@@ -1,0 +1,28 @@
+/* 마을 화면. main.js 와 js/trial.js 다음에 불러야 한다. 다른 화면이 hub, pmCleanup 을 그대로 부른다. */
+function pmCleanup(){if(!C||C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=1+Math.floor(C.ex/40)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
+function hub(){show("hub");pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);
+ const tt=titleById(C.ti),wn=C.wp>=0?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음",cell=(k,x)=>"<div><small>"+k+"</small><b>"+x+"</b></div>";
+ $("#hc").innerHTML="<div class='hc-top'>"+(C.img?"<img class='av' alt='프로필 이미지' src='"+C.img+"'>":"<div class='av hc-noimg' aria-hidden='true'>"+esc(String(C.n).slice(0,1))+"</div>")+"<div class='hc-id'><h2>"+esc(cn(UID,C.n))+"</h2><p>"+v.n+" · "+C.s+" · "+C.a.join("·")+"</p>"+(tt?"<p class='hc-ti'>✦ "+tt[1]+"</p>":"")+"</div><span class='hc-grade'>"+C.g+"</span></div>"
+  +"<div class='hc-grid'>"+cell("레벨",C.lv)+cell("토벌",C.cl+"회")+cell("전투력",pw())+cell("골드",C.gd||0)+cell("무기",wn)+cell("특성",C.t)+"</div>"+(petCur()?"<p class='hc-pet'>"+PETS[petCur().sp][2]+" "+PETS[petCur().sp][1]+" "+esc(petCur().nm)+" · 친밀도 "+petLv(petCur())+"단계</p>":"")
+  +"<div class='hc-xp"+(C.fall||scarLeft()>0?" scar":"")+"'><small>경험치</small><div class='bar'><i style='width:"+(((C.ex||0)%40)/40*100)+"%'></i></div><b>"+((C.ex||0)%40)+" / 40</b></div>"+(C.fall?"<p class='hc-next' style='color:#ff8da0'>타락 중에는 경험치를 얻을 수 없다.</p>":scarLeft()>0?"<p class='hc-next' style='color:#ff8da0'>타락의 후유증: 얻는 경험치 절반 (약 "+Math.ceil(scarLeft()/60000)+"분 남음)</p>":"")+"<div class='hc-dz'><small>절망도</small><div class='bar'><i style='width:"+C.dz+"%'></i></div><b>"+C.dz+"</b></div><div class='hc-heal'><p class='hc-next' id='hcnext'>"+healTxt()+"</p><button type='button' class='chip hc-htog' id='hctog' aria-pressed='"+(C.healOff?"false":"true")+"'>자연 회복 "+(C.healOff?"꺼짐":"켜짐")+"</button></div>"
+  +((()=>{const a=ITM.filter(x=>USE[x[0]]&&armed(x[0])).map(x=>x[1]).concat(Object.keys(SKID).filter(armedSk).map(id=>SKID[id].nm));return a.length?"<p class='hc-arm'>준비: "+a.join(", ")+"</p>":""})())+"<details class='hc-more'><summary>속성 · 특성 · 캐릭터 설정 자세히</summary><dl class='kv'><dt>속성</dt><dd>"+C.a.map(a=>{const x=AT.find(t=>t[0]===a);return a+"<small style='display:block;color:var(--mu)'>"+(x?x[2]:"")+"</small>"}).join("")+"</dd><dt>특성</dt><dd>"+C.t+"<small style='display:block;color:var(--mu)'>"+(TD[C.t]||"")+"</small></dd><dt>마을</dt><dd>"+v.d+"</dd></dl></details>";
+ {const ht=$("#hctog");if(ht)ht.onclick=healToggle}const pr2=pfRows(C.pf);if(pr2){pr2.style.marginTop="10px";$("#hc .hc-more").appendChild(pr2)}
+ const fb=$("#fbar");fb.innerHTML="";if(C.fall||C.dz>=90){const d=document.createElement("div"),b=document.createElement("b"),p=document.createElement("span");d.className="fallbar"+(C.fall?"":" warn");
+  b.textContent=C.fall?"타락":"타락 직전";p.textContent=C.fall?"절망에 삼켜져 마수가 되었다. 친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다.":"절망도가 "+C.dz+"이다. 100이 되면 타락한다. 공명이나 선물로 절망도를 낮추자.";d.append(b,p);
+  if(C.fall){const g=document.createElement("button");g.type="button";g.className="btn";g.textContent="나의 그림자 보기";g.onclick=()=>openRaid(UID);d.appendChild(g)}fb.appendChild(d)}
+ if(C.du&&!C.du.fin&&!unDu)duWatch();
+ const n=need(),ok=C.lv>=n.lv&&C.cl>=n.cl,cd=trLeft()>0,can=!C.fall&&gi()<5&&ok&&!cd;$("#b-trial").disabled=!can;
+ $("#b-trial").textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전";$("#hm").textContent="";watchHub();regPlayer();$("#b-out").hidden=!AUTH.uid;applyRes();syncFr();applyGift();drawDQ();drawTut();updNav();drawRaids();checkRaid();autoClaimOld();sweepRooms();hubPortal();pTick().then(hubPortal);hubGuard();hubBoss();loadNotice();hubFac();loadFac().then(()=>{hubFac();disCheck();hubDis()});beat();loadOnline();hubDis();disAlert();hubLH()}
+
+// 마을 화면의 정기 출정 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다.
+function xFold(open){const b=$("#xtog"),box=$("#xbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_xopen",open?"1":"0")}catch(e){}if(open)drawXAll()}
+$("#xtog").onclick=()=>xFold($("#xbox").hidden);
+// 오늘의 의뢰 칸 열고 닫기. 닫아도 제목 옆에 진행 상황이 보인다. 이 기기에서 마지막 상태를 기억한다.
+function dqFold(open){const b=$("#dqtog"),box=$("#dqbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_dqopen",open?"1":"0")}catch(e){}}
+$("#dqtog").onclick=()=>dqFold($("#dqbox").hidden);
+// 장기 토벌 칸 열고 닫기. 닫아도 제목 옆에 진행 상황(토벌 중·귀환)이 보인다. 이 기기에서 마지막 상태를 기억한다.
+function lhFold(open){const b=$("#lhtog"),box=$("#hlh");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_lhopen",open?"1":"0")}catch(e){}}
+$("#lhtog").onclick=()=>lhFold($("#hlh").hidden);
+(()=>{let v="1";try{v=localStorage.getItem("mgr_lhopen")||"1"}catch(e){}if(v==="0")lhFold(false)})();
+(()=>{let v="1";try{v=localStorage.getItem("mgr_dqopen")||"1"}catch(e){}if(v==="0")dqFold(false)})();
+(()=>{let v="1";try{v=localStorage.getItem("mgr_xopen")||"1"}catch(e){}if(v==="0")xFold(false)})();
