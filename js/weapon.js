@@ -1,10 +1,5 @@
-/* 무기. 강화 단계, 장착 여부, 전투력 보너스, 가방의 무기 칸, 상점의 무기 칸.
-   main.js 다음에 불러야 한다. 전투와 마을 화면이 eq, wup, wlv 를 그대로 부른다. */
-const upr=L=>Math.min(100,UPR[L]+(C.t==="행운"?5:0)+2*facLv("forge")+((VL[C.v]||{}).up||0)+(typeof petEff==="function"?petEff("up"):0));
-const wlv=i=>(C.wl&&C.wl["w"+i])||0;
-// 무기 번호: 0 칼, 1 총, 2 낫, 3 방패, 4 오브, 5 완드, 6 스태프. 장착 중인 무기만 효과가 있다.
-const eq=i=>C.wp===i,wup=i=>wlv(i)*(i===0?2:1);
-
+/* 무기. 가방의 무기 칸과 상점의 무기 칸.
+   main.js 다음에 불러야 한다. 강화 단계와 장착, 성공 확률은 js/common/formula.js 의 wlv, eq, wup, upr 을 그대로 부른다. */
 function bagWeapons(rowEl){const wp=$("#bgw");wp.innerHTML="";
  if(!C.wps.length)wp.innerHTML="<p class='hint'>가진 무기가 없다. 상점에서 살 수 있다.</p>";
  C.wps.forEach(i=>{const L=wlv(i),cost=L+1,mx=L>=5,have=C.inv.mana||0,on=C.wp===i;

@@ -17,12 +17,8 @@ function hub(){show("hub");pmCleanup();setTimeout(checkComp,800);setTimeout(chec
 // 마을 화면의 정기 출정 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다.
 function xFold(open){const b=$("#xtog"),box=$("#xbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_xopen",open?"1":"0")}catch(e){}if(open)drawXAll()}
 $("#xtog").onclick=()=>xFold($("#xbox").hidden);
-// 오늘의 의뢰 칸 열고 닫기. 닫아도 제목 옆에 진행 상황이 보인다. 이 기기에서 마지막 상태를 기억한다.
-function dqFold(open){const b=$("#dqtog"),box=$("#dqbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_dqopen",open?"1":"0")}catch(e){}}
-$("#dqtog").onclick=()=>dqFold($("#dqbox").hidden);
 // 장기 토벌 칸 열고 닫기. 닫아도 제목 옆에 진행 상황(토벌 중·귀환)이 보인다. 이 기기에서 마지막 상태를 기억한다.
 function lhFold(open){const b=$("#lhtog"),box=$("#hlh");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_lhopen",open?"1":"0")}catch(e){}}
 $("#lhtog").onclick=()=>lhFold($("#hlh").hidden);
 (()=>{let v="1";try{v=localStorage.getItem("mgr_lhopen")||"1"}catch(e){}if(v==="0")lhFold(false)})();
-(()=>{let v="1";try{v=localStorage.getItem("mgr_dqopen")||"1"}catch(e){}if(v==="0")dqFold(false)})();
 (()=>{let v="1";try{v=localStorage.getItem("mgr_xopen")||"1"}catch(e){}if(v==="0")xFold(false)})();

@@ -1,8 +1,5 @@
-/* 상점. main.js 다음에 불러야 한다. 가격, 구매 수량, 아이템 구매.
-   무기 칸은 shopWeapons 를, 마을 화면과 튜토리얼은 shop 과 pr 을 그대로 부른다. */
-const pr=p=>Math.ceil(p*(C.v==="A"?.9:1)*(1-.02*facLv("market"))*(1-petEff("shop"))*(disMine()==="fire"?1.2:1));
-/* 물건을 사거나 장착해도 보던 위치를 그대로 지키고, 결과는 화면 위 알림으로도 보여 준다.
-   아이템은 수량(shopQ)을 골라 한 번에 여러 개 살 수 있다. 하루 제한·보유 제한이 있는 아이템은 남은 만큼만 산다. */
+/* 상점. main.js 다음에 불러야 한다. 구매 수량과 아이템 구매.
+   가격은 js/common/formula.js 의 pr 을, 무기 칸은 shopWeapons 를 그대로 부른다. */
 let shopQ=1;
 function itemMax(id){C.inv=C.inv||{};if(id==="charm")return Math.max(0,CHARM_MAX-charmToday());if(id==="candle")return (C.inv.candle||0)>=1?0:1;return 99}
 function shop(msg){C.wps=C.wps||[];const again=!$("#v-shop").hidden,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);

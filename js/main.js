@@ -4,7 +4,6 @@ const evCtx=r=>{const ps=Object.values(r.pl||{});return{ps,n:ps.length,at:a=>ps.
 // 메아리 이벤트: 파티에 없는 내 친구 이름 하나
 const echoName=r=>{const ids=Object.keys((C&&C.fr)||{}).filter(u=>!r.pl[u]&&C.fr[u]);return ids.length?esc(String(C.fr[ids[R(ids.length)]]).slice(0,20)):"이름 모를 마법소녀"};
 const EVM={};EV.concat(SOLO_EV,...Object.values(VEV)).forEach(x=>EVM[x.id]=x);
-const $=s=>document.querySelector(s),R=n=>Math.floor(Math.random()*n);
 let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 저장하고, 만일을 위해 이 브라우저에도 계정별 백업을 남긴다.
@@ -124,8 +123,6 @@ async function refresh(){const r=await fetch("https://securetoken.googleapis.com
 const admFix=o=>{ADMIN_FIXED.forEach(u=>o[u]=true);return o};
 let ADM=admFix({}),signup=false,sct=null;
 // 운영자는 서버의 admins 목록(콘솔에서만 수정 가능)에 있는 계정이다. 이름으로는 판단하지 않는다.
-const cn=(u,n)=>(ADM[u]?"👑 ":"")+String(n==null?"":n).replace(/👑/g,"");
-const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 /* 서버 저장. 실패하면 조용히 넘어가지 않고 화면 위에 경고를 띄운다(저장이 다시 되면 사라진다). */
 let saveErr="";
 function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
@@ -178,7 +175,6 @@ async function saveRescue(){if(saveFix)return false;saveFix=true;try{
  saveDiag=" [진단: 토큰 "+(tok?"정상":"갱신 실패")+" · 작은 저장 "+(small?"성공 → 저장 내용("+kb+"KB)이 규칙에 걸림":"실패 → 계정 쓰기 권한 자체가 막힘")+"]";return false}finally{saveFix=false}}
 function saveCloud(now){clearTimeout(sct);const go=async()=>{const sp=await syncPeek();if(sp==="adopted")return;if(sp==="other"){try{const d=(await DB.doc("accounts/"+AUTH.uid).get()).data();if(d&&d.c&&d.c.n&&C)keepMerge(C,d.c)}catch(e){}}return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("")}).catch(async e=>{const c=String(e&&e.message||e);
   if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");return}saveWarn(c);clearTimeout(sct);sct=setTimeout(go,15000)})};if(now)go();else sct=setTimeout(go,600)}
-const healTxt=()=>{if(!C)return "";if(C.fall)return "타락 중에는 절망도가 자연히 회복되지 않는다.";if(C.healOff)return "자연 회복을 꺼 두었다. 절망도가 저절로 내려가지 않는다.";if(!(C.dz>0))return "";const left=HEAL_MS-(Date.now()-(C.dzT||Date.now()))%HEAL_MS;return "다음 자연 회복(-"+healAmt()+")까지 "+Math.max(1,Math.ceil(left/60000))+"분"};
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();regPlayer();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
@@ -253,9 +249,6 @@ let FBU="";
  let url=lget("mgr_fb")||FB_URL;
  if(url){FBU=url;await startAuth();return}
  DB=local();LOCAL=true;UID="나";mode(0);boot()})();
-// 특성에 따른 전투력 보너스
-const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="천재"?4:t==="대기만성"?(lv<8?-2:Math.max(Math.min(8,Math.floor(lv/2)),Math.floor(lv/4))):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
-const gi=()=>GL.indexOf(C.g),pw=()=>tpw()+10+gi()*8+C.lv*3+(C.b||0)+(C.wp>=0?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+(C.a.includes("불")?6:0)+(C.a.includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(wfLv()>=5?WF_PW:0)+petEff("pw");
 let curView="";
 /* 같은 화면을 다시 그리는 동안 내용이 잠깐 비면(목록을 지우고 다시 채울 때) 휴대폰 브라우저가 화면을 위로 끌어올린다.
    잠깐 동안 화면 높이를 지금 높이로 붙잡아 두고, 위치가 바뀌었으면 원래대로 돌려놓는다. */
@@ -272,8 +265,6 @@ function titles(msg){show("titles");setRec("ttl");titleState();const fresh=check
  const earned=$("#title-earned"),locked=$("#title-locked");earned.innerHTML="";locked.innerHTML="";TITLE_LIST.forEach((t,i)=>{const got=C.titles.includes(t[0]),w=document.createElement("div");w.className="chip title-card";const copy=document.createElement("div");copy.className="title-copy";const name=document.createElement("strong"),desc=document.createElement("small");const sc=t[4]==="secret";if(sc)w.classList.add("secret-ttl");name.textContent=got?(sc?"✧ ":"✦ ")+t[1]+(sc?" (히든)":""):sc?"🔒 ??? (히든 칭호)":"🔒 "+t[1];desc.textContent=got||!sc?t[2]:"힌트: "+t[5];copy.append(name,desc);w.appendChild(copy);if(got){const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=C.ti===t[0]?"장착 중":"장착";b.disabled=C.ti===t[0];b.onclick=()=>{C.ti=t[0];save();titles("'"+t[1]+"' 칭호를 장착했다.")};w.appendChild(b);earned.appendChild(w)}else if(!t[4]||t[4]==="secret")locked.appendChild(w)});const secN=TITLE_LIST.filter(t=>t[4]==="secret"),secGot=secN.filter(t=>C.titles.includes(t[0])).length;$("#title-msg").textContent=msg||(fresh.length?"새 칭호 획득: "+fresh.map(t=>t[1]).join(", "):"획득한 칭호 "+C.titles.length+" / "+TITLE_LIST.length+" · 히든 칭호 "+secGot+" / "+secN.length);regPlayer()}
 function titleProgress(){if(!C)return;titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz||0);C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);checkTitles()}
 
-function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(wfLv()>=3?1-WF_CALM:1)*(1-petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&C.a.includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&C.a.includes("바람"))ex=Math.round(ex*1.15);C.ex+=Math.round(ex);C.lv=1+Math.floor(C.ex/40);C.dz=Math.max(0,Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
- if(!C.fall){if(C.dz>=100)fallen();else if(oldDz<90&&C.dz>=90)note("warn","절망도가 "+C.dz+"에 이르렀다. 타락 직전이다."),alertBox("타락 직전","절망도가 "+C.dz+"에 이르렀다. 마음이 무너지기 직전이다.\n절망도가 100이 되면 타락해 마수가 된다. 공명이나 선물로 친구들의 도움을 받자.")}}
 /* 사진 줄이기: 한 번에 확 줄이면 깨지고 뭉개지므로 절반씩 여러 번 부드럽게 줄인다. */
 function sq(im,Z,q){const s0=Math.min(im.width,im.height);let c=document.createElement("canvas"),w=s0;c.width=c.height=w;let x=c.getContext("2d");x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(im,(im.width-s0)/2,(im.height-s0)/2,s0,s0,0,0,w,w);
  while(w/2>=Z){const n=document.createElement("canvas"),h=Math.floor(w/2);n.width=n.height=h;const y=n.getContext("2d");y.imageSmoothingEnabled=true;y.imageSmoothingQuality="high";y.drawImage(c,0,0,w,w,0,0,h,h);c=n;w=h}
@@ -281,31 +272,6 @@ function sq(im,Z,q){const s0=Math.min(im.width,im.height);let c=document.createE
 const HIRES={};
 function pick(f,cb){if(!f)return;const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const m=Math.min(im.width,im.height),Z=Math.min(AV_BIG,Math.max(160,m));const d=sq(im,Z,.9);
  if(m>AV_BIG)HIRES[d]=sq(im,Math.min(PIC_PX,m),.92);URL.revokeObjectURL(u);cb(d)};im.onerror=()=>URL.revokeObjectURL(u);im.src=u}
-let pimg=null;
-$("#im").onchange=e=>{const f=e.target.files[0];e.target.value="";pick(f,d=>{pimg=d;const p=$("#pv");p.src=d;p.hidden=false})};
-/* 캐릭터 제작 */
-let sg=null,sv=null,sa=null,hs=[],pk=null,busy=false;
-function chips(el,list,f){list.forEach(it=>{const b=document.createElement("button");b.type="button";b.className="chip"+(it[2]?" vil":"");b.setAttribute("aria-pressed","false");
- if(it[1]&&it[1][0]==="#"){b.style.setProperty("--c",it[1]);b.innerHTML='<span class="dot"></span>'+it[0]+(it[2]?"<small>"+it[2]+"</small>":"")}else b.innerHTML=it[0]+(it[2]?"<small>"+it[2]+"</small>":"");
- b.onclick=()=>{f(it);[...el.children].forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"))};el.appendChild(b)})}
-chips($("#gd"),[["소년"],["소녀"]],i=>sg=i[0]);
-chips($("#vl"),Object.keys(VL).map(k=>[VL[k].n,"",VL[k].d]),i=>sv=i[0][0]);
-chips($("#at"),AT,i=>{sa=i[0];$("#v-create").style.setProperty("--glow",i[1])});
-function roll(){let r=Math.random()*100,a=0;for(const[g,w]of GR){a+=w;if(r<a)return g}return"E"}
-function rc(){const l=3-hs.length,o=$("#orb");$("#left").textContent=l>0?"남은 기회 "+l+"번":"기회를 모두 썼다. 하나를 골라라.";o.disabled=l<=0;
- o.innerHTML=hs.length?hs[hs.length-1].g:"<small>손을 얹는다</small>";const h=$("#hist");h.innerHTML="";
- hs.forEach((r,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.setAttribute("aria-pressed",pk===i?"true":"false");
-  b.innerHTML="<span>"+(i+1)+"번째 뽑기 <b>"+r.t+"</b><small style='display:block;color:var(--mu);font-weight:400'>"+TD[r.t]+"</small></span><strong>"+r.g+"등급</strong>";b.onclick=()=>{pk=i;rc()};h.appendChild(b)});
- $("#tdesc").textContent=pk!==null?"특성: "+hs[pk].t:""}
-$("#orb").onclick=()=>{if(busy||hs.length>=3)return;busy=true;const o=$("#orb");o.classList.add("ch");
- setTimeout(()=>{o.classList.remove("ch");hs.push({g:roll(),t:TR[R(TR.length)]});if(pk===null)pk=0;busy=false;rc()},900)};
-$("#ok").onclick=()=>{const n=$("#nm").value.trim(),m=$("#cm");
- if(!n)return m.textContent="이름을 입력해야 한다.";if(!sg)return m.textContent="소년 또는 소녀를 골라야 한다.";
- if(!sv)return m.textContent="시작 마을을 골라야 한다.";if(!sa)return m.textContent="속성을 골라야 한다.";
- if(pk===null)return m.textContent="수정구로 등급을 한 번 이상 뽑아야 한다.";
- C={n,s:sg,v:sv,a:[sa],g:hs[pk].g,t:hs[pk].t,lv:1,ex:0,cl:0,dz:0,b:0,img:pimg,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{maxDespair:0,maxGold:100,loginDays:1,lastDay:new Date().toISOString().slice(0,10),reachedZero:false}};save();checkTitles();hub()};
-
-
 // 프로필 사진을 누르면 크게 볼 수 있다. 바깥이나 ✕, Esc 키로 닫는다. (사진 고르기 화면의 미리보기는 제외)
 function imgOpen(src,cap){const o=$("#imgo");if(!o||!src)return;$("#imgoi").src=src;$("#imgoi").alt=cap||"프로필 사진";$("#imgoc").textContent=cap||"";o.hidden=false;$("#imgox").focus({preventScroll:true})}
 function imgClose(){const o=$("#imgo");if(o&&!o.hidden){o.hidden=true;$("#imgoi").removeAttribute("src");$("#imgoi").classList.remove("free")}}
@@ -316,7 +282,6 @@ document.addEventListener("click",e=>{const t=e.target;if(!(t instanceof HTMLIma
 $("#imgo").addEventListener("click",e=>{if(e.target.id!=="imgoi")imgClose()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")imgClose()});
 const lhOf=k=>LH.find(x=>x[0]===k),lhOn=()=>!!(C&&C.lh&&lhOf(C.lh.k));
-const lhChance=(pwv,req)=>Math.max(.3,Math.min(.95,pwv/req*.85+(typeof petEff==="function"?petEff("lh"):0)));
 function lhStart(k){const L=lhOf(k);if(!L||lhOn())return;if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
  const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();save();note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");hubLH()}
@@ -344,7 +309,6 @@ setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){
 
 /* 프로필과 공명: 친구의 프로필에서 '공명하기'로 공명을 청하고, 친구가 받아들이면 둘 다 절망도가 내려간다. 같은 상대에게는 3시간에 한 번이다. */
 let pfU=null;
-const once=q=>new Promise((ok,no)=>{let un=null,done=false;un=q.onSnapshot(s=>{if(done)return;done=true;un&&un();ok(s)},e=>{if(done)return;done=true;un&&un();no(e)})});
 /* 크게 보기용 사진: 내 사진을 320픽셀로 줄여 wboss/pic/{나}에 따로 올려 둔다. 목록(players)에는 작은 사진만 있어서 데이터를 아끼고,
    누군가 사진을 눌러 크게 볼 때만 이 큰 사진 한 장을 받아 온다(사람마다 한 번만 받고 기억한다). */
 const PICC={},PICM={};
@@ -384,12 +348,10 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
   if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사");cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp);b.appendChild(ub)}
   frBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}},
   e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
-const cdTxt=ms=>{const t=Math.ceil(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+"시간 "+m+"분":m?m+"분 "+s+"초":s+"초"};
 $("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null};
 $("#pfo").onclick=e=>{if(e.target===$("#pfo"))$("#pfc").click()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$("#pfc").click()});
 
-const nmOf=()=>String(C.n).replace(/👑/g,"").slice(0,20);
 function updNav(){const cb=document.querySelector("#nav [data-v=chat]");if(cb&&C){const k=Object.keys(C.dmu||{}).length;cb.textContent=k?"채팅 ("+k+")":"채팅";document.title=(k?"("+k+") ":"")+"魔法 成長記錄"}
  const b=document.querySelector("#nav [data-v=friends]");if(b){const n=Object.keys((C&&C.fq)||{}).length+Object.keys((C&&C.rqIn)||{}).length;b.textContent=n?"친구 ("+n+")":"친구"}
  const dub=document.querySelector("#nav [data-v=arena]");if(dub&&C){const n=(typeof DUI!=="undefined"?DUI.length:0),on=C.du&&!C.du.fin;dub.textContent=on?"대련 ⚔":n?"대련 ("+n+")":"대련"}
@@ -399,7 +361,6 @@ function updNav(){const cb=document.querySelector("#nav [data-v=chat]");if(cb&&C
  const ib=document.querySelector("#nav [data-v=inbox]");if(ib&&C){const k=(C.nt||[]).filter(n=>!n.r).length;ib.textContent=k?"알림 ("+(k>9?"9+":k)+")":"알림"}
  // "이름 (3)" 꼴의 숫자는 작은 배지로 바꿔서, 숫자가 생겨도 탭 글자가 잘리지 않게 한다.
  document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}})}
-const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
@@ -470,38 +431,9 @@ $("#pf-save").onclick=()=>{const n=$("#en").value.trim();if(!n){$("#pfe").textCo
  C.n=n;if(pend)C.img=pend;C.pf={};PF.forEach(([k])=>C.pf[k]=$("#pf-"+k).value.trim().slice(0,300));pend=null;save();regPlayer();$("#pfedit").hidden=true;hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="프로필을 저장했다."};
 
 let unH=null;
-const XON=()=>!!DB&&!LOCAL&&!!FBU;
-const hs32=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
-const rng=seed=>{let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}};
-const seeded=(seed,f)=>{const o=Math.random;Math.random=rng(seed);try{return f()}finally{Math.random=o}};
 
 $("#nav").onclick=e=>{const v=e.target.dataset&&e.target.dataset.v;if(v==="hub")hub();if(v==="shop")shop();if(v==="chat")chat();if(v==="friends")friends();if(v==="board")board(null);if(v==="ntc")ntcView();if(v==="arena")arena();if(v==="bag")bag();if(v==="titles")(recTab==="ttl"?titles():dex());if(v==="inbox")inbox();if(v==="roster")roster()};
 
-const agoTxt=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<60?m+"분 전":m<1440?Math.floor(m/60)+"시간 전":Math.floor(m/1440)+"일 전"};
-function toast(t,go){let w=$("#toasts");if(!w){w=elT("div");w.id="toasts";w.setAttribute("aria-live","polite");document.body.appendChild(w)}
- const b=elT("button","toast",t);b.type="button";b.onclick=()=>{b.remove();go&&go()};w.appendChild(b);setTimeout(()=>b.remove(),7000);while(w.children.length>3)w.firstChild.remove()}
-function ding(){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const a=ding.c||(ding.c=new A()),o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.setValueAtTime(880,a.currentTime);o.frequency.setValueAtTime(1175,a.currentTime+.09);g.gain.setValueAtTime(.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(.12,a.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.35);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.36)}catch(e){}}
-
-const dqDef=id=>DQ.find(q=>q[0]===id);
-const rwTxt=r=>[r.g?"골드 "+r.g:"",r.m?"마력석 "+r.m:""].filter(Boolean).join(", ");
-function ensureDQ(){if(!C)return;titleState();if(C.dq&&C.dq.d===today()&&Array.isArray(C.dq.l)){
-  // 목록에서 없어진 의뢰(예: 무기 강화)가 오늘 의뢰에 남아 있으면 다른 의뢰로 바꿔 준다.
-  const bad=C.dq.l.filter(q=>!dqDef(q.id));if(bad.length){const have=C.dq.l.map(q=>q.id),pool=DQ.filter(q=>(q[5]||!LOCAL)&&!have.includes(q[0]));
-   C.dq.l=C.dq.l.map(q=>{if(dqDef(q.id))return q;const n=pool.length?pool.splice(R(pool.length),1)[0]:null;return n?{id:n[0],b:n[3](C.stats),c:false}:null}).filter(Boolean);save()}return}
- const pool=DQ.filter(q=>q[5]||!LOCAL).slice();const l=[];while(l.length<DQ_N&&pool.length){const q=pool.splice(R(pool.length),1)[0];l.push({id:q[0],b:q[3](C.stats),c:false})}
- C.dq={d:today(),l,bc:false};save()}
-const dqProg=q=>{const d=dqDef(q.id);return d?Math.min(d[2],Math.max(0,d[3](C.stats||{})-q.b)):0};
-function dqReady(){if(!C||!C.dq||C.dq.d!==today())return 0;let n=C.dq.l.filter(q=>!q.c&&dqDef(q.id)&&dqProg(q)>=dqDef(q.id)[2]).length;if(!C.dq.bc&&C.dq.l.length&&C.dq.l.every(q=>q.c))n++;return n}
-function giveRw(r){C.gd=(C.gd||0)+(r.g||0);if(r.m){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+r.m}titleState();C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd)}
-function drawDQ(){const l=$("#dql");if(!l||!C)return;ensureDQ();l.innerHTML="";
- {const sm=$("#dqsum");if(sm){const done=C.dq.l.filter(q=>q.c).length,rd=dqReady();sm.textContent="받음 "+done+" / "+C.dq.l.length+(rd?" · 받을 보상 "+rd+"개":"")}}
- const row=(cls,title,sub,pct,label,dis,fn)=>{const w=document.createElement("div");w.className="dq "+cls;const cp=document.createElement("div");cp.className="dq-copy";const b=document.createElement("b"),sm=document.createElement("small");b.textContent=title;sm.textContent=sub;cp.append(b,sm);
-  if(pct!=null){const bar=document.createElement("div"),i=document.createElement("i");bar.className="bar";i.style.width=pct+"%";bar.appendChild(i);cp.appendChild(bar)}
-  const bt=document.createElement("button");bt.type="button";bt.className="chip";bt.textContent=label;bt.disabled=dis;bt.onclick=fn;w.append(cp,bt);l.appendChild(w)};
- C.dq.l.forEach(q=>{const d=dqDef(q.id);if(!d)return;const p=dqProg(q),ok=p>=d[2];
-  row(q.c?"got":ok?"done":"",d[1],p+" / "+d[2]+" · 보상: "+rwTxt(d[4]),p/d[2]*100,q.c?"받음":ok?"받기":"진행 중",q.c||!ok,()=>{if(q.c||dqProg(q)<d[2])return;q.c=true;giveRw(d[4]);save();checkTitles();hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="의뢰 완료! "+rwTxt(d[4])+"을(를) 받았다."})});
- const all=C.dq.l.length&&C.dq.l.every(q=>q.c);
- row("bonus"+(C.dq.bc?" got":all?" done":""),"모두 완료 보너스",(all?"오늘 의뢰를 모두 끝냈다.":"의뢰 3개를 모두 받으면 열린다.")+" · 보상: "+rwTxt(DQ_BONUS),null,C.dq.bc?"받음":"받기",C.dq.bc||!all,()=>{if(C.dq.bc||!C.dq.l.every(q=>q.c))return;C.dq.bc=true;giveRw(DQ_BONUS);note("quest","오늘의 의뢰를 모두 끝냈다. "+rwTxt(DQ_BONUS)+"을(를) 받았다.");C.stats.dqAll=(C.stats.dqAll||0)+1;guardAdd(15);save();checkTitles();hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="오늘의 의뢰를 모두 끝냈다! "+rwTxt(DQ_BONUS)+"을(를) 받았다."})}
 const SKID={};Object.keys(SK).forEach(a=>SKID[SK[a].id]={...SK[a],a});
 // Firebase는 빈 객체를 저장하지 않으므로, 불러온 뒤 arm이 사라져 있으면 다시 만든다.
 function skDay(){if(!C.sk||C.sk.day!==today())C.sk={day:today(),used:0,arm:{}};C.sk.arm=C.sk.arm||{};C.sk.used=C.sk.used||0}
@@ -519,33 +451,6 @@ function drawSkills(){skDay();const l=$("#bgs");l.innerHTML="";const mx=mpMax(),
   w.append(elT("span","sk-ic"),tx,b);l.appendChild(w)})}
 
 $("#tut-re").onclick=()=>{C.tut=C.tut||{got:{}};C.tut.hide=0;C.tut.fold=0;save();hub()};
-function note(k,t,u){if(!C)return;C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k,t:String(t).slice(0,160),u:u||"",ts:Date.now(),r:false});if(C.nt.length>80)C.nt.length=80;save();if(!$("#v-inbox").hidden)inbox(true)}
-function ntGo(n){const u=n.u;if(n.k==="notice"){keep("mgr_ntc_x","");drawNotice();hub();return}if(n.k==="dm"&&u)goDM(u);else if(n.k==="fr")friends();else if(n.k==="res")friends();else if(n.k==="gift"&&u)openProfile(u);else if(n.k==="title")titles();else if(n.k==="boss")bossView();
- else if(n.k==="raid"&&u)openRaid(u);else if(n.k==="fall"&&C.fall)openRaid(UID);else if(n.k==="dex")dex();else if(n.k==="portal")portalView();else if(n.k==="guard")guardView();else if(n.k==="fac")facView();else if(n.k==="disaster")hub();else if(n.k==="wave")waveView();else if(n.k==="board")board(n.u||null);else if(n.k==="quest"||n.k==="warn"||n.k==="fall")hub()}
-let ntCat="all",ntNew=new Set();
-const ntCatOf=k=>{const c=NT_CAT.find(x=>x[2]&&x[2].includes(k));return c?c[0]:"etc"};
-const ntIn=(n,cat)=>cat==="all"||ntCatOf(n.k)===cat;
-function inbox(keep){show("inbox");C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
- // 화면을 처음 열 때 안 읽은 알림을 기억해 두고(종류를 바꿔도 '새 알림' 표시가 남게), 바로 읽음으로 바꾼다.
- if(!keep)ntNew=new Set(C.nt.filter(n=>!n.r).map(n=>n.ts+"|"+n.t));
- const cb=$("#ntcat");cb.innerHTML="";NT_CAT.forEach(([k,nm])=>{const all=C.nt.filter(n=>ntIn(n,k)),nw=all.filter(n=>ntNew.has(n.ts+"|"+n.t)).length;if(k==="etc"&&!all.length)return;
-  const b=elT("button","chip nt-cat",nm+(k==="all"?"":" "+all.length));b.type="button";b.setAttribute("role","tab");b.setAttribute("aria-selected",ntCat===k?"true":"false");if(nw)b.appendChild(elT("span","nav-n",String(nw)));b.onclick=()=>{ntCat=k;inbox(true)};cb.appendChild(b)});
- if(!NT_CAT.some(c=>c[0]===ntCat)||(ntCat==="etc"&&!C.nt.some(n=>ntIn(n,"etc"))))ntCat="all";
- $("#nt-clr").textContent=ntCat==="all"?"모두 지우기":"'"+NT_CAT.find(c=>c[0]===ntCat)[1]+"' 알림 지우기";
- const list=C.nt.filter(n=>ntIn(n,ntCat));
- if(!list.length){l.innerHTML=C.nt.length?"<p class='hint'>이 종류의 알림이 없다.</p>":"<p class='hint'>아직 알림이 없다.</p>"}
- const t0=today(),y=new Date();y.setDate(y.getDate()-1);const t1=ymd(y);let last="";
- list.forEach(n=>{const d=new Date(n.ts),day=ymd(d);if(day!==last){last=day;l.appendChild(elT("p","nt-day",day===t0?"오늘":day===t1?"어제":day.replace(/-/g,".")))}
-  const b=elT("button","nt"+(ntNew.has(n.ts+"|"+n.t)?" new":""));b.type="button";const ic=NTI[n.k]||["·",""];
-  b.append(elT("span","nt-ic "+ic[1],ic[0]),elT("span","nt-tx",n.t),elT("span","nt-tm",String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")));b.onclick=()=>ntGo(n);l.appendChild(b)});
- // 화면을 연 순간 모두 읽음으로 바꾼다(이번 화면에서는 새 알림 표시가 남아 있다).
- if(C.nt.some(n=>!n.r)){C.nt.forEach(n=>n.r=true);save()}updNav()}
-$("#nt-clr").onclick=()=>{if(!C.nt||!C.nt.length)return;const c=NT_CAT.find(x=>x[0]===ntCat);if(ntCat==="all"){if(!confirm("알림을 모두 지울까?"))return;C.nt=[]}else{if(!C.nt.some(n=>ntIn(n,ntCat)))return;if(!confirm("'"+c[1]+"' 알림만 지울까?"))return;C.nt=C.nt.filter(n=>!ntIn(n,ntCat))}save();inbox(true)};
-const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-const dayN=d=>Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);
-const keepIds=(o,id)=>{o=o||{};o[id]=true;const ks=Object.keys(o);ks.slice(0,Math.max(0,ks.length-6)).forEach(x=>delete o[x]);return o};
-const elT=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
-
 function alertBox(t,x){$("#alt").textContent=t;$("#alx").textContent=x;$("#alo").hidden=false;$("#alc").focus({preventScroll:true})}
 $("#alc").onclick=()=>{$("#alo").hidden=true};
 setInterval(()=>{if(C&&!$("#v-hub").hidden){hubGuard();hubBoss()}},30000);
@@ -571,8 +476,6 @@ function drawOnline(){const w=$("#onlw"),b=$("#onl");if(!w||!C)return;w.hidden=!
 setInterval(()=>{if(document.hidden)return;beat();loadOnline()},ON_MS);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){beat();loadOnline(true)}});
 
-const rnCost=L=>L+2;
-function rnLv(k){return C&&C.rn?Math.min(RN_MAX,Math.max(0,Number(C.rn[k])||0)):0}
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
  $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
  RN.forEach(([k,nm,ic,ef])=>{const L=rnLv(k),mx=L>=RN_MAX,cost=rnCost(L),w=document.createElement("div");w.style.cssText="display:flex;gap:8px";
@@ -595,53 +498,6 @@ function retrait(){const r=rtReq();if(!r.ok)return;
  C.inv.mana-=RT_MANA;C.gd-=RT_GOLD;C.t=nt;C.rtT=Date.now();titleState();C.stats.traitChanges=(C.stats.traitChanges||0)+1;
  note("quest","운명의 재계약: 특성이 「"+old+"」에서 「"+nt+"」(으)로 바뀌었다.");gain(0,RT_DZ);save();regPlayer();checkTitles();
  alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");bag()}
-const petLv=q=>q?PET_LV.filter(n=>(q.xp||0)>=n).length:0;
-const petCur=()=>C&&Array.isArray(C.pets)?C.pets.find(q=>q&&q.id===C.pet)||null:null;
-// 함께하는 사역마의 효과. k: ex 경험치, gd 골드, dz 절망도 감소, pw 전투력, heal 자연 회복, lh 장기 토벌 확률
-function petEff(k){const q=petCur();if(!q)return 0;const L=petLv(q),sp=q.sp;
- if(k==="ex")return sp==="rabbit"?.02*L:sp==="hope"?.02*L:0;if(k==="gd")return sp==="sparrow"?.02*L:sp==="hope"?.02*L:sp==="dragon"?.03*L:0;
- if(k==="dz")return sp==="jelly"?.02*L:sp==="hope"?.02*L:0;if(k==="pw")return sp==="fox"||sp==="dragon"?3*L:sp==="hope"?2*L:0;
- if(k==="heal")return sp==="cat"?(L>=5?2:L>=3?1:0):0;if(k==="lh")return sp==="turtle"||sp==="dragon"?.02*L:0;
- if(k==="gift")return sp==="sheep"?.1*L:0;if(k==="shop")return sp==="mouse"?.02*L:0;if(k==="trial")return sp==="owl"?L:0;if(k==="mana")return sp==="crow"?.03*L:0;
- if(k==="up")return sp==="hedgehog"?2*L:0;if(k==="res")return sp==="butterfly"?2*L:0;return 0}
-function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(PET_LV[PET_LV.length-1],(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!")}}
-// 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
-function petDrop(src){if(Math.random()>=(src==="lh"?PET_DROP_LH:PET_DROP_X))return "";C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 가방에서 품을 수 있다.");return "🥚 사역마의 알을 주웠다!"}
-function petRoll(){let r=Math.random(),rar=1;for(const [k,p] of PET_RATE){if(r<p){rar=k;break}r-=p}const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]}
-function petMsg(t,bad){const m=$("#bgm");if(m){m.style.color=bad?"var(--bad)":"var(--mu)";m.textContent=t}}
-function petBuyEgg(){if((C.gd||0)<PET_EGG_G)return;if(C.eggBuy===today()){petMsg("알은 하루에 한 개만 살 수 있다.",1);return}C.gd-=PET_EGG_G;C.eggBuy=today();C.eggs=(C.eggs||0)+1;save();bag("사역마의 알을 샀다. 따뜻하게 품어 주자.")}
-function petIncubate(){if(!(C.eggs>0)||C.egg)return;if((C.pets||[]).length>=PET_MAX){petMsg("사역마는 "+PET_MAX+"마리까지 데리고 있을 수 있다. 한 마리를 보내 주어야 새로 품을 수 있다.",1);return}
- C.eggs--;C.egg={t0:Date.now(),t1:Date.now()+PET_HATCH};save();bag("알을 품기 시작했다. 1시간 뒤에 깨어난다.")}
-function petHatch(){const e=C.egg;if(!e||Date.now()<e.t1)return;const sp=petRoll(),P=PETS[sp],nm=(prompt(P[2]+" "+P[1]+"이(가) 깨어났다!\n이름을 지어 주자. (최대 10자)",P[1])||P[1]).trim().slice(0,10)||P[1];
- const q={id:"p"+Date.now().toString(36),sp,nm,xp:0,born:Date.now()};C.pets=Array.isArray(C.pets)?C.pets:[];C.pets.push(q);C.egg=null;if(!C.pet)C.pet=q.id;titleState();C.stats.hatched=(C.stats.hatched||0)+1;if(PETS[sp][3]===3)C.stats.petLeg=1;C.petSeen=C.petSeen||{};C.petSeen[sp]=1;
- note("quest","알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다!");save();regPlayer();checkTitles();
- alertBox(P[2]+" 부화!",(P[3]===3?"★ 전설의 사역마 ★\n":P[3]===2?"희귀한 사역마!\n":"")+"알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다.\n\n"+P[4]+"\n\n함께하면: "+P[5](1)+" (친밀도 1단계)\n친밀도가 오를수록 효과가 커진다.");bag()}
-function petPat(q){if(q.pd===today())return;q.pd=today();petXp0(q,PET_PAT);save();bag(PETS[q.sp][2]+" "+q.nm+"을(를) 쓰다듬었다. 기분이 좋아 보인다. (친밀도 +"+PET_PAT+")")}
-function petFeed(q){if((C.gd||0)<PET_SNACK_G)return;if(!q.fd||q.fd.d!==today())q.fd={d:today(),n:0};if(q.fd.n>=PET_SNACK_N){petMsg("오늘은 간식을 충분히 먹었다.",1);return}q.fd.n++;C.gd-=PET_SNACK_G;petXp0(q,PET_FEED);save();bag(PETS[q.sp][2]+" "+q.nm+"이(가) 간식을 맛있게 먹었다. (친밀도 +"+PET_FEED+")")}
-function petXp0(q,n){const cur=C.pet;C.pet=q.id;petXp(n);C.pet=cur;regPlayer()}
-function petRename(q){const nm=(prompt("새 이름 (최대 10자)",q.nm)||"").trim().slice(0,10);if(!nm)return;q.nm=nm;save();regPlayer();bag("이름을 '"+nm+"'(으)로 바꿨다.")}
-function petBye(q){if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;save();regPlayer();bag(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다.")}
-function drawPets(){const box=$("#bgpt");if(!box||!C)return;box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
- box.appendChild(elT("p","hint","곁을 지키는 작은 마수. '함께하기'로 정한 한 마리의 효과를 받는다. 쓰다듬고, 간식을 주고, 함께 출정할수록 친밀도가 올라 효과가 커진다."));
- // 알
- const ec=elT("div","card pet-card"),eb=elT("div","pet-body");ec.append(elT("span","pet-ic","🥚"),eb);
- if(C.egg){const done=now>=C.egg.t1;eb.append(elT("b","",done?"알이 흔들린다!":"알을 품는 중"),elT("small","",done?"곧 무언가 깨어날 것 같다.":"부화까지 "+cdTxt(C.egg.t1-now)));const a=elT("div","pet-act"),b=elT("button","chip",done?"부화시키기":"기다리는 중");b.type="button";b.disabled=!done;b.onclick=petHatch;a.appendChild(b);eb.appendChild(a)}
- else{eb.append(elT("b","","사역마의 알 "+(C.eggs||0)+"개"),elT("small","","상점가 "+PET_EGG_G+"골드(하루 1개) · 출정에서 가끔, 장기 토벌 성공 시 종종 줍는다. 품으면 1시간 뒤 깨어난다. (일반 70% · 희귀 27% · 전설 3%)"));
-  const a=elT("div","pet-act"),b1=elT("button","chip","알 품기");b1.type="button";b1.disabled=!(C.eggs>0);b1.onclick=petIncubate;const b2=elT("button","chip","알 사기 ("+PET_EGG_G+"골드)");b2.type="button";b2.disabled=(C.gd||0)<PET_EGG_G||C.eggBuy===today();b2.onclick=petBuyEgg;a.append(b1,b2);eb.appendChild(a)}
- box.appendChild(ec);
- {const all=Object.values(PETS),seen=all.filter(x=>C.petSeen[x[0]]);box.appendChild(elT("p","hint","만난 사역마 "+seen.length+" / "+all.length+"종: "+all.map(x=>C.petSeen[x[0]]?x[2]:"❔").join(" ")))}
- if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}
- C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),on=C.pet===q.id,nx=PET_LV[L],c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);
-  bd.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]),elT("small","","효과: "+P[5](L)+" · 친밀도 "+L+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (최고)")));
-  const bar=elT("div","bar"),f=elT("i");const pv=PET_LV[L-1]||0;f.style.width=(nx!=null?Math.min(100,((q.xp||0)-pv)/(nx-pv)*100):100)+"%";bar.appendChild(f);bd.appendChild(bar);
-  const a=elT("div","pet-act"),mk=(t,fn,dis)=>{const b=elT("button","chip",t);b.type="button";b.disabled=!!dis;b.onclick=fn;a.appendChild(b)};
-  if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();bag(q.nm+"와(과) 함께하기로 했다.")});
-  mk(q.pd===today()?"쓰다듬기 (내일 다시)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),q.pd===today());
-  const fn=(q.fd&&q.fd.d===today())?q.fd.n:0;mk("간식 "+PET_SNACK_G+"골드 ("+fn+"/"+PET_SNACK_N+")",()=>petFeed(q),fn>=PET_SNACK_N||(C.gd||0)<PET_SNACK_G);
-  mk("이름 바꾸기",()=>petRename(q));mk("보내 주기",()=>petBye(q));bd.appendChild(a);box.appendChild(c)})}
-setInterval(()=>{if(C&&C.egg&&!C.egg.nt&&Date.now()>=C.egg.t1){C.egg.nt=1;save();note("quest","사역마의 알이 흔들린다! 가방에서 부화시키자.");toast("🥚 알이 흔들린다! 가방에서 부화시키자.");try{ding()}catch(e){}}if(C&&C.egg&&!$("#v-bag").hidden)drawPets()},30000);
-// 홍수와 마인의 저주는 자연 회복을 각각 절반으로 줄인다.
-const healAmt=()=>{const h=HEAL_DZ+facLv("spring")+petEff("heal"),f=(disMine()==="flood"?.5:1)*(witchCurse()?.5:1);return f<1?Math.ceil(h*f):h};
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
 function thmDraw(){const b=document.getElementById("thm");if(!b)return;const lt=document.documentElement.dataset.theme==="light";b.textContent=lt?"☾ 블랙":"☀ 화이트";b.title=lt?"블랙 모드로 바꾸기":"화이트 모드로 바꾸기";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}
