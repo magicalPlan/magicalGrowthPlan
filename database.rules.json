@@ -161,6 +161,30 @@
       }
     },
 
+    // 마을 시설 단계. score·players 와 별개다. vfac/{A|B|C|D}/{시설키} = { t:표시 이름, sum:전체 기여, lv:단계 }
+    // 사람별 기여는 vfactop 에 두고, 화면은 그 중 상위 5명만 읽는다.
+    "vfac": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$v": {
+        "$k": {
+          ".write": "auth != null && ($v === 'A' || $v === 'B' || $v === 'C' || $v === 'D') && newData.child('sum').isNumber() && newData.child('sum').val() >= 0 && newData.child('sum').val() <= 100000000 && newData.child('lv').isNumber() && newData.child('lv').val() === (newData.child('sum').val() >= 5000 ? 5 : newData.child('sum').val() >= 3000 ? 4 : newData.child('sum').val() >= 1600 ? 3 : newData.child('sum').val() >= 800 ? 2 : newData.child('sum').val() >= 300 ? 1 : 0) && (!data.exists() || newData.child('sum').val() >= data.child('sum').val()) && (($k === 'spring' && newData.child('t').val() === '치유의 샘') || ($k === 'forge' && newData.child('t').val() === '대장간') || ($k === 'drill' && newData.child('t').val() === '훈련장') || ($k === 'tower' && newData.child('t').val() === '감시탑') || ($k === 'market' && newData.child('t').val() === '시장') || ($k === 'chapel' && newData.child('t').val() === '성당') || ($k === 'library' && newData.child('t').val() === '서고') || ($k === 'workshop' && newData.child('t').val() === '공방'))"
+        }
+      }
+    },
+    "vfactop": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$v": {
+        "$k": {
+          ".indexOn": ["pt"],
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && ($v === 'A' || $v === 'B' || $v === 'C' || $v === 'D') && ($k === 'spring' || $k === 'forge' || $k === 'drill' || $k === 'tower' || $k === 'market' || $k === 'chapel' || $k === 'library' || $k === 'workshop') && newData.child('n').isString() && newData.child('n').val().length <= 20 && newData.child('pt').isNumber() && newData.child('pt').val() >= 0 && newData.child('pt').val() <= 1000000 && (!data.exists() || newData.child('pt').val() >= data.child('pt').val())"
+          }
+        }
+      }
+    },
+
     // 시설·등대·재해 기여만 모은 작은 기록. 사진이 든 등록자 전체는 읽지 않는다. 본인 칸만 쓴다.
     "score": {
       ".read": "auth != null",
