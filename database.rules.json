@@ -2,7 +2,7 @@
   // 마법 성장기록 · Realtime Database 규칙
   // ADMIN = 운영자(admins 목록에 있는 계정). admins 목록은 콘솔에서만 고칠 수 있다.
   "rules": {
-    ".read": false,
+    ".read": true,
     ".write": false,
 
     // 운영자 목록: 로그인한 사람은 읽기만. 추가·삭제는 Firebase 콘솔에서 직접.
@@ -23,6 +23,7 @@
     // 공지(ntc)·멸망까지(dd)·시즌 초기화(rst)도 운영자 본인의 이 칸에 저장된다.
     "players": {
       ".read": "auth != null",
+      ".indexOn": ["pw", "lv", "gr"],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
       }
