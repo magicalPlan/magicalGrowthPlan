@@ -27,9 +27,9 @@
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련·레이드 상세처럼 바로 반영되어야 하는 곳만 쓴다.
-      타락 목록은 collection().live() 로 같은 연결을 연다. 처음 한 번 받고, 그 뒤엔 목록이 바뀔 때만 받는다.
-      POLL_HUB 는 타락 체력·정기 출정 자리다. 연결을 열지 않고 이 간격으로만 묻는다.
-      POLL_HUB 를 POLL_FAST 와 같은 값으로 두면 그 자리들도 연결이 열린다. */
+      타락 목록과 정기 출정 자리는 collection().live() 로 같은 연결을 연다. 처음 한 번 받고, 그 뒤엔 바뀔 때만 받는다.
+      POLL_HUB 는 타락 체력이다. 연결을 열지 않고 이 간격으로만 묻는다.
+      POLL_HUB 를 POLL_FAST 와 같은 값으로 두면 타락 체력도 연결이 열린다. */
    const POLL_MS=4000,POLL_FAST=2500,POLL_HUB=20000;
 
 

@@ -8,7 +8,7 @@ const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.
 const tf=(u,o)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof AbortController!=="function")return fetch(u,opt);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign(opt,{signal:ac.signal})).finally(()=>clearTimeout(t))};
 const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o)}catch(e){}}return r};
 const J=async mk=>{const r=await fx(mk);if(!r.ok)throw new Error(r.status);return r.json()};
-/* POLL_FAST 와 collection().live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록). 그 밖은 연결 없이 주기적으로 묻는다.
+/* POLL_FAST 와 collection().live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록, 정기 출정 자리). 그 밖은 연결 없이 주기적으로 묻는다.
    묻기가 실패하면 다음 간격을 두 배씩 늘린다(최대 60초). 한 번 성공하면 원래 간격으로 돌아온다.
    브라우저 탭이 화면에 보이지 않는 동안에는 묻지 않고 기다렸다가, 다시 보이면 이어서 묻는다. */
 const poll=(get,emit,err,ms)=>{let on=true,last="",t=null,first=true,base=ms||POLL_MS,gap=base;const run=async()=>{if(!on)return;if(!first&&document.hidden){t=setTimeout(run,1000);return}first=false;try{const j=await get(),k=JSON.stringify(j);if(k!==last){last=k;emit(j)}gap=base}catch(e){err&&err({code:"unavailable",message:String(e)});gap=Math.min(Math.max(gap*2,base*2),60000)}if(on)t=setTimeout(run,gap)};run();return()=>{on=false;clearTimeout(t)}};
