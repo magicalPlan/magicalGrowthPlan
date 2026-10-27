@@ -1,4 +1,5 @@
 /* 마을 화면. main.js 와 js/trial.js 다음에 불러야 한다. 다른 화면이 hub, pmCleanup 을 그대로 부른다.
+   마을을 그릴 때는 공개 카드(players)를 다시 쓰지 않는다. 카드는 프로필·기여·타락처럼 내용이 바뀔 때 쓴다.
    로그인한 뒤 마을을 열 때와, 출정·장기 토벌에서 마을로 돌아올 때 서버의 prog(레벨·경험치)를 한 번만 읽는다. */
 function hubLv(){return C&&C.xv>=2?lvOf(C.ex||0):(C&&C.lv)||1}
 function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
@@ -28,7 +29,7 @@ function hub(){const fresh=$("#v-hub").hidden,online=!!(C&&AUTH.uid&&!LOCAL&&DB)
   if(C.fall){const g=document.createElement("button");g.type="button";g.className="btn";g.textContent="나의 그림자 보기";g.onclick=()=>openRaid(UID);d.appendChild(g)}fb.appendChild(d)}
  if(C.du&&!C.du.fin&&!unDu)duWatch();
  const n=need(),ok=lv>=n.lv&&C.cl>=n.cl,cd=trLeft()>0,can=!C.fall&&gi()<5&&ok&&!cd;$("#b-trial").disabled=!can;
- $("#b-trial").textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전";$("#hm").textContent="";watchHub();regPlayer();$("#b-out").hidden=!AUTH.uid;if(fresh)applyGift();drawDQ();drawTut();updNav();drawRaids();checkRaid();sweepRooms();hubPortal();pTick().then(hubPortal);hubGuard(fresh);hubBoss();loadNotice();hubFac();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});onlineOnce();hubDis();disAlert();hubLH();if(fresh&&online)readProg()}
+ $("#b-trial").textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전";$("#hm").textContent="";watchHub();$("#b-out").hidden=!AUTH.uid;if(fresh)applyGift();drawDQ();drawTut();updNav();drawRaids();checkRaid();sweepRooms();hubPortal();pTick().then(hubPortal);hubGuard(fresh);hubBoss();loadNotice();hubFac();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});onlineOnce();hubDis();disAlert();hubLH();if(fresh&&online)readProg()}
 
 // 마을 화면의 정기 출정 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다.
 function xFold(open){const b=$("#xtog"),box=$("#xbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_xopen",open?"1":"0")}catch(e){}if(open)drawXAll()}

@@ -15,8 +15,10 @@ const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+"
 const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
 const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-Date.now())};
 let xSnap={},xS=-1,unX=null,XR=null,xBusy=false,xAuto="",xPh="",xChK="",xMyV=null;
+/* 마을·출정 목록이 보이는 동안 이번 묶음(15자리)을 채팅과 같이 연결로 받아 둔다. 사람이 드나들 때만 그 자리가 온다.
+   연결이 안 되면 2.5초마다 다시 받는다. 그 화면을 벗어나면 연결을 닫는다. */
 function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;xS=s;xSnap={};if(!XON())return;
- unX=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{})}
+ unX=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{},POLL_FAST)}
 function drawXAll(){["#hl","#rl"].forEach(q=>{const el=$(q);if(el&&!el.closest("[hidden]"))drawX(el)})}
 function xSay(t,bad){[$("#hm"),$("#rm")].forEach(e=>{if(e){e.style.color=bad?"var(--bad)":"var(--mu)";e.textContent=t}})}
 function drawX(el){el.innerHTML="";if(!C)return;
