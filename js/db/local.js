@@ -1,0 +1,9 @@
+/* 서버 없이 이 브라우저 안에서만 도는 임시 저장소. main.js 보다 먼저 불러야 한다. */
+function local(){const st={},ls={};const nt=p=>{const c=p.split("/")[0];(ls[p]||[]).forEach(f=>f());(ls[c]||[]).forEach(f=>f())};
+const sn=p=>({id:p.split("/").slice(1).join("/"),exists:p in st,data:()=>st[p]&&JSON.parse(JSON.stringify(st[p]))});
+const sub=(k,g)=>{(ls[k]=ls[k]||[]).push(g);setTimeout(g);return()=>{ls[k]=ls[k].filter(x=>x!==g)}};
+const D=p=>({get:async()=>sn(p),set:async d=>{st[p]=JSON.parse(JSON.stringify(d));nt(p)},
+ patch:async d=>{let cur=st[p];if(!cur||typeof cur!=="object"||Array.isArray(cur))cur={};else cur=JSON.parse(JSON.stringify(cur));Object.keys(d||{}).forEach(k=>{const parts=String(k).split("/"),o=parts.slice(0,-1).reduce((a,x)=>a[x]&&typeof a[x]==="object"?a[x]:(a[x]={}),cur);const last=parts[parts.length-1];if(d[k]==null)delete o[last];else o[last]=d[k]});st[p]=cur;nt(p)},
+ delete:async()=>{delete st[p];nt(p)},onSnapshot:f=>sub(p,()=>f(sn(p)))});
+const Q=(c,fl,op)=>({where:(a,o,v)=>Q(c,fl.concat([[a,v]]),op),orderBy:()=>Q(c,fl,op),limit:n=>Q(c,fl,Object.assign({},op,{l:n})),first:n=>Q(c,fl,Object.assign({},op,{f:n})),from:k=>Q(c,fl,Object.assign({},op,{fr:k})),prefix:p=>Q(c,fl,Object.assign({},op,{pre:p})),after:k=>Q(c,fl,Object.assign({},op,{af:k})),end:k=>Q(c,fl,Object.assign({},op,{en:k})),doc:id=>D(c+"/"+id),onSnapshot:f=>sub(c,()=>{let docs=Object.keys(st).filter(k=>k.startsWith(c+"/")).map(sn).filter(d=>fl.every(x=>d.data()&&d.data()[x[0]]===x[1]));const o=op||{};if(o.pre||o.en!=null||o.fr||o.f||o.af){docs.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);if(o.pre)docs=docs.filter(d=>String(d.id).startsWith(o.pre));if(o.af)docs=docs.filter(d=>d.id>=o.af);if(o.fr)docs=docs.filter(d=>d.id>=o.fr);if(o.en!=null)docs=docs.filter(d=>d.id<=o.en);if(o.f)docs=docs.slice(0,o.f);else if(o.l)docs=docs.slice(Math.max(0,docs.length-o.l))}f({docs})})});
+return{doc:D,collection:c=>Q(c,[])}}
