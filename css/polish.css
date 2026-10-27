@@ -234,3 +234,9 @@ html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{
 html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
 @media (max-width:440px){.doom-n{font-size:1.9rem}.doom-t{letter-spacing:.22em}}
 html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}
+
+/* 시즌 초기화 (운영자 전용) */
+#rstbox{margin-top:28px}
+.rst-card{--c:#7d1a2e;border-style:dashed!important}
+.rst-card h2{font-size:1.1rem!important;color:#ff8da0!important}
+html[data-theme="light"] .rst-card h2{color:#a8283f!important}

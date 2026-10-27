@@ -18,8 +18,11 @@ const CHOICE_MS=15000;
 const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
 const POLL_MS=4000,POLL_FAST=2500;
 /* 계정: Firebase 이메일/비밀번호 로그인. 아이디는 가짜 이메일 주소로 바꿔서 쓴다. */
-// Firebase 콘솔의 프로젝트 설정에서 '웹 API 키'를 복사해 적거나, 로그인 화면 입력칸에 넣는다.
-const FB_KEY="AIzaSyD3d7HPimTPtbj1Bmb-B-k85xFLK8946Ig";
+/* Firebase 웹 API 키: 코드에 그대로 보이지 않도록 뒤집은 뒤 base64로 바꾸고 조각내 두었다(검색·자동 수집 방지용).
+   주의: 브라우저 게임은 로그인할 때 이 키를 브라우저가 서버로 보내야 하므로, 완전히 숨길 수는 없다(개발자 도구로는 보인다).
+   진짜 보호는 Google Cloud 콘솔의 'API 키 제한'(허용 웹사이트·허용 API)과 Firebase 데이터베이스 규칙이 맡는다.
+   키를 바꾸려면: 새 키를 뒤집어서(reverse) base64로 바꾼 값을 조각으로 나눠 아래 배열에 넣는다. */
+const FB_KEY=(p=>{try{return atob(p.join("")).split("").reverse().join("")}catch(e){return ""}})(["Z0k2NDk4S0xGeD","U4ay1CLWJtQjFq","YnRQVG1pUEg3ZD","NEeVNheklB"] );
 const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 6자 이상으로 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다."};
 /* 최초의 구세주: Firebase 계정이 FOUNDER_CUTOFF(한국 시각) 전에 만들어졌으면 칭호를 준다.
    기준 시각 전에 가입한 사람은 언제 로그인하든 받는다. 기준을 바꾸려면 날짜만 고친다. */

@@ -18,7 +18,9 @@ const Q=(c,fl)=>({where:(a,o,v)=>Q(c,fl.concat([[a,v]])),orderBy:()=>Q(c,fl),lim
 return{doc:D,collection:c=>Q(c,[])}}
 // 모든 플레이어 목록은 무겁다(프로필 사진 포함). 여러 기능이 따로 받지 않도록 한 번 받은 것을 PL_TTL 동안 함께 쓴다.
 let PLC=null,PLT=0,PLP=null;
-function plAll(maxAge){if(PLC&&Date.now()-PLT<(maxAge==null?90000:maxAge))return Promise.resolve(PLC);if(PLP)return PLP;
+/* 서버비 절약: 전체 플레이어 목록(사진·설정 글 포함)은 가장 무거운 읽기다. 기본 5분(PL_TTL) 동안 다시 받지 않고 함께 쓴다. */
+const PL_TTL=300000;
+function plAll(maxAge){if(PLC&&Date.now()-PLT<(maxAge==null?PL_TTL:maxAge))return Promise.resolve(PLC);if(PLP)return PLP;
  PLP=once(DB.collection("players")).then(sn=>{PLC=sn;PLT=Date.now();PLP=null;return sn},e=>{PLP=null;throw e});return PLP}
 const IDX_BAD={};let lastSaveErr=null;
 function fbdb(base){base=base.replace(/\/+$/,"");
@@ -57,8 +59,8 @@ const D=p=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,awai
  peek:async()=>J(()=>U(p,"shallow=true")),
  delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
  onSnapshot:(f,e,ms)=>{const pl=()=>poll(()=>J(()=>U(p)),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
-const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),limit:n=>Q(c,{...o,l:n}),prefix:p=>Q(c,{...o,pre:p}),doc:id=>D(c+"/"+id),
- onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else{q.push('orderBy="$key"');if(o.pre)q.push("startAt="+encodeURIComponent(JSON.stringify(o.pre)),"endAt="+encodeURIComponent(JSON.stringify(o.pre+"\uf8ff")))}if(o.l)q.push("limitToLast="+o.l);
+const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),limit:n=>Q(c,{...o,l:n}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),doc:id=>D(c+"/"+id),
+ onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else{q.push('orderBy="$key"');if(o.pre)q.push("startAt="+encodeURIComponent(JSON.stringify(o.af&&o.af>o.pre?o.af:o.pre)),"endAt="+encodeURIComponent(JSON.stringify(o.pre+"\uf8ff")))}if(o.l)q.push("limitToLast="+o.l);
  /* 서버 규칙에 찾기 목록(.indexOn)이 빠져 있으면 서버가 400 오류를 낸다. 그때는 최근 기록을 받아서 브라우저에서 골라낸다(조금 느리고 데이터를 더 쓰지만 동작은 한다). */
  const get=async()=>{if(o.w&&IDX_BAD[c]){const j=await J(()=>U(c,'orderBy="$key"&limitToLast=1500')),r={};Object.keys(j||{}).forEach(k=>{if(j[k]&&j[k][o.w[0]]===o.w[1])r[k]=j[k]});return r}
   try{return await J(()=>U(c,q.join("&")))}catch(x){if(o.w&&String(x.message)==="400"){IDX_BAD[c]=1;return get()}throw x}};
@@ -464,7 +466,7 @@ const sendF=(to,t)=>DB.doc("fmsg/"+to+"/"+UID).set({t,ts:{".sv":"timestamp"},n:n
 let RS=[],rsQ="",rsS="g";
 async function roster(){show("roster");const box=$("#rsl");$("#rsh").textContent="";
  if(!XON()){box.innerHTML="<p class='hint'>서버에 연결되어야 등록자 목록을 볼 수 있다.</p>";return}
- if(!RS.length)box.innerHTML="<p class='hint'>목록을 불러오는 중...</p>";let docs=[];try{docs=(await plAll(60000)).docs}catch(e){}
+ if(!RS.length)box.innerHTML="<p class='hint'>목록을 불러오는 중...</p>";let docs=[];try{docs=(await plAll(120000)).docs}catch(e){}
  if($("#v-roster").hidden)return;RS=docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p&&p.n&&p.g);$("#rsq").value=rsQ;$("#rss").value=rsS;rsDraw()}
 function rsDraw(){const box=$("#rsl");if(!box)return;const q=rsQ.trim().toLowerCase(),gi=g=>GL.indexOf(g);
  let L=RS.filter(p=>!q||String(p.n).toLowerCase().includes(q));
@@ -696,9 +698,10 @@ const humansOf=r=>Object.keys(r.pl).filter(k=>!k.startsWith("bot"));
 const vref=(c,u)=>DB.doc("rooms/"+c+"v_"+u);
 let busyT=false,myV=null,cdT=null;
 function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.pl)humansOf(r).forEach(u=>vref(c,u).delete().catch(()=>{}))}
-// 방장이 창을 닫아 남은 방, 오래된 투표 기록을 마을에 들어올 때 정리한다(10분에 한 번).
+// 방장이 창을 닫아 남은 방, 오래된 투표 기록을 마을에 들어올 때 정리한다(30분에 한 번, 4명 중 1명꼴).
 let lastSweep=0;
-async function sweepRooms(){if(!DB||Date.now()-lastSweep<600000)return;lastSweep=Date.now();let s;try{s=await once(DB.collection("rooms"))}catch(e){return}const now=Date.now();
+async function sweepRooms(){if(!DB||Date.now()-lastSweep<1800000)return;lastSweep=Date.now();if(Math.random()>.25)return;// 서버비 절약: 모두가 방 목록 전체를 받지 않도록 30분에 한 번, 4명 중 1명꼴로만 정리한다
+ let s;try{s=await once(DB.collection("rooms"))}catch(e){return}const now=Date.now();
  s.docs.forEach(d=>{const v=d.data(),id=d.id;if(!v||id===code||/^x[mvdabr]/.test(id))return;const age=now-(Number(v.ts)||0);
   const stale=v.st==null?(!v.ts||age>300000):(!v.ts||(v.st==="done"&&age>120000)||(v.st==="run"&&age>1800000)||(v.st==="lobby"&&age>3600000));
   if(stale)DB.doc("rooms/"+id).delete().catch(()=>{})});xSweep()}
@@ -984,7 +987,7 @@ function setT(t){ct=t;unC&&unC();unC=null;unP&&unP();unP=null;
   unC=DB.collection("chat").prefix("c_"+C.v+"_").limit(40).onSnapshot(s=>{const ms=s.docs.map(d=>d.data()).filter(m=>m&&m.vc===C.v);paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},e=>cmsg("마을 채팅을 불러오지 못했다."),POLL_FAST)}
  else if(t==="a")watchAdm();else{peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="";
   // 목록은 친구 먼저, 그다음 이름순으로 고정한다. 이름·등급·안 읽음 표시가 바뀔 때만 다시 그려서 화면이 흔들리지 않는다.
-  dmBackfill();{let alive=true;const go=()=>plAll(60000).then(s=>{if(!alive)return;peerDocs=s.docs.map(d=>[d.id,d.data()]);drawPeers()},()=>cmsg("플레이어 목록을 불러오지 못했다."));go();const iv=setInterval(go,60000);unP=()=>{alive=false;clearInterval(iv)}}}
+  dmBackfill();{let alive=true;const go=()=>plAll(PL_TTL).then(s=>{if(!alive)return;peerDocs=s.docs.map(d=>[d.id,d.data()]);drawPeers()},()=>cmsg("플레이어 목록을 불러오지 못했다."));go();const iv=setInterval(go,60000);unP=()=>{alive=false;clearInterval(iv)}}}
  sync()}
 /* 1:1 대화 상대 목록: 최근에 대화를 주고받은 사람이 맨 위. 대화한 적 없는 사람은 그 아래에 친구 먼저, 이름순.
    C.dml = 상대별 마지막으로 메시지를 주고받은 시각(내가 보낸 것, 받은 것 모두). 순서가 바뀔 때만 다시 그린다. */
@@ -1552,7 +1555,7 @@ const facLvOf=pts=>FAC_LV.filter(n=>pts>=n).length;
 const facLv=k=>C&&!(typeof disMine==="function"&&disMine()==="quake")?facLvOf(facPts(C.v,k)):0;
 const myFac=()=>Object.values((C&&C.fc)||{}).reduce((a,b)=>a+(Number(b)||0),0);
 async function loadFac(force){if(!C||!XON())return;if(!force&&Date.now()-facT<60000)return;facT=Date.now();
- try{const sn0=await plAll(force?0:60000),sn={docs:sn0.docs.filter(d=>!rstOld(d.data()))};const o={},dp={};sn.docs.forEach(d=>{const p=d.data();if(p&&p.dr&&typeof p.dr==="object"&&typeof p.dr.id==="string")dp[p.dr.id]=(dp[p.dr.id]||0)+Math.max(0,Math.min(40,Number(p.dr.pts)||0))});DRP=dp;wfLoad(sn.docs);sn.docs.forEach(d=>{const p=d.data();if(!p||!VL[p.v]||!p.fc||typeof p.fc!=="object")return;
+ try{const sn0=await plAll(force?0:PL_TTL),sn={docs:sn0.docs.filter(d=>!rstOld(d.data()))};const o={},dp={};sn.docs.forEach(d=>{const p=d.data();if(p&&p.dr&&typeof p.dr==="object"&&typeof p.dr.id==="string")dp[p.dr.id]=(dp[p.dr.id]||0)+Math.max(0,Math.min(40,Number(p.dr.pts)||0))});DRP=dp;wfLoad(sn.docs);sn.docs.forEach(d=>{const p=d.data();if(!p||!VL[p.v]||!p.fc||typeof p.fc!=="object")return;
    FAC.forEach(([k])=>{const n=Math.max(0,Math.min(1e6,Number(p.fc[k])||0));if(!n)return;const f=((o[p.v]=o[p.v]||{})[k]=o[p.v][k]||{sum:0,top:[]});f.sum+=n;f.top.push({u:d.id,n:p.n,pt:n})})});
   // 내 기여는 서버 반영 전이라도 바로 보이게 맞춘다.
   if(C.fc)FAC.forEach(([k])=>{const mine=Number(C.fc[k])||0,f=((o[C.v]=o[C.v]||{})[k]=o[C.v][k]||{sum:0,top:[]}),me0=f.top.find(t=>t.u===UID);if(me0){f.sum+=mine-me0.pt;me0.pt=mine}else if(mine){f.sum+=mine;f.top.push({u:UID,n:C.n,pt:mine})}});
@@ -1774,8 +1777,17 @@ const bdSave=()=>{try{localStorage.setItem("mgr_bd_draft",JSON.stringify(bdDraft
 const bdTyping=()=>{const a=document.activeElement;return !!(a&&$("#bdl")&&$("#bdl").contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))};
 const bdId=()=>"b_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const bdAgo=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<60?m+"분 전":m<1440?Math.floor(m/60)+"시간 전":Math.floor(m/1440)+"일 전"};
+/* 서버비 절약: 게시판은 처음 한 번(또는 게시판을 열 때)만 전체(최대 BD_MAX개)를 받고, 그 뒤로는 가지고 있는 것보다 새 글·댓글만 받아 합친다.
+   글 이름(b_+시각)이 시간순이라 '마지막으로 받은 이름 - 10분'부터 받으면 된다(기기 시계가 조금 틀려도 빠지지 않게 10분 여유). */
+let bdFull=false;
 async function loadBoard(force){if(!DB||!XON()||bdBusy)return;if(!force&&Date.now()-bdT<10000)return;bdBusy=true;bdT=Date.now();
- try{const sn=await once(DB.collection("chat").prefix("b_").limit(BD_MAX));BD=sn.docs.map(d=>Object.assign({id:d.id},d.data()||{})).filter(m=>m&&m.bt&&m.u&&typeof m.ts==="number");bdNotify()}catch(e){}finally{bdBusy=false}}
+ try{const ok=m=>m&&m.bt&&m.u&&typeof m.ts==="number",inc=!force&&bdFull&&BD.length;
+  if(inc){const mk=BD.reduce((a,m)=>m.id>a?m.id:a,""),t=parseInt(mk.slice(2,10),36);
+   const from=t>0?"b_"+Math.max(0,t-600000).toString(36):"b_";
+   const sn=await once(DB.collection("chat").prefix("b_").after(from).limit(BD_MAX));const by={};BD.forEach(m=>by[m.id]=m);
+   sn.docs.forEach(d=>{const m=Object.assign({id:d.id},d.data()||{});if(ok(m))by[m.id]=m});BD=Object.values(by).sort((a,b)=>a.id<b.id?-1:1).slice(-BD_MAX)}
+  else{const sn=await once(DB.collection("chat").prefix("b_").limit(BD_MAX));BD=sn.docs.map(d=>Object.assign({id:d.id},d.data()||{})).filter(ok);bdFull=true}
+  bdNotify()}catch(e){}finally{bdBusy=false}}
 // 지워진 것: 글쓴이 본인이나 운영자가 남긴 지움 표시가 있는 글·댓글
 // 고정: 운영자가 남긴 고정·해제 표시 중 가장 최근 것을 따른다. 고정된 글은 고정한 시각 순으로 맨 위에 온다.
 function bdPins(){const last={};BD.filter(m=>(m.bt==="pin"||m.bt==="unpin")&&ADM[m.u]&&m.ref).sort((a,b)=>a.ts-b.ts).forEach(m=>{last[m.ref]=m.bt==="pin"?m.ts:0});Object.keys(last).forEach(k=>{if(!last[k])delete last[k]});return last}
@@ -1856,13 +1868,13 @@ function bdForm(pid,rid,ph){const key="c:"+pid+":"+(rid||""),f=elT("form","row b
  const b=elT("button","btn",rid?"답글":"댓글");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
  f.onsubmit=async e=>{e.preventDefault();const x=i.value.trim().slice(0,BD_CMT);if(!x)return;b.disabled=true;const ok=await bdWrite({bt:"c",p:pid,r:rid||"",x});b.disabled=false;if(ok){delete bdDraft[key];bdSave();titleState();C.stats.comments=(C.stats.comments||0)+1;save();checkTitles();bdReply=null;drawBoard()}};
  if(rid)setTimeout(()=>i.focus());return f}let ONL=[],onT=0;
-const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
+const isOn=p=>!!p&&Number(p.on)>Math.min(Date.now(),PLT||Date.now())-ON_WIN;
 function beat(){if(!AUTH.uid||!C||!DB||LOCAL||document.visibilityState==="hidden")return;DB.doc("players/"+UID+"/on").set(Date.now()).catch(()=>{})}
-async function loadOnline(force){if(!AUTH.uid||!C||!XON())return;if(!force&&Date.now()-onT<30000)return;onT=Date.now();
- try{const sn=await plAll(force?0:55000);ONL=sn.docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"));if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n});drawOnline()}catch(e){}}
+async function loadOnline(force){if(!AUTH.uid||!C||!XON())return;if(!force&&Date.now()-onT<PL_TTL)return;onT=Date.now();
+ try{const sn=await plAll(force?0:PL_TTL);ONL=sn.docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"));if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n});drawOnline()}catch(e){}}
 function drawOnline(){const w=$("#onlw"),b=$("#onl");if(!w||!C)return;w.hidden=!XON();if(w.hidden)return;b.textContent="지금 접속 중 "+ONL.length+"명"}
 setInterval(()=>{if(document.hidden)return;beat();loadOnline()},ON_MS);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){beat();loadOnline(true)}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){beat();loadOnline()}});
 
 /* 친구 목록의 절망도: 친구가 마지막으로 접속했을 때의 절망도에서, 그 뒤 흐른 시간만큼 자연 회복을 반영한 추정값을 보여 준다. */
 function frDz(p){const fall=!!p.fl,base=Math.max(0,Math.min(100,Number(p.dz)||0)),ts=Number(p.ts)||Date.now(),est=fall?100:p.hf?base:Math.max(0,base-HEAL_DZ*Math.floor(Math.max(0,Date.now()-ts)/HEAL_MS));
