@@ -1,0 +1,11 @@
+<div id="v-chat" hidden>
+<div class="tabs" id="ct"><button type="button" data-t="g" aria-pressed="true">단체 채팅</button><button type="button" data-t="v" aria-pressed="false">마을 채팅</button><button type="button" data-t="d" aria-pressed="false">1:1 채팅</button><button type="button" data-t="a" aria-pressed="false" hidden>운영자</button></div>
+<p class="hint" style="font-size:.8rem;margin:-6px 0 10px;text-align:center">캐입 대화를 지향합니다</p>
+<div id="cg"><div class="log" id="gl" style="max-height:360px;overflow:auto"></div></div>
+<div id="cvl" hidden><p class="hint" id="cvh" style="margin:0 0 8px"></p><div class="log" id="vcl" style="max-height:360px;overflow:auto"></div></div>
+<div id="ca" hidden><h2>모든 1:1 대화</h2><p class="hint">운영자 전용이다. 대화는 열람만 할 수 있다.</p><div class="hist" id="al"></div><div id="at2" hidden><div class="dm-head"><h2 id="ah"></h2><button class="btn g dm-png" id="apng" type="button">📄 PDF로 저장</button></div><div class="log" id="alg" style="max-height:320px;overflow:auto"></div></div></div>
+<div id="cd" hidden><div id="cpick"><h2>대화 중인 상대</h2><p class="hint">대화를 주고받은 상대만 최근 순으로 보인다. 새 대화는 친구 화면이나 상대의 프로필에서 '1:1 대화'를 눌러 시작한다. 운영자는 신고나 운영 점검을 위해 1:1 대화를 열람할 수 있다.</p><div class="hist" id="pl2"></div></div>
+<div id="dt" hidden><button class="btn g" id="pchg" type="button" style="width:auto;margin:0 0 4px;padding:8px 14px">← 다른 대화 상대</button><div class="dm-head"><h2 id="dh"></h2><button class="btn g dm-png" id="dpng" type="button">📄 PDF로 저장</button></div><div class="log" id="dl" style="max-height:300px;overflow:auto"></div></div></div>
+<form class="row" id="cin" style="margin-top:10px;flex-wrap:nowrap" autocomplete="off"><input id="ci" type="text" maxlength="200" placeholder="메시지를 입력" autocomplete="off" enterkeyhint="send" aria-label="메시지" style="flex:1"><button class="btn" id="cs" type="submit" style="width:auto;margin:0">보내기</button></form>
+<p class="msg" id="cm2" role="alert"></p>
+</div>

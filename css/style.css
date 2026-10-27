@@ -86,6 +86,7 @@ textarea::placeholder{color:#6f6785}
 .profile-stat{background:#0f0c1a;border:1px solid var(--ln);border-radius:10px;padding:9px 11px}
 .profile-stat small{display:block;color:var(--mu);font-size:.8rem}
 .profile-stat strong{display:block;font-size:1rem;overflow-wrap:anywhere}
+
 /* 마을 탭 프로필 카드: 한눈에 보이도록 작게 */
 #hc{padding:12px 14px}
 .hc-top{display:flex;align-items:center;gap:10px}
@@ -110,6 +111,7 @@ textarea::placeholder{color:#6f6785}
 .hc-more .kv{margin-top:6px}
 #v-hub .btn{padding:11px;margin-top:6px}
 .hc-arm{margin:6px 0 0;font-size:.78rem;color:#d8c79a}
+
 /* 상점: 옆으로 넓게 */
 @media (min-width:700px){main.xwide{max-width:1180px}}
 #v-shop .card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px}
@@ -117,6 +119,7 @@ textarea::placeholder{color:#6f6785}
 #v-shop .wgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
 @media (min-width:1000px){#v-shop .wgrid{grid-template-columns:repeat(7,minmax(0,1fr))}#v-shop #il{grid-template-columns:repeat(5,minmax(0,1fr))}}
 #v-shop .chip.sq{min-height:118px}
+
 /* 마법 */
 .sk{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#1d1730,#151126);border:1px solid color-mix(in srgb,var(--c) 55%,#2a2140);border-radius:12px;padding:10px 12px}
 .sk.on{box-shadow:inset 3px 0 0 var(--c),0 0 16px color-mix(in srgb,var(--c) 30%,transparent)}
@@ -125,11 +128,13 @@ textarea::placeholder{color:#6f6785}
 .sk-tx small{display:block;color:var(--mu);font-size:.8rem;line-height:1.45}
 .sk button{flex:0 0 auto;min-width:76px;padding:9px 12px}
 .mp{display:inline-flex;gap:4px;vertical-align:middle;margin-left:6px}.mp i{width:10px;height:10px;border-radius:50%;background:#8a6fd1;box-shadow:0 0 6px #8a6fd1}.mp i.off{background:#2a2140;box-shadow:none}
+
 /* 도감 */
 .dex-it.lock{opacity:.45}
 .dex-it .dex-tag{color:#d8c79a!important;font-size:.7rem!important;letter-spacing:.08em}
 #dex-sum .bar{height:12px;margin:10px 0 4px}#dex-sum .bar i{background:linear-gradient(90deg,#8a6a2e,#e6c56a)}
 #dex-cats .chip{flex:1 1 auto;min-width:0;font-size:.88rem}
+
 /* 알림함 */
 .nt-cats{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.nt-cat{position:relative;flex:0 0 auto;min-width:0;padding:7px 14px;font-size:.85rem}.nt-cat[aria-selected=true]{border-color:#b89b5e;color:#e6d9b5;background:#1d1730;font-weight:700}
 .nt-day{margin:16px 0 6px;color:var(--mu);font-size:.8rem;letter-spacing:.1em}
@@ -140,12 +145,29 @@ textarea::placeholder{color:#6f6785}
 .nt-ic.bad{color:#ff8da0;border-color:#7d1a2e}
 .nt-tx{flex:1;min-width:0;overflow-wrap:anywhere}
 .nt-tm{flex:0 0 auto;color:var(--mu);font-size:.75rem;margin-top:2px}
-/* 메뉴 탭: 화면(마을·상점·게시판…)마다 본문 너비가 달라도, 탭 줄은 언제나 같은 너비·같은 칸 크기로 화면 가운데에 놓인다. */
-#nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px;width:min(1100px,calc(100vw - 36px));position:relative;left:50%;transform:translateX(-50%)}
-#nav button{position:relative;min-width:0;padding:10px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.95rem}
-.nav-n{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e2574c;color:#fff;font-size:.68rem;font-weight:700;line-height:18px;text-align:center;pointer-events:none}
-#nav{overflow:visible}#nav button{overflow:visible}#nav button{text-overflow:clip}
-@media (max-width:600px){#nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}#nav button{padding:9px 2px;font-size:.84rem}}
+
+/* 메뉴: 위에는 부모 8개, 마을·게시판·기록을 누르면 그 아래에 하위 항목이 나온다.
+   본문 너비(마을은 넓고 대련·친구는 좁다)와 상관없이 메뉴 중심은 화면 중심에 둔다. */
+#nav{
+   display:flex;
+   flex-direction:column;
+   gap:4px;
+   width:min(880px,calc(100vw - 28px));
+   margin:0 0 12px calc(50% - min(440px,calc(50vw - 14px)));
+   position:relative;
+   left:auto;
+   right:auto;
+   transform:none;
+}
+.nav-bar,.nav-sub{display:flex;gap:2px}
+.nav-bar{overflow-x:auto;scrollbar-width:none}.nav-bar::-webkit-scrollbar{display:none}
+.nav-bar>button,.nav-sub>button{position:relative;flex:1 1 0;min-width:0;padding:10px 6px;white-space:nowrap;overflow:visible;font-size:.92rem}
+.nav-sub{justify-content:center;padding:3px;border-radius:10px}
+.nav-sub[hidden]{display:none}
+.nav-sub>button{flex:0 1 148px}
+.nav-n{position:absolute;top:-6px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e2574c;color:#fff;font-size:.68rem;font-weight:700;line-height:18px;text-align:center;pointer-events:none}
+@media (max-width:600px){#nav button{padding:9px 3px;font-size:.78rem}.nav-sub>button{flex:1 1 0}}
+
 /* 보스 레이드 */
 .boss-card{--c:#5b2a7a}
 .boss-card.w{--c:#8f1d33}
@@ -159,6 +181,7 @@ textarea::placeholder{color:#6f6785}
 .boss-rank li{margin:1px 0}.boss-rank li.me{color:#d8c79a;font-weight:700}
 .boss-info{margin:10px 0 0;font-size:.8rem;color:var(--mu)}
 .boss-dead{margin:10px 0 0;font-family:"Gowun Batang",serif;font-size:1.1rem;color:#ffcf6a;letter-spacing:.1em}
+
 /* 일일 의뢰 */
 .dq{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#1d1730,#151126);border:1px solid var(--ln);border-radius:10px;padding:9px 10px}
 .dq.done{border-color:#b89b5e}.dq.got{opacity:.55}
@@ -167,6 +190,7 @@ textarea::placeholder{color:#6f6785}
 .dq .bar{height:6px;margin-top:5px}.dq .bar i{background:linear-gradient(90deg,#8a6a2e,#e6c56a)}
 .dq button{flex:0 0 auto;min-width:64px;padding:8px 10px}
 .dq.bonus{border-style:dashed}
+
 /* 타락과 레이드 */
 .fallbar{border:1px solid #e0405a;background:linear-gradient(180deg,#3a0d18,#1a0710);color:#ffd7de;border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:.9rem}
 .fallbar b{display:block;color:#ff8da0;font-family:"Gowun Batang",serif;font-size:1.05rem;letter-spacing:.08em}
@@ -186,12 +210,14 @@ textarea::placeholder{color:#6f6785}
 .witch-card .raid-hp i{background:linear-gradient(90deg,#5b1a8a,#c06bff)!important}
 .witch-flash{animation:wflash 2.5s ease-out}@keyframes wflash{0%{box-shadow:inset 0 0 0 100vmax rgba(60,0,90,.85)}100%{box-shadow:inset 0 0 0 100vmax rgba(60,0,90,0)}}
 .alert-card{--c:#7d1a2e}.alert-card h2{color:#ff8da0!important;font-size:1.5rem;letter-spacing:.2em}
+
 /* 1:1 새 메시지 알림 */
 #toasts{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100% - 32px))}
 .toast{font:inherit;text-align:left;color:#efe6cf;background:linear-gradient(180deg,#2a1d3e,#170f26);border:1px solid #b89b5e;border-radius:12px;padding:11px 14px;box-shadow:0 10px 30px #000a,0 0 18px #b89b5e33;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:tin .25s ease-out}
 @keyframes tin{from{opacity:0;transform:translateY(-8px)}}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 .newmsg{display:block;margin:6px auto 0;padding:6px 14px;font:inherit;font-size:.85rem;color:#efe6cf;background:#2a1d3e;border:1px solid #b89b5e;border-radius:999px;cursor:pointer;box-shadow:0 0 12px #b89b5e33}
+
 /* 접고 펴는 칸 */
 .fold{margin-top:22px}
 .fold>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--ln);padding-bottom:6px}
@@ -201,11 +227,13 @@ textarea::placeholder{color:#6f6785}
 .fold[open] .fold-t::before{transform:rotate(90deg)}
 .fold-s{color:var(--mu);font-size:.8rem}.fold-s .x-cd{margin:0;font-size:.8rem}
 .fold>summary:hover .fold-t{color:#efe6cf}
+
 /* 상점 구매 수량 */
 .shopq{align-items:center;margin:0 0 10px;gap:6px}
 .shopq .chip{flex:0 0 auto;min-width:44px;padding:8px 10px}
 .shopq-l{color:var(--mu);font-size:.9rem;margin-right:4px}
 #shopqn{width:64px;padding:8px;font:inherit;text-align:center;color:var(--ink);background:#0f0c1a;border:1px solid var(--ln);border-radius:10px}
+
 /* 경험치 막대(절망도 위): 레벨이 오를수록 필요한 경험치가 늘어난다 */
 .hc-xp{display:flex;align-items:center;gap:8px;margin-top:8px}
 .hc-xp small{color:var(--mu);font-size:.75rem;flex:0 0 auto}
@@ -215,6 +243,7 @@ textarea::placeholder{color:#6f6785}
 .hc-xp.scar .bar i{background:linear-gradient(90deg,#4a2a3a,#9a5a6e)}
 .hc-next{margin:4px 0 0;color:var(--mu);font-size:.72rem;text-align:right}
 .hc-next:empty{display:none}
+
 /* 마을 화면 가로 배치: 넓은 화면에서는 프로필 · 의뢰 · 포탈과 경쟁 · 정기 출정을 네 칸으로 나란히 놓는다.
    칸마다 화면 높이에 맞춰 안에서만 스크롤되므로 페이지 전체를 내리지 않아도 한눈에 보인다. 좁은 화면(휴대폰 세로)에서는 위아래로 쌓인다. */
 .hcols{display:grid;gap:18px}
@@ -223,6 +252,7 @@ textarea::placeholder{color:#6f6785}
  #v-hub>.two{grid-template-columns:clamp(260px,22vw,310px) 1fr;gap:16px}.hcols{grid-template-columns:1fr 1fr 1.15fr;align-items:start;gap:16px}.hcol-x{grid-column:auto}
  .hcol,#v-hub>.two>div:first-child{max-height:calc(100vh - 250px);min-height:240px;overflow:auto;padding-right:4px;scrollbar-width:thin}}
 .hcol h2:first-child{margin-top:0}
+
 /* 공지 */
 #ntc{margin:0 0 14px}
 .ntc-card{position:relative;border:1px solid #b89b5e;border-radius:14px;padding:12px 44px 12px 14px;background:linear-gradient(180deg,#2a2140,#171126);box-shadow:0 0 18px #b89b5e22}
@@ -231,6 +261,7 @@ textarea::placeholder{color:#6f6785}
 .ntc-t{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#efe6cf}
 .ntc-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:1px solid var(--ln);background:#0f0c1a;color:var(--mu);cursor:pointer;font:inherit}
 .ntc-adm{margin-top:8px}.ntc-adm textarea{margin-top:6px}
+
 /* 튜토리얼 */
 .tut{border:1px solid #b89b5e;border-radius:14px;padding:12px;background:linear-gradient(180deg,#221a36,#141022);margin-bottom:18px}
 .tut h2{border:0;padding:0;margin:0}
@@ -238,12 +269,15 @@ textarea::placeholder{color:#6f6785}
 .tut .dq{margin-top:6px}.tut .dq.got .dq-copy b::before{content:"✓ ";color:#e6c56a}
 .tut .dq-copy small{white-space:normal}
 .tut-acts{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}.tut-acts .chip{min-width:64px;padding:7px 10px;font-size:.85rem}
+
 /* 칭호 표시 */
 .ttl-tag{color:#e6c56a;font-size:.88rem;letter-spacing:.04em}
 .dm-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}.dm-head h2{flex:1;min-width:0;margin:0}.dm-png{width:auto!important;margin:0!important;padding:7px 12px!important;font-size:.85rem}
 .ttl-chip{display:inline-block;margin:0 0 0 4px;padding:0 7px;border:1px solid #b89b5e88;border-radius:999px;font-size:.72rem;color:#e6c56a;vertical-align:1px}
+
 /* 마을 시설 화면: 넓은 화면에서는 2×2 */
 @media (min-width:860px){#fl3{display:grid;grid-template-columns:1fr 1fr;gap:12px}#fl3>.x-cd,#fl3>.boss-info{grid-column:1/-1}#fl3 .card{margin-top:0!important}}
+
 /* 게시판 */
 #v-board{max-width:820px;margin:0 auto}
 .bd-item{display:block;width:100%;text-align:left;font:inherit;color:var(--ink);background:linear-gradient(180deg,#1d1730,#151126);border:1px solid var(--ln);border-radius:12px;padding:11px 14px;margin:0 0 8px;cursor:pointer}
@@ -257,14 +291,17 @@ textarea::placeholder{color:#6f6785}
 .bd-cmt.re{margin-left:22px;padding-left:12px;border-left:2px solid #b89b5e55;border-top:0}
 .bd-act{display:flex;gap:6px;margin-top:6px}.bd-act .chip{flex:0 0 auto;min-width:0;padding:4px 10px;font-size:.78rem}
 .bd-cf{margin-top:8px}
+
 /* 동시 접속자 */
 #onlw{text-align:center;margin:-8px 0 14px}
 #onl{display:inline-block;font-size:.85rem;color:#9fe0b0;border:1px solid #2f6b46;border-radius:999px;padding:3px 12px}
 #onl::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#4fd27a;box-shadow:0 0 8px #4fd27a;margin-right:6px;vertical-align:1px}
+
 /* 친구 절망도 */
 .fr-dz{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:.75rem;color:var(--mu)}
 .fr-dz .bar{flex:1;height:6px;margin:0;max-width:220px}.fr-dz b{min-width:2.4em;text-align:right;color:var(--ink)}
 .fr-dz.warn b{color:#ff8da0}.fr-dz.fall{color:#ff8da0}
+
 /* 마을 시설 요약 */
 .fac-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .fac-tile{font:inherit;text-align:left;color:var(--ink);background:linear-gradient(180deg,#1d1730,#151126);border:1px solid var(--ln);border-radius:10px;padding:7px 9px;cursor:pointer;min-width:0}
@@ -280,8 +317,10 @@ textarea::placeholder{color:#6f6785}
 .wf-vil .bar{height:4px;margin-top:4px}
 .wf-eff{margin:6px 0 0;padding-left:1.2em;font-size:.85rem}.wf-eff li.on{color:#f3d27a}.wf-eff li{color:var(--mu)}
 .fac-tile.ready{border-color:#6fc1d1;box-shadow:inset 3px 0 0 #6fc1d1}.fac-tile.ready small{color:#9fe0f0}
+
 /* 자연재해 */
 .dq.dis{border-color:#7a5a2e}.dq.dis.mine{border-color:#e0a040;box-shadow:inset 3px 0 0 #e0a040}.dq.dis .bar i{background:linear-gradient(90deg,#7a5a2e,#f0c060)}
+
 /* 몬스터 웨이브 */
 .dq.wv.done{border-color:#c0406a;box-shadow:inset 3px 0 0 #c0406a}.dq.wv .bar i{background:linear-gradient(90deg,#4a1a6b,#c0406a)}
 .wv-steps{display:flex;gap:4px;margin:10px 0 4px}.wv-steps span{flex:1;text-align:center;font-size:.75rem;padding:3px 0;border-radius:6px;background:#0f0c1a;border:1px solid var(--ln);color:var(--mu)}
@@ -289,9 +328,11 @@ textarea::placeholder{color:#6f6785}
 .bd-item.pinned,.bd-post.pinned{border-color:#b89b5e;background:linear-gradient(180deg,#2a2140,#171126);box-shadow:inset 3px 0 0 #e6c56a}
 .bd-pin{flex:0 0 auto;font-size:.75rem;color:#e6c56a;border:1px solid #b89b5e88;border-radius:999px;padding:0 7px}
 .bd-at{color:#e6c56a;font-size:.88em}
+
 /* 공지 모아 보기 */
 #v-ntc{max-width:820px;margin:0 auto}
 .ntc-item{margin-bottom:10px}.ntc-item .ntc-t{font-size:1rem;line-height:1.7}.ntc-item.new{box-shadow:inset 3px 0 0 #e6c56a}
+
 /* 정기 출정 */
 .xm.abyss{border-color:#7d1a2e;background:linear-gradient(180deg,#2a0d1c,#120611);box-shadow:inset 3px 0 0 #c0406a,0 0 14px #7d1a2e44}
 .xm.abyss .xm-copy b{color:#ff8da0;letter-spacing:.04em}
@@ -339,6 +380,7 @@ html[data-theme="light"] .ver-bar{background:#fffcf6;color:#3a2c18;border-color:
 .bp-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bp-acts .btn{margin-top:6px;padding:11px 4px;font-size:.92rem;min-width:0}
 html[data-theme="light"] .bp-box{background:#f8f3ea;border-color:#9a7a3655}html[data-theme="light"] .bp-now{color:#8c6408}
 @media (max-width:440px){main{padding-top:46px}}
+
 /* 등록자 탭 */
 .ros-title{font-family:"Gowun Batang",serif;font-size:1.5rem;text-align:center;letter-spacing:.12em;margin:6px 0 4px;color:#e6c56a}
 #v-roster>.hint{text-align:center}
@@ -365,4 +407,4 @@ html[data-theme="light"] .ros-av,html[data-theme="light"] .ros-g{background:#fff
 html[data-theme="light"] .ros-g.gS{color:#94680a;border-color:#94680a;box-shadow:none}html[data-theme="light"] .ros-g.gA{color:#b8304a;border-color:#b8304a}
 html[data-theme="light"] .ros-ti{color:#7a5f22}html[data-theme="light"] .ros-on{border-color:#fffcf6}
 html[data-theme="light"] .ros-chip{filter:brightness(.75)}
-@media (max-width:600px){#nav{grid-template-columns:repeat(6,minmax(0,1fr))!important}#nav button{font-size:.78rem!important;padding:9px 1px!important}.ros-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.ros-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

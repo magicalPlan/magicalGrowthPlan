@@ -7,10 +7,7 @@
 :root{--gold:#b89b5e;--gold-hi:#e6d9b5;--gold-soft:#b89b5e33;--pn2:#120f20;--pn3:#1d1730;--shadow:0 8px 24px #00000055;--r:12px}
 html[data-theme="light"]{--gold:#9a7a36;--gold-hi:#5a4a26;--gold-soft:#9a7a3626;--pn2:#fbf7ef;--pn3:#f3ece0;--shadow:0 6px 18px #3a2c1814}
 
-/* 1. 화면 모드 버튼: 화면마다 위치가 바뀌지 않도록 오른쪽 위에 고정 */
-.thm{position:fixed!important;top:calc(10px + env(safe-area-inset-top,0px))!important;right:12px!important;z-index:45!important;backdrop-filter:blur(6px)}
-
-/* 2. 머리말: 로그인 뒤(메뉴가 보일 때)에는 작게 줄여 본문이 바로 보이게 */
+/* 1. 머리말: 로그인 뒤(메뉴가 보일 때)에는 작게 줄여 본문이 바로 보이게 */
 body:has(#nav:not([hidden])) main{padding-top:14px}
 body:has(#nav:not([hidden])) h1{font-size:1.55rem;letter-spacing:.18em;text-shadow:0 0 18px #9b233555}
 body:has(#nav:not([hidden])) h1::after{display:none}
@@ -18,12 +15,15 @@ body:has(#nav:not([hidden])) .sub{margin:0 0 10px;font-size:.8rem;letter-spacing
 #mode{font-size:.8rem;margin:-4px 0 12px!important}
 #mode .btn{font-size:.78rem!important;padding:4px 10px!important;margin:0 0 0 6px!important;vertical-align:middle}
 
-/* 3. 메뉴 탭: 낱칸 11개 대신 하나의 막대로 묶고, 내릴 때도 위에 붙어 있게 */
-#nav{position:sticky;top:6px;left:auto;margin-left:50%;z-index:40;gap:2px;padding:4px;border:1px solid var(--ln);border-radius:14px;background:color-mix(in srgb,var(--pn2) 88%,transparent);backdrop-filter:blur(10px);box-shadow:var(--shadow)}
-#nav button{border:0!important;background:transparent!important;border-radius:10px;color:var(--mu)!important;padding:9px 4px;transition:background .15s,color .15s}
+/* 3. 메뉴: 부모 한 줄은 위에 붙고, 하위 항목은 그 부모를 눌렀을 때만 막대 안에 나온다. */
+#nav{position:sticky;top:6px;left:auto;z-index:40;padding:4px;border:1px solid var(--ln);border-radius:14px;background:color-mix(in srgb,var(--pn2) 88%,transparent);backdrop-filter:blur(10px);box-shadow:var(--shadow)}
+#nav button{border:0!important;background:transparent!important;border-radius:10px;color:var(--mu)!important;padding:9px 6px;transition:background .15s,color .15s}
 #nav button:hover{color:var(--ink)!important;background:var(--gold-soft)!important}
 #nav button[aria-pressed=true]{color:var(--gold-hi)!important;background:var(--pn3)!important;font-weight:700;box-shadow:inset 0 -2px 0 var(--gold)}
-@media (max-width:600px){#nav{top:4px;padding:3px;gap:2px!important}#nav button{padding:8px 1px!important}}
+#nav .nav-bar>button[data-g]::after{content:"";display:inline-block;width:0;height:0;margin-left:5px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;vertical-align:2px;opacity:.65}
+#nav .nav-bar>button[aria-expanded=true]::after{border-top:0;border-bottom:4px solid currentColor;vertical-align:3px;opacity:1}
+#nav .nav-sub{background:color-mix(in srgb,var(--gold) 10%,var(--pn3))}
+@media (max-width:600px){#nav{top:4px;padding:3px}#nav button{padding:8px 2px!important}}
 
 /* 4. 제목 정리: 입력칸 이름표(lbl)와 접기 제목(fold-h) */
 h2.lbl{font-family:inherit;font-size:.85rem;font-weight:700;color:var(--mu)!important;letter-spacing:.02em;margin:14px 0 6px;border:0!important;padding:0}
@@ -208,15 +208,19 @@ html[data-theme="light"] .cm.me .cm-x{background:#f6e3e1;border-color:#d9b2ae}
 .cm-av.has{border-color:var(--gold);background:var(--pn2)}
 
 /* ─────────────────────────────────────────────────────────────
-   '멸망까지' 카운트다운
+   '멸망까지' 카운트다운: 오른쪽 위에 붙는 배너
    ───────────────────────────────────────────────────────────── */
-#doom{margin:0 0 14px}
-.doom-card{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px;padding:12px 18px 14px;border-radius:16px;
+#doom{position:fixed;z-index:44;top:calc(10px + env(safe-area-inset-top,0px));right:12px;margin:0;width:min(232px,calc(100vw - 24px))}
+#doom:has(.doom-form:not([hidden])){width:min(300px,calc(100vw - 24px));z-index:46}
+/* 오른쪽 위 배너가 제목과 겹치지 않게, 카운트가 보일 때만 본문을 아래로 민다. */
+body:has(#doom:not([hidden])) main{padding-top:calc(116px + env(safe-area-inset-top,0px))}
+body:has(#doom .doom-form:not([hidden])) main{padding-top:calc(300px + env(safe-area-inset-top,0px))}
+.doom-card{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:8px 12px 10px;border-radius:14px;
  border:1px solid #7d1a2e;background:radial-gradient(140% 120% at 100% 0%,#5a0f2255,transparent 60%),linear-gradient(180deg,#22091a,#120712);box-shadow:0 0 24px #7d1a2e33,inset 0 0 0 1px #00000066;overflow:hidden}
 .doom-card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,#ffffff04 22px 23px);pointer-events:none}
-.doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:1.05rem;letter-spacing:.32em;color:#ff8da0}
-.doom-s{margin:2px 0 0;font-size:.85rem;color:#d9b3bd}
-.doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:2.3rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000}
+.doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:.78rem;letter-spacing:.18em;color:#ff8da0}
+.doom-s{margin:2px 0 0;font-size:.72rem;line-height:1.35;color:#d9b3bd}
+.doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.45rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000}
 .doom-bar{grid-column:1/-1;height:6px;margin-top:8px;background:#ffffff12}
 .doom-bar i{background:linear-gradient(90deg,#6b1a2c,#e0405a,#ffb36b)!important}
 .doom-card.near{border-color:#e0405a;animation:doomPulse 2.4s ease-in-out infinite}
@@ -232,7 +236,7 @@ html[data-theme="light"] .doom-form input[type=date]{color-scheme:light}
 html[data-theme="light"] .doom-card{border-color:#c46a7a;background:radial-gradient(140% 120% at 100% 0%,#f5c6cf88,transparent 60%),linear-gradient(180deg,#fff3f4,#fbe7ea);box-shadow:0 4px 18px #a8283f1a}
 html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{color:#7a4450}
 html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
-@media (max-width:440px){.doom-n{font-size:1.9rem}.doom-t{letter-spacing:.22em}}
+@media (max-width:440px){#doom{top:calc(8px + env(safe-area-inset-top,0px));width:min(188px,calc(100vw - 20px));right:8px}.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s{font-size:.68rem}}
 html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}
 
 /* 시즌 초기화 (운영자 전용) */

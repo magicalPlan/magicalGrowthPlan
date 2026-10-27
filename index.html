@@ -1,246 +1,85 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>魔法 成長記錄</title>
-<script>/* 화면 모드(블랙/화이트)를 화면이 그려지기 전에 먼저 적용해 깜빡임을 막는다. */try{if(localStorage.getItem("mgr_theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
-<!-- 본문 글꼴(Pretendard): 작은 글씨도 또렷하게 읽히도록 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/theme-light.css">
-<!-- UI 다듬기: 이 한 줄을 지우면 예전 모습으로 돌아간다 -->
-<link rel="stylesheet" href="css/polish.css">
-</head>
-<body>
-<main>
-<button type="button" id="thm" class="thm" aria-label="화면 모드 바꾸기"></button>
-<h1>魔法 成長記錄</h1>
-<p class="sub">마법에 희망하고 절망하라</p>
-<p class="hint" id="mode" style="text-align:center;margin:-14px 0 16px"></p>
-<div id="onlw" hidden><span id="onl"></span></div>
-<div id="doom" hidden></div>
-<div id="ntc" hidden></div>
-<nav class="tabs" id="nav" hidden aria-label="화면 전환"><button type="button" data-v="hub" aria-pressed="true">마을</button><button type="button" data-v="shop" aria-pressed="false">상점</button><button type="button" data-v="bag" aria-pressed="false">마법·가방</button><button type="button" data-v="chat" aria-pressed="false">채팅</button><button type="button" data-v="ntc" aria-pressed="false">공지</button><button type="button" data-v="board" aria-pressed="false">게시판</button><button type="button" data-v="arena" aria-pressed="false">대련</button><button type="button" data-v="friends" aria-pressed="false">친구</button><button type="button" data-v="titles" aria-pressed="false">기록</button><button type="button" data-v="inbox" aria-pressed="false">알림</button><button type="button" data-v="roster" aria-pressed="false">등록자</button></nav>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <title>魔法 成長記錄</title>
+        <script>/* 화면 모드(블랙/화이트)를 화면이 그려지기 전에 먼저 적용해 깜빡임을 막는다. */
+            try {
+                if (localStorage.getItem("mgr_theme")==="light") {
+                    document.documentElement.dataset.theme="light"
+                }
+            } catch(e) {
+            }
+        </script>
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+        <!-- 본문 글꼴(Pretendard): 작은 글씨도 또렷하게 읽히도록 -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/theme-light.css">
+        <!-- UI 다듬기: 이 한 줄을 지우면 예전 모습으로 돌아간다 -->
+        <link rel="stylesheet" href="css/polish.css">
+    </head>
 
-<div id="v-login" hidden>
-<div class="card"><h2 id="lt">로그인</h2><p class="hint">아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다. 비밀번호를 잊어버리면 되찾을 방법이 없다.</p>
-<h2 class="lbl">아이디</h2><input id="lid" type="text" maxlength="20" autocomplete="username" aria-label="아이디" placeholder="영문, 숫자, 밑줄 3~20자">
-<h2 class="lbl">비밀번호</h2><input id="lpw" type="password" autocomplete="current-password" aria-label="비밀번호" placeholder="6자 이상">
-<div id="lcd" hidden><h2 class="lbl">비밀 코드</h2><input id="lcode" type="password" maxlength="40" autocomplete="off" aria-label="비밀 코드" placeholder="계정을 만들려면 비밀 코드가 필요하다"></div>
-<div id="lk" hidden><h2 class="lbl">Firebase 웹 API 키</h2><input id="lkey" type="text" autocomplete="off" aria-label="Firebase 웹 API 키" placeholder="프로젝트 설정의 웹 API 키"></div>
-<button class="btn" id="lgo" type="button">로그인</button>
-<button class="btn g" id="lsw" type="button">계정이 없다면 계정 만들기</button>
-<button class="btn g" id="lloc" type="button">서버 없이 혼자 하기</button>
-<p class="msg" id="lm" role="alert"></p></div>
-</div>
+    <body>
+        <script src="js/common/include.js"></script>    <!-- 화면 HTML 내에서 무엇을 찾고 붙이는지를 알리기 위한 script. -->
 
-<div id="v-create" hidden>
-<h2>이름</h2><input id="nm" type="text" maxlength="8" placeholder="최대 8자" autocomplete="off" aria-label="이름">
-<h2>프로필 이미지</h2><p class="hint">선택 사항이다. 마을 화면에서 언제든 바꿀 수 있다.</p><div class="row" style="align-items:center"><img id="pv" class="av" alt="선택한 프로필 이미지" hidden><label class="btn g fl" style="width:auto;margin:0;padding:10px 16px;display:inline-block">이미지 고르기<input id="im" type="file" accept="image/*"></label></div>
-<h2>소년 또는 소녀</h2><div class="row" id="gd"></div>
-<h2>시작 마을</h2><p class="hint">마을은 한 번 고르면 바꿀 수 없다.</p><div class="row" id="vl"></div>
-<h2>속성</h2><p class="hint">처음 고른 속성은 바꿀 수 없다. 속성마다 효과가 있고, 재계약 시험에서 새 속성을 얻으면 그 효과도 함께 적용된다.</p><div class="row" id="at"></div>
-<h2>계약 등급과 특성</h2><p class="hint">수정구에 손을 얹으면 등급과 특성이 함께 정해진다. 최대 3번 뽑고 하나를 고른다.</p>
-<div class="stage"><button class="orb" id="orb" type="button" aria-label="등급 뽑기"><small>손을 얹는다</small></button><div id="left" aria-live="polite"></div></div>
-<div class="hist" id="hist"></div><p class="hint" id="tdesc" style="margin-top:8px"></p>
-<button class="btn" id="ok" type="button">이 계약으로 확정</button><p class="msg" id="cm" role="alert"></p>
-</div>
+        <script>includeHtml("html/home/main.html")</script>  <!-- 홈 화면 -->
 
-<div id="v-hub" hidden>
-<div class="two">
-<div>
-<div id="fbar"></div>
-<div class="card" id="hc"></div>
-<button class="btn g" id="b-trial" type="button">재계약 시험</button>
-<button class="btn g" id="b-edit" type="button">프로필 편집</button>
-<div id="pfedit" hidden>
-<h2 class="lbl">프로필 이미지</h2>
-<div class="row" style="align-items:center"><img id="ev" class="av" alt="프로필 이미지 미리보기" hidden><label class="btn g fl" style="width:auto;margin:0;padding:10px 16px;display:inline-block">이미지 고르기<input id="im2" type="file" accept="image/*"></label></div>
-<h2 class="lbl">이름</h2><input id="en" type="text" maxlength="8" autocomplete="off" aria-label="이름" placeholder="최대 8자">
-<h2 class="lbl">외관</h2><textarea id="pf-ap" rows="3" maxlength="300" placeholder="머리색, 눈동자, 옷차림 등" aria-label="외관"></textarea>
-<h2 class="lbl">성격</h2><textarea id="pf-pe" rows="3" maxlength="300" placeholder="말투, 버릇, 좋아하고 싫어하는 것 등" aria-label="성격"></textarea>
-<h2 class="lbl">마법</h2><textarea id="pf-mg" rows="3" maxlength="300" placeholder="마법의 이름, 능력, 대가 등" aria-label="마법"></textarea>
-<h2 class="lbl">기타</h2><textarea id="pf-et" rows="3" maxlength="300" placeholder="과거나 배경, 하고 싶은 말 등" aria-label="기타"></textarea>
-<button class="btn" id="pf-save" type="button">저장</button><button class="btn g" id="pf-cancel" type="button">취소</button>
-<p class="msg" id="pfe" role="alert"></p>
-</div>
-<p class="msg" id="hm"></p>
-<button class="btn g" id="b-out" type="button" style="margin-top:28px" hidden>로그아웃</button>
-</div>
 
-<aside class="hcols">
-<div class="hcol">
-<div id="tutbox"></div>
-<h2 class="fold-h"><span>오늘의 의뢰 <small id="dqsum" class="fold-sum"></small></span><button class="chip fold-btn" id="dqtog" type="button" aria-expanded="true" aria-controls="dqbox">접기 ▲</button></h2>
-<div id="dqbox"><p class="hint">매일 밤 12시에 새 의뢰 3개가 나온다. 모두 끝내면 보너스를 받는다.</p><div class="hist" id="dql"></div></div>
-
-<h2>타락한 친구</h2><p class="hint">친구가 타락하면 여기에 나타난다. 함께 맞서 쓰러뜨리면 원래 모습으로 돌아온다. 일주일에 3번 타락한 사람은 '절망의 마인'이 되어, 친구가 아니어도 여기에 나타난다.</p><div class="hist" id="rdl"><p class="hint">타락한 친구가 없다.</p></div>
-</div>
-
-<div class="hcol">
-<h2 class="fold-h"><span>장기 토벌 <small id="lhsum" class="fold-sum"></small></span><button class="chip fold-btn" id="lhtog" type="button" aria-expanded="true" aria-controls="hlh">접기 ▲</button></h2>
-<div class="hist" id="hlh"></div>
-<h2>자연재해</h2><div class="hist" id="hdi"></div>
-<h2>몬스터 웨이브</h2><div class="hist" id="hwv"></div>
-<h2>보스 레이드</h2><div class="hist" id="hbo"></div>
-<h2>마수 포탈</h2><div class="hist" id="hpo"></div>
-<h2>마을 경쟁</h2><div class="hist" id="hgu"></div>
-<h2>마을 시설 · 희망의 등대</h2><div class="hist" id="hfa"></div>
-</div>
-
-<div class="hcol hcol-x">
-<h2 class="fold-h">정기 출정<button class="chip fold-btn" id="xtog" type="button" aria-expanded="true" aria-controls="xbox">접기 ▲</button></h2>
-<div id="xbox"><p class="hint">5분마다 출정 15개가 열린다. 참가해 두면 출발 시각에 자동으로 출발한다. 출발 2분 전에 참가가 마감된다. 출발할 때 나 혼자뿐이면 더 어렵지만 특별한 이벤트와 보상이 있는 '고독한 출정'이 된다.</p><div class="hist" id="hl"></div></div>
-</div>
-</aside>
-</div>
-</div>
-
-<div id="v-rooms" hidden>
-<h2>매지컬 마치</h2><p class="hint">파티원은 최대 7명이고 혼자서도 출발할 수 있다. 전투 3~5번을 치르면 토벌이 완료된다. 인원이 적으면 보상이 줄어든다.</p>
-<h2>정기 출정</h2><p class="hint">5분마다 출정 15개가 자동으로 열린다. 참가해 두면 출발 시각에 자동으로 출발하고, 출발 2분 전에 마감된다. 위험도가 높을수록 마수가 강하지만 보상도 크다.</p><div class="hist" id="rl"></div>
-<p class="msg" id="rm"></p><button class="btn g" id="rb" type="button">돌아가기</button>
-</div>
-
-<div id="v-room" hidden>
-<h2 id="rt"></h2><p class="hint" id="rs"></p><div class="hist" id="pl"></div>
-<button class="btn" id="rd" type="button">준비 완료</button><button class="btn g" id="st" type="button" hidden>출발</button><button class="btn g" id="bt" type="button" hidden>연습용 동료 채우기</button>
-<div class="log" id="lg" style="margin-top:14px" hidden></div><div class="choice" id="chv" hidden></div><p class="msg" id="rrm"></p>
-<button class="btn g" id="rx" type="button">방에서 나가기</button>
-</div>
-
-<div id="v-xm" hidden>
-<h2 id="xt"></h2><p class="hint" id="xs"></p><div class="hist" id="xpl"></div>
-<div class="log" id="xlg" style="margin-top:14px"></div><div class="choice" id="xch" hidden></div>
-<button class="btn g" id="xq" type="button" hidden>이 출정 정리하고 빠져나오기</button><button class="btn g" id="xb" type="button">마을로 돌아가기</button>
-</div>
-
-<div id="v-shop" hidden><div class="card"><h2>상점</h2><p class="hint" style="margin:0" id="sg"></p></div><h2>무기</h2><div class="wgrid" id="wl"></div><h2>아이템</h2><div class="row shopq" id="shopq"></div><div class="wgrid" id="il"></div><p class="msg" id="sm"></p></div>
-
-<div id="v-chat" hidden>
-<div class="tabs" id="ct"><button type="button" data-t="g" aria-pressed="true">단체 채팅</button><button type="button" data-t="v" aria-pressed="false">마을 채팅</button><button type="button" data-t="d" aria-pressed="false">1:1 채팅</button><button type="button" data-t="a" aria-pressed="false" hidden>운영자</button></div>
-<p class="hint" style="font-size:.8rem;margin:-6px 0 10px;text-align:center">캐입 대화를 지향합니다</p>
-<div id="cg"><div class="log" id="gl" style="max-height:360px;overflow:auto"></div></div>
-<div id="cvl" hidden><p class="hint" id="cvh" style="margin:0 0 8px"></p><div class="log" id="vcl" style="max-height:360px;overflow:auto"></div></div>
-<div id="ca" hidden><h2>모든 1:1 대화</h2><p class="hint">운영자 전용이다. 대화는 열람만 할 수 있다.</p><div class="hist" id="al"></div><div id="at2" hidden><div class="dm-head"><h2 id="ah"></h2><button class="btn g dm-png" id="apng" type="button">📄 PDF로 저장</button></div><div class="log" id="alg" style="max-height:320px;overflow:auto"></div></div></div>
-<div id="cd" hidden><div id="cpick"><h2>대화 중인 상대</h2><p class="hint">대화를 주고받은 상대만 최근 순으로 보인다. 새 대화는 친구 화면이나 상대의 프로필에서 '1:1 대화'를 눌러 시작한다. 운영자는 신고나 운영 점검을 위해 1:1 대화를 열람할 수 있다.</p><div class="hist" id="pl2"></div></div>
-<div id="dt" hidden><button class="btn g" id="pchg" type="button" style="width:auto;margin:0 0 4px;padding:8px 14px">← 다른 대화 상대</button><div class="dm-head"><h2 id="dh"></h2><button class="btn g dm-png" id="dpng" type="button">📄 PDF로 저장</button></div><div class="log" id="dl" style="max-height:300px;overflow:auto"></div></div></div>
-<form class="row" id="cin" style="margin-top:10px;flex-wrap:nowrap" autocomplete="off"><input id="ci" type="text" maxlength="200" placeholder="메시지를 입력" autocomplete="off" enterkeyhint="send" aria-label="메시지" style="flex:1"><button class="btn" id="cs" type="submit" style="width:auto;margin:0">보내기</button></form>
-<p class="msg" id="cm2" role="alert"></p>
-</div>
-
-<div id="v-bag" hidden>
-<h2>마법</h2><p class="hint" id="skh"></p><div class="hist" id="bgs"></div>
-<h2>받은 선물</h2><p class="hint" id="rgh"></p><div class="hist" id="bgrg"></div>
-<h2>소지품</h2><div class="hist" id="bgi"></div>
-<h2>무기</h2><div class="hist" id="bgw"></div>
-<h2>마력 각인</h2><p class="hint" id="rnh"></p><div class="hist" id="bgr"></div>
-<h2>사역마</h2><div class="hist" id="bgpt"></div>
-<h2>운명의 재계약</h2><div class="hist" id="bgrt"></div>
-<p class="msg" id="bgm" role="alert"></p>
-</div>
-
-<div id="v-titles" hidden><div class="tabs" id="rec-t"><button type="button" data-r="dex" aria-pressed="true">도감</button><button type="button" data-r="ttl" aria-pressed="false">칭호</button></div>
-<div id="dex-box"><div class="card" id="dex-sum"></div><div class="row" id="dex-cats" style="margin:12px 0"></div><div id="dex-cat"></div><div class="wgrid" id="dex-list"></div><p class="msg" id="dex-msg" aria-live="polite"></p></div>
-<div id="ttl-box" hidden><button class="btn g" id="tut-re" type="button" style="width:auto;padding:8px 14px;margin:0 0 10px">튜토리얼 다시 보기</button><h2>칭호 보관함</h2><p class="hint">업적 조건을 달성하면 칭호를 얻을 수 있다. 획득한 칭호 중 하나를 골라 프로필에 표시하자.</p><div class="card" id="title-current"></div><h2>획득한 칭호</h2><div class="hist" id="title-earned"></div><h2>아직 발견하지 못한 칭호</h2><div class="hist" id="title-locked"></div><p class="msg" id="title-msg" aria-live="polite"></p></div></div>
-
-<div id="v-friends" hidden>
-<input id="fsq" type="text" maxlength="20" autocomplete="off" aria-label="이름으로 검색" placeholder="이름으로 검색 (친구, 신청, 다른 플레이어)">
-<div id="fsb" hidden><h2>다른 플레이어</h2><p class="hint">이름을 누르면 프로필이 열리고, 거기서 친구 추가를 할 수 있다.</p><div class="hist" id="fsr"></div></div>
-<h2>받은 공명</h2><p class="hint">친구가 청한 공명이다. 받아들이면 나와 친구 모두 절망도가 내려간다. 24시간이 지나면 사라진다.</p><div class="hist" id="rql"></div>
-<h2>받은 친구 신청</h2><div class="hist" id="fql"></div>
-<h2>친구 목록</h2><div class="hist" id="ffl"></div>
-<h2>보낸 신청</h2><div class="hist" id="fol"></div>
-<p class="msg" id="fm" role="alert"></p>
-</div>
-
-<div id="v-roster" hidden><h2 class="ros-title">계약직 마법사 목록</h2><p class="hint" id="rsh"></p>
-<div class="ros-tools"><input id="rsq" type="text" maxlength="20" placeholder="이름으로 찾기" aria-label="이름으로 찾기"><select id="rss" aria-label="정렬"><option value="g">등급순</option><option value="lv">레벨순</option><option value="pw">전투력순</option><option value="on">접속 중 먼저</option><option value="n">이름순</option></select></div>
-<div id="rsl" class="ros-grid"></div></div>
-<div id="v-inbox" hidden>
-<h2>알림함</h2><p class="hint">공명, 선물, 친구, 보상, 칭호 같은 소식이 모인다. 최근 80개까지 보관하고, 누르면 관련 화면으로 간다. 위의 종류를 눌러 골라 볼 수 있다.</p>
-<div class="nt-cats" id="ntcat" role="tablist" aria-label="알림 종류"></div>
-<button class="btn g" id="nt-clr" type="button" style="width:auto;padding:8px 14px;margin:0 0 12px">모두 지우기</button>
-<div id="ntl"></div>
-</div>
-
-<div id="v-boss" hidden>
-<h2>보스 레이드</h2><p class="hint">모든 마법소녀가 함께 같은 보스와 싸운다. 공격할 때마다 골드를 받고, 보스가 쓰러지면 참가한 모두가 처치 보상을 받는다. 참가자가 늘수록 보스도 강해진다.</p>
-<div class="two" id="bsl"></div>
-<p class="msg" id="bsm" role="alert"></p>
-<button class="btn g" id="bsb" type="button">돌아가기</button>
-</div>
-
-<div id="v-raid" hidden>
-<div class="card raid-card" id="rdc"></div>
-<div class="log" id="rdlg" style="margin-top:12px"></div>
-<button class="btn" id="rdgo" type="button" hidden>공격한다</button>
-<button class="btn g" id="rdb" type="button">돌아가기</button>
-<p class="msg" id="rdm" role="alert"></p>
-</div>
-
-<div id="v-portal" hidden>
-<h2>마수 포탈</h2><p class="hint">한 시간에 한 번, 예고 없이 어느 마을엔가 포탈이 열린다. 어느 마을의 포탈이든 출동할 수 있다. 10분 안에 정해진 인원(새벽 0시~6시에는 약 10명, 그 밖에는 약 30명)이 모이면 토벌 성공이고, 모자라면 마을 주민이 다친다. 다친 주민은 1시간 안에 모두가 힘을 모아 치유해야 한다.</p>
-<div id="pl3"></div><p class="msg" id="pm" role="alert"></p><button class="btn g" id="pb" type="button">돌아가기</button>
-</div>
-
-<div id="v-guard" hidden>
-<h2>마을 경쟁</h2><p class="hint">일주일 동안 마을 사람들이 모은 점수로 순위를 겨룬다. 출정, 보스, 마수 포탈, 치유, 의뢰로 우리 마을에 점수를 보태자. 지난주 1등 마을에서 점수를 낸 사람은 우승 보상을 받는다.</p>
-<div id="gl3"></div><p class="msg" id="gm" role="alert"></p><button class="btn g" id="gb" type="button">돌아가기</button>
-</div>
-
-<div id="v-fac" hidden>
-<h2>마을 시설</h2><p class="hint">골드와 마력석을 기부해 우리 마을의 시설을 함께 짓는다. 마을 주민 모두의 기여가 모여 단계가 오르면, 그 마을 주민 전체가 효과를 받는다. 시설은 사라지지 않고 계속 쌓인다.</p>
-<div id="fl3"></div><p class="msg" id="fm2" role="alert"></p><button class="btn g" id="fb3" type="button">돌아가기</button>
-</div>
-
-<div id="v-board" hidden>
-<h2>교류 게시판</h2><p class="hint">자유롭게 글을 올리고 댓글과 답글을 달 수 있다. 캐입 대화를 지향한다. 내 글이나 댓글은 언제든 지울 수 있다.</p>
-<div id="bdl"></div><p class="msg" id="bdm" role="alert"></p>
-</div>
-
-<div id="v-wave" hidden>
-<h2>몬스터 웨이브</h2><p class="hint">마수 무리가 열 번에 걸쳐 몰려온다. 모두의 피해를 합쳐 앞 웨이브부터 차례로 막아 내고, 30분이 끝났을 때 막아 낸 웨이브 수만큼 모두가 보상을 받는다.</p>
-<div id="wvb"></div><p class="msg" id="wvm" role="alert"></p><button class="btn g" id="wvx" type="button">돌아가기</button>
-</div>
-
-<div id="v-arena" hidden><h2>대련장</h2><p class="hint">무기·레벨·등급은 잊어라. 모두가 체력 100, 같은 힘으로 겨루는 곳. 승부를 가르는 것은 속성 비기와 상대의 수를 읽는 눈뿐이다.</p><div id="dev"></div><div id="dua"></div><p class="msg" id="dum" role="alert"></p><button class="btn g" id="dub" type="button">마을로 돌아가기</button></div>
-<div id="v-ntc" hidden>
-<h2>공지</h2><p class="hint">운영자가 올린 공지를 모아 볼 수 있다. 최근 공지가 위에 온다.</p>
-<div id="ntcl"></div>
-<div id="rstbox" hidden></div>
-</div>
-
-<div id="v-trial" hidden>
-<h2>여왕의 시련</h2><div class="card" id="tc"></div><div class="log" id="tl" style="margin-top:12px"></div>
-<button class="btn" id="tg" type="button">나아간다</button><button class="btn g" id="tb" type="button">돌아가기</button>
-</div>
-</main>
-<div id="alo" role="alertdialog" aria-modal="true" aria-labelledby="alt" hidden style="position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:60"><div class="card alert-card" style="max-width:420px;width:100%;text-align:center"><h2 id="alt"></h2><p id="alx" style="white-space:pre-wrap;margin:10px 0 4px"></p><button class="btn" id="alc" type="button">확인</button></div></div>
-<div id="pfo" role="dialog" aria-modal="true" aria-label="프로필" hidden style="position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:18px;z-index:50">
-<div class="card profile-modal" style="max-width:520px;width:100%;max-height:90vh;overflow:auto"><div id="pfb"></div><button class="btn" id="pfr" type="button">공명하기</button><button class="btn g" id="pff" type="button" hidden>친구 추가</button><button class="btn g" id="pfg" type="button" hidden>선물하기</button><button class="btn g" id="pfdm" type="button" hidden>1:1 대화</button><button class="btn g" id="pfdu" type="button" hidden>⚔ 대련 신청</button><div id="gbox" hidden></div><button class="btn g" id="pfc" type="button">닫기</button><p class="msg" id="pfm" role="alert"></p></div></div>
-
-<div id="imgo" class="imgo" hidden role="dialog" aria-modal="true" aria-label="프로필 사진 크게 보기"><button type="button" class="imgo-x" id="imgox" aria-label="닫기">✕</button><figure><img id="imgoi" alt=""><figcaption id="imgoc"></figcaption></figure></div>
-<script src="models/event.js"></script>
-<script src="models/title.js"></script>
-<script src="models/pet.js"></script>
-<script src="data/events/common.js"></script>
-<script src="data/events/village.js"></script>
-<script src="data/events/solo.js"></script>
-<script src="data/titles/growth.js"></script>
-<script src="data/titles/gear.js"></script>
-<script src="data/titles/social.js"></script>
-<script src="data/titles/ordeal.js"></script>
-<script src="data/titles/town.js"></script>
-<script src="data/titles/secret.js"></script>
-<script src="data/titles/record.js"></script>
-<script src="data/titles/list.js"></script>
-<script src="data/pets.js"></script>
-<script src="data/game.js"></script>
-<script src="js/main.js"></script>
-</body>
+        <!-- 기타, 나누기 위한 분리 -->
+        <script src="models/event.js"></script>
+        <script src="models/title.js"></script>
+        <script src="models/pet.js"></script>
+        <script src="data/events/common.js"></script>
+        <script src="data/events/village.js"></script>
+        <script src="data/events/solo.js"></script>
+        <script src="data/titles/growth.js"></script>
+        <script src="data/titles/gear.js"></script>
+        <script src="data/titles/social.js"></script>
+        <script src="data/titles/ordeal.js"></script>
+        <script src="data/titles/town.js"></script>
+        <script src="data/titles/secret.js"></script>
+        <script src="data/titles/record.js"></script>
+        <script src="data/titles/list.js"></script>
+        <script src="data/pets.js"></script>
+        <script src="data/game.js"></script>
+        <script src="js/common/base.js"></script>
+        <script src="js/common/time.js"></script>
+        <script src="js/common/rand.js"></script>
+        <script src="js/common/formula.js"></script>
+        <script src="js/main.js"></script>
+        <script src="js/trial.js"></script>
+        <script src="js/village.js"></script>
+        <script src="js/weapon.js"></script>
+        <script src="js/corruption.js"></script>
+        <script src="js/room.js"></script>
+        <script src="js/notice.js"></script>
+        <script src="js/board.js"></script>
+        <script src="js/duel.js"></script>
+        <script src="js/friends/friend.js"></script>
+        <script src="js/dex.js"></script>
+        <script src="js/boss.js"></script>
+        <script src="js/march.js"></script>
+        <script src="js/chat.js"></script>
+        <script src="js/friends/resonance.js"></script>
+        <script src="js/roster.js"></script>
+        <script src="js/town/portal.js"></script>
+        <script src="js/town/guard.js"></script>
+        <script src="js/town/disaster.js"></script>
+        <script src="js/town/facility.js"></script>
+        <script src="js/town/wave.js"></script>
+        <script src="js/shop.js"></script>
+        <script src="js/alarm/toast.js"></script>
+        <script src="js/alarm/inbox.js"></script>
+        <script src="js/create.js"></script>    
+        <script src="js/pet/effect.js"></script>
+        <script src="js/pet/egg.js"></script>
+        <script src="js/pet/care.js"></script>
+        <script src="js/quest/daily.js"></script>
+        <script src="js/setting/setting.js"></script>
+    </body>
 </html>
