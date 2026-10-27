@@ -1,0 +1,236 @@
+/* ─────────────────────────────────────────────────────────────
+   UI 다듬기 (polish.css)
+   style.css · theme-light.css 위에 덧씌우는 정리용 스타일.
+   index.html에서 이 파일을 불러오는 한 줄을 지우면 예전 모습으로 돌아간다.
+   색은 아래 변수로만 쓰므로 블랙/화이트 모드 모두에 맞는다.
+   ───────────────────────────────────────────────────────────── */
+:root{--gold:#b89b5e;--gold-hi:#e6d9b5;--gold-soft:#b89b5e33;--pn2:#120f20;--pn3:#1d1730;--shadow:0 8px 24px #00000055;--r:12px}
+html[data-theme="light"]{--gold:#9a7a36;--gold-hi:#5a4a26;--gold-soft:#9a7a3626;--pn2:#fbf7ef;--pn3:#f3ece0;--shadow:0 6px 18px #3a2c1814}
+
+/* 1. 화면 모드 버튼: 화면마다 위치가 바뀌지 않도록 오른쪽 위에 고정 */
+.thm{position:fixed!important;top:calc(10px + env(safe-area-inset-top,0px))!important;right:12px!important;z-index:45!important;backdrop-filter:blur(6px)}
+
+/* 2. 머리말: 로그인 뒤(메뉴가 보일 때)에는 작게 줄여 본문이 바로 보이게 */
+body:has(#nav:not([hidden])) main{padding-top:14px}
+body:has(#nav:not([hidden])) h1{font-size:1.55rem;letter-spacing:.18em;text-shadow:0 0 18px #9b233555}
+body:has(#nav:not([hidden])) h1::after{display:none}
+body:has(#nav:not([hidden])) .sub{margin:0 0 10px;font-size:.8rem;letter-spacing:.22em}
+#mode{font-size:.8rem;margin:-4px 0 12px!important}
+#mode .btn{font-size:.78rem!important;padding:4px 10px!important;margin:0 0 0 6px!important;vertical-align:middle}
+
+/* 3. 메뉴 탭: 낱칸 11개 대신 하나의 막대로 묶고, 내릴 때도 위에 붙어 있게 */
+#nav{position:sticky;top:6px;left:auto;margin-left:50%;z-index:40;gap:2px;padding:4px;border:1px solid var(--ln);border-radius:14px;background:color-mix(in srgb,var(--pn2) 88%,transparent);backdrop-filter:blur(10px);box-shadow:var(--shadow)}
+#nav button{border:0!important;background:transparent!important;border-radius:10px;color:var(--mu)!important;padding:9px 4px;transition:background .15s,color .15s}
+#nav button:hover{color:var(--ink)!important;background:var(--gold-soft)!important}
+#nav button[aria-pressed=true]{color:var(--gold-hi)!important;background:var(--pn3)!important;font-weight:700;box-shadow:inset 0 -2px 0 var(--gold)}
+@media (max-width:600px){#nav{top:4px;padding:3px;gap:2px!important}#nav button{padding:8px 1px!important}}
+
+/* 4. 제목 정리: 입력칸 이름표(lbl)와 접기 제목(fold-h) */
+h2.lbl{font-family:inherit;font-size:.85rem;font-weight:700;color:var(--mu)!important;letter-spacing:.02em;margin:14px 0 6px;border:0!important;padding:0}
+h2.fold-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fold-sum{font-family:inherit;font-size:.78rem;font-weight:400;color:var(--mu);letter-spacing:0}
+.fold-btn{flex:0 0 auto!important;min-width:0!important;padding:4px 11px!important;font-family:inherit!important;font-size:.76rem!important;border-radius:999px!important}
+
+/* 5. 입력칸: 검색칸·숫자칸·고르기칸도 같은 모양으로 */
+input[type=text],input[type=password],input[type=search],input[type=number],textarea,select{transition:border-color .15s,box-shadow .15s}
+input[type=search],input[type=number]{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px}
+#shopqn{width:64px;padding:8px}
+select{font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px;padding:10px 12px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+input::placeholder,textarea::placeholder{color:var(--mu);opacity:.7}
+
+/* 6. 버튼·칸: 눌리는 느낌과 부드러운 전환 */
+.btn,.chip,.nt,.bd-item,.ros-card,.fac-tile{transition:border-color .15s,background .15s,box-shadow .15s,transform .1s,filter .15s}
+.btn:not(:disabled):hover{filter:brightness(1.1)}
+.btn:not(:disabled):active,.chip:not(:disabled):active{transform:translateY(1px)}
+.btn.g:not(:disabled):hover{border-color:var(--gold);background:var(--gold-soft)}
+.btn:disabled{opacity:.4;filter:saturate(.4)}
+.btn{border-radius:var(--r)}
+.ros-card:hover,.bd-item:hover{transform:translateY(-1px)}
+
+/* 7. 카드·목록 여백 통일 */
+.card{border-radius:14px}
+.hist{gap:6px}
+.log{border-radius:var(--r);line-height:1.65}
+.dq,.xm,.sk{border-radius:var(--r)}
+
+/* 8. 상점 카드: 설명과 가격·보유를 나눠 보기 쉽게 */
+#v-shop .chip.sq{padding:12px 13px;gap:4px}
+#v-shop .chip.sq b{margin-bottom:2px}
+#v-shop .chip.sq:not(:disabled):hover{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-soft),var(--shadow)}
+#v-shop>.card{margin-bottom:4px}
+
+/* 9. 마력 각인: 이름과 설명이 엉켜 줄바꿈되던 것을 위아래로 정리 */
+#bgr>div>.chip:first-child{display:block!important;padding:10px 12px}
+#bgr>div>.chip:first-child b{display:block;margin-bottom:2px}
+#bgr>div>.chip:last-child{align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:.85rem;white-space:nowrap}
+
+/* 10. 도감: 아직 못 찾은 칸은 작게 접어 화면이 끝없이 길어지지 않게 */
+#dex-list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+#dex-list .dex-it{min-height:0}
+#dex-list .dex-it.lock{opacity:.4;padding:9px 11px;border-style:dashed}
+#dex-list .dex-it.lock>small:last-child{display:none}
+#dex-list .dex-it.lock b{font-size:1rem}
+
+/* 11. 비어 있는 목록에 안내 문구 */
+#fql:empty::before,#ffl:empty::before,#fol:empty::before{content:"아직 없다.";color:var(--mu);font-size:.9rem}
+
+/* 12. 대련 검색칸 */
+#dusq{margin-bottom:8px}
+
+/* 13. 스크롤 막대를 얇고 어둡게 */
+*{scrollbar-width:thin;scrollbar-color:var(--ln) transparent}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--ln);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+
+/* 14. 마을 화면 세로 칸: 넓은 화면에서 탭이 위에 붙은 만큼 높이를 다시 맞춤 */
+@media (min-width:1080px){.hcol,#v-hub>.two>div:first-child{max-height:calc(100vh - 170px)}}
+
+/* 15. 휴대폰 */
+@media (max-width:440px){main{padding-top:40px}body:has(#nav:not([hidden])) main{padding-top:36px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ─────────────────────────────────────────────────────────────
+   가독성 (2차): 본문 글꼴, 글자 크기, 대비, 줄 간격
+   제목·이름은 고운바탕을 그대로 쓰고, 설명 글만 또렷한 글꼴로 바꾼다.
+   ───────────────────────────────────────────────────────────── */
+:root{--ink:#efe9de;--mu:#bfb6d0}
+html[data-theme="light"]{--ink:#221a2e;--mu:#554b68}
+
+/* 본문 글꼴과 기본 크기 */
+body{font-family:"Pretendard Variable","Pretendard","Noto Sans KR",system-ui,sans-serif;font-size:16px;line-height:1.65;letter-spacing:-.005em;word-break:keep-all;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font-family:inherit}
+b,strong{font-weight:700}
+
+/* 설명 글: 조금 크게, 줄 간격 넉넉하게 */
+.hint{font-size:.92rem;line-height:1.7}
+.tut-intro{font-size:.9rem;line-height:1.7}
+.log{font-size:.95rem;line-height:1.75}
+.log p{margin:0 0 8px}
+
+/* 너무 작던 글씨(0.7rem대)를 읽을 수 있는 크기로 */
+.hc-grid small,.hc-dz small,.hc-xp small,.hc-next,.nt-tm,.fac-tile small,.du-act small,.du-cand small,
+.ros-meta,.ros-ti,.ros-chip,.ttl-chip,.bd-pin,.wv-steps span,.wf-vil div,.dex-tag,.fold-sum{font-size:.8rem!important}
+.dq-copy small,.xm-copy small,.sk-tx small,.chip.sq small,.chip.sq .item-feature,.boss-info,.pet-body small,
+.title-card small,.profile-stat small,.fr-dz,.hc-more summary,.nt-day{font-size:.85rem!important;line-height:1.6}
+.dq-copy b,.xm-copy b{font-size:.98rem!important;margin-bottom:2px}
+.hc-grid b{font-size:.98rem}
+
+/* 카드 속 설명이 빽빽하지 않게 */
+.dq,.xm{padding:11px 12px;gap:12px}
+.chip.sq{gap:7px;padding:14px}
+.chip.sq b{font-size:1.15rem}
+.sk{padding:12px 14px}
+.nt{padding:12px 14px}.nt-tx{line-height:1.6}
+.bd-body{line-height:1.8}
+
+/* 흐린 글씨(--mu)를 쓰던 부분도 바뀐 색을 따르게 */
+.hint,.sub,.dq-copy small,.xm-copy small,.chip.sq small,.chip.sq .item-feature,.nt-tm,.ros-meta{color:var(--mu)}
+
+/* 잠긴(살 수 없는) 칸이 너무 흐려 글씨가 안 보이던 것 */
+.chip:disabled{opacity:.62}
+
+/* 제목은 고운바탕 그대로, 자간만 살짝 줄여 덜 퍼져 보이게 */
+h2{letter-spacing:.02em}
+
+/* 화이트 모드: 흐린 금색 제목을 조금 더 진하게 */
+html[data-theme="light"] h2{color:#6b5216}
+html[data-theme="light"] .hint{color:var(--mu)}
+
+/* ─────────────────────────────────────────────────────────────
+   채팅 (3차): 넓은 대화창 + 말풍선
+   ───────────────────────────────────────────────────────────── */
+body:has(#v-chat:not([hidden])) main{max-width:780px}
+
+/* 위쪽 탭: 알약 모양으로 한 줄에 */
+#ct{gap:4px;padding:4px;margin:0 0 6px;border:1px solid var(--ln);border-radius:14px;background:var(--pn2)}
+#ct button{border:0!important;background:transparent!important;border-radius:10px;color:var(--mu)!important;padding:9px}
+#ct button[aria-pressed=true]{background:var(--pn3)!important;color:var(--gold-hi)!important;font-weight:700;box-shadow:inset 0 -2px 0 var(--gold)}
+#v-chat>.hint:first-of-type{font-size:.78rem!important;margin:0 0 10px!important;opacity:.85}
+
+/* 대화창: 화면 높이에 맞춰 크게, 은은한 배경 */
+#gl,#vcl,#dl,#alg{height:clamp(320px,calc(100dvh - 380px),680px);min-height:0;max-height:none!important;padding:16px 14px 10px;border:1px solid var(--ln)!important;border-left:1px solid var(--ln)!important;border-radius:16px 16px 0 0;
+ background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px;scroll-behavior:smooth}
+#dl,#alg{height:clamp(300px,calc(100dvh - 440px),620px)}
+#cin{margin-top:0!important;padding:10px;gap:8px;border:1px solid var(--ln);border-top:0;border-radius:0 0 16px 16px;background:var(--pn3)}
+#cin input{border-radius:999px;padding:11px 16px;background:var(--pn2)}
+#cin .btn{border-radius:999px;padding:11px 20px}
+#cin[hidden]+.msg{margin-top:0}
+/* 입력칸이 없는 화면(운영자·상대 고르기)에서는 대화창 아래도 둥글게 */
+#v-chat:has(#cin[hidden]) .log{border-radius:16px}
+
+/* 비어 있을 때 */
+.cm-empty{margin:auto;text-align:center;color:var(--mu)}
+.cm-empty span{display:block;font-size:1.6rem;color:var(--gold);opacity:.7;margin-bottom:6px}
+.cm-empty p{margin:0;font-family:"Gowun Batang",serif;font-size:1.05rem;color:var(--ink)}
+.cm-empty small{font-size:.85rem}
+
+/* 날짜 구분선 */
+.cm-day{display:flex;align-items:center;gap:10px;margin:12px 0 8px;color:var(--mu);font-size:.78rem;letter-spacing:.06em}
+.cm-day::before,.cm-day::after{content:"";flex:1;height:1px;background:var(--ln)}
+
+/* 한 줄 말 */
+.cm{display:flex;align-items:flex-start;gap:9px;margin-top:10px;max-width:100%}
+.cm.cont{margin-top:3px}
+.cm-av{flex:0 0 40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Gowun Batang",serif;font-weight:700;font-size:.95rem;
+ color:var(--gold-hi);background:color-mix(in srgb,var(--glow) 25%,var(--pn3));border:1px solid var(--gold-soft)}
+.cm-av.link{cursor:pointer}
+.cm.cont .cm-av{visibility:hidden;height:0}
+.cm-body{min-width:0;max-width:min(78%,520px)}
+.cm-head{display:flex;align-items:center;gap:4px;margin:0 0 3px 2px}
+.cm.cont .cm-head{display:none}
+.cm-n{font-size:.84rem;font-weight:700;color:#e49aa9}
+html[data-theme="light"] .cm-n{color:#a8283f}
+.cm-n.link{cursor:pointer}.cm-n.link:hover{text-decoration:underline}
+.cm-head .ttl-chip{margin:0}
+.cm-row{display:flex;align-items:flex-end;gap:6px}
+.cm-x{display:inline-block;padding:8px 13px;border-radius:4px 16px 16px 16px;background:var(--pn3);border:1px solid var(--ln);color:var(--ink);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+.cm.cont .cm-x{border-radius:16px}
+.cm-t{flex:0 0 auto;font-size:.72rem;color:var(--mu);opacity:.8;padding-bottom:2px}
+
+/* 내 말: 오른쪽, 금빛 말풍선, 얼굴 생략 */
+.cm.me{flex-direction:row-reverse}
+.cm.me .cm-av{display:none}
+.cm.me .cm-body{display:flex;flex-direction:column;align-items:flex-end}
+.cm.me .cm-head{margin:0 2px 3px 0}
+.cm.me .cm-n{color:var(--gold-hi)}
+.cm.me .cm-row{flex-direction:row-reverse}
+.cm.me .cm-x{border-radius:16px 4px 16px 16px;background:linear-gradient(180deg,color-mix(in srgb,#a8283f 38%,var(--pn3)),color-mix(in srgb,#74182b 32%,var(--pn3)));border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
+.cm.me.cont .cm-x{border-radius:16px}
+html[data-theme="light"] .cm.me .cm-x{background:#f6e3e1;border-color:#d9b2ae}
+
+/* 새 메시지 버튼 */
+.newmsg{position:relative;margin:-46px auto 10px!important;z-index:2}
+
+@media (max-width:600px){.cm-body{max-width:84%}}
+/* 채팅 프로필 사진 */
+.cm-av{overflow:hidden}
+.cm-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.cm-av.has{border-color:var(--gold);background:var(--pn2)}
+
+/* ─────────────────────────────────────────────────────────────
+   '멸망까지' 카운트다운
+   ───────────────────────────────────────────────────────────── */
+#doom{margin:0 0 14px}
+.doom-card{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px;padding:12px 18px 14px;border-radius:16px;
+ border:1px solid #7d1a2e;background:radial-gradient(140% 120% at 100% 0%,#5a0f2255,transparent 60%),linear-gradient(180deg,#22091a,#120712);box-shadow:0 0 24px #7d1a2e33,inset 0 0 0 1px #00000066;overflow:hidden}
+.doom-card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,#ffffff04 22px 23px);pointer-events:none}
+.doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:1.05rem;letter-spacing:.32em;color:#ff8da0}
+.doom-s{margin:2px 0 0;font-size:.85rem;color:#d9b3bd}
+.doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:2.3rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000}
+.doom-bar{grid-column:1/-1;height:6px;margin-top:8px;background:#ffffff12}
+.doom-bar i{background:linear-gradient(90deg,#6b1a2c,#e0405a,#ffb36b)!important}
+.doom-card.near{border-color:#e0405a;animation:doomPulse 2.4s ease-in-out infinite}
+.doom-card.dday .doom-n{color:#ffcf6a;text-shadow:0 0 22px #ff6a3d}
+@keyframes doomPulse{50%{box-shadow:0 0 34px #e0405a77,inset 0 0 0 1px #00000066}}
+@media (prefers-reduced-motion:reduce){.doom-card.near{animation:none}}
+.doom-card.off{border-style:dashed;opacity:.8}.doom-card.off .doom-n{color:var(--mu);text-shadow:none}
+.doom-set{flex:none!important;min-width:0!important;margin-top:8px;padding:6px 12px!important;font-size:.85rem}
+.doom-form{margin-top:8px;padding:12px;border:1px solid var(--ln);border-radius:12px;background:var(--pn2)}
+.doom-form input[type=date]{width:100%;padding:11px 14px;font:inherit;color:var(--ink);background:var(--pn3);border:1px solid var(--ln);border-radius:10px;color-scheme:dark}
+.doom-form .hint{margin:8px 0 0}
+html[data-theme="light"] .doom-form input[type=date]{color-scheme:light}
+html[data-theme="light"] .doom-card{border-color:#c46a7a;background:radial-gradient(140% 120% at 100% 0%,#f5c6cf88,transparent 60%),linear-gradient(180deg,#fff3f4,#fbe7ea);box-shadow:0 4px 18px #a8283f1a}
+html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{color:#7a4450}
+html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
+@media (max-width:440px){.doom-n{font-size:1.9rem}.doom-t{letter-spacing:.22em}}
+html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}

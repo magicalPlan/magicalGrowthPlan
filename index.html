@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>魔法 成長記錄</title>
 <script>/* 화면 모드(블랙/화이트)를 화면이 그려지기 전에 먼저 적용해 깜빡임을 막는다. */try{if(localStorage.getItem("mgr_theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<!-- 본문 글꼴(Pretendard): 작은 글씨도 또렷하게 읽히도록 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/theme-light.css">
+<!-- UI 다듬기: 이 한 줄을 지우면 예전 모습으로 돌아간다 -->
+<link rel="stylesheet" href="css/polish.css">
 </head>
 <body>
 <main>
@@ -16,15 +22,16 @@
 <p class="sub">마법에 희망하고 절망하라</p>
 <p class="hint" id="mode" style="text-align:center;margin:-14px 0 16px"></p>
 <div id="onlw" hidden><span id="onl"></span></div>
+<div id="doom" hidden></div>
 <div id="ntc" hidden></div>
 <nav class="tabs" id="nav" hidden aria-label="화면 전환"><button type="button" data-v="hub" aria-pressed="true">마을</button><button type="button" data-v="shop" aria-pressed="false">상점</button><button type="button" data-v="bag" aria-pressed="false">마법·가방</button><button type="button" data-v="chat" aria-pressed="false">채팅</button><button type="button" data-v="ntc" aria-pressed="false">공지</button><button type="button" data-v="board" aria-pressed="false">게시판</button><button type="button" data-v="arena" aria-pressed="false">대련</button><button type="button" data-v="friends" aria-pressed="false">친구</button><button type="button" data-v="titles" aria-pressed="false">기록</button><button type="button" data-v="inbox" aria-pressed="false">알림</button><button type="button" data-v="roster" aria-pressed="false">등록자</button></nav>
 
 <div id="v-login" hidden>
 <div class="card"><h2 id="lt">로그인</h2><p class="hint">아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다. 비밀번호를 잊어버리면 되찾을 방법이 없다.</p>
-<h2 style="font-size:1rem">아이디</h2><input id="lid" type="text" maxlength="20" autocomplete="username" aria-label="아이디" placeholder="영문, 숫자, 밑줄 3~20자">
-<h2 style="font-size:1rem">비밀번호</h2><input id="lpw" type="password" autocomplete="current-password" aria-label="비밀번호" placeholder="6자 이상">
-<div id="lcd" hidden><h2 style="font-size:1rem">비밀 코드</h2><input id="lcode" type="password" maxlength="40" autocomplete="off" aria-label="비밀 코드" placeholder="계정을 만들려면 비밀 코드가 필요하다"></div>
-<div id="lk" hidden><h2 style="font-size:1rem">Firebase 웹 API 키</h2><input id="lkey" type="text" autocomplete="off" aria-label="Firebase 웹 API 키" placeholder="프로젝트 설정의 웹 API 키"></div>
+<h2 class="lbl">아이디</h2><input id="lid" type="text" maxlength="20" autocomplete="username" aria-label="아이디" placeholder="영문, 숫자, 밑줄 3~20자">
+<h2 class="lbl">비밀번호</h2><input id="lpw" type="password" autocomplete="current-password" aria-label="비밀번호" placeholder="6자 이상">
+<div id="lcd" hidden><h2 class="lbl">비밀 코드</h2><input id="lcode" type="password" maxlength="40" autocomplete="off" aria-label="비밀 코드" placeholder="계정을 만들려면 비밀 코드가 필요하다"></div>
+<div id="lk" hidden><h2 class="lbl">Firebase 웹 API 키</h2><input id="lkey" type="text" autocomplete="off" aria-label="Firebase 웹 API 키" placeholder="프로젝트 설정의 웹 API 키"></div>
 <button class="btn" id="lgo" type="button">로그인</button>
 <button class="btn g" id="lsw" type="button">계정이 없다면 계정 만들기</button>
 <button class="btn g" id="lloc" type="button">서버 없이 혼자 하기</button>
@@ -43,33 +50,54 @@
 <button class="btn" id="ok" type="button">이 계약으로 확정</button><p class="msg" id="cm" role="alert"></p>
 </div>
 
-<div id="v-hub" hidden><div class="two"><div>
+<div id="v-hub" hidden>
+<div class="two">
+<div>
 <div id="fbar"></div>
 <div class="card" id="hc"></div>
 <button class="btn g" id="b-trial" type="button">재계약 시험</button>
 <button class="btn g" id="b-edit" type="button">프로필 편집</button>
 <div id="pfedit" hidden>
-<h2 style="font-size:1rem">프로필 이미지</h2>
+<h2 class="lbl">프로필 이미지</h2>
 <div class="row" style="align-items:center"><img id="ev" class="av" alt="프로필 이미지 미리보기" hidden><label class="btn g fl" style="width:auto;margin:0;padding:10px 16px;display:inline-block">이미지 고르기<input id="im2" type="file" accept="image/*"></label></div>
-<h2 style="font-size:1rem">이름</h2><input id="en" type="text" maxlength="8" autocomplete="off" aria-label="이름" placeholder="최대 8자">
-<h2 style="font-size:1rem">외관</h2><textarea id="pf-ap" rows="3" maxlength="300" placeholder="머리색, 눈동자, 옷차림 등" aria-label="외관"></textarea>
-<h2 style="font-size:1rem">성격</h2><textarea id="pf-pe" rows="3" maxlength="300" placeholder="말투, 버릇, 좋아하고 싫어하는 것 등" aria-label="성격"></textarea>
-<h2 style="font-size:1rem">마법</h2><textarea id="pf-mg" rows="3" maxlength="300" placeholder="마법의 이름, 능력, 대가 등" aria-label="마법"></textarea>
-<h2 style="font-size:1rem">기타</h2><textarea id="pf-et" rows="3" maxlength="300" placeholder="과거나 배경, 하고 싶은 말 등" aria-label="기타"></textarea>
+<h2 class="lbl">이름</h2><input id="en" type="text" maxlength="8" autocomplete="off" aria-label="이름" placeholder="최대 8자">
+<h2 class="lbl">외관</h2><textarea id="pf-ap" rows="3" maxlength="300" placeholder="머리색, 눈동자, 옷차림 등" aria-label="외관"></textarea>
+<h2 class="lbl">성격</h2><textarea id="pf-pe" rows="3" maxlength="300" placeholder="말투, 버릇, 좋아하고 싫어하는 것 등" aria-label="성격"></textarea>
+<h2 class="lbl">마법</h2><textarea id="pf-mg" rows="3" maxlength="300" placeholder="마법의 이름, 능력, 대가 등" aria-label="마법"></textarea>
+<h2 class="lbl">기타</h2><textarea id="pf-et" rows="3" maxlength="300" placeholder="과거나 배경, 하고 싶은 말 등" aria-label="기타"></textarea>
 <button class="btn" id="pf-save" type="button">저장</button><button class="btn g" id="pf-cancel" type="button">취소</button>
 <p class="msg" id="pfe" role="alert"></p>
 </div>
 <p class="msg" id="hm"></p>
-<button class="btn g" id="b-out" type="button" style="margin-top:28px" hidden>로그아웃</button></div><aside class="hcols"><div class="hcol"><div id="tutbox"></div><h2 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>오늘의 의뢰 <small id="dqsum" style="font-family:inherit;font-size:.78rem;color:var(--mu);letter-spacing:0"></small></span><button class="chip" id="dqtog" type="button" aria-expanded="true" aria-controls="dqbox" style="flex:0 0 auto;min-width:0;padding:5px 12px;font-family:inherit;font-size:.8rem">접기 ▲</button></h2><div id="dqbox"><p class="hint">매일 밤 12시에 새 의뢰 3개가 나온다. 모두 끝내면 보너스를 받는다.</p><div class="hist" id="dql"></div></div>
-<h2 style="margin-top:22px">타락한 친구</h2><p class="hint">친구가 타락하면 여기에 나타난다. 함께 맞서 쓰러뜨리면 원래 모습으로 돌아온다. 일주일에 3번 타락한 사람은 '절망의 마인'이 되어, 친구가 아니어도 여기에 나타난다.</p><div class="hist" id="rdl"><p class="hint">타락한 친구가 없다.</p></div></div>
-<div class="hcol"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>장기 토벌 <small id="lhsum" style="font-size:.78rem;font-weight:400;color:var(--mu)"></small></span><button class="chip" id="lhtog" type="button" aria-expanded="true" aria-controls="hlh" style="flex:0 0 auto;min-width:0;padding:5px 12px;font-family:inherit;font-size:.8rem">접기 ▲</button></h2><div class="hist" id="hlh"></div>
-<h2 style="margin-top:22px">자연재해</h2><div class="hist" id="hdi"></div>
-<h2 style="margin-top:22px">몬스터 웨이브</h2><div class="hist" id="hwv"></div>
-<h2 style="margin-top:22px">보스 레이드</h2><div class="hist" id="hbo"></div>
-<h2 style="margin-top:22px">마수 포탈</h2><div class="hist" id="hpo"></div>
-<h2 style="margin-top:22px">마을 경쟁</h2><div class="hist" id="hgu"></div>
-<h2 style="margin-top:22px">마을 시설 · 희망의 등대</h2><div class="hist" id="hfa"></div></div>
-<div class="hcol hcol-x"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:8px">정기 출정<button class="chip" id="xtog" type="button" aria-expanded="true" aria-controls="xbox" style="flex:0 0 auto;min-width:0;padding:5px 12px;font-family:inherit;font-size:.8rem">접기 ▲</button></h2><div id="xbox"><p class="hint">5분마다 출정 15개가 열린다. 참가해 두면 출발 시각에 자동으로 출발한다. 출발 2분 전에 참가가 마감된다. 출발할 때 나 혼자뿐이면 더 어렵지만 특별한 이벤트와 보상이 있는 '고독한 출정'이 된다.</p><div class="hist" id="hl"></div></div></div></aside></div>
+<button class="btn g" id="b-out" type="button" style="margin-top:28px" hidden>로그아웃</button>
+</div>
+
+<aside class="hcols">
+<div class="hcol">
+<div id="tutbox"></div>
+<h2 class="fold-h"><span>오늘의 의뢰 <small id="dqsum" class="fold-sum"></small></span><button class="chip fold-btn" id="dqtog" type="button" aria-expanded="true" aria-controls="dqbox">접기 ▲</button></h2>
+<div id="dqbox"><p class="hint">매일 밤 12시에 새 의뢰 3개가 나온다. 모두 끝내면 보너스를 받는다.</p><div class="hist" id="dql"></div></div>
+
+<h2>타락한 친구</h2><p class="hint">친구가 타락하면 여기에 나타난다. 함께 맞서 쓰러뜨리면 원래 모습으로 돌아온다. 일주일에 3번 타락한 사람은 '절망의 마인'이 되어, 친구가 아니어도 여기에 나타난다.</p><div class="hist" id="rdl"><p class="hint">타락한 친구가 없다.</p></div>
+</div>
+
+<div class="hcol">
+<h2 class="fold-h"><span>장기 토벌 <small id="lhsum" class="fold-sum"></small></span><button class="chip fold-btn" id="lhtog" type="button" aria-expanded="true" aria-controls="hlh">접기 ▲</button></h2>
+<div class="hist" id="hlh"></div>
+<h2>자연재해</h2><div class="hist" id="hdi"></div>
+<h2>몬스터 웨이브</h2><div class="hist" id="hwv"></div>
+<h2>보스 레이드</h2><div class="hist" id="hbo"></div>
+<h2>마수 포탈</h2><div class="hist" id="hpo"></div>
+<h2>마을 경쟁</h2><div class="hist" id="hgu"></div>
+<h2>마을 시설 · 희망의 등대</h2><div class="hist" id="hfa"></div>
+</div>
+
+<div class="hcol hcol-x">
+<h2 class="fold-h">정기 출정<button class="chip fold-btn" id="xtog" type="button" aria-expanded="true" aria-controls="xbox">접기 ▲</button></h2>
+<div id="xbox"><p class="hint">5분마다 출정 15개가 열린다. 참가해 두면 출발 시각에 자동으로 출발한다. 출발 2분 전에 참가가 마감된다. 출발할 때 나 혼자뿐이면 더 어렵지만 특별한 이벤트와 보상이 있는 '고독한 출정'이 된다.</p><div class="hist" id="hl"></div></div>
+</div>
+</aside>
+</div>
 </div>
 
 <div id="v-rooms" hidden>
@@ -184,6 +212,7 @@
 <div id="v-ntc" hidden>
 <h2>공지</h2><p class="hint">운영자가 올린 공지를 모아 볼 수 있다. 최근 공지가 위에 온다.</p>
 <div id="ntcl"></div>
+<div id="rstbox" hidden></div>
 </div>
 
 <div id="v-trial" hidden>

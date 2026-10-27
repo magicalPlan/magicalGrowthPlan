@@ -100,7 +100,7 @@ function checkGrant(){if(!C||!UID)return;C.cmp=C.cmp||{};const got=GRANT.filter(
  got.forEach(x=>{C.cmp[x[0]]=Date.now();const ts=(x[2]||[]).filter(id=>titleById(id)&&!C.titles.includes(id));ts.forEach(id=>C.titles.push(id));C.gd=(C.gd||0)+(x[3]||0);if(x[4]){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+x[4]}
   const wg=[];C.wps=Array.isArray(C.wps)?C.wps:[];C.wl=C.wl||{};(x[7]||[]).forEach(([wi,lv])=>{if(!WP[wi])return;if(!C.wps.includes(wi))C.wps.push(wi);lv=Math.min(5,Math.max(0,lv|0));if((C.wl["w"+wi]||0)<lv)C.wl["w"+wi]=lv;dexAdd("wp","w"+wi);wg.push(WP[wi][0]+(lv?" +"+lv:""))});
   const o8=x[8]||{},ex8=[];
-  if(o8.lv>0&&(C.lv||1)<o8.lv){C.ex=Math.max(C.ex||0,(o8.lv-1)*40);C.lv=1+Math.floor(C.ex/40);ex8.push("레벨 "+C.lv)}
+  if(o8.lv>0&&(C.lv||1)<o8.lv){C.ex=Math.max(C.ex||0,xpAt(o8.lv));C.lv=lvOf(C.ex);ex8.push("레벨 "+C.lv)}
   if(o8.g&&GL.indexOf(o8.g)>GL.indexOf(C.g)){C.g=o8.g;ex8.push(o8.g+"등급")}
   if(Array.isArray(o8.a)&&o8.a.length&&o8.a.every(z=>AT.some(t=>t[0]===z))&&o8.a.join()!==(C.a||[]).join()){C.a=o8.a.slice();ex8.push("속성 "+C.a.join("·"))}
   if(o8.rn>0){C.rn=C.rn||{};let ch=false;["pow","calm","wis","luck"].forEach(k=>{if((C.rn[k]||0)<o8.rn){C.rn[k]=Math.min(RN_MAX,o8.rn);ch=true}});if(ch)ex8.push("마력 각인 전부 "+Math.min(RN_MAX,o8.rn)+"단계")}
@@ -126,7 +126,7 @@ let ADM=admFix({}),admT={},admK=null,signup=false,sct=null;
 // 운영자는 서버의 admins 목록(콘솔에서만 수정 가능)에 있는 계정이다. 이름으로는 판단하지 않는다.
 const cn=(u,n)=>(ADM[u]?"👑 ":"")+String(n==null?"":n).replace(/👑/g,"");
 const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-function admUI(){const b=document.querySelector("#ct [data-t=a]");if(b)b.hidden=!ADM[UID];try{drawNotice()}catch(e){}}
+function admUI(){const b=document.querySelector("#ct [data-t=a]");if(b)b.hidden=!ADM[UID];try{drawNotice()}catch(e){}try{drawDoom()}catch(e){}}
 function watchAdm(){if(!ADM[UID])return;unC=DB.collection("dm").limit(500).onSnapshot(s=>{const th={};s.docs.forEach(d=>{const m=d.data();if(m&&m.k)(th[m.k]=th[m.k]||[]).push(m)});Object.values(th).forEach(a=>a.sort((x,y)=>x.ts-y.ts));admT=th;drawAdm()},e=>cmsg("대화 목록을 불러오지 못했다. 운영자 등록과 데이터베이스 규칙을 확인해야 한다."))}
 function admLabel(k){const nm={};(admT[k]||[]).forEach(m=>nm[m.u]=m.n);return Object.keys(nm).map(u=>cn(u,nm[u])).join(" ↔ ")}
 function drawAdm(){const l=$("#al");l.innerHTML="";const ks=Object.keys(admT).sort((a,b)=>{const x=admT[a],y=admT[b];return y[y.length-1].ts-x[x.length-1].ts});
@@ -212,8 +212,8 @@ function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style
  const b1=elT("button","btn","① 로그아웃하고 평소 쓰던 기기에서 접속하기");b1.type="button";b1.onclick=()=>{o.remove();res("out")};
  const b2=elT("button","btn g","② 여기서 기본 정보로 복구하기");b2.type="button";b2.onclick=()=>{if(!confirm("기본 정보로 복구하면, 평소 기기의 백업으로는 자동 복구되지 않을 수 있다. 정말 여기서 복구할까?"))return;o.remove();res("base")};
  c.append(b1,b2);o.appendChild(c);document.body.appendChild(o)})}
-function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv=Math.max(1,Number(p.lv)||1),ex=Math.max((lv-1)*40,Number(p.ex)||0);
- const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:1+Math.floor(ex/40),ex,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{huntsWon:Number(p.cl)||0},
+function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv=Math.max(1,Number(p.lv)||1),ex=Math.max(xpAt(lv),Number(p.ex)||0);
+ const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:2,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{huntsWon:Number(p.cl)||0},
   pf:p.pf&&typeof p.pf==="object"?p.pf:{},fc:p.fc&&typeof p.fc==="object"?p.fc:{},wf:Number(p.wf)||0,rescued:Date.now(),
   // 예전 보상·개인 지급은 이미 받은 것으로 친다(기본 정보 복구로 두 번 받지 않게). 이번 복구 보상만 새로 받는다.
   cmp:Object.fromEntries(COMP.map(x=>x[0]).concat(GRANT.map(x=>x[0])).filter(id=>id!=="restore-apology-20261016"&&id!=="maint-20261018").map(id=>[id,1]))};
@@ -232,6 +232,7 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID);
   // 서버 기록도 백업도 없지만 예전에 캐릭터가 있었던 계정이면(players에 흔적이 남아 있으면) 바로 새로 만들지 않고 복구 방법을 고르게 한다.
   if(!C&&!RESTORE_FULL.some(r=>r[1]===UID)){let pp=null;try{pp=(await DB.doc("players/"+UID).get()).data()}catch(e){}if(pp&&pp.n){const r=await rescueAsk(pp);if(r==="out"){AUTH.uid=null;try{localStorage.removeItem("mgr_rt")}catch(e){}location.reload();return}if(r==="base"){C=rescueBuild(pp);saveCloud(true);setTimeout(()=>alertBox("기본 정보로 복구","이름·등급·레벨·속성·특성·마을·프로필·장착 무기·전투력을 되살렸다.\n골드·아이템·친구 목록·일부 칭호는 돌아오지 않았다.\n\n평소 쓰던 기기에 백업이 남아 있다면 운영자에게 알려 주자."),800)}}}}
  DB.collection("admins").onSnapshot(sn=>{const before=Object.keys(ADM).join();ADM=admFix({});sn.docs.forEach(d=>ADM[d.id]=true);admUI();if(before!==Object.keys(ADM).join()){loadNotice(true);if(!$("#v-hub").hidden)hub()}},e=>{},300000);
+ try{await rstCheck(true)}catch(e){}
  const frx=fullRestore();
  mode(1);boot();checkFounder();setTimeout(checkComp,1500);
  if(frx){save();regPlayer();setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
@@ -285,7 +286,14 @@ function titles(msg){show("titles");setRec("ttl");titleState();const fresh=check
  const earned=$("#title-earned"),locked=$("#title-locked");earned.innerHTML="";locked.innerHTML="";TITLE_LIST.forEach((t,i)=>{const got=C.titles.includes(t[0]),w=document.createElement("div");w.className="chip title-card";const copy=document.createElement("div");copy.className="title-copy";const name=document.createElement("strong"),desc=document.createElement("small");const sc=t[4]==="secret";if(sc)w.classList.add("secret-ttl");name.textContent=got?(sc?"✧ ":"✦ ")+t[1]+(sc?" (히든)":""):sc?"🔒 ??? (히든 칭호)":"🔒 "+t[1];desc.textContent=got||!sc?t[2]:"힌트: "+t[5];copy.append(name,desc);w.appendChild(copy);if(got){const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=C.ti===t[0]?"장착 중":"장착";b.disabled=C.ti===t[0];b.onclick=()=>{C.ti=t[0];save();titles("'"+t[1]+"' 칭호를 장착했다.")};w.appendChild(b);earned.appendChild(w)}else if(!t[4]||t[4]==="secret")locked.appendChild(w)});const secN=TITLE_LIST.filter(t=>t[4]==="secret"),secGot=secN.filter(t=>C.titles.includes(t[0])).length;$("#title-msg").textContent=msg||(fresh.length?"새 칭호 획득: "+fresh.map(t=>t[1]).join(", "):"획득한 칭호 "+C.titles.length+" / "+TITLE_LIST.length+" · 히든 칭호 "+secGot+" / "+secN.length);regPlayer()}
 function titleProgress(){if(!C)return;titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz||0);C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);checkTitles()}
 
-function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(wfLv()>=3?1-WF_CALM:1)*(1-petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&C.a.includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&C.a.includes("바람"))ex=Math.round(ex*1.15);C.ex+=Math.round(ex);C.lv=1+Math.floor(C.ex/40);C.dz=Math.max(0,Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
+/* 레벨과 경험치: 레벨이 오를수록 다음 레벨까지 필요한 경험치가 늘어난다(수치는 data/game.js의 XP_BASE·XP_STEP).
+   xpNeed(L) = L에서 L+1로 가는 데 필요한 경험치, xpAt(L) = 레벨 L이 시작되는 누적 경험치, lvOf(ex) = 누적 경험치로 본 레벨. */
+function xpNeed(lv){return XP_BASE+XP_STEP*(Math.max(1,Number(lv)||1)-1)}
+function xpAt(lv){const n=Math.max(1,Number(lv)||1)-1;return XP_BASE*n+XP_STEP*n*(n-1)/2}
+function lvOf(ex){ex=Math.max(0,Number(ex)||0);let L=1;while(L<9999&&xpAt(L+1)<=ex)L++;return L}
+// 예전 방식(40마다 1레벨)으로 쌓인 경험치를 새 방식으로 옮긴다. 레벨은 그대로 두고, 그 레벨 안에서 채운 비율도 그대로 옮긴다(한 번만).
+function xpMigrate(){if(!C||C.xv>=2)return;const ex=Math.max(0,Number(C.ex)||0),L=1+Math.floor(ex/40),r=(ex-(L-1)*40)/40;C.ex=xpAt(L)+Math.floor(r*xpNeed(L));C.lv=L;C.xv=2}
+function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(wfLv()>=3?1-WF_CALM:1)*(1-petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&C.a.includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&C.a.includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(0,Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
  if(!C.fall){if(C.dz>=100)fallen();else if(oldDz<90&&C.dz>=90)note("warn","절망도가 "+C.dz+"에 이르렀다. 타락 직전이다."),alertBox("타락 직전","절망도가 "+C.dz+"에 이르렀다. 마음이 무너지기 직전이다.\n절망도가 100이 되면 타락해 마수가 된다. 공명이나 선물로 친구들의 도움을 받자.")}}
 /* 사진 줄이기: 한 번에 확 줄이면 깨지고 뭉개지므로 절반씩 여러 번 부드럽게 줄인다. */
 function sq(im,Z,q){const s0=Math.min(im.width,im.height);let c=document.createElement("canvas"),w=s0;c.width=c.height=w;let x=c.getContext("2d");x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(im,(im.width-s0)/2,(im.height-s0)/2,s0,s0,0,0,w,w);
@@ -316,7 +324,7 @@ $("#ok").onclick=()=>{const n=$("#nm").value.trim(),m=$("#cm");
  if(!n)return m.textContent="이름을 입력해야 한다.";if(!sg)return m.textContent="소년 또는 소녀를 골라야 한다.";
  if(!sv)return m.textContent="시작 마을을 골라야 한다.";if(!sa)return m.textContent="속성을 골라야 한다.";
  if(pk===null)return m.textContent="수정구로 등급을 한 번 이상 뽑아야 한다.";
- C={n,s:sg,v:sv,a:[sa],g:hs[pk].g,t:hs[pk].t,lv:1,ex:0,cl:0,dz:0,b:0,img:pimg,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{maxDespair:0,maxGold:100,loginDays:1,lastDay:new Date().toISOString().slice(0,10),reachedZero:false}};save();checkTitles();hub()};
+ C={n,s:sg,v:sv,a:[sa],g:hs[pk].g,t:hs[pk].t,born:Date.now(),xv:2,rsv:RST?RST.id:0,lv:1,ex:0,cl:0,dz:0,b:0,img:pimg,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{maxDespair:0,maxGold:100,loginDays:1,lastDay:new Date().toISOString().slice(0,10),reachedZero:false}};save();checkTitles();hub()};
 
 
 // 프로필 사진을 누르면 크게 볼 수 있다. 바깥이나 ✕, Esc 키로 닫는다. (사진 고르기 화면의 미리보기는 제외)
@@ -356,12 +364,12 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
 setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){h.nt=1;save();const L=lhOf(h.k);note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if(!$("#v-hub").hidden)hubLH()},30000);
 /* 마을 */
 // (승급 시스템 삭제) 예전에 '응축된 경험치'로 모아 둔 경험치가 있으면 돌려주고, 승급 기록을 지운다.
-function pmCleanup(){if(!C||C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=1+Math.floor(C.ex/40)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
+function pmCleanup(){xpMigrate();if(!C||C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=lvOf(C.ex)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
 function hub(){show("hub");pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);
  const tt=titleById(C.ti),wn=C.wp>=0?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음",cell=(k,x)=>"<div><small>"+k+"</small><b>"+x+"</b></div>";
  $("#hc").innerHTML="<div class='hc-top'>"+(C.img?"<img class='av' alt='프로필 이미지' src='"+C.img+"'>":"<div class='av hc-noimg' aria-hidden='true'>"+esc(String(C.n).slice(0,1))+"</div>")+"<div class='hc-id'><h2>"+esc(cn(UID,C.n))+"</h2><p>"+v.n+" · "+C.s+" · "+C.a.join("·")+"</p>"+(tt?"<p class='hc-ti'>✦ "+tt[1]+"</p>":"")+"</div><span class='hc-grade'>"+C.g+"</span></div>"
   +"<div class='hc-grid'>"+cell("레벨",C.lv)+cell("토벌",C.cl+"회")+cell("전투력",pw())+cell("골드",C.gd||0)+cell("무기",wn)+cell("특성",C.t)+"</div>"+(petCur()?"<p class='hc-pet'>"+PETS[petCur().sp][2]+" "+PETS[petCur().sp][1]+" "+esc(petCur().nm)+" · 친밀도 "+petLv(petCur())+"단계</p>":"")
-  +"<div class='hc-xp"+(C.fall||scarLeft()>0?" scar":"")+"'><small>경험치</small><div class='bar'><i style='width:"+(((C.ex||0)%40)/40*100)+"%'></i></div><b>"+((C.ex||0)%40)+" / 40</b></div>"+(C.fall?"<p class='hc-next' style='color:#ff8da0'>타락 중에는 경험치를 얻을 수 없다.</p>":scarLeft()>0?"<p class='hc-next' style='color:#ff8da0'>타락의 후유증: 얻는 경험치 절반 (약 "+Math.ceil(scarLeft()/60000)+"분 남음)</p>":"")+"<div class='hc-dz'><small>절망도</small><div class='bar'><i style='width:"+C.dz+"%'></i></div><b>"+C.dz+"</b></div><div class='hc-heal'><p class='hc-next' id='hcnext'>"+healTxt()+"</p><button type='button' class='chip hc-htog' id='hctog' aria-pressed='"+(C.healOff?"false":"true")+"'>자연 회복 "+(C.healOff?"꺼짐":"켜짐")+"</button></div>"
+  +"<div class='hc-xp"+(C.fall||scarLeft()>0?" scar":"")+"'><small>경험치</small><div class='bar'><i style='width:"+Math.min(100,((C.ex||0)-xpAt(C.lv))/xpNeed(C.lv)*100)+"%'></i></div><b>"+((C.ex||0)-xpAt(C.lv))+" / "+xpNeed(C.lv)+"</b></div>"+(C.fall?"<p class='hc-next' style='color:#ff8da0'>타락 중에는 경험치를 얻을 수 없다.</p>":scarLeft()>0?"<p class='hc-next' style='color:#ff8da0'>타락의 후유증: 얻는 경험치 절반 (약 "+Math.ceil(scarLeft()/60000)+"분 남음)</p>":"")+"<div class='hc-dz'><small>절망도</small><div class='bar'><i style='width:"+C.dz+"%'></i></div><b>"+C.dz+"</b></div><div class='hc-heal'><p class='hc-next' id='hcnext'>"+healTxt()+"</p><button type='button' class='chip hc-htog' id='hctog' aria-pressed='"+(C.healOff?"false":"true")+"'>자연 회복 "+(C.healOff?"꺼짐":"켜짐")+"</button></div>"
   +((()=>{const a=ITM.filter(x=>USE[x[0]]&&armed(x[0])).map(x=>x[1]).concat(Object.keys(SKID).filter(armedSk).map(id=>SKID[id].nm));return a.length?"<p class='hc-arm'>준비: "+a.join(", ")+"</p>":""})())+"<details class='hc-more'><summary>속성 · 특성 · 캐릭터 설정 자세히</summary><dl class='kv'><dt>속성</dt><dd>"+C.a.map(a=>{const x=AT.find(t=>t[0]===a);return a+"<small style='display:block;color:var(--mu)'>"+(x?x[2]:"")+"</small>"}).join("")+"</dd><dt>특성</dt><dd>"+C.t+"<small style='display:block;color:var(--mu)'>"+(TD[C.t]||"")+"</small></dd><dt>마을</dt><dd>"+v.d+"</dd></dl></details>";
  {const ht=$("#hctog");if(ht)ht.onclick=healToggle}const pr2=pfRows(C.pf);if(pr2){pr2.style.marginTop="10px";$("#hc .hc-more").appendChild(pr2)}
  const fb=$("#fbar");fb.innerHTML="";if(C.fall||C.dz>=90){const d=document.createElement("div"),b=document.createElement("b"),p=document.createElement("span");d.className="fallbar"+(C.fall?"":" warn");
@@ -389,7 +397,7 @@ async function bigPic(uid){if(!uid)return "";if(uid===UID&&C&&C.img)return HIRES
 async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(uid);if(big&&!$("#imgo").hidden&&$("#imgoi").src===small)$("#imgoi").src=big}
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
 function regPlayer(){if(!DB||!C)return;try{clockSync()}catch(e){}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:Date.now(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
+ DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],dd:ADM[UID]&&C.doom?C.doom:null,rst:ADM[UID]&&C.rst?C.rst:null,rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:Date.now(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#pfdu").hidden=uid===UID;$("#gbox").hidden=true;$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -912,9 +920,9 @@ async function dmPng(el,title){const ms=(el&&el._ms||[]).slice();if(!ms.length)r
  const fN="bold 15px "+FF,fT="16px "+FF,fS="12px "+FF;
  // 메시지마다 높이를 미리 잰다.
  const items=ms.map(m=>{const nm=cn(m.u,m.n)+(m.u===UID?" (나)":""),lines=wrap(m.x||"",fT,TW);return{m,nm,lines,h:16+20+lines.length*LH+12}});
- const HEAD=96,FOOT=44,pages=[];let cur=[],hh=HEAD;items.forEach(it=>{if(cur.length&&hh+it.h+8+FOOT>DM_PNG_H){pages.push(cur);cur=[];hh=HEAD}cur.push(it);hh+=it.h+8});if(cur.length)pages.push(cur);
+ const HEAD=96,FOOT=44,PH=Math.round(W*297/210),pages=[];let cur=[],hh=HEAD;items.forEach(it=>{if(cur.length&&hh+it.h+8+FOOT>PH){pages.push(cur);cur=[];hh=HEAD}cur.push(it);hh+=it.h+8});if(cur.length)pages.push(cur);
  const stamp=(()=>{const d=new Date();return d.getFullYear()+two(d.getMonth()+1)+two(d.getDate())+"_"+two(d.getHours())+two(d.getMinutes())})(),safe=String(title||"대화").replace(/와의 1:1 대화| \(열람 전용\)/g,"").replace(/[\\/:*?"<>|\s]+/g,"_").slice(0,40);
- for(let pi=0;pi<pages.length;pi++){const its=pages[pi],H=HEAD+its.reduce((a,it)=>a+it.h+8,0)+FOOT,cv=document.createElement("canvas");cv.width=W*DM_PNG_X;cv.height=H*DM_PNG_X;const x=cv.getContext("2d");x.scale(DM_PNG_X,DM_PNG_X);x.textBaseline="top";
+ const jp=[];for(let pi=0;pi<pages.length;pi++){const its=pages[pi],H=HEAD+its.reduce((a,it)=>a+it.h+8,0)+FOOT,cv=document.createElement("canvas");cv.width=W*DM_PNG_X;cv.height=H*DM_PNG_X;const x=cv.getContext("2d");x.scale(DM_PNG_X,DM_PNG_X);x.textBaseline="top";
   x.fillStyle=K.bg;x.fillRect(0,0,W,H);
   x.fillStyle=K.gold;x.font="bold 13px "+FF;x.fillText("魔法 成長記錄 · 1:1 대화",P,22);
   x.fillStyle=K.ink;x.font="bold 20px "+FF;x.fillText(wrap(title||"",x.font=("bold 20px "+FF),W-P*2)[0]||"",P,42);
@@ -927,15 +935,46 @@ async function dmPng(el,title){const ms=(el&&el._ms||[]).slice();if(!ms.length)r
    x.font=fS;x.fillStyle=K.mu;const tm=dt(it.m.ts);x.fillText(tm,bx+bw-14-x.measureText(tm).width,y+14);
    x.font=fT;x.fillStyle=K.ink;it.lines.forEach((ln,i)=>x.fillText(ln,bx+14,y+38+i*LH));y+=it.h+8});
   x.fillStyle=K.mu;x.font=fS;x.fillText("저장한 시각 "+dt(Date.now()),P,H-28);
-  const blob=await new Promise(r=>cv.toBlob(r,"image/png"));if(!blob){toast("그림을 만들지 못했다.");return}
-  const a=document.createElement("a"),u=URL.createObjectURL(blob);a.href=u;a.download="1대1_"+safe+"_"+stamp+(pages.length>1?"_"+(pi+1):"")+".png";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
-  if(pi<pages.length-1)await new Promise(r=>setTimeout(r,400))}
- toast(pages.length>1?"대화가 길어 "+pages.length+"장으로 나눠 저장했다.":"대화를 PNG로 저장했다.")}
+  const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.92));if(!blob){toast("PDF를 만들지 못했다.");return}
+  jp.push({b:new Uint8Array(await blob.arrayBuffer()),w:cv.width,h:cv.height,pw:595.28,ph:595.28*H/W})}
+ const pdf=pdfJpeg(jp),a=document.createElement("a"),u=URL.createObjectURL(pdf);a.href=u;a.download="1대1_"+safe+"_"+stamp+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+ toast("대화를 PDF로 저장했다"+(pages.length>1?" ("+pages.length+"쪽).":"."))}
+/* JPEG 그림들을 한 쪽씩 담은 PDF를 만든다(외부 라이브러리 없이). 쪽 크기는 A4 너비(595pt)에 그림 비율을 맞춘다. */
+function pdfJpeg(pgs){const enc=new TextEncoder(),parts=[],offs=[];let len=0;const put=x=>{const b=typeof x==="string"?enc.encode(x):x;parts.push(b);len+=b.length};
+ const n=2+pgs.length*3,obj=(i,body)=>{offs[i]=len;put(i+" 0 obj\n");body();put("\nendobj\n")};
+ put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+ obj(1,()=>put("<< /Type /Catalog /Pages 2 0 R >>"));
+ obj(2,()=>put("<< /Type /Pages /Count "+pgs.length+" /Kids ["+pgs.map((_,i)=>(3+i*3)+" 0 R").join(" ")+"] >>"));
+ pgs.forEach((g,i)=>{const P=3+i*3,I=P+1,S=P+2,pw=g.pw.toFixed(2),ph=g.ph.toFixed(2),cs="q "+pw+" 0 0 "+ph+" 0 0 cm /Im0 Do Q";
+  obj(P,()=>put("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+pw+" "+ph+"] /Resources << /XObject << /Im0 "+I+" 0 R >> >> /Contents "+S+" 0 R >>"));
+  obj(I,()=>{put("<< /Type /XObject /Subtype /Image /Width "+g.w+" /Height "+g.h+" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+g.b.length+" >>\nstream\n");put(g.b);put("\nendstream")});
+  obj(S,()=>put("<< /Length "+cs.length+" >>\nstream\n"+cs+"\nendstream"))});
+ const xr=len;put("xref\n0 "+(n+1)+"\n0000000000 65535 f \n");for(let i=1;i<=n;i++)put(String(offs[i]).padStart(10,"0")+" 00000 n \n");
+ put("trailer\n<< /Size "+(n+1)+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF");
+ return new Blob(parts,{type:"application/pdf"})}
 function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);const same=el.dataset.th===th,nearB=el.scrollHeight-el.scrollTop-el.clientHeight<40,top=el.scrollTop,prevLast=Number(el.dataset.last||0);
  ms.sort((a,b)=>a.ts-b.ts);el._ms=ms;const last=ms.length?Number(ms[ms.length-1].ts)||0:0;el.dataset.th=th;el.dataset.last=last;
  const keep=()=>{if(!same||nearB){el.scrollTop=el.scrollHeight;newBtn(el,false)}else{el.scrollTop=top;if(last>prevLast)newBtn(el,true)}};
- el.innerHTML="";if(!ms.length){el.innerHTML="<p class='hint' style='margin:0'>아직 대화가 없다.</p>";newBtn(el,false);return}
- ms.forEach(m=>{const p=document.createElement("p"),b=document.createElement("b");b.textContent=cn(m.u,m.n)+(m.u===UID?" (나)":"");if(typeof m.t==="string"&&m.t)p.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));b.style.color=m.u===UID?"#d8c79a":"#e49aa9";if(m.u&&m.u!==UID){b.tabIndex=0;b.setAttribute("role","button");b.style.cssText+="cursor:pointer;text-decoration:underline";b.onclick=()=>openProfile(m.u);b.onkeydown=e=>{if(e.key==="Enter")openProfile(m.u)}}p.insertBefore(b,p.firstChild);p.appendChild(document.createTextNode(": "+m.x));el.appendChild(p)});keep()}
+ el.innerHTML="";if(!ms.length){el.innerHTML="<div class='cm-empty'><span>✦</span><p>아직 대화가 없다.</p><small>먼저 인사를 건네 보자.</small></div>";newBtn(el,false);return}
+ /* 말풍선: 내 말은 오른쪽, 다른 사람 말은 왼쪽. 같은 사람이 3분 안에 이어 말하면 이름과 얼굴을 한 번만 보인다. 날짜가 바뀌면 구분선을 넣는다. */
+ let pu=null,pt=0,pd="",need=false;
+ ms.forEach(m=>{const me=m.u===UID,ts=Number(m.ts)||0,d=ts?new Date(ts):null,dk=d?d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate():"";
+  if(dk&&dk!==pd){const sep=elT("div","cm-day",(d.getMonth()+1)+"월 "+d.getDate()+"일");el.appendChild(sep);pu=null}pd=dk||pd;
+  const cont=pu===m.u&&ts-pt<180000;pu=m.u;pt=ts;
+  const p=elT("div","cm"+(me?" me":"")+(cont?" cont":""));
+  const nm=cn(m.u,m.n),av=elT("span","cm-av",(nm||"?").slice(0,1));if(!me&&m.u){av.dataset.u=m.u;if(!avSet(av,m.u))need=true}
+  const body=elT("div","cm-body"),head=elT("div","cm-head"),b=elT("b","cm-n",nm+(me?" (나)":""));
+  if(m.u&&!me){b.tabIndex=0;b.setAttribute("role","button");b.classList.add("link");b.onclick=()=>openProfile(m.u);b.onkeydown=e=>{if(e.key==="Enter")openProfile(m.u)};av.onclick=()=>openProfile(m.u);av.classList.add("link")}
+  head.appendChild(b);if(typeof m.t==="string"&&m.t)head.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));
+  const row=elT("div","cm-row"),bub=elT("span","cm-x",String(m.x==null?"":m.x)),tm=elT("small","cm-t",d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"");
+  row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoad();keep()}
+/* 채팅 프로필 사진: 등록자 목록(players)에 이미 들어 있는 작은 사진을 쓴다. 목록은 plAll이 모아 두므로 따로 많이 받지 않는다.
+   사진이 없는 사람은 이름 첫 글자를 그대로 보인다. 목록에 없는 새 사람이 보이면 5분에 한 번까지만 목록을 다시 받는다. */
+let AVM=null,AVK=null,AVT=-1,avBusy=false,avLast=0;
+function avMap(){if(PLC&&AVT!==PLT){AVM={};AVK=new Set();PLC.docs.forEach(d=>{AVK.add(d.id);const q=d.data();if(q&&typeof q.im==="string"&&/^(data:image\/|https:)/.test(q.im))AVM[d.id]=q.im});AVT=PLT}return AVM}
+function avSet(av,u){const mp=avMap();if(!mp)return false;const im=mp[u];if(im&&!av.querySelector("img")){const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}return AVK.has(u)||Date.now()-avLast<300000}
+function avLoad(){if(!DB||avBusy)return;if(AVK&&Date.now()-avLast<300000)return;avBusy=true;avLast=Date.now();
+ plAll(AVK?0:undefined).then(()=>{avBusy=false;document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))},()=>{avBusy=false})}
 function setT(t){ct=t;unC&&unC();unC=null;unP&&unP();unP=null;
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";
@@ -1183,7 +1222,7 @@ $("#alc").onclick=()=>{$("#alo").hidden=true};
 const rhits=(u,rid)=>DB.collection("raidhit/"+u+"/"+rid);
 const sumHits=list=>list.reduce((a,v)=>a+(Number(v&&v.d)||0),0);
 const scarLeft=()=>Math.max(0,((C&&C.scar)||0)-Date.now());
-function fallLoss(w){const lv=C.lv||1,ex0=C.ex||0,ex1=Math.max(0,(lv-2)*40),g0=C.gd||0,gl=Math.floor(g0*FALL_GOLD*(w?2:1));C.ex=Math.min(ex0,ex1);C.lv=1+Math.floor(C.ex/40);C.gd=g0-gl;return{lv0:lv,lv1:C.lv,exl:ex0-C.ex,gl}}
+function fallLoss(w){const lv=C.lv||1,ex0=C.ex||0,ex1=xpAt(lv-1),g0=C.gd||0,gl=Math.floor(g0*FALL_GOLD*(w?2:1));C.ex=Math.min(ex0,ex1);C.lv=lvOf(C.ex);C.gd=g0-gl;return{lv0:lv,lv1:C.lv,exl:ex0-C.ex,gl}}
 function fallen(){if(C.fall)return;C.fallT=fallsRecent().concat(Date.now()).slice(-10);const w=C.fallT.length>=WITCH_N;if(w)return witchBorn();const L=fallLoss();C.fall={rid:Date.now(),mx:raidHp(),sd:0,st:0};titleState();C.stats.falls=(C.stats.falls||0)+1;C.dz=100;note("fall","절망도가 100에 닿아 타락했다. 친구들이 맞서 주기를 기다리자.");save();putRaid();regPlayer();checkTitles();
  alertBox("타락","절망도가 100에 닿았다. "+C.n+"은(는) 절망에 삼켜져 마수가 되었다.\n\n타락의 대가\n· 경험치 "+L.exl+"을(를) 잃었다"+(L.lv1<L.lv0?" (레벨 "+L.lv0+" → "+L.lv1+")":"")+"\n· 골드 "+L.gl+"을(를) 잃었다\n· 타락한 동안에는 경험치를 얻을 수 없다\n· 되돌아온 뒤 1시간 동안 얻는 경험치가 절반이 된다\n\n친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다. 그동안 출정과 재계약 시험은 할 수 없다."+(C.fallT.length===WITCH_N-1?"\n\n⚠ 경고: 최근 7일 동안 "+C.fallT.length+"번 타락했다. 한 번 더 타락하면 절망의 마인이 된다.":""));note("fall","타락의 대가로 경험치 "+L.exl+", 골드 "+L.gl+"을(를) 잃었다."+(L.lv1<L.lv0?" 레벨이 "+L.lv1+"(으)로 떨어졌다.":""))}
 function witchBorn(){const L=fallLoss(1);C.fall={rid:Date.now(),mx:raidHp()*WITCH_HP,sd:0,st:0,w:1};titleState();C.stats.falls=(C.stats.falls||0)+1;C.stats.witch=(C.stats.witch||0)+1;C.dz=100;
@@ -1367,7 +1406,7 @@ $("#gb").onclick=()=>hub();
    새 공지가 올라오면 한 번 알림(화면 위 알림·알림함)을 띄운다. 각자 ✕로 닫을 수 있고, 더 새 공지가 오면 다시 보인다. 최근 5개까지만 남긴다. */
 let NTC=[],ntcT=0;// 운영자 한 명당 최근 30개까지 보관
 // 공지 탭: 모든 공지를 최근 순으로. 연 순간 읽은 것으로 표시한다.
-function ntcView(keep){if(!keep){show("ntc");loadNotice(true)}const l=$("#ntcl");if(!l||!C)return;l.innerHTML="";const seen=C.ntcSeen||0;
+function ntcView(keep){if(!keep){show("ntc");loadNotice(true)}try{drawRst()}catch(e){}const l=$("#ntcl");if(!l||!C)return;l.innerHTML="";const seen=C.ntcSeen||0;
  if(ADM[UID]){const w=elT("p","hint","공지 쓰기와 내리기는 화면 위쪽 공지 칸의 '📢 공지 쓰기'에서 할 수 있다.");l.appendChild(w)}
  if(!NTC.length){l.appendChild(elT("p","hint","아직 공지가 없다."));}
  NTC.forEach(n=>{const d=new Date(Number(n.ts)),c=elT("div","ntc-card ntc-item"+(n.u?" urgent":"")+(Number(n.ts)>seen?" new":""));
@@ -1375,7 +1414,7 @@ function ntcView(keep){if(!keep){show("ntc");loadNotice(true)}const l=$("#ntcl")
   if(ADM[UID]&&n.src==="p"&&n.by===UID){const x=elT("button","chip","이 공지 내리기");x.type="button";x.style.cssText="margin-top:8px;padding:5px 12px;font-size:.8rem";x.onclick=async()=>{if(!confirm("이 공지를 내릴까?"))return;C.ntcl=(C.ntcl||[]).filter(o=>o.id!==n.id);save();try{await DB.doc("players/"+UID+"/ntc").set(C.ntcl)}catch(e){}NTC=NTC.filter(o=>o!==n);drawNotice();ntcView(true)};c.appendChild(x)}
   l.appendChild(c)});
  if(NTC.length&&Number(NTC[0].ts)>seen){C.ntcSeen=Number(NTC[0].ts);save()}updNav()}
-async function loadNotice(force){if(!C||!XON())return;if(!force&&Date.now()-ntcT<20000)return;ntcT=Date.now();let list=null;
+async function loadNotice(force){if(!C||!XON())return;if(!force&&Date.now()-ntcT<20000)return;ntcT=Date.now();loadDoom();rstCheck();let list=null;
  // 공지는 운영자 본인의 플레이어 기록(players/{운영자}/ntc)에 저장한다. 그 칸은 운영자 본인만 쓸 수 있고, 운영자 목록(admins)은 콘솔에서만 바뀌므로
  // 서버 규칙을 따로 추가하지 않아도 운영자만 공지를 올릴 수 있다. notice 규칙이 있으면 그쪽 공지도 함께 읽는다.
  const all=[];let okAny=false;
@@ -1388,7 +1427,7 @@ async function loadNotice(force){if(!C||!XON())return;if(!force&&Date.now()-ntcT
  else if(top&&(Number(top.ts)||0)>C.nts){const first=false;C.nts=Number(top.ts)||Date.now();save();if(!first){note("notice","공지: "+top.t.slice(0,120));toast("📢 공지: "+top.t.slice(0,60),()=>{keep("mgr_ntc_x","");drawNotice()});ding()}}
  drawNotice()}
 setInterval(()=>{if(!document.hidden)loadNotice()},60000);
-function drawNotice(){const b=$("#ntc");if(!b)return;const isA=!!(C&&ADM[UID]),top=NTC[0],hid=!!top&&lget("mgr_ntc_x")===String(top.ts),openForm=!!b.querySelector(".ntc-adm:not([hidden]) textarea");
+function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;const isA=!!(C&&ADM[UID]),top=NTC[0],hid=!!top&&lget("mgr_ntc_x")===String(top.ts),openForm=!!b.querySelector(".ntc-adm:not([hidden]) textarea");
  if(openForm)return;// 운영자가 공지를 쓰는 중이면 다시 그리지 않는다
  b.innerHTML="";const show=!!C&&((top&&!hid)||isA);b.hidden=!show;if(!show)return;
  if(top&&!hid){const c=elT("div","ntc-card"+(top.u?" urgent":"")),d=new Date(Number(top.ts)||Date.now());
@@ -1405,6 +1444,92 @@ function drawNotice(){const b=$("#ntc");if(!b)return;const isA=!!(C&&ADM[UID]),t
     keep("mgr_ntc_x","");f.hidden=true;ta.value="";await loadNotice(true);toast("공지를 게시했다.")}
    catch(err){msg.textContent="게시하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}go.disabled=false};
   b.append(row,f)}}
+/* ── '멸망까지' 카운트다운 (D-14) ──
+   운영자가 시작일을 고르면 그날이 D-14, 14일 뒤가 D-DAY다. 모든 화면 위쪽에 보인다.
+   저장 위치는 공지와 같은 방식: 운영자 본인의 플레이어 기록(players/{운영자}/dd). 그 칸은 운영자 본인만 쓸 수 있어서
+   서버 규칙을 따로 추가하지 않아도 운영자만 날짜를 바꿀 수 있다. 값: {d:"2026-10-27"(시작일), ts:저장 시각} 또는 비어 있음(꺼짐). */
+const DOOM_DAYS=14;let DOOM=null,doomT=0;
+const doomOk=o=>!!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
+const doomYmd=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const doomDay=s=>{const [y,m,d]=String(s).split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)};
+function doomState(o){if(!doomOk(o))return null;const st=doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
+ const e=new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
+ const [,sm,sd]=o.d.split("-").map(Number);
+ return {left,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
+async function loadDoom(){if(!XON())return;let best=null,ok=false;
+ for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/dd").get()).data();ok=true;if(d&&typeof d==="object"&&(!best||Number(d.ts||0)>Number(best.ts||0)))best=d}catch(e){}}
+ if(ok){DOOM=best&&best.d?best:null;doomT=Date.now();drawDoom()}}
+function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),src=XON()?DOOM:(C&&C.doom)||null,st=doomState(src);
+ if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
+ b.innerHTML="";const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;if(!show)return;
+ const c=elT("div","doom-card"+(live&&st.left<=3?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off"));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘, 세계가 끝난다.":st.endTx+" 멸망 · "+st.startTx+" 시작"));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다. 운영자만 보인다.":st.before?st.startTx+"에 시작한다 (D-14). 운영자만 보인다.":"멸망의 날("+st.endTx+")이 지났다. 운영자만 보인다."));
+ c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.left):"—"));
+ if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
+ b.appendChild(c);
+ if(isA){const set=elT("button","chip doom-set","⏳ 시작일 설정");set.type="button";
+  const f=elT("form","doom-form");f.hidden=true;const inp=elT("input");inp.type="date";inp.value=doomOk(src)?src.d:doomYmd(srvNow());inp.setAttribute("aria-label","카운트다운 시작일");
+  const hint=elT("p","hint","고른 날이 D-14, 14일 뒤가 D-DAY가 된다.");
+  const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
+  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY)":"날짜를 골라야 한다."};inp.oninput=upd;upd();
+  f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
+  const put=async v=>{go.disabled=off.disabled=true;try{C.doom=v;save();if(XON()){await DB.doc("players/"+UID+"/dd").set(v);DOOM=v}f.hidden=true;drawDoom();toast(v?"'멸망까지' 시작일을 "+doomState(v).startTx+"로 정했다.":"'멸망까지' 카운트다운을 껐다.")}
+   catch(e){msg.textContent="저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}go.disabled=off.disabled=false};
+  f.onsubmit=e=>{e.preventDefault();if(!/^\d{4}-\d{2}-\d{2}$/.test(inp.value)){msg.textContent="날짜를 골라야 한다.";return}put({d:inp.value,ts:Date.now()})};
+  off.onclick=()=>{if(confirm("카운트다운을 끌까? 모두의 화면에서 사라진다."))put(null)};
+  b.append(set,f)}}
+setInterval(()=>{if(document.hidden)return;if(XON()&&Date.now()-doomT>60000)loadDoom();else drawDoom()},30000);
+/* ── 시즌 초기화 ──
+   운영자가 '시즌 초기화'를 실행하면 운영자 본인의 플레이어 기록(players/{운영자}/rst)에 {id:실행 시각}을 남긴다(공지·카운트다운과 같은 방식).
+   모든 플레이어는 접속할 때와 1분마다 이 표시를 확인하고, 내 캐릭터가 그보다 오래된 시즌이면(C.rsv < id) 한 번 초기화한다.
+   남기는 것: 이름·성별·마을·등급·속성·특성, 프로필(사진·설정), 기록(칭호·도감·통계), 사역마(+품고 있는 알).
+   이미 받은 보상·이미 본 알림 표시도 남긴다(초기화 뒤 같은 보상을 다시 받거나 옛 알림이 다시 뜨지 않게).
+   그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
+   공용 데이터(채팅·1:1·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. */
+let RST=null,rstT=0;
+const RST_KEEP=["n","s","v","a","g","t","img","pf","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg",
+ "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
+ "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
+const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
+async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM).concat(typeof ADMIN_FIXED!=="undefined"?ADMIN_FIXED:[]));
+ for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
+ if(ok){RST=best;rstT=Date.now()}return RST}
+async function rstCheck(boot){if(!C||!XON())return;if(!boot&&Date.now()-rstT<55000)return;const R=await rstLoad();if(!R||!C)return;
+ if((Number(C.rsv)||0)>=R.id)return;
+ if(Number(C.born)>R.id){C.rsv=R.id;save();return}// 초기화 뒤에 새로 만든 캐릭터
+ rstApply(R,boot)}
+function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined)keep[k]=C[k]});
+ C=Object.assign({lv:1,ex:0,xv:2,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:R.id,nt:[]});
+ C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,100);
+ note("notice","🌑 새 시즌이 시작되었다. 이름·속성·특성·사역마와 프로필·기록은 그대로 남고, 나머지는 처음부터 다시 시작한다.");
+ save();try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}
+ const msg="운영자가 시즌을 초기화했다.\n\n남은 것: 이름·성별·마을·등급·속성·특성, 프로필, 칭호·도감·기록, 사역마\n처음으로 돌아간 것: 레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n새로운 이야기를 시작하자.";
+ if(boot)setTimeout(()=>alertBox("🌑 새 시즌",msg),900);else{alertBox("🌑 새 시즌",msg);try{hub()}catch(e){}}}
+// 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
+async function rstWipe(){const done=[],fail=[];
+ const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["guard","마을 경쟁"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
+  let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
+ return {done,fail}}
+async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
+ const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구·마을 경쟁·보스 기록이 초기화된다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
+ if((t||"").trim()!=="초기화"){msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="초기화하는 중이다. 창을 닫지 말자...";
+ try{const R={id:Date.now(),ts:Date.now()};C.rst=R;save();await DB.doc("players/"+UID+"/rst").set(R);RST={id:R.id,by:UID};rstT=Date.now();
+  const w=await rstWipe();try{PLC=null}catch(e){}
+  rstApply(RST,false);
+  alertBox("🌑 시즌 초기화 완료","플레이어들은 다음 접속(또는 1분 안)에 각자 초기화된다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
+  msg.textContent=""}
+ catch(e){msg.style.color="var(--bad)";msg.textContent="초기화 표시를 저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (아무것도 바뀌지 않았다)"}btn.disabled=false}
+function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
+ const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
+  elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·등급·속성·특성, 프로필, 칭호·도감·기록, 사역마는 남는다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 기여, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지'는 남는다."),
+  elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
+ const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c)}
 function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{got:{}};const t=C.tut;box.innerHTML="";if(t.hide)return;
  const ok=TUT.map(x=>{let v=false;try{v=!!x[3](C)}catch(e){}return v}),got=TUT.filter(x=>t.got[x[0]]).length,all=got===TUT.length;
  const w=elT("div","tut"),hd=elT("div","");hd.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";hd.append(elT("h2","","튜토리얼 · "+got+" / "+TUT.length));
@@ -1427,7 +1552,7 @@ const facLvOf=pts=>FAC_LV.filter(n=>pts>=n).length;
 const facLv=k=>C&&!(typeof disMine==="function"&&disMine()==="quake")?facLvOf(facPts(C.v,k)):0;
 const myFac=()=>Object.values((C&&C.fc)||{}).reduce((a,b)=>a+(Number(b)||0),0);
 async function loadFac(force){if(!C||!XON())return;if(!force&&Date.now()-facT<60000)return;facT=Date.now();
- try{const sn=await plAll(force?0:60000);const o={},dp={};sn.docs.forEach(d=>{const p=d.data();if(p&&p.dr&&typeof p.dr==="object"&&typeof p.dr.id==="string")dp[p.dr.id]=(dp[p.dr.id]||0)+Math.max(0,Math.min(40,Number(p.dr.pts)||0))});DRP=dp;wfLoad(sn.docs);sn.docs.forEach(d=>{const p=d.data();if(!p||!VL[p.v]||!p.fc||typeof p.fc!=="object")return;
+ try{const sn0=await plAll(force?0:60000),sn={docs:sn0.docs.filter(d=>!rstOld(d.data()))};const o={},dp={};sn.docs.forEach(d=>{const p=d.data();if(p&&p.dr&&typeof p.dr==="object"&&typeof p.dr.id==="string")dp[p.dr.id]=(dp[p.dr.id]||0)+Math.max(0,Math.min(40,Number(p.dr.pts)||0))});DRP=dp;wfLoad(sn.docs);sn.docs.forEach(d=>{const p=d.data();if(!p||!VL[p.v]||!p.fc||typeof p.fc!=="object")return;
    FAC.forEach(([k])=>{const n=Math.max(0,Math.min(1e6,Number(p.fc[k])||0));if(!n)return;const f=((o[p.v]=o[p.v]||{})[k]=o[p.v][k]||{sum:0,top:[]});f.sum+=n;f.top.push({u:d.id,n:p.n,pt:n})})});
   // 내 기여는 서버 반영 전이라도 바로 보이게 맞춘다.
   if(C.fc)FAC.forEach(([k])=>{const mine=Number(C.fc[k])||0,f=((o[C.v]=o[C.v]||{})[k]=o[C.v][k]||{sum:0,top:[]}),me0=f.top.find(t=>t.u===UID);if(me0){f.sum+=mine-me0.pt;me0.pt=mine}else if(mine){f.sum+=mine;f.top.push({u:UID,n:C.n,pt:mine})}});
