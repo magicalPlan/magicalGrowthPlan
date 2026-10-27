@@ -8,64 +8,6 @@ let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 저장하고, 만일을 위해 이 브라우저에도 계정별 백업을 남긴다.
 const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){if(C&&Date.now()-(window.__reg||0)>60000){window.__reg=Date.now();try{regPlayer()}catch(e){}}try{if(C){C._sv=Date.now();localStorage.setItem("mgr_bk_"+AUTH.uid,JSON.stringify(C))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
-// 공유 기능이 없는 환경(일반 웹 호스팅)에서는 이 브라우저 안에서만 도는 임시 저장소를 쓴다.
-function local(){const st={},ls={};const nt=p=>{const c=p.split("/")[0];(ls[p]||[]).forEach(f=>f());(ls[c]||[]).forEach(f=>f())};
-const sn=p=>({id:p.split("/").slice(1).join("/"),exists:p in st,data:()=>st[p]&&JSON.parse(JSON.stringify(st[p]))});
-const sub=(k,g)=>{(ls[k]=ls[k]||[]).push(g);setTimeout(g);return()=>{ls[k]=ls[k].filter(x=>x!==g)}};
-const D=p=>({get:async()=>sn(p),set:async d=>{st[p]=JSON.parse(JSON.stringify(d));nt(p)},delete:async()=>{delete st[p];nt(p)},onSnapshot:f=>sub(p,()=>f(sn(p)))});
-const Q=(c,fl,op)=>({where:(a,o,v)=>Q(c,fl.concat([[a,v]]),op),orderBy:()=>Q(c,fl,op),limit:n=>Q(c,fl,Object.assign({},op,{l:n})),first:n=>Q(c,fl,Object.assign({},op,{f:n})),from:k=>Q(c,fl,Object.assign({},op,{fr:k})),prefix:p=>Q(c,fl,Object.assign({},op,{pre:p})),after:k=>Q(c,fl,Object.assign({},op,{af:k})),end:k=>Q(c,fl,Object.assign({},op,{en:k})),doc:id=>D(c+"/"+id),onSnapshot:f=>sub(c,()=>{let docs=Object.keys(st).filter(k=>k.startsWith(c+"/")).map(sn).filter(d=>fl.every(x=>d.data()&&d.data()[x[0]]===x[1]));const o=op||{};if(o.pre||o.en!=null||o.fr||o.f||o.af){docs.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);if(o.pre)docs=docs.filter(d=>String(d.id).startsWith(o.pre));if(o.af)docs=docs.filter(d=>d.id>=o.af);if(o.fr)docs=docs.filter(d=>d.id>=o.fr);if(o.en!=null)docs=docs.filter(d=>d.id<=o.en);if(o.f)docs=docs.slice(0,o.f);else if(o.l)docs=docs.slice(Math.max(0,docs.length-o.l))}f({docs})})});
-return{doc:D,collection:c=>Q(c,[])}}
-// 모든 플레이어 목록은 무겁다(프로필 사진 포함). 여러 기능이 따로 받지 않도록 한 번 받은 것을 PL_TTL 동안 함께 쓴다.
-let PLC=null,PLT=0,PLP=null;
-/* 서버비 절약: 전체 플레이어 목록(사진·설정 글 포함)은 가장 무거운 읽기다. 기본 5분(PL_TTL) 동안 다시 받지 않고 함께 쓴다. */
-const PL_TTL=300000;
-function plAll(maxAge){if(PLC&&Date.now()-PLT<(maxAge==null?PL_TTL:maxAge))return Promise.resolve(PLC);if(PLP)return PLP;
- PLP=once(DB.collection("players")).then(sn=>{PLC=sn;PLT=Date.now();PLP=null;return sn},e=>{PLP=null;throw e});return PLP}
-const IDX_BAD={};let lastSaveErr=null;
-function fbdb(base){base=base.replace(/\/+$/,"");
-const U=(p,q)=>base+"/"+p+".json?"+(AUTH.tok?"auth="+encodeURIComponent(AUTH.tok)+(q?"&":""):"")+(q||"");
-const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.stringify(v))});
-/* 서버 요청에 시간 제한(20초)을 둔다. 휴대폰 네트워크에서 요청이 응답 없이 멈추면, 그 요청을 기다리던 출정 진행이 새로고침 전까지 영영 멈췄다. */
-const tf=(u,o)=>{if(typeof AbortController!=="function")return fetch(u,o);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(t))};
-const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o)}catch(e){}}return r};
-const J=async mk=>{const r=await fx(mk);if(!r.ok)throw new Error(r.status);return r.json()};
-/* 데이터 사용량 절약: 실시간 감시는 POLL_MS(4초)마다 서버에 묻는다(채팅·대련처럼 빨라야 하는 곳만 더 짧게).
-   브라우저 탭이 화면에 보이지 않는 동안에는 묻지 않고 기다렸다가, 다시 보이면 이어서 묻는다. */
-const poll=(get,emit,err,ms)=>{let on=true,last="",t=null,first=true;const run=async()=>{if(!on)return;if(!first&&document.hidden){t=setTimeout(run,1000);return}first=false;try{const j=await get(),k=JSON.stringify(j);if(k!==last){last=k;emit(j)}}catch(e){err&&err({code:"unavailable",message:String(e)})}if(on)t=setTimeout(run,ms||POLL_MS)};run();return()=>{on=false;clearTimeout(t)}};
-/* 실시간 채팅: 채팅·1:1·대련 화면은 서버와 연결을 열어 두고(EventSource), 바뀐 부분만 바로 받는다.
-   몇 초마다 전체 목록을 다시 받는 것보다 빠르고 데이터도 훨씬 덜 쓴다. 탭이 안 보이면 연결을 닫고, 다시 보이면 연다.
-   연결이 안 되는 환경(동시 접속 한도 초과 등)이면 예전처럼 몇 초마다 묻는 방식으로 자동으로 돌아간다. */
-const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fallback();
- let on=true,es=null,tree=null,fails=0,ok=false,stopPoll=null,last="",retryT=null;
- const put=(path,data,merge)=>{const ks=String(path||"/").split("/").filter(Boolean);
-  if(!ks.length){if(merge){tree=tree&&typeof tree==="object"?tree:{};Object.keys(data||{}).forEach(k=>{if(data[k]==null)delete tree[k];else tree[k]=data[k]})}else tree=data;return}
-  tree=tree&&typeof tree==="object"?tree:{};let o=tree;ks.slice(0,-1).forEach(k=>{if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]});const lk=ks[ks.length-1];
-  if(merge){o[lk]=o[lk]&&typeof o[lk]==="object"?o[lk]:{};Object.keys(data||{}).forEach(k=>{if(data[k]==null)delete o[lk][k];else o[lk][k]=data[k]})}else if(data==null)delete o[lk];else o[lk]=data};
- const out=()=>{const k=JSON.stringify(tree);if(k!==last){last=k;emit(tree==null?null:JSON.parse(k))}};
- const toPoll=()=>{close();if(on&&!stopPoll)stopPoll=fallback()};
- const close=()=>{if(es){try{es.close()}catch(e){}es=null}};
- const open=()=>{if(!on||es||stopPoll||document.hidden)return;let u;try{u=mk()}catch(e){return toPoll()}es=new EventSource(u);
-  const h=(ev,mg)=>{try{const j=JSON.parse(ev.data);if(!j)return;put(j.path,j.data,mg);ok=true;fails=0;out()}catch(e){}};
-  es.addEventListener("put",ev=>h(ev,false));es.addEventListener("patch",ev=>h(ev,true));
-  es.addEventListener("cancel",()=>toPoll());
-  es.addEventListener("auth_revoked",async()=>{close();try{if(AUTH.rt&&AUTH.key)await refresh()}catch(e){}retryT=setTimeout(open,500)});
-  es.onerror=()=>{if(!es||es.readyState!==2)return;close();fails++;if(!ok||fails>=3){toPoll();return}retryT=setTimeout(open,3000)}};
- const vis=()=>{if(!on)return;if(document.hidden){if(!stopPoll)close()}else open()};
- document.addEventListener("visibilitychange",vis);open();
- return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(stopPoll)stopPoll()}};
-const D=p=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,await J(()=>U(p))),
- set:async d=>{const body=JSON.stringify(d),r=await fx(()=>U(p),{method:"PUT",body});if(!r.ok){/* 서버가 알려 준 거절 이유를 기억해 두었다가 오류 안내에 보여 준다(원인 찾기용). */if(p.startsWith("accounts/")){let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(body.length/1024)}}throw new Error(r.status)}},
- peek:async()=>J(()=>U(p,"shallow=true")),
- delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
- onSnapshot:(f,e,ms)=>{const pl=()=>poll(()=>J(()=>U(p)),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
-const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),end:k=>Q(c,{...o,en:k}),doc:id=>D(c+"/"+id),
- onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else{q.push('orderBy="$key"');if(o.pre){const start=o.af&&o.af>o.pre?o.af:o.pre,end=o.en!=null&&String(o.en)<o.pre+"\uf8ff"?o.en:o.pre+"\uf8ff";q.push("startAt="+encodeURIComponent(JSON.stringify(start)),"endAt="+encodeURIComponent(JSON.stringify(end)))}else if(o.fr)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)))}if(o.f)q.push("limitToFirst="+o.f);else if(o.l)q.push("limitToLast="+o.l);
- /* 서버 규칙에 찾기 목록(.indexOn)이 빠져 있으면 서버가 400 오류를 낸다. 그때는 최근 기록을 받아서 브라우저에서 골라낸다(조금 느리고 데이터를 더 쓰지만 동작은 한다). */
- const get=async()=>{if(o.w&&IDX_BAD[c]){const j=await J(()=>U(c,'orderBy="$key"&limitToLast=1500')),r={};Object.keys(j||{}).forEach(k=>{if(j[k]&&j[k][o.w[0]]===o.w[1])r[k]=j[k]});return r}
-  try{return await J(()=>U(c,q.join("&")))}catch(x){if(o.w&&String(x.message)==="400"){IDX_BAD[c]=1;return get()}throw x}};
- const em=j=>f({docs:Object.keys(j||{}).map(k=>sn(k,j[k]))}),pl=()=>poll(get,em,e,ms);
- return ms===POLL_FAST&&!(o.w&&IDX_BAD[c])?live(()=>U(c,q.join("&")),em,e,pl):pl()}});
-return{doc:D,collection:c=>Q(c,{})}}
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
 function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
  if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
@@ -155,7 +97,9 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
- dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{})}catch(e){}return dst}
+ dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
+ dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
+ dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t})}catch(e){}return dst}
 // 최신 기록은 조용히 불러온다(알림 없음). 다른 창을 오가며 플레이할 때마다 알림이 뜨면 거슬리기 때문이다.
 async function syncAdopt(why){try{const d=(await DB.doc("accounts/"+AUTH.uid).get()).data();if(!d||!d.c||!d.c.n||!C)return false;C=keepMerge(d.c,C);accSeen=Number(d.ts)||null;
  try{localStorage.setItem("mgr_bk_"+UID,JSON.stringify(Object.assign({},C,{_sv:Date.now()})))}catch(e){}
@@ -266,7 +210,7 @@ function navSync(id,moved){const g=navGroup(id);
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&unRd){unRd();unRd=null}if(id!=="boss"&&unB){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){unC&&unC();unC=null;unP&&unP();unP=null}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
