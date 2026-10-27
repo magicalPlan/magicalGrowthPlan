@@ -1,8 +1,11 @@
 /* 마을 경쟁. main.js 다음에 불러야 한다. 주간 점수, 순위, 우승 보상.
-   출정·보스·포탈·시설은 guardAdd 를, 마을 화면은 hubGuard 를 그대로 부른다. */
-let hgT=0,hgC=null;
+   출정·보스·포탈·시설은 guardAdd 를, 마을 화면은 hubGuard 를 그대로 부른다.
+   다른 사람의 점수는 마을 탭에 들어올 때 한 번만 읽는다. 내 점수는 오른 즉시 칸에 더한다. */
+let hgC=null,hgBusy=false;
+function guardApplyMine(){if(!hgC||!C||!C.gp||C.gp.wk!==wkKey())return;const v=hgC[C.v];if(!v)return;const pt=Math.max(0,Math.min(1000,Number(C.gp.pt)||0));
+ let me=v.ps.find(p=>p.u===UID);if(!me){if(!pt)return;me={u:UID,n:nmOf(),pt:0};v.ps.push(me)}if(me.pt===pt)return;me.pt=pt;me.n=nmOf();v.ps.sort((a,b)=>b.pt-a.pt);v.tot=v.ps.reduce((a,p)=>a+p.pt,0)}
 async function hubGuard(force){const box=$("#hgu");if(!box||!C)return;if(!XON()){box.innerHTML="<p class='hint'>서버에 연결되어야 마을 경쟁에 참여할 수 있다.</p>";return}
- if(force||!hgC||Date.now()-hgT>30000){hgT=Date.now();try{hgC=await guardWeek(wkKey())}catch(e){}}if(!hgC||$("#v-hub").hidden)return;
+ if((force||!hgC)&&!hgBusy){hgBusy=true;try{hgC=await guardWeek(wkKey());guardApplyMine()}catch(e){}finally{hgBusy=false}}if(!hgC||$("#v-hub").hidden)return;
  const rank=Object.values(hgC).sort((a,b)=>b.tot-a.tot),top=rank[0].tot||0,my=Math.max(((hgC[C.v]||{ps:[]}).ps.find(p=>p.u===UID)||{}).pt||0,C.gp&&C.gp.wk===wkKey()?C.gp.pt:0);box.innerHTML="";
  rank.forEach((r,i)=>{const w=elT("div","dq"+(r.v===C.v?" done":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");f.style.width=(top?r.tot/top*100:0)+"%";bar.appendChild(f);
   cp.append(elT("b","",(i+1)+"위 "+VL[r.v].n+(r.v===C.v?" (우리 마을)":"")),elT("small","",r.tot+"점 · 참여 "+r.ps.length+"명"),bar);w.appendChild(cp);w.onclick=guardView;w.style.cursor="pointer";box.appendChild(w)});
@@ -14,7 +17,7 @@ const wkKey=(off=0)=>{const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7
 const gSync={};
 async function guardAdd(n){if(!C||!XON()||!n)return;const wk=wkKey();if(!C.gp||C.gp.wk!==wk)C.gp={wk,pt:0};
  if(!gSync[wk+C.v]){try{const sv=Number(((await DB.doc("guard/"+wk+"/"+C.v+"/"+UID).get()).data()||{}).pt)||0;gSync[wk+C.v]=1;if(C.gp.wk===wk&&sv>C.gp.pt)C.gp.pt=Math.min(1000,sv)}catch(e){}}
- if(!C.gp||C.gp.wk!==wk)return;const b=C.gp.pt;C.gp.pt=Math.min(1000,b+n);if(C.gp.pt===b)return;/* 최대(1000점)에 닿으면 조용히 넘어간다. 내 점수는 마을 경쟁 칸에서 볼 수 있다. */C.gp.dirty=1;save();guardPush()}
+ if(!C.gp||C.gp.wk!==wk)return;const b=C.gp.pt;C.gp.pt=Math.min(1000,b+n);if(C.gp.pt===b)return;/* 최대(1000점)에 닿으면 조용히 넘어간다. 내 점수는 마을 경쟁 칸에서 볼 수 있다. */C.gp.dirty=1;save();guardPush();guardApplyMine();if(!$("#v-hub").hidden)hubGuard()}
 function guardPush(){if(!C||!C.gp||!C.gp.dirty||!XON()||C.gp.wk!==wkKey())return;const pt=C.gp.pt;
  DB.doc("guard/"+C.gp.wk+"/"+C.v+"/"+UID).set({u:UID,n:nmOf(),pt}).then(()=>{if(C&&C.gp&&C.gp.pt===pt){delete C.gp.dirty;save()}}).catch(()=>{})}
 async function guardWeek(wk){const out={};await Promise.all("ABCD".split("").map(async v=>{let d={};try{const s=await DB.doc("guard/"+wk+"/"+v).get();d=(s.exists&&s.data())||{}}catch(e){}

@@ -149,7 +149,7 @@ body:has(#v-chat:not([hidden])) main{max-width:780px}
 
 /* 대화창: 화면 높이에 맞춰 크게, 은은한 배경 */
 #gl,#vcl,#dl,#alg{height:clamp(320px,calc(100dvh - 380px),680px);min-height:0;max-height:none!important;padding:16px 14px 10px;border:1px solid var(--ln)!important;border-left:1px solid var(--ln)!important;border-radius:16px 16px 0 0;
- background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px;scroll-behavior:smooth}
+ background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px}
 #dl,#alg{height:clamp(300px,calc(100dvh - 440px),620px)}
 #cin{margin-top:0!important;padding:10px;gap:8px;border:1px solid var(--ln);border-top:0;border-radius:0 0 16px 16px;background:var(--pn3)}
 #cin input{border-radius:999px;padding:11px 16px;background:var(--pn2)}

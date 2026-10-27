@@ -166,6 +166,7 @@ textarea::placeholder{color:#6f6785}
 .nav-sub[hidden]{display:none}
 .nav-sub>button{flex:0 1 148px}
 .nav-n{position:absolute;top:-6px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e2574c;color:#fff;font-size:.68rem;font-weight:700;line-height:18px;text-align:center;pointer-events:none}
+.nav-bar>button>.nav-n{top:5px;right:4px;width:6px;height:6px;min-width:0;padding:0;border-radius:50%;font-size:0;line-height:0;color:transparent}
 @media (max-width:600px){#nav button{padding:9px 3px;font-size:.78rem}.nav-sub>button{flex:1 1 0}}
 
 /* 보스 레이드 */

@@ -1,5 +1,6 @@
 /* 보스 레이드. main.js 다음에 불러야 한다. 오전·오후 보스와 주간 보스, 패턴 대응, 처치 보상.
-   마을 화면은 hubBoss 와 autoClaimOld 를, 알림과 튜토리얼은 bossView 를 그대로 부른다. */
+   마을에서는 이름과 남은 공격만 그린다. 처치 여부와 공격 기록은 보스 화면에 들어간 뒤 한 번, 공격할 때 그 보스만 다시 한 번 받는다.
+   마을 화면은 hubBoss 를, 알림과 튜토리얼은 bossView 를 그대로 부른다. */
 let unB=null;const bossLast={};
 // off=1이면 어제(지난주) 보스
 /* 오전·오후 보스: 하루를 0시~12시(오전), 12시~24시(오후)로 나눠 반나절마다 다른 보스가 나온다. off=1이면 바로 앞 반나절의 보스. */
@@ -15,8 +16,9 @@ const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0
    오전·오후 보스는 최근 하루, 주간 보스는 최근 일주일 동안 접속한 캐릭터를 센다. 정해진 체력은 공격 기록(hp0)에 남아서 그 보스가 끝날 때까지 모두에게 똑같다.
    캐릭터들이 강해지고 사람이 늘수록 보스도 강해지고, 서버 초반처럼 다들 약할 때는 보스도 약하다. 숫자는 data/game.js의 BOSS_SCALE에서 고친다. */
 const bScaled=(k,id)=>!!id&&String(id)>=BOSS_SCALE_FROM[k];
-function bossHpEst(k){const c=BOSS_SCALE[k],now=Date.now();let sum=0;const seen={};
- ((PLC&&PLC.docs)||[]).forEach(d=>{if(d.id===UID)return;const p=d.data()||{};if(Number(p.on)>now-c.win&&!rstOld(p)){sum+=Math.max(0,Number(p.pw)||0);seen[d.id]=1}});
+function bossHpEst(k){const c=BOSS_SCALE[k],now=Date.now(),seen={};let sum=0;
+ const add=(id,p)=>{if(!id||id===UID||seen[id]||!p)return;if(Number(p.on)>now-c.win&&!rstOld(p)){sum+=Math.max(0,Number(p.pw)||0);seen[id]=1}};
+ ((PLC&&PLC.docs)||[]).forEach(d=>add(d.id,d.data()||{}));if(!Object.keys(seen).length)(ONL||[]).forEach(p=>add(p.u,p));
  sum+=C?pw():0;return Math.max(c.min,Math.round(c.x*sum))}
 const bhpScaled=(k,list)=>{const real=list.filter(v=>v&&v.u),withHp=real.filter(v=>Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):bossHpEst(k)};
 const bhp=(k,list,id)=>{if(bScaled(k,id))return bhpScaled(k,list);if(k==="d"&&!(id&&String(id)<BOSS_NEW_FROM.d)){const real=list.filter(v=>v&&v.u),f=real.length?bFirst(real):null;if(!f)return dHpNow();if(Number(f.hp0)>0)return Math.round(Number(f.hp0))}const c=bcfgOf(k,id);return Math.round(c.base+c.k*list.reduce((a,v)=>a+(Number(v.p)||0),0)+(c.m||0)*list.reduce((a,v)=>Math.max(a,Number(v.p)||0),0))};
@@ -32,11 +34,16 @@ const bossList=async b=>{const s=await once(DB.collection("wboss/"+b.id));return
 // 공격 횟수: 오전·오후 보스는 반나절마다, 주간 보스는 하루마다 다시 채워진다.
 function bossDay(){const hk=bossOf("d").id;if(!C.wb||C.wb.day!==today())C.wb={day:today(),h:hk,d:0,w:0};else if(C.wb.h!==hk){C.wb.h=hk;C.wb.d=0}}
 function bossView(){show("boss");$("#bsm").textContent="";bossDay();unB&&unB();unB=null;const box=$("#bsl");box.innerHTML="";
- ["d","w"].forEach(k=>{const c=elT("div","card boss-card "+k);c.id="bs-"+k;box.appendChild(c)});
+ ["d","w"].forEach(k=>{const c=elT("div","card boss-card "+k);c.id="bs-"+k;box.appendChild(c);drawBoss(k,bossOf(k),null)});
  if(!DB){$("#bsm").textContent="보스 레이드를 쓸 수 없다.";return}
- const uns=["d","w"].map(k=>{const b=bossOf(k);drawBoss(k,b,[]);return DB.collection("wboss/"+b.id).onSnapshot(s=>drawBoss(k,b,s.docs.map(d=>d.data()).filter(Boolean)),e=>{})});
- unB=()=>uns.forEach(f=>f&&f());autoClaimOld(true)}
-function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossLast[k]=list;bossDay();const cfg=BOSS[k],def=b.def,dead=bossDead(k,list,b.id),mx=bhp(k,list,b.id),hp=dead?0:Math.max(0,mx-sumHits(list));
+ loadBoss();autoClaimOld(true)}
+let bossBusy=false;
+async function loadBoss(){if(!C||!DB||$("#v-boss").hidden||bossBusy)return;bossBusy=true;
+ try{const rows=await Promise.all(["d","w"].map(async k=>{const b=bossOf(k);let list=[];try{list=await bossList(b)}catch(e){}return{k,b,list}}));
+  if($("#v-boss").hidden||!C)return;rows.forEach(({k,b,list})=>drawBoss(k,b,list))}finally{bossBusy=false}}
+function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const cfg=BOSS[k],def=b.def;
+ if(list==null){c.innerHTML="";c.append(elT("p","boss-tag",(b.nm||cfg.nm)+" · "+(b.until||cfg.until)),elT("h2","",def[0]),elT("p","hint","처치 여부와 공격 기록을 불러오는 중..."));return}
+ bossLast[k]=list;const dead=bossDead(k,list,b.id),mx=bhp(k,list,b.id),hp=dead?0:Math.max(0,mx-sumHits(list));
  const rank=list.slice().sort((a,x)=>(x.d||0)-(a.d||0)),mine=list.find(v=>v.u===UID),weak=(C.a||[]).includes(def[2]);c.innerHTML="";
  c.append(elT("p","boss-tag",(b.nm||cfg.nm)+" · "+(b.until||cfg.until)),elT("h2","",def[0]),elT("p","hint",def[1]),elT("p","boss-weak"+(weak?" on":""),"약점: "+def[2]+" 속성"+(weak?" · 내 속성이라 피해 30% 증가!":"")));
  const bar=elT("div","bar"),fill=elT("i");fill.style.width=(hp/mx*100)+"%";bar.appendChild(fill);c.append(bar,elT("p","hint","HP "+hp+" / "+mx+" · 참가자 "+list.length+"명"));
@@ -55,8 +62,7 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossLast[k]=lis
  else if(k==="d")c.appendChild(elT("p","boss-info","체력: 첫 공격 때 접속 중인 가장 강한 마법소녀가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":" (지금 기준 약 "+dHpNow().toLocaleString()+")")));
  c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOSS[k],m=$("#bsm");bossDay();if(C.fall||C.dz>=90||C.wb[k]>=cfg.t)return;bt.disabled=true;const pt=bpAt(b.id,Date.now()),ef=bpEff(pt,act),good=pt.best===act;
- try{if(bScaled(k,b.id)&&!(await bossList(b)).some(v=>Number(v&&v.hp0)>0)){try{await plAll()}catch(e){}}
-  const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
+ try{const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
   if(hp<=0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,list);return}
   const weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
   const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p,c:(Number(mine.c)||0)+1,ts:Date.now(),t0:Number(mine.t0)||Date.now()};if(bScaled(k,b.id))rec.hp0=bhpScaled(k,list);else if(k==="d")rec.hp0=Number(mine.hp0)||(list.length?(Number((bFirst(list)||{}).hp0)||0):0)||dHpNow();if(mine.x||hp-d<=0)rec.x=1;await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
@@ -76,9 +82,7 @@ async function autoClaimOld(inView){if(!C||!DB)return;const got=[];for(const b o
 $("#bsb").onclick=()=>hub();
 
 // 마을 탭 요약: 오늘의 지금의 오전·오후 보스와 이번 주 주간 보스. 누르면 보스 레이드 화면으로 간다.
-async function hubBoss(){const box=$("#hbo");if(!box||!C)return;if(!DB){box.innerHTML="<p class='hint'>보스 레이드를 쓸 수 없다.</p>";return}bossDay();
- const rows=await Promise.all(["d","w"].map(async k=>{const b=bossOf(k);let list=[];try{list=await bossList(b)}catch(e){}return{k,b,list}}));if($("#v-hub").hidden)return;box.innerHTML="";
- rows.forEach(({k,b,list})=>{const cfg=BOSS[k],dead=bossDead(k,list,b.id),mx=bhp(k,list,b.id),hp=dead?0:Math.max(0,mx-sumHits(list)),left=cfg.t-(C.wb[k]||0),weak=(C.a||[]).includes(b.def[2]);
-  const w=elT("div","dq"+(dead?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");f.style.width=(mx?hp/mx*100:100)+"%";f.style.background="linear-gradient(90deg,#4a1a6b,#c0406a)";bar.appendChild(f);
-  cp.append(elT("b","",(b.nm||cfg.nm)+" · "+b.def[0]),elT("small","",dead?"처치 완료":"HP "+hp+" / "+mx+" · "+(k==="d"?"남은 공격 ":"오늘 공격 ")+Math.max(0,left)+" / "+cfg.t+"번 남음"+(weak?" · 약점 속성!":"")),bar);
-  const bt=elT("button","chip",dead?"보기":"도전");bt.type="button";bt.onclick=bossView;w.append(cp,bt);box.appendChild(w)})}
+function hubBoss(){const box=$("#hbo");if(!box||!C)return;if(!DB){box.innerHTML="<p class='hint'>보스 레이드를 쓸 수 없다.</p>";return}bossDay();box.innerHTML="";
+ ["d","w"].forEach(k=>{const b=bossOf(k),cfg=BOSS[k],left=cfg.t-(C.wb[k]||0),weak=(C.a||[]).includes(b.def[2]),w=elT("div","dq"),cp=elT("div","dq-copy");
+  cp.append(elT("b","",(b.nm||cfg.nm)+" · "+b.def[0]),elT("small","",(b.until||cfg.until)+" · "+(k==="d"?"남은 공격 ":"오늘 공격 ")+Math.max(0,left)+" / "+cfg.t+"번"+(weak?" · 약점 속성!":"")+" · 들어가면 처치와 공격 기록을 본다"));
+  const bt=elT("button","chip","도전");bt.type="button";bt.onclick=bossView;w.append(cp,bt);box.appendChild(w)})}
