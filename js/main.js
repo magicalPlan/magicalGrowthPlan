@@ -13,7 +13,7 @@ function local(){const st={},ls={};const nt=p=>{const c=p.split("/")[0];(ls[p]||
 const sn=p=>({id:p.split("/").slice(1).join("/"),exists:p in st,data:()=>st[p]&&JSON.parse(JSON.stringify(st[p]))});
 const sub=(k,g)=>{(ls[k]=ls[k]||[]).push(g);setTimeout(g);return()=>{ls[k]=ls[k].filter(x=>x!==g)}};
 const D=p=>({get:async()=>sn(p),set:async d=>{st[p]=JSON.parse(JSON.stringify(d));nt(p)},delete:async()=>{delete st[p];nt(p)},onSnapshot:f=>sub(p,()=>f(sn(p)))});
-const Q=(c,fl)=>({where:(a,o,v)=>Q(c,fl.concat([[a,v]])),orderBy:()=>Q(c,fl),limit:()=>Q(c,fl),doc:id=>D(c+"/"+id),onSnapshot:f=>sub(c,()=>f({docs:Object.keys(st).filter(k=>k.startsWith(c+"/")).map(sn).filter(d=>fl.every(x=>d.data()[x[0]]===x[1]))}))});
+const Q=(c,fl,op)=>({where:(a,o,v)=>Q(c,fl.concat([[a,v]]),op),orderBy:()=>Q(c,fl,op),limit:n=>Q(c,fl,Object.assign({},op,{l:n})),first:n=>Q(c,fl,Object.assign({},op,{f:n})),from:k=>Q(c,fl,Object.assign({},op,{fr:k})),doc:id=>D(c+"/"+id),onSnapshot:f=>sub(c,()=>{let docs=Object.keys(st).filter(k=>k.startsWith(c+"/")).map(sn).filter(d=>fl.every(x=>d.data()&&d.data()[x[0]]===x[1]));const o=op||{};if(o.fr||o.f){docs.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);if(o.fr)docs=docs.filter(d=>d.id>=o.fr);if(o.f)docs=docs.slice(0,o.f)}f({docs})})});
 return{doc:D,collection:c=>Q(c,[])}}
 // 모든 플레이어 목록은 무겁다(프로필 사진 포함). 여러 기능이 따로 받지 않도록 한 번 받은 것을 PL_TTL 동안 함께 쓴다.
 let PLC=null,PLT=0,PLP=null;
@@ -58,8 +58,8 @@ const D=p=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,awai
  peek:async()=>J(()=>U(p,"shallow=true")),
  delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
  onSnapshot:(f,e,ms)=>{const pl=()=>poll(()=>J(()=>U(p)),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
-const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),limit:n=>Q(c,{...o,l:n}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),doc:id=>D(c+"/"+id),
- onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else{q.push('orderBy="$key"');if(o.pre)q.push("startAt="+encodeURIComponent(JSON.stringify(o.af&&o.af>o.pre?o.af:o.pre)),"endAt="+encodeURIComponent(JSON.stringify(o.pre+"\uf8ff")))}if(o.l)q.push("limitToLast="+o.l);
+const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),doc:id=>D(c+"/"+id),
+ onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else{q.push('orderBy="$key"');if(o.pre)q.push("startAt="+encodeURIComponent(JSON.stringify(o.af&&o.af>o.pre?o.af:o.pre)),"endAt="+encodeURIComponent(JSON.stringify(o.pre+"\uf8ff")));else if(o.fr)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)))}if(o.f)q.push("limitToFirst="+o.f);else if(o.l)q.push("limitToLast="+o.l);
  /* 서버 규칙에 찾기 목록(.indexOn)이 빠져 있으면 서버가 400 오류를 낸다. 그때는 최근 기록을 받아서 브라우저에서 골라낸다(조금 느리고 데이터를 더 쓰지만 동작은 한다). */
  const get=async()=>{if(o.w&&IDX_BAD[c]){const j=await J(()=>U(c,'orderBy="$key"&limitToLast=1500')),r={};Object.keys(j||{}).forEach(k=>{if(j[k]&&j[k][o.w[0]]===o.w[1])r[k]=j[k]});return r}
   try{return await J(()=>U(c,q.join("&")))}catch(x){if(o.w&&String(x.message)==="400"){IDX_BAD[c]=1;return get()}throw x}};
