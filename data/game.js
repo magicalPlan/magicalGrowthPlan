@@ -23,7 +23,7 @@
 
    
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
-   const FB_URL="https://magical-growth-plan-default-rtdb.asia-southeast1.firebasedatabase.app";
+   const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    const POLL_MS=4000,POLL_FAST=2500;
 
 
@@ -33,7 +33,7 @@
       주의: 브라우저 게임은 로그인할 때 이 키를 브라우저가 서버로 보내야 하므로, 완전히 숨길 수는 없다(개발자 도구로는 보인다).
       진짜 보호는 Google Cloud 콘솔의 'API 키 제한'(허용 웹사이트·허용 API)과 Firebase 데이터베이스 규칙이 맡는다.
     키를 바꾸려면: 새 키를 뒤집어서(reverse) base64로 바꾼 값을 조각으로 나눠 아래 배열에 넣는다. */
-   const FB_KEY=(p=>{try{return atob(p.join("")).split("").reverse().join("")}catch(e){return ""}})(["ME4yeFM0dWxjLV","9Na3I3WlcyeXFs","Vm5VU0RlODJOZD","BCeVNheklB"] );
+   const FB_KEY=(p=>{try{return atob(p.join("")).split("").reverse().join("")}catch(e){return ""}})(["Z0k2NDk4S0xGeD","U4ay1CLWJtQjFq","YnRQVG1pUEg3ZD","NEeVNheklB"] );
 
 
    const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 6자 이상으로 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다."};
@@ -86,7 +86,7 @@
 
 
       /* 고정 운영자: 데이터베이스의 admins 칸과 상관없이 항상 운영자로 인정할 계정(uid). 운영자를 늘리려면 이 목록에 uid를 더한다. */
-      const ADMIN_FIXED=[];
+      const ADMIN_FIXED=["TLXwyHDof5hs2maSugjRj8OcA9G3"];
 
 
       /* 자연 회복: 10분마다 절망도가 10씩 내려간다. 게임을 꺼 둔 동안 지난 시간도 다시 접속하면 한꺼번에 반영된다.
@@ -95,7 +95,7 @@
 
 
       /* 계정 만들기 비밀 코드: 코드 자체는 파일에 적지 않고, 바꾼 값(해시)만 적어 둔다. 코드를 바꾸려면 새 코드의 SHA-256 값으로 이 줄을 고친다. */
-      const SIGNUP_CODE_HASH="351d52416be30e8af7b0ba0f0b89551e98724a464865b70dc20db5da05d8a487";
+      const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f",AUTO_JC="희망하라";
       const TRIAL_CD=24*3600000;
 
 
