@@ -243,7 +243,7 @@ async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,m=$(
  if(!/^[A-Za-z0-9_]{3,20}$/.test(id))return m.textContent="아이디는 영문, 숫자, 밑줄 3~20자로 적어야 한다.";
  if(pw.length<6)return m.textContent="비밀번호는 6자 이상이어야 한다.";
  const k=AUTH.key||$("#lkey").value.trim();if(!k)return m.textContent="Firebase 웹 API 키를 입력해야 한다.";AUTH.key=k;
- let jc="";if(signup){let okc=false;jc=$("#lcode").value.trim().normalize("NFC");try{okc=await codeOk(jc)}catch(e){}if(!okc)return m.textContent="비밀 코드가 맞지 않다."}
+ let jc="";// 비밀 코드 없이 누구나 계정을 만들 수 있다(예전 비밀 코드 확인은 뺐다).
  $("#lgo").disabled=true;
  try{const j=await idt(signup?"signUp":"signInWithPassword",{email:EM(id),password:pw,returnSecureToken:true});
   AUTH.uid=j.localId;AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.name=id;if(jc){AUTH.jc=jc;keep("mgr_jc_"+j.localId,jc)}keep("mgr_key",k);keep("mgr_rt",AUTH.rt);keep("mgr_id",id);$("#lpw").value="";
@@ -253,7 +253,7 @@ async function startAuth(){AUTH.key=lget("mgr_key")||FB_KEY;const rt=lget("mgr_r
  if(AUTH.key&&rt){AUTH.rt=rt;try{const j=await refresh();AUTH.uid=j.user_id;AUTH.name=lget("mgr_id");await enterGame();return}catch(e){AUTH.uid=null;AUTH.tok=null;showLogin();$("#lm").textContent=errMsg(e);return}}
  showLogin()}
 $("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};
-$("#lsw").onclick=()=>{signup=!signup;$("#lcd").hidden=!signup;$("#lcode").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent=""};
+$("#lsw").onclick=()=>{signup=!signup;$("#lcd").hidden=true;$("#lcode").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent=""};
 $("#lloc").onclick=()=>{DB=local();LOCAL=true;UID="나";FBU="";mode(0);boot()};
 $("#b-out").onclick=()=>{keep("mgr_rt","");location.reload()};
 let FBU="";

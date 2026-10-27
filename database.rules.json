@@ -11,12 +11,11 @@
       ".write": false
     },
 
-    // 내 캐릭터 저장: 본인만 읽고 쓴다. 처음 저장할 때는 비밀 코드(jc)가 맞아야 계정을 만들 수 있다.
-    // ★ 아래 '여기에_비밀코드' 를 실제 비밀 코드로 바꿔서 게시할 것 (게임 화면의 '비밀 코드' 입력칸에 넣는 그 값)
+    // 내 캐릭터 저장: 본인만 읽고 쓴다. (비밀 코드 없이 누구나 가입할 수 있다)
     "accounts": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid && (data.exists() || newData.child('jc').val() === '여기에_비밀코드')"
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
 
