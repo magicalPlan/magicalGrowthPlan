@@ -244,3 +244,7 @@ html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 1
 .rst-card{--c:#7d1a2e;border-style:dashed!important}
 .rst-card h2{font-size:1.1rem!important;color:#ff8da0!important}
 html[data-theme="light"] .rst-card h2{color:#a8283f!important}
+
+/* 세계관: 마을 소제목 */
+#v-world .world-sub{margin:14px 0 4px;font-size:.98rem;color:#d8c79a;letter-spacing:.04em}
+html[data-theme="light"] #v-world .world-sub{color:#7a5f22}
