@@ -22,6 +22,8 @@
    const CHOICE_MS=15000;
 
    
+   /* 앱 버전. 설정 화면 오른쪽 아래에 보이고, 켜질 때 이 브라우저(mgr_ver)에 같은 값을 남긴다. 버전을 맞출 때 이 문자열만 고친다. */
+   const APP_VER="1.0.0.0";
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 만 서버와 연결(EventSource)을 연다. 채팅·대련·레이드 상세처럼 바로 반영되어야 하는 곳만 쓴다.

@@ -373,6 +373,8 @@ img.av:not(#pv):not(#ev){cursor:zoom-in}
 
 .secret-ttl{border-style:dashed!important;border-color:#8a7bd1!important}.secret-ttl strong{color:#c9b8ff!important}.title-card small{display:block;color:var(--mu);font-size:.82rem}.title-card button{flex:0 0 auto;min-width:80px}
 .ver-bar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;width:min(520px,calc(100% - 24px));padding:10px 12px 10px 16px;border-radius:14px;background:#1d1730;color:#efe6cf;border:1px solid #b89b5e;box-shadow:0 6px 24px #0008;font-size:.9rem}.ver-bar .chip{flex:none;min-width:0;padding:7px 14px}
+#v-setting{display:flex;flex-direction:column;min-height:calc(100dvh - 280px)}
+#v-setting .set-ver{margin:auto 0 0;text-align:right;font-size:.72rem;line-height:1.3;color:var(--mu);letter-spacing:.03em}
 html[data-theme="light"] .ver-bar{background:#fffcf6;color:#3a2c18;border-color:#9a7a36;box-shadow:0 6px 24px #0002}
 .bp-box{margin:12px 0 0;padding:10px 12px;border:1px solid #b89b5e55;border-radius:12px;background:#120f20}
 .bp-now{margin:0;font-family:"Gowun Batang",serif;font-size:1.08rem;color:#f3d27a;letter-spacing:.04em}
