@@ -2,16 +2,18 @@
    마을 화면은 loadNotice 를, 알림함과 메뉴는 drawNotice, ntcView, NTC 를 그대로 부른다. */
 /* 공지: 운영자(admins 목록에 있는 계정)만 쓸 수 있고, 모든 플레이어의 화면 위쪽에 보인다. 서버 기록: notice/{번호}
    새 공지가 올라오면 한 번 알림(화면 위 알림·알림함)을 띄운다. 각자 ✕로 닫을 수 있고, 더 새 공지가 오면 다시 보인다. 최근 5개까지만 남긴다. */
-let NTC=[],ntcT=0;// 운영자 한 명당 최근 30개까지 보관
-// 공지 탭: 모든 공지를 최근 순으로. 연 순간 읽은 것으로 표시한다.
-function ntcView(keep){if(!keep){show("ntc");loadNotice(true)}try{drawRst()}catch(e){}const l=$("#ntcl");if(!l||!C)return;l.innerHTML="";const seen=C.ntcSeen||0;
+let NTC=[],ntcT=0,ntcShown=10,ntcMark=0;// 운영자 한 명당 최근 30개까지 보관. 공지 탭은 한 번에 10개.
+const NTC_PAGE=10;
+// 공지 탭: 최근 공지부터 10개씩. 연 순간 읽은 것으로 표시하고, 더 보기로 연 뒤에도 이번 화면의 새 공지 표시는 남긴다.
+function ntcView(keep){if(!keep){show("ntc");ntcShown=NTC_PAGE;ntcMark=C?Number(C.ntcSeen)||0:0;loadNotice(true)}try{drawRst()}catch(e){}const l=$("#ntcl");if(!l||!C)return;l.innerHTML="";const seen=ntcMark;
  if(ADM[UID]){const w=elT("p","hint","공지 쓰기와 내리기는 화면 위쪽 공지 칸의 '📢 공지 쓰기'에서 할 수 있다.");l.appendChild(w)}
  if(!NTC.length){l.appendChild(elT("p","hint","아직 공지가 없다."));}
- NTC.forEach(n=>{const d=new Date(Number(n.ts)),c=elT("div","ntc-card ntc-item"+(n.u?" urgent":"")+(Number(n.ts)>seen?" new":""));
+ NTC.slice(0,ntcShown).forEach(n=>{const d=new Date(Number(n.ts)),c=elT("div","ntc-card ntc-item"+(n.u?" urgent":"")+(Number(n.ts)>seen?" new":""));
   c.append(elT("p","ntc-tag",(n.u?"📢 중요 공지":"📢 공지")+" · "+d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+(n.n?" · "+String(n.n).slice(0,20):"")+(Number(n.ts)>seen?" · 새 공지":"")),elT("p","ntc-t",String(n.t).slice(0,300)));
   if(ADM[UID]&&n.src==="p"&&n.by===UID){const x=elT("button","chip","이 공지 내리기");x.type="button";x.style.cssText="margin-top:8px;padding:5px 12px;font-size:.8rem";x.onclick=async()=>{if(!confirm("이 공지를 내릴까?"))return;C.ntcl=(C.ntcl||[]).filter(o=>o.id!==n.id);save();try{await DB.doc("players/"+UID+"/ntc").set(C.ntcl)}catch(e){}NTC=NTC.filter(o=>o!==n);drawNotice();ntcView(true)};c.appendChild(x)}
   l.appendChild(c)});
- if(NTC.length&&Number(NTC[0].ts)>seen){C.ntcSeen=Number(NTC[0].ts);save()}updNav()}
+ if(NTC.length>ntcShown){const left=NTC.length-ntcShown,more=elT("button","btn g","이전 공지 "+Math.min(NTC_PAGE,left)+"개 더 보기");more.type="button";more.id="ntc-more";more.style.marginTop="12px";more.onclick=()=>{ntcShown+=NTC_PAGE;ntcView(true)};l.appendChild(more)}
+ if(NTC.length&&Number(NTC[0].ts)>(C.ntcSeen||0)){C.ntcSeen=Number(NTC[0].ts);save()}updNav()}
 async function loadNotice(force){if(!C||!XON())return;if(!force&&Date.now()-ntcT<20000)return;ntcT=Date.now();loadDoom();rstCheck();let list=null;
  // 공지는 운영자 본인의 플레이어 기록(players/{운영자}/ntc)에 저장한다. 그 칸은 운영자 본인만 쓸 수 있고, 운영자 목록(admins)은 콘솔에서만 바뀌므로
  // 서버 규칙을 따로 추가하지 않아도 운영자만 공지를 올릴 수 있다. notice 규칙이 있으면 그쪽 공지도 함께 읽는다.

@@ -19,4 +19,4 @@ function shopWeapons(){const w=$("#wl");w.innerHTML="";C.wps=C.wps||[];WP.forEac
   b.innerHTML="<b></b><small class='item-feature'></small><small></small>";b.querySelector("b").textContent=it[0]+(wlv(i)?" +"+wlv(i):"");b.querySelector(".item-feature").textContent=it[1]+" 전투력 +"+it[3]+".";b.querySelectorAll("small")[1].textContent=st;
   b.title=it[1]+" 전투력 +"+it[3];b.setAttribute("aria-label",it[0]+", "+st+". 전투력 +"+it[3]);
   b.disabled=!own&&(C.gd||0)<pc;b.setAttribute("aria-pressed",on?"true":"false");
-  b.onclick=()=>{if(on){C.wp=-1;save();shop(it[0]+"을(를) 해제했다.");return}if(!own){if((C.gd||0)<pc)return;C.gd-=pc;C.wps.push(i);titleState();C.stats.purchases=(C.stats.purchases||0)+1}C.wp=i;save();checkTitles();shop(it[0]+"을(를) 장착했다.")};w.appendChild(b)})}
+  b.onclick=()=>{if(on){C.wp=-1;shopWrite({wp:-1});shop(it[0]+"을(를) 해제했다.");return}const fields={wp:i};if(!own){if((C.gd||0)<pc)return;C.gd-=pc;C.wps.push(i);titleState();C.stats.purchases=(C.stats.purchases||0)+1;fields.gd=C.gd;fields.wps=C.wps;fields["stats/purchases"]=C.stats.purchases}C.wp=i;shopWrite(fields);checkTitles();shop(it[0]+"을(를) 장착했다.")};w.appendChild(b)})}
