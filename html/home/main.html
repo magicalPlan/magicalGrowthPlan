@@ -1,12 +1,28 @@
 <main>
-<button type="button" id="thm" class="thm" aria-label="화면 모드 바꾸기"></button>
+    <button type="button" id="thm" class="thm" aria-label="화면 모드 바꾸기"></button>
 <h1>魔法 成長記錄</h1>
 <p class="sub">마법에 희망하고 절망하라</p>
 <p class="hint" id="mode" style="text-align:center;margin:-14px 0 16px"></p>
 <div id="onlw" hidden><span id="onl"></span></div>
 <div id="doom" hidden></div>
 <div id="ntc" hidden></div>
-<nav class="tabs" id="nav" hidden aria-label="화면 전환"><button type="button" data-v="hub" aria-pressed="true">마을</button><button type="button" data-v="shop" aria-pressed="false">상점</button><button type="button" data-v="bag" aria-pressed="false">마법·가방</button><button type="button" data-v="chat" aria-pressed="false">채팅</button><button type="button" data-v="ntc" aria-pressed="false">공지</button><button type="button" data-v="board" aria-pressed="false">게시판</button><button type="button" data-v="arena" aria-pressed="false">대련</button><button type="button" data-v="friends" aria-pressed="false">친구</button><button type="button" data-v="titles" aria-pressed="false">기록</button><button type="button" data-v="inbox" aria-pressed="false">알림</button><button type="button" data-v="roster" aria-pressed="false">등록자</button></nav>
+<nav class="tabs" id="nav" hidden aria-label="화면 전환">
+    <button type="button" data-v="hub" aria-pressed="true">마을</button>
+    <button type="button" data-v="shop" aria-pressed="false">상점</button>
+    <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
+    <button type="button" data-v="chat" aria-pressed="false">채팅</button>
+    <button type="button" data-v="ntc" aria-pressed="false">공지</button>
+    <button type="button" data-v="board" aria-pressed="false">게시판</button>
+    <button type="button" data-v="arena" aria-pressed="false">대련</button>
+    <button type="button" data-v="friends" aria-pressed="false">친구</button>
+    <button type="button" data-v="titles" aria-pressed="false">기록</button>
+    <button type="button" data-v="inbox" aria-pressed="false">알림</button>
+    <button type="button" data-v="roster" aria-pressed="false">등록자</button>
+    <button type = "button" data-v="world" aria-pressed="false">세계관</button>
+    <button type = "button" data-v="setting" aria-pressed="false">설정</button>
+</nav>
+
+
 <script>includeHtml("html/login/login.html")</script>
 <script>includeHtml("html/create/create.html")</script>
 <script>includeHtml("html/town/hub.html")</script>
@@ -45,6 +61,8 @@
 <script>includeHtml("html/duel/arena.html")</script>
 <script>includeHtml("html/notice/notice.html")</script>
 <script>includeHtml("html/trial/trial.html")</script>
+<script>includeHtml("html/world/world.html")</script>
+<script>includeHtml("html/setting/setting.html")</script>
 </main>
 <div id="alo" role="alertdialog" aria-modal="true" aria-labelledby="alt" hidden style="position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:60"><div class="card alert-card" style="max-width:420px;width:100%;text-align:center"><h2 id="alt"></h2><p id="alx" style="white-space:pre-wrap;margin:10px 0 4px"></p><button class="btn" id="alc" type="button">확인</button></div></div>
 <div id="pfo" role="dialog" aria-modal="true" aria-label="프로필" hidden style="position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:18px;z-index:50">
