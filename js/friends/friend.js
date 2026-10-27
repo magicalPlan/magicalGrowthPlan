@@ -1,5 +1,6 @@
-/* 친구. main.js 다음에 불러야 한다. 신청, 수락, 삭제, 친구 목록과 검색, 목록에 보이는 절망도.
-   마을 화면은 syncFr 를, 메뉴와 알림은 friends 를, 프로필은 frBtn 과 frDo 를 그대로 부른다. */
+/* 친구. main.js 다음에, 공명 파일보다 먼저 불러야 한다. 신청, 수락, 삭제, 친구 목록과 검색, 목록에 보이는 절망도.
+   마을 화면은 syncFr 를, 메뉴와 알림은 friends 를, 프로필은 frBtn 과 frDo 를 그대로 부른다.
+   공명은 sendF 를 쓰고, 친구 소식은 실행 중에 rqRetry 와 resHeard 를 부른다. */
 /* 친구: 신청 -> 수락의 양방향 구조. 친구 목록은 내 계정에 저장하고, 신청/수락/삭제 알림은 서버의 fmsg(받는 사람만 읽을 수 있음)로 주고받는다. */
 const sendF=(to,t)=>DB.doc("fmsg/"+to+"/"+UID).set({t,ts:{".sv":"timestamp"},n:nmOf()});
 async function frDo(a,u,nm){C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
@@ -28,7 +29,7 @@ async function syncFr(){if(!AUTH.uid||!C||!DB)return;try{rqRetry();const s=await
  if(!$("#v-friends").hidden)friends();else if(!$("#v-hub").hidden&&notes.length){const h=$("#hm");h.style.color="var(--mu)";h.textContent=notes.join(", ")+"."}}catch(e){}}
 async function friends(msg){show("friends");updNav();rqDraw();const fm=$("#fm");fm.style.color="var(--mu)";fm.textContent=msg||"";
  const q=$("#fql"),l=$("#ffl"),o=$("#fol");
- if(!AUTH.uid){q.innerHTML=l.innerHTML=o.innerHTML="";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
+ if(!AUTH.uid){q.innerHTML=l.innerHTML=o.innerHTML="";fm.style.color="var(--mu)";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
  C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};let pl={};try{const s=await plAll();s.docs.forEach(d=>pl[d.id]=d.data())}catch(e){}
  if($("#v-friends").hidden)return;
  const row=(uid,fb,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const p=pl[uid],nb=document.createElement("button");nb.type="button";nb.className="chip";nb.style.cssText="flex:1;text-align:left";

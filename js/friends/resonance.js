@@ -1,4 +1,4 @@
-/* 공명. main.js 다음에 불러야 한다. 친구에게 청하기, 수락·거절, 절망도 감소.
+/* 공명. friend.js 다음에 불러야 한다. sendF 가 이미 있어야 한다. 친구에게 청하기, 수락·거절, 절망도 감소.
    마을 화면은 applyRes 를, 친구 소식은 rqRetry 와 resHeard 를, 프로필은 resBtn 을 그대로 부른다. */
 $("#pfr").onclick=async()=>{const m=$("#pfm"),u=pfU;if(!u||u===UID)return;if(!(C.fr&&C.fr[u])){m.style.color="var(--bad)";m.textContent="친구에게만 공명할 수 있다. 먼저 친구 추가를 해 보자.";return}const last=(C.rl&&C.rl[u])||0,left=RES_CD-(Date.now()-last);
  if(left>0){m.style.color="var(--bad)";m.textContent="같은 상대에게는 3시간에 한 번만 공명할 수 있다. 약 "+Math.ceil(left/3600000)+"시간 뒤에 다시 할 수 있다.";return}
