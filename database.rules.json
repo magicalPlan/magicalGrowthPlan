@@ -33,7 +33,7 @@
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
       "$id": {
-        ".write": "auth != null && ((!data.exists() && newData.child('u').val() === auth.uid) || (data.exists() && (data.child('u').val() === auth.uid || root.child('admins').child(auth.uid).exists())))"
+        ".write": "auth != null && ((!data.exists() && newData.child('u').val() === auth.uid) || (data.exists() && (data.child('u').val() === auth.uid || root.child('admins').child(auth.uid).exists())) || (data.exists() && data.child('bt').val() === 'p' && newData.child('bt').val() === 'p' && newData.child('u').val() === data.child('u').val() && newData.child('ti').val() === data.child('ti').val() && newData.child('x').val() === data.child('x').val() && newData.child('ts').val() === data.child('ts').val() && newData.child('n').val() === data.child('n').val() && newData.child('img').val() === data.child('img').val() && newData.child('cc').isNumber()))"
       }
     },
 

@@ -1,8 +1,11 @@
 /* 상점. main.js 다음에 불러야 한다. 구매 수량과 아이템 구매.
-   가격은 js/common/formula.js 의 pr 을, 무기 칸은 shopWeapons 를 그대로 부른다. */
-let shopQ=1;
+   가격은 js/common/formula.js 의 pr 을, 무기 칸은 shopWeapons 를 그대로 부른다.
+   시장 할인과 산불 할증은 상점 탭을 열 때 한 번만 읽는다. 열어 둔 동안에는 다시 묻지 않고, 구매할 때만 바뀐 칸을 저장한다. */
+let shopQ=1,shopBusy=false;
+function shopWrite(fields){return apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}})}
+async function shopRead(){if(shopBusy||!C||!XON()||typeof loadFac!=="function")return;shopBusy=true;try{await loadFac()}catch(e){}finally{shopBusy=false}if(!$("#v-shop").hidden)shop()}
 function itemMax(id){C.inv=C.inv||{};if(id==="charm")return Math.max(0,CHARM_MAX-charmToday());if(id==="candle")return (C.inv.candle||0)>=1?0:1;return 99}
-function shop(msg){C.wps=C.wps||[];const again=!$("#v-shop").hidden,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
+function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
  $("#sg").textContent="보유 골드 "+(C.gd||0)+". 골드는 토벌과 시련에서 얻는다."+(C.v==="A"?" A마을 주민은 10% 할인을 받는다.":"");
  const sm=$("#sm");sm.style.color="var(--mu)";sm.textContent=msg||"";if(msg&&again)toast(msg);
  shopWeapons();
@@ -19,5 +22,7 @@ function shop(msg){C.wps=C.wps||[];const again=!$("#v-shop").hidden,y=window.scr
   b.innerHTML="<b></b><small class='item-feature'></small><small></small><small></small>";const bs=b.querySelectorAll("small");b.querySelector("b").textContent=x[1];bs[0].textContent=x[2];bs[1].textContent=st;bs[2].textContent=cnt;
   b.title=x[2];b.setAttribute("aria-label",x[1]+", "+st+", "+cnt+". "+x[2]);b.disabled=mx<=0||(C.gd||0)<cost;
   b.onclick=()=>{const k=Math.min(shopQ,itemMax(id)),c=pc*k;if(k<=0||(C.gd||0)<c)return;if(lim)C.daily={d:today(),charm:charmToday()+k};
-   C.gd-=c;C.inv[id]=(C.inv[id]||0)+k;dexAdd("it",id);titleState();C.stats.purchases=(C.stats.purchases||0)+k;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);save();checkTitles();
-   shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)})}
+   C.gd-=c;C.inv[id]=(C.inv[id]||0)+k;const dexNew=dexAdd("it",id);titleState();C.stats.purchases=(C.stats.purchases||0)+k;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);
+   const fields={gd:C.gd,["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
+   shopWrite(fields);checkTitles();
+   shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)});if(fresh)shopRead()}
