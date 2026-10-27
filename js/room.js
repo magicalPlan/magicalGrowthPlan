@@ -17,9 +17,20 @@ async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");if(c.
  try{const s=await rref(c).get();if(!s.exists)return rmsg("그런 방이 없다.");const r=s.data();r.seq=r.seq||[];r.rd=r.rd||{};
  if(r.pl[UID]){enter(c);return}if(r.st!=="lobby"||Object.keys(r.pl).length>=3)return rmsg("들어갈 수 없는 방이다.");
  r.pl[UID]=me();r.rd[UID]=false;await rref(c).set(r);enter(c)}catch(e){rmsg("입장하지 못했다.")}}
-function enter(c){code=c;room=null;myV=null;clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#rrm").textContent="";
- unR=rref(c).onSnapshot(s=>{if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.")}
-function leave(){unR&&unR();unR=null;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;hub()}
+function enter(c){code=c;room=null;myV=null;holdN=0;if(holdT){clearTimeout(holdT);holdT=null}clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#rrm").textContent="";unR&&unR();unR=null;watchRoom()}
+function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).onSnapshot(s=>{if(code!==c)return;if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.")}
+/* 선택지가 떠 있는 동안에는 방을 반복해서 받지 않는다. 끝나면 결과를 한 번 읽고, 선택이 끝났으면 다시 이어 받는다. */
+function armChoice(r){const live=!!(r&&r.st==="run"&&r.ch&&r.step>=r.seq.length&&EVM[r.ch.id]);
+ if(!live){holdN=0;if(holdT){clearTimeout(holdT);holdT=null}if(code&&DB&&!unR)watchRoom();return}
+ if(holdT)return;unR&&unR();unR=null;const now=Date.now();
+ if(now<r.ch.until){holdN=0;holdT=setTimeout(()=>{holdT=null;pullRoom()},r.ch.until-now+600);return}
+ if(holdN>=4){holdN=0;if(code&&DB)watchRoom();return}
+ holdN++;holdT=setTimeout(()=>{holdT=null;pullRoom()},2000)}
+async function pullRoom(){if(!code||!DB)return;const c=code;try{const s=await rref(c).get();if(code!==c)return;
+ if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}
+ room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()}
+ catch(e){if(code!==c||holdT)return;if(holdN>=4){holdN=0;watchRoom();return}holdN++;holdT=setTimeout(()=>{holdT=null;pullRoom()},3000)}}
+function leave(){unR&&unR();unR=null;if(holdT){clearTimeout(holdT);holdT=null}holdN=0;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;hub()}
 $("#rx").onclick=async()=>{if(room&&DB&&room.st==="lobby"){try{if(room.host===UID||Object.keys(room.pl).length<=1)await rref(code).delete();else{delete room.pl[UID];delete room.rd[UID];await rref(code).set(room)}}catch(e){}}
  // 끝난 방: 방장이 나가면 파티원들이 결과를 받을 시간을 10초 준 뒤 지운다.
  else if(room&&DB&&room.st==="done"&&room.host===UID){const c=code,r=room;setTimeout(()=>delRoom(c,r),10000)}leave()};
@@ -69,7 +80,7 @@ function resolveChoice(r,picks){const x=EVM[r.ch.id],v=r.ch.v;if(!x){r.ch=null;r
  let out=o.r;if(out.p!=null){if((r.sim.lucky||0)>0){r.sim.lucky--;r.seq.push("바람의 길잡이가 운명을 바꾸었다.");out=out.win}else out=Math.random()<out.p?out.win:out.lose}applyEv(r,out,v);r.ch=null;r.pend=null;simStep(r)}
 const humansOf=r=>Object.keys(r.pl).filter(k=>!k.startsWith("bot"));
 const vref=(c,u)=>DB.doc("rooms/"+c+"v_"+u);
-let busyT=false,myV=null,cdT=null;
+let busyT=false,myV=null,cdT=null,holdT=null,holdN=0;
 function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.pl)humansOf(r).forEach(u=>vref(c,u).delete().catch(()=>{}))}
 // 방장이 창을 닫아 남은 방, 오래된 투표 기록을 정리한다. rooms 전체를 받지 않는다.
 // 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방과 오래된 정기 출정 자리만 지운다.
@@ -85,17 +96,17 @@ async function hostTick(){if(room&&room.host===UID&&room.st==="done"&&Date.now()
  if(room.step<room.seq.length){room.step++;ch=true}
  else if(room.pend&&!room.ch){const x=EVM[room.pend.id],cx=evCtx(room),ops=x.o.map((o,i)=>i).filter(i=>!x.o[i].req||x.o[i].req(cx)),h=(cx.tr("번뜩임")||cx.tr("예민함"))?x.o.findIndex(o=>o.ok):-1;
   room.ch={id:room.pend.id,v:room.pend.v,k:room.seq.length,until:Date.now()+CHOICE_MS,ops,h};ch=true}
- else if(room.ch){const hs=humansOf(room),picks=[];for(const u of hs){try{const s=await vref(c,u).get(),d=s.exists&&s.data();if(d&&d.k===room.ch.k&&(room.ch.ops||[]).includes(d.i))picks.push(d.i)}catch(e){}}
-  if(picks.length>=hs.length||Date.now()>=room.ch.until){resolveChoice(room,picks);hs.forEach(u=>vref(c,u).delete().catch(()=>{}));ch=true}}
+ else if(room.ch&&Date.now()>=room.ch.until){const hs=humansOf(room),picks=[];for(const u of hs){try{const s=await vref(c,u).get(),d=s.exists&&s.data();if(d&&d.k===room.ch.k&&(room.ch.ops||[]).includes(d.i))picks.push(d.i)}catch(e){}}
+  resolveChoice(room,picks);hs.forEach(u=>vref(c,u).delete().catch(()=>{}));ch=true}
  else if(room.fin){room.st="done";room.doneAt=Date.now();ch=true}
- if(ch&&room&&code===c){room.ts=Date.now();await rref(c).set(room)}}catch(e){}busyT=false}
+ if(ch&&room&&code===c){room.ts=Date.now();await rref(c).set(room);if(code===c&&!unR)draw()}}catch(e){}busyT=false}
 function drawChoice(r){const cv=$("#chv");if(!(r.st==="run"&&r.ch&&r.step>=r.seq.length&&EVM[r.ch.id])){cv.hidden=true;return}
  const x=EVM[r.ch.id];cv.hidden=false;cv.innerHTML="";cv.appendChild(elT("p","choice-q",vtx(x.q,r.ch.v)));const row=elT("div","row");
  const ops=(r.ch.ops&&r.ch.ops.length)?r.ch.ops:x.o.map((_,i)=>i);ops.forEach(i=>{const o=x.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(r.ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed",myV&&myV.k===r.ch.k&&myV.i===i?"true":"false");
   b.onclick=async()=>{myV={k:r.ch.k,i};drawChoice(r);try{await vref(code,UID).set({k:r.ch.k,i,ts:Date.now()})}catch(e){}};row.appendChild(b)});
  cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint choice-t",""));cdTick()}
 function cdTick(){const t=document.querySelector("#chv .choice-t");if(!t||!room||!room.ch)return;const left=Math.max(0,Math.ceil((room.ch.until-Date.now())/1000));
- t.textContent=(myV&&myV.k===room.ch.k?"골랐다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
+ t.textContent=(myV&&myV.k===room.ch.k?"선택했다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
 
 function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(i=>r.rd[i]);
  $("#rt").textContent="출정 방 "+(r.pub?"(공개)":"(비공개 코드 "+r.code+")");
@@ -107,7 +118,7 @@ function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(
  if(r.st!=="lobby"){const g=$("#lg");g.hidden=false;g.innerHTML=r.seq.slice(0,r.step).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";
   $("#rx").textContent="마을로 돌아가기";
   if(r.st==="run"&&r.host===UID&&!tick)tick=setInterval(hostTick,2200);
-  if(r.st==="done"&&C.last!==r.code+r.seq.length)g.innerHTML+=settle(r)}}
+  if(r.st==="done"&&C.last!==r.code+r.seq.length)g.innerHTML+=settle(r);armChoice(r)}}
 // 출정 결과를 내 캐릭터에 반영하고, 기록 창에 붙일 HTML을 돌려준다. 같은 출정은 한 번만 반영된다.
 function settle(r){if(C.last===r.code+r.seq.length)return "";C.last=r.code+r.seq.length;let out="";const v=VL[C.v],m=(Object.keys(r.pl).length===1&&r.solo?SOLO_M:([0,.6,.7,.8,.87,.93,.97,1][Object.keys(r.pl).length]||1))*(r.rw||1);
    const mine=r.pl[UID]||{},used=[],msk=mine.sk||[],dkz=msk.includes("dark")?6:0,wtz=r.wsk?5:0;msk.forEach(id=>{if(useSk(id))used.push(SKID[id].nm)});if(mine.f&&useItem("flag"))used.push("용기의 깃발");if(mine.m&&useItem("map"))used.push("마수 사냥 지도");const ch=useItem("charm");if(ch)used.push("결계 부적");

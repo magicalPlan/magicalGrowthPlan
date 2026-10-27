@@ -54,7 +54,8 @@ function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],d
 function xAbandon(why){if(!C)return;const j=C.mj;C.mj=null;if(XR)XR.gone=1;save();note("march",why);drawXAll();if(j)xAuto=j.id}
 /* 진행 중 표시(xBusy)가 40초 넘게 풀리지 않으면 멈춘 것으로 보고 풀어 준다(새로고침 없이 출정이 다시 진행된다). */
 let xBusyT=0;
-async function xTick(){const j=C&&C.mj;if(xBusy&&Date.now()-xBusyT>40000)xBusy=false;if(!j||!XON()||xBusy||Date.now()<j.T0)return;xBusy=true;xBusyT=Date.now();
+async function xTick(){const j=C&&C.mj;if(xBusy&&Date.now()-xBusyT>40000)xBusy=false;if(!j||!XON()||xBusy||Date.now()<j.T0)return;
+ if(XR&&XR.id===j.id&&XR.res&&XR.res.wait&&Date.now()<XR.res.wait.Wd+3000)return;xBusy=true;xBusyT=Date.now();
  try{const x=xInfo(j.s,j.i),late=Date.now()-x.T0;if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fin:"",drawn:-1};
   if(late>X_HARD_LIMIT&&!XR.fin){xAbandon(x.nm+" 출정이 너무 오래 끝나지 않아 정리했다. 다시 참가할 수 있다.");return}
   if(!XR.pl){let d=null;try{d=(await DB.doc(xSeat(x.s,x.i)).get()).data()||{}}catch(e){if(late>X_FETCH_GIVEUP)xAbandon(x.nm+" 출정 정보를 서버에서 불러오지 못해 정리했다. 잠시 뒤에 다시 참가해 보자.");return}
@@ -65,7 +66,7 @@ async function xTick(){const j=C&&C.mj;if(xBusy&&Date.now()-xBusyT>40000)xBusy=f
    if(!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}}
   let R0=xReplay(XR);
   if(R0.wait&&Date.now()>=R0.wait.Wd+3000){let p=[];
-   try{const vs=await once(DB.collection(xVote(x.id,R0.wait.c)));vs.docs.forEach(d=>{const v=d.data();if(v&&XR.pl[d.id]&&(typeof v.ts!=="number"||v.ts<=R0.wait.Wd+1000))p.push(Number(v.i))})}
+   try{const body=(await DB.doc(xVote(x.id,R0.wait.c)).get()).data()||{};Object.keys(body).forEach(id=>{const v=body[id];if(!v||typeof v!=="object"||!XR.pl[id])return;if(typeof v.ts==="number"&&v.ts>R0.wait.Wd+1000)return;p.push(Number(v.i))})}
    catch(e){if(Date.now()<R0.wait.Wd+X_VOTE_GIVEUP)return;p=[]}// 표를 끝내 못 읽으면 운명에 맡기고 계속 진행한다.
    XR.picks[R0.wait.c]=p;R0=xReplay(XR)}
   XR.res=R0;
@@ -88,7 +89,7 @@ function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR
    r.ch.ops.forEach(i=>{const o=xe.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(r.ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed","false");
     b.onclick=async()=>{if(Date.now()>=w.Wd)return;xMyV=i;row.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));try{await DB.doc(xVote(x.id,w.c)+"/"+UID).set({i,ts:{".sv":"timestamp"}});DB.doc(xVote(x.id,w.c)+"/ts").set(Date.now()).catch(()=>{})}catch(e){}};row.appendChild(b)});
    cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""))}
-  const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"골랐다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
+  const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택했다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;xChK=""}}
 $("#xb").onclick=()=>hub();
 // 출정이 멈춘 것처럼 보이면(예정보다 1분 넘게 안 끝나거나, 출발 후 3분째 준비 중) 직접 정리할 수 있다.
