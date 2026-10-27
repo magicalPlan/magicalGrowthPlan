@@ -8,7 +8,7 @@ let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 바뀐 칸만 올린다. 캐릭터 전체를 이 브라우저에 다시 쓰지 않는다.
 // 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
-const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;if(C&&Date.now()-(window.__reg||0)>60000){window.__reg=Date.now();try{regPlayer()}catch(e){}}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
+const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
 function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
  if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
@@ -133,9 +133,9 @@ function saveCloud(now){clearTimeout(sct);const go=async()=>{if(!AUTH.uid||!C||!
  return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(async e=>{const c=String(e&&e.message||e);
   if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}saveWarn(c);clearTimeout(sct);sct=setTimeout(go,15000)})};if(now)return go();return new Promise(res=>{sct=setTimeout(()=>res(go()),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
-function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();regPlayer();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
+function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
- const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();regPlayer();
+ const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
   if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML=""}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
@@ -180,8 +180,9 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
  try{await rstCheck(true)}catch(e){}
  const frx=fullRestore();
  if(frx)save();
+ else pubRemember();
  mode(1);boot();checkFounder();setTimeout(checkComp,1500);
- if(frx){regPlayer();setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
+ if(frx){regPlayer(true);setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
 async function codeOk(v){const t=String(v||"").trim().normalize("NFC");if(!t||!(window.crypto&&crypto.subtle))return false;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")===SIGNUP_CODE_HASH}
 async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,m=$("#lm");m.textContent="";
  if(!/^[A-Za-z0-9_]{3,20}$/.test(id))return m.textContent="아이디는 영문, 숫자, 밑줄 3~20자로 적어야 한다.";
@@ -290,8 +291,22 @@ async function bigPic(uid){if(!uid)return "";if(uid===UID&&C&&C.img)return HIRES
 // 작은 사진으로 먼저 열고, 큰 사진을 받아 오면 바꿔 끼운다.
 async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(uid);if(big&&!$("#imgo").hidden&&$("#imgoi").src===small)$("#imgoi").src=big}
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
-function regPlayer(){if(!DB||!C)return;try{clockSync()}catch(e){}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- const pv=typeof pw==="function"?pw():0,lv=C.lv||1;DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:pv,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],dd:ADM[UID]&&C.doom?C.doom:null,rst:ADM[UID]&&C.rst?C.rst:null,rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:onlineStamp(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
+/* 공개 카드는 사진과 통째로 다시 쓰지 않는다. 이번 접속에서 바뀐 칸만 고친다.
+   절망도는 10분마다 실제로 내려갔을 때 dz 만, 출정·기여·타락처럼 값이 바뀔 때는 그 칸만 고친다.
+   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
+let pubLast=null;
+const pubCopy=o=>JSON.parse(JSON.stringify(o));
+function pubCard(){const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
+ const q=typeof petCur==="function"?petCur():null;
+ return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:petLv(q)}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf||{},fl:C.fall?1:0}}
+function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
+function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
+ Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
+ if(!Object.keys(patch).length)return;
+ if(patch.dz!=null||patch.hf!=null){patch.dz=body.dz;patch.ts=Date.now()}
+ const prev=pubLast,next=pubCopy(Object.assign({},pubLast,patch));pubLast=next;
+ DB.doc("players/"+UID).patch(patch).catch(()=>{if(pubLast===next)pubLast=prev})}
+function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev})}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#pfdu").hidden=uid===UID;$("#gbox").hidden=true;$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -404,7 +419,7 @@ $("#im2").onchange=e=>{const f=e.target.files[0];e.target.value="";pick(f,d=>{pe
 $("#en").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)$("#pf-save").click()};
 // 이미지, 이름, 설정을 한 번에 저장한다.
 $("#pf-save").onclick=()=>{const n=$("#en").value.trim();if(!n){$("#pfe").textContent="이름을 입력해야 한다.";return}
- C.n=n;if(pend)C.img=pend;C.pf={};PF.forEach(([k])=>C.pf[k]=$("#pf-"+k).value.trim().slice(0,300));pend=null;save();regPlayer();$("#pfedit").hidden=true;hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="프로필을 저장했다."};
+ C.n=n;if(pend)C.img=pend;C.pf={};PF.forEach(([k])=>C.pf[k]=$("#pf-"+k).value.trim().slice(0,300));pend=null;save();regPlayer(true);$("#pfedit").hidden=true;hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="프로필을 저장했다."};
 
 let unH=null;
 
