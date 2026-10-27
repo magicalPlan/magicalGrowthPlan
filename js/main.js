@@ -473,12 +473,8 @@ function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{got:{
 let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
-/* 새로고침이나 게임 화면이 처음 열릴 때 한 번만 접속 시각을 남기고, 목록도 그때 한 번만 읽는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut();loadOnline()}
-async function loadOnline(){if(!AUTH.uid||!C||!XON())return;
- try{const sn=await plSince(Date.now()-ON_WIN);ONL=(sn.docs||[]).map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"))}catch(e){ONL=ONL||[]}
- if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n,on:onlineStamp(),pw:typeof pw==="function"?pw():0});drawOnline()}
-function drawOnline(){const w=$("#onlw"),b=$("#onl");if(!w||!C)return;w.hidden=!XON();if(w.hidden)return;b.textContent="지금 접속 중 "+ONL.length+"명"}
+/* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
 
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
  $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";

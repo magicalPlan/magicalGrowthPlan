@@ -293,11 +293,6 @@ textarea::placeholder{color:#6f6785}
 .bd-act{display:flex;gap:6px;margin-top:6px}.bd-act .chip{flex:0 0 auto;min-width:0;padding:4px 10px;font-size:.78rem}
 .bd-cf{margin-top:8px}
 
-/* 동시 접속자 */
-#onlw{text-align:center;margin:-8px 0 14px}
-#onl{display:inline-block;font-size:.85rem;color:#9fe0b0;border:1px solid #2f6b46;border-radius:999px;padding:3px 12px}
-#onl::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#4fd27a;box-shadow:0 0 8px #4fd27a;margin-right:6px;vertical-align:1px}
-
 /* 친구 절망도 */
 .fr-dz{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:.75rem;color:var(--mu)}
 .fr-dz .bar{flex:1;height:6px;margin:0;max-width:220px}.fr-dz b{min-width:2.4em;text-align:right;color:var(--ink)}
