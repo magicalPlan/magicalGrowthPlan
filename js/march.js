@@ -15,8 +15,10 @@ const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+"
 const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
 const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-Date.now())};
 let xSnap={},xS=-1,unX=null,XR=null,xBusy=false,xAuto="",xPh="",xChK="",xMyV=null;
+/* 마을·출정 목록이 보이는 동안 이번 묶음(15자리)을 POLL_HUB(20초)마다 한 번 묻는다. 연결은 열지 않는다.
+   실패하면 poll 이 간격을 늘린다. 그 화면을 벗어나면 묻기를 멈춘다. 내가 참가·취소하면 화면은 그때 바로 고친다. */
 function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;xS=s;xSnap={};if(!XON())return;
- unX=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{})}
+ unX=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{},POLL_HUB)}
 function drawXAll(){["#hl","#rl"].forEach(q=>{const el=$(q);if(el&&!el.closest("[hidden]"))drawX(el)})}
 function xSay(t,bad){[$("#hm"),$("#rm")].forEach(e=>{if(e){e.style.color=bad?"var(--bad)":"var(--mu)";e.textContent=t}})}
 function drawX(el){el.innerHTML="";if(!C)return;
@@ -91,9 +93,9 @@ function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR
 $("#xb").onclick=()=>hub();
 // 출정이 멈춘 것처럼 보이면(예정보다 1분 넘게 안 끝나거나, 출발 후 3분째 준비 중) 직접 정리할 수 있다.
 $("#xq").onclick=()=>{if(!confirm("이 출정을 정리하고 빠져나올까? 이번 출정의 보상은 받지 못한다."))return;xAbandon("출정을 직접 정리하고 빠져나왔다.");hub()};
-// 오래된 출정 기록(2시간 전)을 지운다.
-async function xSweep(){if(!XON())return;const cur=xSlot();
- try{const s=await once(DB.collection("rooms"));s.docs.forEach(d=>{const m=String(d.id).match(/^x[mv]x?(\d+)_/);if(m&&Number(m[1])<cur-XKEEP)DB.doc("rooms/"+d.id).delete().catch(()=>{})})}catch(e){}}
+// 오래된 출정 자리. rooms 전체를 다시 받지 않고, sweepRooms 가 넘겨 준 키만 지운다.
+function xSweep(keys){if(!XON()||!keys||!keys.length)return;const cur=xSlot();
+ keys.forEach(id=>{const m=String(id).match(/^x[mv]x?(\d+)_/);if(m&&Number(m[1])<cur-XKEEP)DB.doc("rooms/"+id).delete().catch(()=>{})})}
 setInterval(()=>{if(!C||!DB)return;const now=Date.now(),hubOn=!$("#v-hub").hidden,rmOn=!$("#v-rooms").hidden,xOn=!$("#v-xm").hidden;
  if(XON()&&(hubOn||rmOn||xOn)){watchX(xOn&&C.mj&&now<C.mj.T0?C.mj.s:xLs());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh){xPh=ph;drawXAll()}document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
  else if(unX){unX();unX=null;xS=-1}

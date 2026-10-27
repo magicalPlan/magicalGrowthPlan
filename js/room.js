@@ -71,12 +71,15 @@ const humansOf=r=>Object.keys(r.pl).filter(k=>!k.startsWith("bot"));
 const vref=(c,u)=>DB.doc("rooms/"+c+"v_"+u);
 let busyT=false,myV=null,cdT=null;
 function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.pl)humansOf(r).forEach(u=>vref(c,u).delete().catch(()=>{}))}
-// 방장이 창을 닫아 남은 방, 오래된 투표 기록을 마을에 들어올 때 정리한다(10분에 한 번).
+// 방장이 창을 닫아 남은 방, 오래된 투표 기록을 정리한다. rooms 전체를 받지 않는다.
+// 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방과 오래된 정기 출정 자리만 지운다.
 let lastSweep=0;
-async function sweepRooms(){if(!DB||Date.now()-lastSweep<600000)return;lastSweep=Date.now();let s;try{s=await once(DB.collection("rooms"))}catch(e){return}const now=Date.now();
- s.docs.forEach(d=>{const v=d.data(),id=d.id;if(!v||id===code||/^x[mvdabr]/.test(id))return;const age=now-(Number(v.ts)||0);
-  const stale=v.st==null?(!v.ts||age>300000):(!v.ts||(v.st==="done"&&age>120000)||(v.st==="run"&&age>1800000)||(v.st==="lobby"&&age>3600000));
-  if(stale)DB.doc("rooms/"+id).delete().catch(()=>{})});xSweep()}
+async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;return {at:now,u:UID}});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
+async function sweepRooms(){if(!DB||!UID||Date.now()-lastSweep<600000)return;lastSweep=Date.now();if(!(await sweepClaim()))return;let keys=[];try{keys=Object.keys((await DB.doc("rooms").peek())||{})}catch(e){return}
+ const now=Date.now(),party=keys.filter(id=>id!==code&&/^[A-Z0-9]{4}(v_.+)?$/.test(id));
+ for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(!v)return;const age=now-(Number(v.ts)||0);
+  const stale=v.st==null?(!v.ts||age>300000):(!v.ts||(v.st==="done"&&age>120000)||(v.st==="run"&&age>1800000)||(v.st==="lobby"&&age>3600000));if(stale)DB.doc("rooms/"+id).delete().catch(()=>{})}))}
+ if(typeof xSweep==="function")xSweep(keys)}
 async function hostTick(){if(room&&room.host===UID&&room.st==="done"&&Date.now()-(room.doneAt||0)>ROOM_KEEP){const c=code,r=room;delRoom(c,r);return}
  if(!room||room.host!==UID||room.st!=="run"||busyT)return;busyT=true;const c=code;try{let ch=false;
  if(room.step<room.seq.length){room.step++;ch=true}

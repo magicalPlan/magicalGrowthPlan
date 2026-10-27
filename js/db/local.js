@@ -1,5 +1,5 @@
 /* 서버 없이 이 브라우저 안에서만 도는 임시 저장소. main.js 보다 먼저 불러야 한다. */
-function local(){const st={},ls={};const nt=p=>{const c=p.split("/")[0];(ls[p]||[]).forEach(f=>f());(ls[c]||[]).forEach(f=>f())};
+function local(){const st={},ls={};const nt=p=>{const parts=p.split("/");for(let i=1;i<=parts.length;i++){const k=parts.slice(0,i).join("/");(ls[k]||[]).forEach(f=>f())}};
 const sn=p=>({id:p.split("/").slice(1).join("/"),exists:p in st,data:()=>st[p]&&JSON.parse(JSON.stringify(st[p]))});
 const sub=(k,g)=>{(ls[k]=ls[k]||[]).push(g);setTimeout(g);return()=>{ls[k]=ls[k].filter(x=>x!==g)}};
 const D=p=>({get:async()=>sn(p),set:async d=>{st[p]=JSON.parse(JSON.stringify(d));nt(p)},

@@ -82,13 +82,15 @@ function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);con
   head.appendChild(b);if(typeof m.t==="string"&&m.t)head.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));
   const row=elT("div","cm-row"),bub=elT("span","cm-x",String(m.x==null?"":m.x)),tm=elT("small","cm-t",d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"");
   row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoad();keep()}
-/* 채팅 프로필 사진: 등록자 목록(players)에 이미 들어 있는 작은 사진을 쓴다. 목록은 plAll이 모아 두므로 따로 많이 받지 않는다.
-   사진이 없는 사람은 이름 첫 글자를 그대로 보인다. 목록에 없는 새 사람이 보이면 5분에 한 번까지만 목록을 다시 받는다. */
-let AVM=null,AVK=null,AVT=-1,avBusy=false,avLast=0;
-function avMap(){if(PLC&&AVT!==PLT){AVM={};AVK=new Set();PLC.docs.forEach(d=>{AVK.add(d.id);const q=d.data();if(q&&typeof q.im==="string"&&/^(data:image\/|https:)/.test(q.im))AVM[d.id]=q.im});AVT=PLT}return AVM}
-function avSet(av,u){const mp=avMap();if(!mp)return true;const im=mp[u];if(im&&!av.querySelector("img")){const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}return AVK.has(u)||Date.now()-avLast<300000}
-function avLoad(){if(!DB||avBusy)return;if(AVK&&Date.now()-avLast<300000)return;avBusy=true;avLast=Date.now();
- plAll(AVK?0:undefined).then(()=>{avBusy=false;document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))},()=>{avBusy=false})}
+/* 채팅 프로필 사진: 화면에 나온 사람의 players/{그 사람}/im 만 받는다. 등록자 전체를 받지 않는다.
+   한 번 받은 사진은 이 탭에서 기억하고, 대화가 다시 그려져도 그 사진을 붙인다. 사진이 없으면 이름 첫 글자를 그대로 둔다. */
+const AVC={},AVT={};
+let avBusy=false;
+function avPaint(av,im){if(!im||av.querySelector("img"))return;const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}
+function avSet(av,u){if(!u)return true;if(AVC[u]==null)return false;avPaint(av,AVC[u]);return true}
+function avApply(){document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))}
+function avLoad(){if(!DB||avBusy)return;const now=Date.now(),ids=[];document.querySelectorAll(".cm-av[data-u]").forEach(a=>{const u=a.dataset.u;if(!u||AVC[u]!=null||(AVT[u]&&AVT[u]>now)||ids.indexOf(u)>=0)return;ids.push(u)});if(!ids.length)return;avBusy=true;
+ Promise.all(ids.slice(0,8).map(async u=>{try{const d=(await DB.doc("players/"+u+"/im").get()).data();AVC[u]=typeof d==="string"&&/^(data:image\/|https:)/.test(d)?d:""}catch(e){AVT[u]=Date.now()+20000}})).then(()=>{avBusy=false;avApply();avLoad()},()=>{avBusy=false})}
 function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;unC&&unC();unC=null;unP&&unP();unP=null;if(t!=="a")admGen++
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";

@@ -8,7 +8,7 @@ let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 바뀐 칸만 올린다. 캐릭터 전체를 이 브라우저에 다시 쓰지 않는다.
 // 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
-const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;if(C&&Date.now()-(window.__reg||0)>60000){window.__reg=Date.now();try{regPlayer()}catch(e){}}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
+const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
 function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
  if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
@@ -133,14 +133,14 @@ function saveCloud(now){clearTimeout(sct);const go=async()=>{if(!AUTH.uid||!C||!
  return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(async e=>{const c=String(e&&e.message||e);
   if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}saveWarn(c);clearTimeout(sct);sct=setTimeout(go,15000)})};if(now)return go();return new Promise(res=>{sct=setTimeout(()=>res(go()),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
-function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();regPlayer();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
+function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
- const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();regPlayer();
+ const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
   if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML=""}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
-function boot(){natHeal();if(C){titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}checkTitles()}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
+function boot(){natHeal();if(C){titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}checkTitles()}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
  C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */
@@ -148,7 +148,7 @@ let verTag=null,verShown=false;
 async function verCheck(){if(verShown||location.protocol==="file:")return;try{const r=await fetch(location.pathname+location.search,{method:"HEAD",cache:"no-store"});const t=r.headers.get("etag")||r.headers.get("last-modified");if(!t)return;if(verTag==null){verTag=t;return}if(t!==verTag){verShown=true;verBanner()}}catch(e){}}
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
-setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();giftPing();checkRaid();if(!$("#v-hub").hidden)drawRaids()}},30000);
+setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();giftPing();checkRaid()}},30000);
 function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
@@ -176,12 +176,13 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
   if(bk&&bk.n){C=bk;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;saveCloud(true)}}
   // 서버 기록도 백업도 없지만 예전에 캐릭터가 있었던 계정이면(players에 흔적이 남아 있으면) 바로 새로 만들지 않고 복구 방법을 고르게 한다.
   if(!C&&!RESTORE_FULL.some(r=>r[1]===UID)){let pp=null;try{pp=(await DB.doc("players/"+UID).get()).data()}catch(e){}if(pp&&pp.n){const r=await rescueAsk(pp);if(r==="out"){AUTH.uid=null;try{localStorage.removeItem("mgr_rt")}catch(e){}location.reload();return}if(r==="base"){C=rescueBuild(pp);saveCloud(true);setTimeout(()=>alertBox("기본 정보로 복구","이름·등급·레벨·속성·특성·마을·프로필·장착 무기·전투력을 되살렸다.\n골드·아이템·친구 목록·일부 칭호는 돌아오지 않았다.\n\n평소 쓰던 기기에 백업이 남아 있다면 운영자에게 알려 주자."),800)}}}}
- DB.collection("admins").onSnapshot(sn=>{const before=Object.keys(ADM).join();ADM=admFix({});sn.docs.forEach(d=>ADM[d.id]=true);admUI();if(before!==Object.keys(ADM).join()){loadNotice(true);if(!$("#v-hub").hidden)hub()}},e=>{},300000);
+ DB.collection("admins").onSnapshot(sn=>{const before=Object.keys(ADM).join();ADM=admFix({});sn.docs.forEach(d=>ADM[d.id]=true);admUI();if(before!==Object.keys(ADM).join()&&!$("#v-hub").hidden)hub()},e=>{},300000);
  try{await rstCheck(true)}catch(e){}
  const frx=fullRestore();
  if(frx)save();
+ else pubRemember();
  mode(1);boot();checkFounder();setTimeout(checkComp,1500);
- if(frx){regPlayer();setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
+ if(frx){regPlayer(true);setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
 async function codeOk(v){const t=String(v||"").trim().normalize("NFC");if(!t||!(window.crypto&&crypto.subtle))return false;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")===SIGNUP_CODE_HASH}
 async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,m=$("#lm");m.textContent="";
  if(!/^[A-Za-z0-9_]{3,20}$/.test(id))return m.textContent="아이디는 영문, 숫자, 밑줄 3~20자로 적어야 한다.";
@@ -290,8 +291,25 @@ async function bigPic(uid){if(!uid)return "";if(uid===UID&&C&&C.img)return HIRES
 // 작은 사진으로 먼저 열고, 큰 사진을 받아 오면 바꿔 끼운다.
 async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(uid);if(big&&!$("#imgo").hidden&&$("#imgoi").src===small)$("#imgoi").src=big}
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
-function regPlayer(){if(!DB||!C)return;try{clockSync()}catch(e){}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- const pv=typeof pw==="function"?pw():0,lv=C.lv||1;DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:pv,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],dd:ADM[UID]&&C.doom?C.doom:null,rst:ADM[UID]&&C.rst?C.rst:null,rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:onlineStamp(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
+/* 공개 카드는 사진과 통째로 다시 쓰지 않는다. 이번 접속에서 바뀐 칸만 고친다.
+   절망도는 10분마다 실제로 내려갔을 때 dz 만, 출정·기여·타락처럼 값이 바뀔 때는 그 칸만 고친다.
+   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
+let pubLast=null;
+const pubCopy=o=>JSON.parse(JSON.stringify(o));
+function pubCard(){const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
+ const q=typeof petCur==="function"?petCur():null;
+ return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:petLv(q)}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf||{},fl:C.fall?1:0}}
+function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
+function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
+ Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
+ if(!Object.keys(patch).length)return;
+ if(patch.dz!=null||patch.hf!=null){patch.dz=body.dz;patch.ts=Date.now()}
+ const prev=pubLast,next=pubCopy(Object.assign({},pubLast,patch));pubLast=next;
+ DB.doc("players/"+UID).patch(patch).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}
+/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다. */
+function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
+function whoPut(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;DB.doc("who/"+UID).set(b).catch(()=>{})}
+function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#pfdu").hidden=uid===UID;$("#gbox").hidden=true;$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -404,7 +422,7 @@ $("#im2").onchange=e=>{const f=e.target.files[0];e.target.value="";pick(f,d=>{pe
 $("#en").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)$("#pf-save").click()};
 // 이미지, 이름, 설정을 한 번에 저장한다.
 $("#pf-save").onclick=()=>{const n=$("#en").value.trim();if(!n){$("#pfe").textContent="이름을 입력해야 한다.";return}
- C.n=n;if(pend)C.img=pend;C.pf={};PF.forEach(([k])=>C.pf[k]=$("#pf-"+k).value.trim().slice(0,300));pend=null;save();regPlayer();$("#pfedit").hidden=true;hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="프로필을 저장했다."};
+ C.n=n;if(pend)C.img=pend;C.pf={};PF.forEach(([k])=>C.pf[k]=$("#pf-"+k).value.trim().slice(0,300));pend=null;save();regPlayer(true);$("#pfedit").hidden=true;hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent="프로필을 저장했다."};
 
 let unH=null;
 
@@ -456,9 +474,10 @@ let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 새로고침이나 게임 화면이 처음 열릴 때 한 번만 접속 시각을 남기고, 목록도 그때 한 번만 읽는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});loadOnline()}
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut();loadOnline()}
 async function loadOnline(){if(!AUTH.uid||!C||!XON())return;
- try{const sn=await plAll();ONL=sn.docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"));if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n,on:onlineStamp()});drawOnline()}catch(e){}}
+ try{const sn=await plSince(Date.now()-ON_WIN);ONL=(sn.docs||[]).map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"))}catch(e){ONL=ONL||[]}
+ if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n,on:onlineStamp(),pw:typeof pw==="function"?pw():0});drawOnline()}
 function drawOnline(){const w=$("#onlw"),b=$("#onl");if(!w||!C)return;w.hidden=!XON();if(w.hidden)return;b.textContent="지금 접속 중 "+ONL.length+"명"}
 
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;

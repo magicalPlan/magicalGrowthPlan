@@ -17,8 +17,9 @@ const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0
    캐릭터들이 강해지고 사람이 늘수록 보스도 강해지고, 서버 초반처럼 다들 약할 때는 보스도 약하다. 숫자는 data/game.js의 BOSS_SCALE에서 고친다. */
 const bScaled=(k,id)=>!!id&&String(id)>=BOSS_SCALE_FROM[k];
 function bossHpEst(k){const c=BOSS_SCALE[k],now=Date.now(),seen={};let sum=0;
+ const sn=typeof plWindow==="function"?plWindow(now-BOSS_SCALE.w.win,()=>{if($("#v-boss").hidden)return;["d","w"].forEach(key=>{const b=bossOf(key);if((bossLast[key]||[]).length)return;drawBoss(key,b,bossLast[key]||[])})}):null;
  const add=(id,p)=>{if(!id||id===UID||seen[id]||!p)return;if(Number(p.on)>now-c.win&&!rstOld(p)){sum+=Math.max(0,Number(p.pw)||0);seen[id]=1}};
- ((PLC&&PLC.docs)||[]).forEach(d=>add(d.id,d.data()||{}));if(!Object.keys(seen).length)(ONL||[]).forEach(p=>add(p.u,p));
+ ((sn&&sn.docs)||[]).forEach(d=>add(d.id,d.data()||{}));if(!Object.keys(seen).length)(ONL||[]).forEach(p=>add(p.u,p));
  sum+=C?pw():0;return Math.max(c.min,Math.round(c.x*sum))}
 const bhpScaled=(k,list)=>{const real=list.filter(v=>v&&v.u),withHp=real.filter(v=>Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):bossHpEst(k)};
 const bhp=(k,list,id)=>{if(bScaled(k,id))return bhpScaled(k,list);if(k==="d"&&!(id&&String(id)<BOSS_NEW_FROM.d)){const real=list.filter(v=>v&&v.u),f=real.length?bFirst(real):null;if(!f)return dHpNow();if(Number(f.hp0)>0)return Math.round(Number(f.hp0))}const c=bcfgOf(k,id);return Math.round(c.base+c.k*list.reduce((a,v)=>a+(Number(v.p)||0),0)+(c.m||0)*list.reduce((a,v)=>Math.max(a,Number(v.p)||0),0))};
