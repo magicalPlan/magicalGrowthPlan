@@ -2,7 +2,7 @@
   // 마법 성장기록 · Realtime Database 규칙
   // ADMIN = 운영자(admins 목록에 있는 계정). admins 목록은 콘솔에서만 고칠 수 있다.
   "rules": {
-    ".read": true,
+    ".read": false,
     ".write": false,
 
     // 운영자 목록: 로그인한 사람은 읽기만. 추가·삭제는 Firebase 콘솔에서 직접.
@@ -185,7 +185,37 @@
       }
     },
 
+    // 사진 없는 명부. 접속 시각(on)으로 최근 접속만 골라 읽는다. 채팅 사진은 그 사람의 players/{나}/im 만 따로 받는다.
+    "who": {
+      ".read": "auth != null",
+      ".indexOn": ["on"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && newData.child('n').isString() && newData.child('n').val().length > 0 && newData.child('n').val().length <= 20 && newData.child('on').isNumber() && newData.child('pw').isNumber() && newData.child('pw').val() >= 0 && newData.child('pw').val() <= 100000000"
+      }
+    },
+
+    // 등대 합계·재해 진압 합계·방 정리 자물쇠. score 전체를 읽지 않기 위한 칸.
+    // wf 는 합계가 줄어들지 않을 때만. 재해 점수도 줄어들지 않을 때만. 시드는 한 클라이언트가 score 를 한 번 옮겨 적을 때 쓴다.
+    "tally": {
+      ".read": "auth != null",
+      "wf": {
+        ".write": "auth != null && newData.child('sum').isNumber() && newData.child('sum').val() >= 0 && newData.child('sum').val() <= 100000000 && newData.child('A').isNumber() && newData.child('B').isNumber() && newData.child('C').isNumber() && newData.child('D').isNumber() && (!data.exists() || newData.child('sum').val() >= data.child('sum').val())"
+      },
+      "dr": {
+        "$id": {
+          ".write": "auth != null && newData.child('pts').isNumber() && newData.child('pts').val() >= 0 && newData.child('pts').val() <= 100000 && (!data.exists() || newData.child('pts').val() >= data.child('pts').val())"
+        }
+      },
+      "seed": {
+        ".write": "auth != null && newData.child('at').isNumber() && newData.child('u').val() === auth.uid"
+      },
+      "roomsweep": {
+        ".write": "auth != null && newData.child('at').isNumber() && newData.child('u').val() === auth.uid"
+      }
+    },
+
     // 시설·등대·재해 기여만 모은 작은 기록. 사진이 든 등록자 전체는 읽지 않는다. 본인 칸만 쓴다.
+    // 화면은 이 목록 전체를 받지 않는다. 합계는 tally·vfac 를 읽고, 이 칸은 본인 기록과 한 번의 옮겨 적기용이다.
     "score": {
       ".read": "auth != null",
       "$uid": {

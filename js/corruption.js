@@ -26,14 +26,14 @@ async function checkRaid(){if(!C||!C.fall||!DB)return;const f=C.fall;let got=0;
  if(C.fall===f&&got+(f.sd||0)>=f.mx)recover()}
 function recover(){if(!C.fall)return;C.edge=0;const wt=!!C.fall.w;C.fall=null;C.dz=RECOVER_DZ;C.scar=Math.max(Number(C.scar)||0,Date.now()+(wt?WITCH_SCAR:SCAR_MS));/* 이미 남아 있는 더 긴 후유증(예: 마인의 3시간)을 짧게 덮어쓰지 않는다 */titleState();C.stats.recovered=(C.stats.recovered||0)+1;if(wt)C.fallT=[];note("fall",wt?"마인의 왕관이 부서지고 원래 모습으로 돌아왔다.":"타락에서 벗어나 원래 모습으로 돌아왔다.");save();checkTitles();if(DB)DB.doc("raid/"+UID).delete().catch(()=>{});regPlayer();
  if(!$("#v-raid").hidden||!$("#v-hub").hidden)hub();if(wt){alertBox("마인의 끝","수많은 마법소녀의 빛이 검은 왕관을 부쉈다. 마인의 저주가 걷히고, "+C.n+"은(는) 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n마인이었던 흔적으로 "+(WITCH_SCAR/3600000)+"시간 동안 얻는 경험치가 절반이 된다.\n타락 횟수 기록은 초기화되었다. 다시는 혼자 무너지지 않기를.");return}alertBox("귀환","친구들의 마법이 닿았다. 타락에서 벗어나 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n다만 타락의 후유증으로 "+(Math.ceil((C.scar-Date.now())/600000)/6>1?"약 "+(Math.round((C.scar-Date.now())/360000)/10)+"시간":"1시간")+" 동안 얻는 경험치가 절반이 된다.")}
-/* 타락 목록은 마을에 앉아 있다고 30초·2분마다 전체를 다시 받지 않는다.
-   raid 는 게임을 켜 둔 동안 연결로 받아, 누군가 타락하거나 돌아오면 그 기록만 온다.
-   체력은 그 친구(또는 마인)의 공격 기록을 연결로 받아, 공격이 있을 때만 고친다. 연결이 안 되면 2.5초마다 다시 받는다. */
+/* 타락 목록과 체력은 마을에 앉아 있는 동안 연결을 붙잡지 않는다. POLL_HUB(20초)마다 한 번씩만 묻는다.
+   연결이 거절돼도 2.5초마다 같은 목록을 다시 받지 않는다. 실패하면 poll 이 간격을 늘린다.
+   레이드 화면을 연 그 한 건만 POLL_FAST 로 연결한다. 보고 있는 동안의 공격 반영용이고, 화면을 닫으면 끊긴다. */
 let unRaid=null,raidDocs=[],raidHitN={},unHit={},raidReady=false;
 const raidKnown=r=>r&&raidHitN[r.u+"_"+r.rid]!=null;
 const raidHpOf=r=>Math.max(0,(Number(r.mx)||0)-(Number(r.sd)||0)-(raidKnown(r)?raidHitN[r.u+"_"+r.rid]:0));
 function watchRaidHits(r){const k=r.u+"_"+r.rid;if(unHit[k]||!DB)return;
- unHit[k]=rhits(r.u,r.rid).onSnapshot(s=>{const cur=raidDocs.find(x=>x&&x.u+"_"+x.rid===k);if(!cur)return;raidHitN[k]=sumHits((s.docs||[]).map(d=>d.data()));applyRaids()},()=>{if(raidHitN[k]==null)raidHitN[k]=0;applyRaids()},POLL_FAST)}
+ unHit[k]=rhits(r.u,r.rid).onSnapshot(s=>{const cur=raidDocs.find(x=>x&&x.u+"_"+x.rid===k);if(!cur)return;raidHitN[k]=sumHits((s.docs||[]).map(d=>d.data()));applyRaids()},()=>{if(raidHitN[k]==null)raidHitN[k]=0;applyRaids()},POLL_HUB)}
 function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&r.u&&r.u!==UID&&(C.fr[r.u]||r.w)),keep={};
  rs.forEach(r=>{keep[r.u+"_"+r.rid]=1;watchRaidHits(r)});
  Object.keys(unHit).forEach(k=>{if(keep[k])return;try{unHit[k]()}catch(e){}delete unHit[k];delete raidHitN[k]});
@@ -47,7 +47,7 @@ function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&
  live.forEach(([r,hp])=>{const b=document.createElement("button");b.type="button";b.className="chip raid-chip";b.style.cssText="display:flex;justify-content:space-between;text-align:left";
   b.innerHTML="<span></span><strong></strong>";if(r.w)b.classList.add("witch-chip");b.firstChild.textContent=(r.w?"🜏 절망의 마인 ":"타락한 ")+cn(r.u,r.n);b.lastChild.textContent="HP "+hp+"/"+r.mx;b.onclick=()=>openRaid(r.u);l.appendChild(b)})}
 function drawRaids(){if(!DB||!C)return;if(unRaid){applyRaids();return}
- unRaid=DB.collection("raid").onSnapshot(sn=>{raidDocs=(sn.docs||[]).map(d=>d.data()).filter(r=>r&&r.u);raidReady=true;applyRaids()},()=>{},POLL_FAST)}
+ unRaid=DB.collection("raid").onSnapshot(sn=>{raidDocs=(sn.docs||[]).map(d=>d.data()).filter(r=>r&&r.u);raidReady=true;applyRaids()},()=>{},POLL_HUB)}
 function openRaid(u){unRd&&unRd();unRd=null;show("raid");rdU=u;rdR=null;rdLast=null;$("#rdm").textContent="";$("#rdlg").innerHTML="";$("#rdc").textContent="불러오는 중...";$("#rdgo").hidden=true;
  const start=r=>{rdR=r;drawRaid([]);if(!DB)return;const un=rhits(u,r.rid).onSnapshot(s=>{if(rdU===u)drawRaid(s.docs.map(d=>d.data()).filter(Boolean))},e=>{},POLL_FAST);const tk=setInterval(rdBtn,1000);unRd=()=>{un();clearInterval(tk)}};
  if(u===UID){if(!C.fall){hub();return}start({u:UID,rid:C.fall.rid,mx:C.fall.mx,w:C.fall.w?1:0,v:C.v,n:C.n,g:C.g,a:C.a.join(" · ")});return}
