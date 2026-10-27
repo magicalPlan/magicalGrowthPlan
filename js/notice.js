@@ -130,4 +130,14 @@ function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hi
   elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·등급·속성·특성, 프로필, 칭호·도감·기록, 사역마는 남는다."),
   elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지'는 남는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
- const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c)}
+ const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
+ const rc=elT("div","card rst-card");rc.style.marginTop="12px";rc.append(elT("h2","","🏛 시설 기여 복구 (운영자 전용)"),
+  elT("p","hint","각 플레이어 카드와 기여 기록에 남아 있는 시설 기여를 읽어, 마을별 전체 기여·단계와 개인 순위를 지금 기록에 맞춘다. 프로필 사진은 받지 않는다. 다시 실행해도 점수가 두 배로 쌓이지 않는다."));
+ const rb=elT("button","btn","시설 기여 복구"),rm=elT("p","msg","");rb.type="button";rb.onclick=async()=>{if(!ADM[UID]||!XON()||typeof apiVfacRecover!=="function")return;
+  const t=prompt("플레이어에게 저장된 시설 기여로 마을 단계와 순위를 다시 쓴다.\n기부가 몰리는 때는 피하고, 한 번만 실행하면 된다.\n\n계속하려면 '복구'라고 입력해 줘.");
+  if((t||"").trim()!=="복구"){rm.style.color="var(--mu)";rm.textContent="취소했다.";return}
+  rb.disabled=true;rm.style.color="var(--mu)";rm.textContent="복구하는 중이다. 창을 닫지 말자...";
+  try{const w=await apiVfacRecover(s=>{rm.textContent=s});rm.style.color="var(--mu)";rm.textContent="복구했다. 플레이어 "+w.players+"명 중 기여 "+w.used+"명."+(w.skipped?" 마을이 없는 기록 "+w.skipped+"명.":"")+(w.failRead?" 읽지 못한 플레이어 "+w.failRead+"명.":"")+(w.failWrite?" 쓰지 못한 칸 "+w.failWrite+"개.":"")+(w.removed?" 옛 순위 "+w.removed+"개 삭제.":"");
+   alertBox("🏛 시설 기여 복구",rm.textContent+(w.lines.length?"\n\n"+w.lines.join("\n"):"\n\n옮길 시설 기여가 없었다.")+"\n\n마을 탭에 다시 들어가면 맞춘 단계가 보인다.");}
+  catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
+ rc.append(rb,rm);box.appendChild(rc)}
