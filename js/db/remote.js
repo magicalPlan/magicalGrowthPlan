@@ -5,7 +5,7 @@ function fbdb(base){base=base.replace(/\/+$/,"");
 const U=(p,q)=>base+"/"+p+".json?"+(AUTH.tok?"auth="+encodeURIComponent(AUTH.tok)+(q?"&":""):"")+(q||"");
 const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.stringify(v))});
 /* 서버 요청에 시간 제한(20초)을 둔다. 휴대폰 네트워크에서 요청이 응답 없이 멈추면, 그 요청을 기다리던 출정 진행이 새로고침 전까지 영영 멈췄다. */
-const tf=(u,o)=>{if(typeof AbortController!=="function")return fetch(u,o);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(t))};
+const tf=(u,o)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof AbortController!=="function")return fetch(u,opt);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign(opt,{signal:ac.signal})).finally(()=>clearTimeout(t))};
 const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o)}catch(e){}}return r};
 const J=async mk=>{const r=await fx(mk);if(!r.ok)throw new Error(r.status);return r.json()};
 /* 데이터 사용량 절약: 실시간 감시는 POLL_MS(4초)마다 서버에 묻는다(채팅·대련처럼 빨라야 하는 곳만 더 짧게).
@@ -34,7 +34,7 @@ const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fa
  return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(stopPoll)stopPoll()}};
 const D=p=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,await J(()=>U(p))),
  set:async d=>{const body=JSON.stringify(d),r=await fx(()=>U(p),{method:"PUT",body});if(!r.ok){/* 서버가 알려 준 거절 이유를 기억해 두었다가 오류 안내에 보여 준다(원인 찾기용). */if(p.startsWith("accounts/")){let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(body.length/1024)}}throw new Error(r.status)}},
- patch:async d=>{const r=await fx(()=>U(p),{method:"PATCH",body:JSON.stringify(d)});if(!r.ok)throw new Error(r.status)},
+ patch:async d=>{const body=JSON.stringify(d),r=await fx(()=>U(p),{method:"PATCH",body});if(!r.ok){if(p.startsWith("accounts/")){let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(body.length/1024)}}throw new Error(r.status)}},
  peek:async()=>J(()=>U(p,"shallow=true")),
  delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
  onSnapshot:(f,e,ms)=>{const pl=()=>poll(()=>J(()=>U(p)),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
