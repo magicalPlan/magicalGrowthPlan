@@ -45,7 +45,7 @@ function paintFriends(msg){const fm=$("#fm");if(typeof msg==="string"){fm.style.
  const fill=(el,items,empty)=>{el.innerHTML="";if(!items.length){el.innerHTML="<p class='hint'>"+empty+"</p>";return}items.forEach(x=>el.appendChild(x))};
  fill(q,Object.keys(C.fq).map(u=>row(u,C.fq[u],[["수락",act("ok",u,C.fq[u])],["거절",()=>{delete C.fq[u];save();updNav();paintFriends("")}]])),"받은 신청이 없다.");
  const ids=frIds(),show=ids.slice(0,frShown),searching=$("#fsq").value.trim();
- fill(l,show.map(u=>row(u,C.fr[u],[["1:1 대화",()=>{chat();setT("d");openDM(u,(fPl[u]&&fPl[u].n)||C.fr[u])}]])),searching?"검색 결과가 없다.":"아직 친구가 없다. 다른 사람의 프로필에서 친구 추가를 눌러보자.");
+ fill(l,show.map(u=>row(u,C.fr[u],[["1:1 대화",()=>goDM(u,(fPl[u]&&fPl[u].n)||C.fr[u])]])),searching?"검색 결과가 없다.":"아직 친구가 없다. 다른 사람의 프로필에서 친구 추가를 눌러보자.");
  let more=$("#fr-more");
  if(ids.length>show.length){if(!more){more=document.createElement("button");more.id="fr-more";more.type="button";more.className="btn g";more.onclick=()=>frMore();l.insertAdjacentElement("afterend",more)}more.hidden=false;more.textContent="친구 "+Math.min(FR_PAGE,ids.length-show.length)+"명 더 보기"}
  else if(more)more.hidden=true;
