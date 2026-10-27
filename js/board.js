@@ -1,6 +1,8 @@
 /* 교류 게시판. main.js 다음에 불러야 한다. 글, 댓글, 답글, 사진, 고정과 작성 중인 초안.
-   메뉴와 알림함은 board 를 그대로 부른다. */
-let BD=[],bdT=0,bdOpen=null,bdLast=0,bdReply=null,bdBusy=false;
+   메뉴와 알림함은 board 를 그대로 부른다.
+   게시판을 열 때 최근 기록 20개만 받고, 그 화면이 열려 있는 동안에만 새 기록을 지켜본다.
+   더 이전 기록은 더 보기를 눌렀을 때만 20개씩 더 받는다. */
+let BD=[],bdOpen=null,bdLast=0,bdReply=null,bdBusy=false;
 // 작성 중인 글과 댓글을 보관한다. 화면이 새로 그려지거나 다른 탭에 다녀와도, 새로고침해도 이어서 쓸 수 있다(올리면 지워진다).
 let bdDraft={};try{bdDraft=JSON.parse(localStorage.getItem("mgr_bd_draft")||"{}")||{}}catch(e){}
 const bdSave=()=>{try{localStorage.setItem("mgr_bd_draft",JSON.stringify(bdDraft))}catch(e){}};
@@ -8,15 +10,17 @@ const bdSave=()=>{try{localStorage.setItem("mgr_bd_draft",JSON.stringify(bdDraft
 const bdTyping=()=>{const a=document.activeElement;return !!(a&&$("#bdl")&&$("#bdl").contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))};
 const bdId=()=>"b_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const bdAgo=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<60?m+"분 전":m<1440?Math.floor(m/60)+"시간 전":Math.floor(m/1440)+"일 전"};
-let bdFull=false;
-async function loadBoard(force){if(!DB||!XON()||bdBusy)return;if(!force&&Date.now()-bdT<10000)return;bdBusy=true;bdT=Date.now();
- try{const ok=m=>m&&m.bt&&m.u&&typeof m.ts==="number",inc=!force&&bdFull&&BD.length;
-  if(inc){const mk=BD.reduce((a,m)=>m.id>a?m.id:a,""),t=parseInt(mk.slice(2,10),36);
-   const from=t>0?"b_"+Math.max(0,t-600000).toString(36):"b_";
-   const sn=await once(DB.collection("chat").prefix("b_").after(from).limit(BD_MAX));const by={};BD.forEach(m=>by[m.id]=m);
-   sn.docs.forEach(d=>{const m=Object.assign({id:d.id},d.data()||{});if(ok(m))by[m.id]=m});BD=Object.values(by).sort((a,b)=>a.id<b.id?-1:1).slice(-BD_MAX)}
-  else{const sn=await once(DB.collection("chat").prefix("b_").limit(BD_MAX));BD=sn.docs.map(d=>Object.assign({id:d.id},d.data()||{})).filter(ok);bdFull=true}
-  bdNotify()}catch(e){}finally{bdBusy=false}}
+const BD_PAGE=20;
+let bdUn=null,bdEnd=false,bdReady=false;
+const bdOk=m=>m&&m.bt&&m.u&&typeof m.ts==="number";
+function bdStop(){if(bdUn){bdUn();bdUn=null}}
+function bdTake(docs){const by={};BD.forEach(m=>by[m.id]=m);(docs||[]).forEach(d=>{const m=Object.assign({id:d.id},d.data()||{});if(bdOk(m))by[m.id]=m});BD=Object.values(by).sort((a,b)=>a.id<b.id?-1:1);bdNotify()}
+// 열려 있는 동안만 최근 20개를 지켜본다. 화면을 떠나면 show 가 구독을 끊는다.
+function bdWatch(){if(bdUn||!DB||!XON()||$("#v-board").hidden)return;
+ bdUn=DB.collection("chat").prefix("b_").limit(BD_PAGE).onSnapshot(sn=>{if($("#v-board").hidden){bdStop();return}bdReady=true;const n=(sn.docs||[]).length;if(n<BD_PAGE)bdEnd=true;bdTake(sn.docs||[]);if(!bdTyping())drawBoard()},()=>{},POLL_FAST)}
+async function bdMore(){if(bdBusy||bdEnd||!bdReady||!DB||!XON()||$("#v-board").hidden)return;const oldest=BD.reduce((a,m)=>!a||m.id<a?m.id:a,"");if(!oldest){bdEnd=true;if(!bdTyping())drawBoard();return}
+ bdBusy=true;if(!bdTyping())drawBoard();try{const sn=await once(DB.collection("chat").prefix("b_").end(oldest).limit(BD_PAGE+1));if($("#v-board").hidden)return;const docs=(sn.docs||[]).filter(d=>d.id!==oldest);if(docs.length<BD_PAGE)bdEnd=true;bdTake(docs)}
+ catch(e){const m=$("#bdm");if(m){m.style.color="var(--bad)";m.textContent="이전 글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}finally{bdBusy=false}if(!$("#v-board").hidden&&!bdTyping())drawBoard()}
 // 지워진 것: 글쓴이 본인이나 운영자가 남긴 지움 표시가 있는 글·댓글
 // 고정: 운영자가 남긴 고정·해제 표시 중 가장 최근 것을 따른다. 고정된 글은 고정한 시각 순으로 맨 위에 온다.
 function bdPins(){const last={};BD.filter(m=>(m.bt==="pin"||m.bt==="unpin")&&ADM[m.u]&&m.ref).sort((a,b)=>a.ts-b.ts).forEach(m=>{last[m.ref]=m.bt==="pin"?m.ts:0});Object.keys(last).forEach(k=>{if(!last[k])delete last[k]});return last}
@@ -30,9 +34,7 @@ function bdNotify(){if(!C)return;const first=C.bdSeen==null,seen=C.bdSeen||0,dea
  BD.filter(m=>m.bt==="c"&&m.u!==UID&&m.ts>seen&&!dead[m.id]).forEach(m=>{mx=Math.max(mx,m.ts);const post=by[m.p],par=m.r?by[m.r]:null;if(!post||dead[m.p])return;
   if(!first&&((par&&par.u===UID)||(!par&&post.u===UID))){n++;note("board",String(m.n||"누군가")+"님이 "+(par?"내 댓글에 답글을":"내 글 「"+String(post.ti||"").slice(0,20)+"」에 댓글을")+" 달았다: "+String(m.x||"").slice(0,40),m.p)}});
  if(first||mx>seen){C.bdSeen=Math.max(mx,first?Date.now():0);save()}if(n){toast("📝 게시판에 새 댓글 "+n+"개");ding()}}
-// 게시판은 보고 있을 때 1분마다, 다른 화면에서는 새 댓글 알림용으로 5분마다만 새로 받는다.
-let bdBgT=0;setInterval(()=>{if(!C||!AUTH.uid||document.hidden)return;const on=!$("#v-board").hidden;if(!on&&Date.now()-bdBgT<300000)return;bdBgT=Date.now();loadBoard().then(()=>{if(on&&!bdTyping())drawBoard()})},60000);
-function board(post){show("board");if(post!==undefined)bdOpen=post;$("#bdm").textContent="";drawBoard();loadBoard(true).then(()=>{if(!bdTyping())drawBoard()})}
+function board(post){const fresh=$("#v-board").hidden;show("board");if(post!==undefined)bdOpen=post;$("#bdm").textContent="";if(fresh){BD=[];bdEnd=false;bdReady=false;bdStop()}drawBoard();bdWatch()}
 const bdName=m=>{const s=elT("span","bd-who");const b=elT("b","",cn(m.u,m.n));if(m.u!==UID){b.style.cursor="pointer";b.onclick=e=>{e.stopPropagation();openProfile(m.u)}}s.appendChild(b);if(m.tn)s.appendChild(elT("span","ttl-chip",String(m.tn).slice(0,20)));s.appendChild(elT("small",""," · "+bdAgo(m.ts)));return s};let bdImg=null;const BDIC={};
 function bdShrink(file,cb){if(!file||!/^image\//.test(file.type))return cb(null,"사진 파일만 올릴 수 있다.");const u=URL.createObjectURL(file),im=new Image();
  im.onload=()=>{URL.revokeObjectURL(u);let w=im.width,h=im.height;const k=Math.min(1,BDI_MAX/Math.max(w,h));w=Math.max(1,Math.round(w*k));h=Math.max(1,Math.round(h*k));
@@ -71,7 +73,7 @@ function drawBoard(){const box=$("#bdl");if(!box||!C)return;box.innerHTML="";if(
   if(!tops.length)box.appendChild(elT("p","hint","아직 댓글이 없다. 첫 댓글을 남겨 보자."));
   {const seen={};tops.forEach(t=>tree(t,0,seen))}
   box.appendChild(bdForm(p.id,"","댓글을 입력 (최대 "+BD_CMT+"자)"));return}
- const top=elT("div","row");top.style.cssText="justify-content:space-between;align-items:center;margin-bottom:10px";top.appendChild(elT("p","hint","글 "+posts.length+"개 · 최근 글이 위에 온다."));
+ const top=elT("div","row");top.style.cssText="justify-content:space-between;align-items:center;margin-bottom:10px";top.appendChild(elT("p","hint","글 "+posts.length+"개 · 최근 글이 위에 온다."+(bdReady&&!bdEnd?" · 더 보기로 이전 글을 볼 수 있다.":"")));
  const wb=elT("button","btn","✎ 글쓰기");wb.type="button";wb.style.cssText="width:auto;margin:0;padding:9px 16px";top.appendChild(wb);box.appendChild(top);
  const f=elT("form","card bd-new");f.hidden=!bdDraft.open;const ti=elT("input");ti.type="text";ti.maxLength=BD_TITLE;ti.placeholder="제목 (최대 "+BD_TITLE+"자)";ti.setAttribute("aria-label","제목");
  const tx=elT("textarea");tx.rows=6;tx.maxLength=BD_BODY;tx.placeholder="내용 (최대 "+BD_BODY+"자)";tx.setAttribute("aria-label","내용");tx.style.marginTop="8px";
@@ -89,9 +91,10 @@ function drawBoard(){const box=$("#bdl");if(!box||!C)return;box.innerHTML="";if(
   go.disabled=true;let id;if(bdImg){const nid=bdId();try{await DB.doc("chat/bimg_"+nid).set({bt:"img",u:UID,ts:Date.now(),im:bdImg})}catch(e){go.disabled=false;$("#bdm").style.color="var(--bad)";$("#bdm").textContent="사진을 올리지 못했다. 사진을 빼고 다시 올려 보자.";return}
    BDIC[nid]=bdImg;id=await bdWrite({bt:"p",ti:t,x,img:1},"글을 올렸다.",nid);if(id)bdImg=null}else id=await bdWrite({bt:"p",ti:t,x},"글을 올렸다.");go.disabled=false;if(id){delete bdDraft.nt;delete bdDraft.nx;bdDraft.open=0;bdSave();titleState();C.stats.posts=(C.stats.posts||0)+1;save();checkTitles();bdOpen=id;drawBoard()}};
  box.appendChild(f);
- if(!posts.length){box.appendChild(elT("p","hint","아직 글이 없다. 첫 글을 남겨 보자."));return}
- posts.forEach(p=>{const n=cmts.filter(x=>x.p===p.id).length,r=elT("button","bd-item"+(pins[p.id]?" pinned":""));r.type="button";const h=elT("div","bd-ti");if(pins[p.id])h.appendChild(elT("span","bd-pin","📌 고정"));h.append(elT("b","",p.ti||"(제목 없음)"));if(p.img)h.appendChild(elT("span","bd-n","📷"));if(n)h.appendChild(elT("span","bd-n","["+n+"]"));
-  r.append(h,bdName(p),elT("p","bd-prev",String(p.x||"").replace(/\s+/g," ").slice(0,80)));r.onclick=()=>{bdOpen=p.id;bdReply=null;drawBoard();window.scrollTo(0,0)};box.appendChild(r)})}
+ if(!posts.length)box.appendChild(elT("p","hint",bdReady?"아직 글이 없다. 첫 글을 남겨 보자.":"글을 불러오는 중…"));
+ else posts.forEach(p=>{const n=cmts.filter(x=>x.p===p.id).length,r=elT("button","bd-item"+(pins[p.id]?" pinned":""));r.type="button";const h=elT("div","bd-ti");if(pins[p.id])h.appendChild(elT("span","bd-pin","📌 고정"));h.append(elT("b","",p.ti||"(제목 없음)"));if(p.img)h.appendChild(elT("span","bd-n","📷"));if(n)h.appendChild(elT("span","bd-n","["+n+"]"));
+  r.append(h,bdName(p),elT("p","bd-prev",String(p.x||"").replace(/\s+/g," ").slice(0,80)));r.onclick=()=>{bdOpen=p.id;bdReply=null;drawBoard();window.scrollTo(0,0)};box.appendChild(r)});
+ if(bdReady&&!bdEnd&&XON()){const more=elT("button","btn g",bdBusy?"불러오는 중…":"더 보기");more.type="button";more.id="bd-more";more.disabled=!!bdBusy;more.style.marginTop="12px";more.onclick=()=>bdMore();box.appendChild(more)}}
 function bdForm(pid,rid,ph){const key="c:"+pid+":"+(rid||""),f=elT("form","row bd-cf");f.style.flexWrap="nowrap";const i=elT("input");i.type="text";i.maxLength=BD_CMT;i.placeholder=ph;i.setAttribute("aria-label",ph);i.style.flex="1";
  i.value=bdDraft[key]||"";i.oninput=()=>{if(i.value)bdDraft[key]=i.value;else delete bdDraft[key];bdSave()};
  const b=elT("button","btn",rid?"답글":"댓글");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
