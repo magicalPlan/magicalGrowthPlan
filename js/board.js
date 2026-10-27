@@ -8,8 +8,15 @@ const bdSave=()=>{try{localStorage.setItem("mgr_bd_draft",JSON.stringify(bdDraft
 const bdTyping=()=>{const a=document.activeElement;return !!(a&&$("#bdl")&&$("#bdl").contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))};
 const bdId=()=>"b_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const bdAgo=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<60?m+"분 전":m<1440?Math.floor(m/60)+"시간 전":Math.floor(m/1440)+"일 전"};
+let bdFull=false;
 async function loadBoard(force){if(!DB||!XON()||bdBusy)return;if(!force&&Date.now()-bdT<10000)return;bdBusy=true;bdT=Date.now();
- try{const sn=await once(DB.collection("chat").prefix("b_").limit(BD_MAX));BD=sn.docs.map(d=>Object.assign({id:d.id},d.data()||{})).filter(m=>m&&m.bt&&m.u&&typeof m.ts==="number");bdNotify()}catch(e){}finally{bdBusy=false}}
+ try{const ok=m=>m&&m.bt&&m.u&&typeof m.ts==="number",inc=!force&&bdFull&&BD.length;
+  if(inc){const mk=BD.reduce((a,m)=>m.id>a?m.id:a,""),t=parseInt(mk.slice(2,10),36);
+   const from=t>0?"b_"+Math.max(0,t-600000).toString(36):"b_";
+   const sn=await once(DB.collection("chat").prefix("b_").after(from).limit(BD_MAX));const by={};BD.forEach(m=>by[m.id]=m);
+   sn.docs.forEach(d=>{const m=Object.assign({id:d.id},d.data()||{});if(ok(m))by[m.id]=m});BD=Object.values(by).sort((a,b)=>a.id<b.id?-1:1).slice(-BD_MAX)}
+  else{const sn=await once(DB.collection("chat").prefix("b_").limit(BD_MAX));BD=sn.docs.map(d=>Object.assign({id:d.id},d.data()||{})).filter(ok);bdFull=true}
+  bdNotify()}catch(e){}finally{bdBusy=false}}
 // 지워진 것: 글쓴이 본인이나 운영자가 남긴 지움 표시가 있는 글·댓글
 // 고정: 운영자가 남긴 고정·해제 표시 중 가장 최근 것을 따른다. 고정된 글은 고정한 시각 순으로 맨 위에 온다.
 function bdPins(){const last={};BD.filter(m=>(m.bt==="pin"||m.bt==="unpin")&&ADM[m.u]&&m.ref).sort((a,b)=>a.ts-b.ts).forEach(m=>{last[m.ref]=m.bt==="pin"?m.ts:0});Object.keys(last).forEach(k=>{if(!last[k])delete last[k]});return last}

@@ -206,7 +206,7 @@ textarea::placeholder{color:#6f6785}
 .shopq .chip{flex:0 0 auto;min-width:44px;padding:8px 10px}
 .shopq-l{color:var(--mu);font-size:.9rem;margin-right:4px}
 #shopqn{width:64px;padding:8px;font:inherit;text-align:center;color:var(--ink);background:#0f0c1a;border:1px solid var(--ln);border-radius:10px}
-/* 경험치 막대(절망도 위): 40마다 레벨이 오른다 */
+/* 경험치 막대(절망도 위): 레벨이 오를수록 필요한 경험치가 늘어난다 */
 .hc-xp{display:flex;align-items:center;gap:8px;margin-top:8px}
 .hc-xp small{color:var(--mu);font-size:.75rem;flex:0 0 auto}
 .hc-xp .bar{flex:1;margin:0;height:8px}.hc-xp .bar i{background:linear-gradient(90deg,#4a3a8a,#a98bff)}

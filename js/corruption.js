@@ -12,7 +12,7 @@ let unRd=null,rdU=null,rdR=null,rdLast=null,rdHp=0;
 const rhits=(u,rid)=>DB.collection("raidhit/"+u+"/"+rid);
 const sumHits=list=>list.reduce((a,v)=>a+(Number(v&&v.d)||0),0);
 const scarLeft=()=>Math.max(0,((C&&C.scar)||0)-Date.now());
-function fallLoss(w){const lv=C.lv||1,ex0=C.ex||0,ex1=Math.max(0,(lv-2)*40),g0=C.gd||0,gl=Math.floor(g0*FALL_GOLD*(w?2:1));C.ex=Math.min(ex0,ex1);C.lv=1+Math.floor(C.ex/40);C.gd=g0-gl;return{lv0:lv,lv1:C.lv,exl:ex0-C.ex,gl}}
+function fallLoss(w){const lv=C.lv||1,ex0=C.ex||0,ex1=xpAt(lv-1),g0=C.gd||0,gl=Math.floor(g0*FALL_GOLD*(w?2:1));C.ex=Math.min(ex0,ex1);C.lv=lvOf(C.ex);C.gd=g0-gl;return{lv0:lv,lv1:C.lv,exl:ex0-C.ex,gl}}
 function fallen(){if(C.fall)return;C.fallT=fallsRecent().concat(Date.now()).slice(-10);const w=C.fallT.length>=WITCH_N;if(w)return witchBorn();const L=fallLoss();C.fall={rid:Date.now(),mx:raidHp(),sd:0,st:0};titleState();C.stats.falls=(C.stats.falls||0)+1;C.dz=100;note("fall","절망도가 100에 닿아 타락했다. 친구들이 맞서 주기를 기다리자.");save();putRaid();regPlayer();checkTitles();
  alertBox("타락","절망도가 100에 닿았다. "+C.n+"은(는) 절망에 삼켜져 마수가 되었다.\n\n타락의 대가\n· 경험치 "+L.exl+"을(를) 잃었다"+(L.lv1<L.lv0?" (레벨 "+L.lv0+" → "+L.lv1+")":"")+"\n· 골드 "+L.gl+"을(를) 잃었다\n· 타락한 동안에는 경험치를 얻을 수 없다\n· 되돌아온 뒤 1시간 동안 얻는 경험치가 절반이 된다\n\n친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다. 그동안 출정과 재계약 시험은 할 수 없다."+(C.fallT.length===WITCH_N-1?"\n\n⚠ 경고: 최근 7일 동안 "+C.fallT.length+"번 타락했다. 한 번 더 타락하면 절망의 마인이 된다.":""));note("fall","타락의 대가로 경험치 "+L.exl+", 골드 "+L.gl+"을(를) 잃었다."+(L.lv1<L.lv0?" 레벨이 "+L.lv1+"(으)로 떨어졌다.":""))}
 function witchBorn(){const L=fallLoss(1);C.fall={rid:Date.now(),mx:raidHp()*WITCH_HP,sd:0,st:0,w:1};titleState();C.stats.falls=(C.stats.falls||0)+1;C.stats.witch=(C.stats.witch||0)+1;C.dz=100;

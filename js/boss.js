@@ -11,7 +11,15 @@ const witchHpOf=p=>(300+Math.max(0,Number(p)||0)*12)*WITCH_HP;
 const onlineTopPw=()=>Math.max(typeof pw==="function"&&C?pw():0,...(ONL||[]).filter(p=>p&&(p.u===UID||isOn(p))).map(p=>Number(p.pw)||0));
 const dHpNow=()=>Math.round(witchHpOf(onlineTopPw())*D_HP_X);
 const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0||b.ts)||0))[0];
-const bhp=(k,list,id)=>{if(k==="d"&&!(id&&String(id)<BOSS_NEW_FROM.d)){const real=list.filter(v=>v&&v.u),f=real.length?bFirst(real):null;if(!f)return dHpNow();if(Number(f.hp0)>0)return Math.round(Number(f.hp0))}const c=bcfgOf(k,id);return Math.round(c.base+c.k*list.reduce((a,v)=>a+(Number(v.p)||0),0)+(c.m||0)*list.reduce((a,v)=>Math.max(a,Number(v.p)||0),0))};
+/* 보스 체력(4차): 보스가 처음 공격받는 순간, 최근에 접속한 캐릭터들의 전투력 합 × BOSS_SCALE[k].x 로 정해진다(최소 BOSS_SCALE[k].min).
+   오전·오후 보스는 최근 하루, 주간 보스는 최근 일주일 동안 접속한 캐릭터를 센다. 정해진 체력은 공격 기록(hp0)에 남아서 그 보스가 끝날 때까지 모두에게 똑같다.
+   캐릭터들이 강해지고 사람이 늘수록 보스도 강해지고, 서버 초반처럼 다들 약할 때는 보스도 약하다. 숫자는 data/game.js의 BOSS_SCALE에서 고친다. */
+const bScaled=(k,id)=>!!id&&String(id)>=BOSS_SCALE_FROM[k];
+function bossHpEst(k){const c=BOSS_SCALE[k],now=Date.now();let sum=0;const seen={};
+ ((PLC&&PLC.docs)||[]).forEach(d=>{if(d.id===UID)return;const p=d.data()||{};if(Number(p.on)>now-c.win&&!rstOld(p)){sum+=Math.max(0,Number(p.pw)||0);seen[d.id]=1}});
+ sum+=C?pw():0;return Math.max(c.min,Math.round(c.x*sum))}
+const bhpScaled=(k,list)=>{const real=list.filter(v=>v&&v.u),withHp=real.filter(v=>Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):bossHpEst(k)};
+const bhp=(k,list,id)=>{if(bScaled(k,id))return bhpScaled(k,list);if(k==="d"&&!(id&&String(id)<BOSS_NEW_FROM.d)){const real=list.filter(v=>v&&v.u),f=real.length?bFirst(real):null;if(!f)return dHpNow();if(Number(f.hp0)>0)return Math.round(Number(f.hp0))}const c=bcfgOf(k,id);return Math.round(c.base+c.k*list.reduce((a,v)=>a+(Number(v.p)||0),0)+(c.m||0)*list.reduce((a,v)=>Math.max(a,Number(v.p)||0),0))};
 /* 한 번 쓰러진 보스는 다시 살아나지 않는다: 마지막 일격을 넣은 사람의 기록에 x 표시를 남기고, 표시가 있거나 피해 합이 체력 이상이면 쓰러진 것으로 본다.
    (예전에는 보스가 쓰러진 뒤 새 사람이 공격하면 그 사람 몫만큼 체력이 늘어나 보스가 되살아났다.) */
 const bossDead=(k,list,id)=>list.length>0&&(list.some(v=>v&&v.x)||sumHits(list)>=bhp(k,list,id));
@@ -43,13 +51,15 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossLast[k]=lis
  const left=cfg.t-C.wb[k],off=!!C.fall||C.dz>=90||left<=0;
  c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?(k==="d"?"이번 보스 공격 횟수를 다 썼다":"오늘 공격 횟수를 다 썼다"):"대응을 골라 공격한다 · "+(k==="d"?"":"오늘 ")+left+"/"+cfg.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off;bt.onclick=()=>{row.querySelectorAll("button").forEach(z=>z.disabled=true);hitBoss(k,bt,a)};row.appendChild(bt)});c.appendChild(row);
- if(k==="d")c.appendChild(elT("p","boss-info","체력: 첫 공격 때 접속 중인 가장 강한 마법소녀가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":" (지금 기준 약 "+dHpNow().toLocaleString()+")")));
+ if(bScaled(k,b.id))c.appendChild(elT("p","boss-info","체력: 첫 공격 때 "+(k==="d"?"최근 하루":"최근 일주일")+" 동안 접속한 마법소녀들의 전투력 합 × "+BOSS_SCALE[k].x+(list.length?"":" (지금 기준 약 "+bossHpEst(k).toLocaleString()+")")));
+ else if(k==="d")c.appendChild(elT("p","boss-info","체력: 첫 공격 때 접속 중인 가장 강한 마법소녀가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":" (지금 기준 약 "+dHpNow().toLocaleString()+")")));
  c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOSS[k],m=$("#bsm");bossDay();if(C.fall||C.dz>=90||C.wb[k]>=cfg.t)return;bt.disabled=true;const pt=bpAt(b.id,Date.now()),ef=bpEff(pt,act),good=pt.best===act;
- try{const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
+ try{if(bScaled(k,b.id)&&!(await bossList(b)).some(v=>Number(v&&v.hp0)>0)){try{await plAll()}catch(e){}}
+  const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
   if(hp<=0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,list);return}
   const weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
-  const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p,c:(Number(mine.c)||0)+1,ts:Date.now(),t0:Number(mine.t0)||Date.now()};if(k==="d")rec.hp0=Number(mine.hp0)||(list.length?(Number((bFirst(list)||{}).hp0)||0):0)||dHpNow();if(mine.x||hp-d<=0)rec.x=1;await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
+  const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p,c:(Number(mine.c)||0)+1,ts:Date.now(),t0:Number(mine.t0)||Date.now()};if(bScaled(k,b.id))rec.hp0=bhpScaled(k,list);else if(k==="d")rec.hp0=Number(mine.hp0)||(list.length?(Number((bFirst(list)||{}).hp0)||0):0)||dHpNow();if(mine.x||hp-d<=0)rec.x=1;await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
   if(fire)useSk("fire");if(dexAdd("bs",b.def[0]))note("dex","도감에 새 보스가 기록되었다: "+b.def[0]);C.wb[k]++;C.wbp=keepIds(C.wbp,b.id);C.gd=(C.gd||0)+cfg.hit;titleState();C.stats.bossHits=(C.stats.bossHits||0)+1;if(good)C.stats.bossRead=(C.stats.bossRead||0)+1;guardAdd(3);const dz=ef[2]?0:cfg.dz+ef[1];if(dz)gain(0,dz);else save();checkTitles();
   const say=good?(act==="def"?" 반격을 막고 되받아쳤다!":act==="weak"?" 모인 마력을 꿰뚫었다! 약점 적중!":" 빈틈에 강타가 꽂혔다!"):act==="str"&&pt.id==="charge"?" 돌진에 반격당했다!":act==="weak"?" 약점을 찾지 못했다.":act==="def"?" 조심스럽게 싸웠다.":"";
   m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(hp-d<=0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");

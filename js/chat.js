@@ -1,7 +1,7 @@
 /* 채팅. main.js 다음에 불러야 한다. 단체 채팅, 마을 채팅, 1:1 대화, 운영자 열람, 새 메시지 알림.
    마을 탭은 chat 을, 프로필과 친구 목록은 goDM 과 openDM 을, 알림함은 goDM 을 그대로 부른다. */
 let admT={},admK=null;
-function admUI(){const b=document.querySelector("#ct [data-t=a]");if(b)b.hidden=!ADM[UID];try{drawNotice()}catch(e){}}
+function admUI(){const b=document.querySelector("#ct [data-t=a]");if(b)b.hidden=!ADM[UID];try{drawNotice()}catch(e){}try{drawDoom()}catch(e){}}
 function watchAdm(){if(!ADM[UID])return;unC=DB.collection("dm").limit(500).onSnapshot(s=>{const th={};s.docs.forEach(d=>{const m=d.data();if(m&&m.k)(th[m.k]=th[m.k]||[]).push(m)});Object.values(th).forEach(a=>a.sort((x,y)=>x.ts-y.ts));admT=th;drawAdm()},e=>cmsg("대화 목록을 불러오지 못했다. 운영자 등록과 데이터베이스 규칙을 확인해야 한다."))}
 function admLabel(k){const nm={};(admT[k]||[]).forEach(m=>nm[m.u]=m.n);return Object.keys(nm).map(u=>cn(u,nm[u])).join(" ↔ ")}
 function drawAdm(){const l=$("#al");l.innerHTML="";const ks=Object.keys(admT).sort((a,b)=>{const x=admT[a],y=admT[b];return y[y.length-1].ts-x[x.length-1].ts});
@@ -30,9 +30,9 @@ async function dmPng(el,title){const ms=(el&&el._ms||[]).slice();if(!ms.length)r
  const fN="bold 15px "+FF,fT="16px "+FF,fS="12px "+FF;
  // 메시지마다 높이를 미리 잰다.
  const items=ms.map(m=>{const nm=cn(m.u,m.n)+(m.u===UID?" (나)":""),lines=wrap(m.x||"",fT,TW);return{m,nm,lines,h:16+20+lines.length*LH+12}});
- const HEAD=96,FOOT=44,pages=[];let cur=[],hh=HEAD;items.forEach(it=>{if(cur.length&&hh+it.h+8+FOOT>DM_PNG_H){pages.push(cur);cur=[];hh=HEAD}cur.push(it);hh+=it.h+8});if(cur.length)pages.push(cur);
+ const HEAD=96,FOOT=44,PH=Math.round(W*297/210),pages=[];let cur=[],hh=HEAD;items.forEach(it=>{if(cur.length&&hh+it.h+8+FOOT>PH){pages.push(cur);cur=[];hh=HEAD}cur.push(it);hh+=it.h+8});if(cur.length)pages.push(cur);
  const stamp=(()=>{const d=new Date();return d.getFullYear()+two(d.getMonth()+1)+two(d.getDate())+"_"+two(d.getHours())+two(d.getMinutes())})(),safe=String(title||"대화").replace(/와의 1:1 대화| \(열람 전용\)/g,"").replace(/[\\/:*?"<>|\s]+/g,"_").slice(0,40);
- for(let pi=0;pi<pages.length;pi++){const its=pages[pi],H=HEAD+its.reduce((a,it)=>a+it.h+8,0)+FOOT,cv=document.createElement("canvas");cv.width=W*DM_PNG_X;cv.height=H*DM_PNG_X;const x=cv.getContext("2d");x.scale(DM_PNG_X,DM_PNG_X);x.textBaseline="top";
+ const jp=[];for(let pi=0;pi<pages.length;pi++){const its=pages[pi],H=HEAD+its.reduce((a,it)=>a+it.h+8,0)+FOOT,cv=document.createElement("canvas");cv.width=W*DM_PNG_X;cv.height=H*DM_PNG_X;const x=cv.getContext("2d");x.scale(DM_PNG_X,DM_PNG_X);x.textBaseline="top";
   x.fillStyle=K.bg;x.fillRect(0,0,W,H);
   x.fillStyle=K.gold;x.font="bold 13px "+FF;x.fillText("魔法 成長記錄 · 1:1 대화",P,22);
   x.fillStyle=K.ink;x.font="bold 20px "+FF;x.fillText(wrap(title||"",x.font=("bold 20px "+FF),W-P*2)[0]||"",P,42);
@@ -45,15 +45,46 @@ async function dmPng(el,title){const ms=(el&&el._ms||[]).slice();if(!ms.length)r
    x.font=fS;x.fillStyle=K.mu;const tm=dt(it.m.ts);x.fillText(tm,bx+bw-14-x.measureText(tm).width,y+14);
    x.font=fT;x.fillStyle=K.ink;it.lines.forEach((ln,i)=>x.fillText(ln,bx+14,y+38+i*LH));y+=it.h+8});
   x.fillStyle=K.mu;x.font=fS;x.fillText("저장한 시각 "+dt(Date.now()),P,H-28);
-  const blob=await new Promise(r=>cv.toBlob(r,"image/png"));if(!blob){toast("그림을 만들지 못했다.");return}
-  const a=document.createElement("a"),u=URL.createObjectURL(blob);a.href=u;a.download="1대1_"+safe+"_"+stamp+(pages.length>1?"_"+(pi+1):"")+".png";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
-  if(pi<pages.length-1)await new Promise(r=>setTimeout(r,400))}
- toast(pages.length>1?"대화가 길어 "+pages.length+"장으로 나눠 저장했다.":"대화를 PNG로 저장했다.")}
+  const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.92));if(!blob){toast("PDF를 만들지 못했다.");return}
+  jp.push({b:new Uint8Array(await blob.arrayBuffer()),w:cv.width,h:cv.height,pw:595.28,ph:595.28*H/W})}
+ const pdf=pdfJpeg(jp),a=document.createElement("a"),u=URL.createObjectURL(pdf);a.href=u;a.download="1대1_"+safe+"_"+stamp+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+ toast("대화를 PDF로 저장했다"+(pages.length>1?" ("+pages.length+"쪽).":"."))}
+/* JPEG 그림들을 한 쪽씩 담은 PDF를 만든다(외부 라이브러리 없이). 쪽 크기는 A4 너비(595pt)에 그림 비율을 맞춘다. */
+function pdfJpeg(pgs){const enc=new TextEncoder(),parts=[],offs=[];let len=0;const put=x=>{const b=typeof x==="string"?enc.encode(x):x;parts.push(b);len+=b.length};
+ const n=2+pgs.length*3,obj=(i,body)=>{offs[i]=len;put(i+" 0 obj\n");body();put("\nendobj\n")};
+ put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+ obj(1,()=>put("<< /Type /Catalog /Pages 2 0 R >>"));
+ obj(2,()=>put("<< /Type /Pages /Count "+pgs.length+" /Kids ["+pgs.map((_,i)=>(3+i*3)+" 0 R").join(" ")+"] >>"));
+ pgs.forEach((g,i)=>{const P=3+i*3,I=P+1,S=P+2,pw=g.pw.toFixed(2),ph=g.ph.toFixed(2),cs="q "+pw+" 0 0 "+ph+" 0 0 cm /Im0 Do Q";
+  obj(P,()=>put("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+pw+" "+ph+"] /Resources << /XObject << /Im0 "+I+" 0 R >> >> /Contents "+S+" 0 R >>"));
+  obj(I,()=>{put("<< /Type /XObject /Subtype /Image /Width "+g.w+" /Height "+g.h+" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+g.b.length+" >>\nstream\n");put(g.b);put("\nendstream")});
+  obj(S,()=>put("<< /Length "+cs.length+" >>\nstream\n"+cs+"\nendstream"))});
+ const xr=len;put("xref\n0 "+(n+1)+"\n0000000000 65535 f \n");for(let i=1;i<=n;i++)put(String(offs[i]).padStart(10,"0")+" 00000 n \n");
+ put("trailer\n<< /Size "+(n+1)+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF");
+ return new Blob(parts,{type:"application/pdf"})}
 function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);const same=el.dataset.th===th,nearB=el.scrollHeight-el.scrollTop-el.clientHeight<40,top=el.scrollTop,prevLast=Number(el.dataset.last||0);
  ms.sort((a,b)=>a.ts-b.ts);el._ms=ms;const last=ms.length?Number(ms[ms.length-1].ts)||0:0;el.dataset.th=th;el.dataset.last=last;
  const keep=()=>{if(!same||nearB){el.scrollTop=el.scrollHeight;newBtn(el,false)}else{el.scrollTop=top;if(last>prevLast)newBtn(el,true)}};
- el.innerHTML="";if(!ms.length){el.innerHTML="<p class='hint' style='margin:0'>아직 대화가 없다.</p>";newBtn(el,false);return}
- ms.forEach(m=>{const p=document.createElement("p"),b=document.createElement("b");b.textContent=cn(m.u,m.n)+(m.u===UID?" (나)":"");if(typeof m.t==="string"&&m.t)p.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));b.style.color=m.u===UID?"#d8c79a":"#e49aa9";if(m.u&&m.u!==UID){b.tabIndex=0;b.setAttribute("role","button");b.style.cssText+="cursor:pointer;text-decoration:underline";b.onclick=()=>openProfile(m.u);b.onkeydown=e=>{if(e.key==="Enter")openProfile(m.u)}}p.insertBefore(b,p.firstChild);p.appendChild(document.createTextNode(": "+m.x));el.appendChild(p)});keep()}
+ el.innerHTML="";if(!ms.length){el.innerHTML="<div class='cm-empty'><span>✦</span><p>아직 대화가 없다.</p><small>먼저 인사를 건네 보자.</small></div>";newBtn(el,false);return}
+ /* 말풍선: 내 말은 오른쪽, 다른 사람 말은 왼쪽. 같은 사람이 3분 안에 이어 말하면 이름과 얼굴을 한 번만 보인다. 날짜가 바뀌면 구분선을 넣는다. */
+ let pu=null,pt=0,pd="",need=false;
+ ms.forEach(m=>{const me=m.u===UID,ts=Number(m.ts)||0,d=ts?new Date(ts):null,dk=d?d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate():"";
+  if(dk&&dk!==pd){const sep=elT("div","cm-day",(d.getMonth()+1)+"월 "+d.getDate()+"일");el.appendChild(sep);pu=null}pd=dk||pd;
+  const cont=pu===m.u&&ts-pt<180000;pu=m.u;pt=ts;
+  const p=elT("div","cm"+(me?" me":"")+(cont?" cont":""));
+  const nm=cn(m.u,m.n),av=elT("span","cm-av",(nm||"?").slice(0,1));if(!me&&m.u){av.dataset.u=m.u;if(!avSet(av,m.u))need=true}
+  const body=elT("div","cm-body"),head=elT("div","cm-head"),b=elT("b","cm-n",nm+(me?" (나)":""));
+  if(m.u&&!me){b.tabIndex=0;b.setAttribute("role","button");b.classList.add("link");b.onclick=()=>openProfile(m.u);b.onkeydown=e=>{if(e.key==="Enter")openProfile(m.u)};av.onclick=()=>openProfile(m.u);av.classList.add("link")}
+  head.appendChild(b);if(typeof m.t==="string"&&m.t)head.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));
+  const row=elT("div","cm-row"),bub=elT("span","cm-x",String(m.x==null?"":m.x)),tm=elT("small","cm-t",d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"");
+  row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoad();keep()}
+/* 채팅 프로필 사진: 등록자 목록(players)에 이미 들어 있는 작은 사진을 쓴다. 목록은 plAll이 모아 두므로 따로 많이 받지 않는다.
+   사진이 없는 사람은 이름 첫 글자를 그대로 보인다. 목록에 없는 새 사람이 보이면 5분에 한 번까지만 목록을 다시 받는다. */
+let AVM=null,AVK=null,AVT=-1,avBusy=false,avLast=0;
+function avMap(){if(PLC&&AVT!==PLT){AVM={};AVK=new Set();PLC.docs.forEach(d=>{AVK.add(d.id);const q=d.data();if(q&&typeof q.im==="string"&&/^(data:image\/|https:)/.test(q.im))AVM[d.id]=q.im});AVT=PLT}return AVM}
+function avSet(av,u){const mp=avMap();if(!mp)return false;const im=mp[u];if(im&&!av.querySelector("img")){const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}return AVK.has(u)||Date.now()-avLast<300000}
+function avLoad(){if(!DB||avBusy)return;if(AVK&&Date.now()-avLast<300000)return;avBusy=true;avLast=Date.now();
+ plAll(AVK?0:undefined).then(()=>{avBusy=false;document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))},()=>{avBusy=false})}
 function setT(t){ct=t;unC&&unC();unC=null;unP&&unP();unP=null;
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";
@@ -63,7 +94,7 @@ function setT(t){ct=t;unC&&unC();unC=null;unP&&unP();unP=null;
   unC=DB.collection("chat").prefix("c_"+C.v+"_").limit(40).onSnapshot(s=>{const ms=s.docs.map(d=>d.data()).filter(m=>m&&m.vc===C.v);paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},e=>cmsg("마을 채팅을 불러오지 못했다."),POLL_FAST)}
  else if(t==="a")watchAdm();else{peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="";
   // 목록은 친구 먼저, 그다음 이름순으로 고정한다. 이름·등급·안 읽음 표시가 바뀔 때만 다시 그려서 화면이 흔들리지 않는다.
-  dmBackfill();{let alive=true;const go=()=>plAll(60000).then(s=>{if(!alive)return;peerDocs=s.docs.map(d=>[d.id,d.data()]);drawPeers()},()=>cmsg("플레이어 목록을 불러오지 못했다."));go();const iv=setInterval(go,60000);unP=()=>{alive=false;clearInterval(iv)}}}
+  dmBackfill();{let alive=true;const go=()=>plAll(PL_TTL).then(s=>{if(!alive)return;peerDocs=s.docs.map(d=>[d.id,d.data()]);drawPeers()},()=>cmsg("플레이어 목록을 불러오지 못했다."));go();const iv=setInterval(go,60000);unP=()=>{alive=false;clearInterval(iv)}}}
  sync()}
 /* 1:1 대화 상대 목록: 최근에 대화를 주고받은 사람이 맨 위. 대화한 적 없는 사람은 그 아래에 친구 먼저, 이름순.
    C.dml = 상대별 마지막으로 메시지를 주고받은 시각(내가 보낸 것, 받은 것 모두). 순서가 바뀔 때만 다시 그린다. */

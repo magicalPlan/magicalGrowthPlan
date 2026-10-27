@@ -1,0 +1,161 @@
+{
+  // 마법 성장기록 · Realtime Database 규칙
+  // ADMIN = 운영자(admins 목록에 있는 계정). admins 목록은 콘솔에서만 고칠 수 있다.
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    // 운영자 목록: 로그인한 사람은 읽기만. 추가·삭제는 Firebase 콘솔에서 직접.
+    "admins": {
+      ".read": "auth != null",
+      ".write": false
+    },
+
+    // 내 캐릭터 저장: 본인만 읽고 쓴다. (비밀 코드 없이 누구나 가입할 수 있다)
+    "accounts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    // 플레이어 공개 정보(등록자 목록·프로필·접속 표시 등): 로그인한 사람은 모두 읽기, 쓰기는 본인만.
+    // 공지(ntc)·멸망까지(dd)·시즌 초기화(rst)도 운영자 본인의 이 칸에 저장된다.
+    "players": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    // 단체·마을 채팅과 게시판(b_), 게시판 사진(bimg_): 모두 읽기. 새 글은 본인 이름으로만, 지우기·고치기는 쓴 사람이나 운영자만.
+    "chat": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('u').val() === auth.uid) || (data.exists() && (data.child('u').val() === auth.uid || root.child('admins').child(auth.uid).exists())))"
+      }
+    },
+
+    // 1:1 대화: 대화 당사자만 자기 대화(k)를 찾아 읽을 수 있다. 운영자는 전체 열람.
+    // ★ .indexOn 'k' 가 꼭 있어야 한다. 빠지면 게임이 대화 1,500개를 통째로 2.5초마다 받는다(이번 요금 폭탄의 유력한 원인).
+    "dm": {
+      ".indexOn": ["k"],
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (query.orderByChild === 'k' && query.equalTo != null && query.equalTo.contains(auth.uid)))",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.child('u').val() === auth.uid && newData.child('k').val().contains(auth.uid)"
+      }
+    },
+
+    // 받는 사람만 읽는 우편함들: 1:1 새 메시지 표시(dmn), 친구 신청·수락(fmsg), 공명(res), 선물(gift).
+    // 경로는 {받는 사람}/{보낸 사람}. 보내는 사람은 자기 칸에만 쓴다.
+    "dmn": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && auth.uid === $from"
+        }
+      }
+    },
+    "fmsg": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && auth.uid === $from"
+        }
+      }
+    },
+    // 공명: 같은 상대에게 3시간에 한 번
+    "res": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && auth.uid === $from && (!data.exists() || data.child('ts').val() < now - 10800000)"
+        }
+      }
+    },
+    // 선물: 같은 친구에게 하루 4개(칸 0~3), 한 칸은 24시간 뒤에 다시 쓸 수 있다
+    "gift": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          "$i": {
+            ".write": "auth != null && auth.uid === $from && ($i === '0' || $i === '1' || $i === '2' || $i === '3') && (!data.exists() || data.child('ts').val() < now - 86400000)"
+          }
+        }
+      }
+    },
+
+    // 마을 경쟁: guard/{주}/{마을}/{나}. 모두 읽기, 내 점수만 쓰기.
+    "guard": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$wk": {
+        "$v": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+
+    // 운영자 공지(예전 방식): 모두 읽기, 운영자만 쓰기
+    "notice": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+    },
+
+    // 마수 포탈: portal/{포탈}/j(출동)·h(치유)/{나}
+    "portal": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        "j": { "$uid": { ".write": "auth != null && auth.uid === $uid" } },
+        "h": { "$uid": { ".write": "auth != null && auth.uid === $uid" } }
+      }
+    },
+
+    // 타락 레이드: raid/{타락한 사람}은 본인만, raidhit/{타락한 사람}/{레이드}/{공격한 사람}은 공격한 본인만
+    "raid": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "raidhit": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$u": {
+        ".write": "auth != null && auth.uid === $u",
+        "$rid": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+
+    // 보스·웨이브 기록과 프로필 큰 사진·시계 맞추기: wboss/{보스·웨이브·pic·picm·clk}/{나}
+    "wboss": {
+      ".read": "auth != null",
+      "$k": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists() && $k !== 'pic' && $k !== 'picm' && $k !== 'clk'",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    // 파티 방·정기 출정 자리와 투표·대련·1:1 알림 신호: 여러 사람이 함께 쓰고 정리하는 곳이라 로그인한 사람에게 열어 둔다(예전과 같음)
+    "rooms": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
