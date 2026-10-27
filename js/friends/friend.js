@@ -1,6 +1,7 @@
 /* 친구. main.js 다음에, 공명 파일보다 먼저 불러야 한다. 신청, 수락, 삭제, 친구 목록과 검색, 목록에 보이는 절망도.
-   마을 화면은 syncFr 를, 메뉴와 알림은 friends 를, 프로필은 frBtn 과 frDo 를 그대로 부른다.
-   공명은 sendF 를 쓰고, 친구 소식은 실행 중에 rqRetry 와 resHeard 를 부른다. */
+   메뉴와 알림은 friends 를, 프로필은 frBtn 과 frDo 를 그대로 부른다.
+   공명은 sendF 를 쓰고, 친구 소식은 실행 중에 rqRetry 와 resHeard 를 부른다.
+   소식과 친구의 플레이어 기록은 친구 화면을 열 때만 한 번 읽는다. 실시간으로 지켜보지 않고, 목록은 20명씩 받는다. */
 /* 친구: 신청 -> 수락의 양방향 구조. 친구 목록은 내 계정에 저장하고, 신청/수락/삭제 알림은 서버의 fmsg(받는 사람만 읽을 수 있음)로 주고받는다. */
 const sendF=(to,t)=>DB.doc("fmsg/"+to+"/"+UID).set({t,ts:{".sv":"timestamp"},n:nmOf()});
 async function frDo(a,u,nm){C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
@@ -26,31 +27,41 @@ async function syncFr(){if(!AUTH.uid||!C||!DB)return;try{rqRetry();const s=await
   else if(v.t==="del"){delete C.fr[f];delete C.fq[f];delete C.fo[f];(notes.push(n+"님과 친구가 끊어졌다"),note("fr",n+"님과 친구가 끊어졌다"+".",f))}
   else if(v.t==="rok"||v.t==="rno")resHeard(f,v,n,notes)});
  if(!ch)return;save();updNav();checkTitles();
- if(!$("#v-friends").hidden)friends();else if(!$("#v-hub").hidden&&notes.length){const h=$("#hm");h.style.color="var(--mu)";h.textContent=notes.join(", ")+"."}}catch(e){}}
-async function friends(msg){show("friends");updNav();rqDraw();const fm=$("#fm");fm.style.color="var(--mu)";fm.textContent=msg||"";
- const q=$("#fql"),l=$("#ffl"),o=$("#fol");
- if(!AUTH.uid){q.innerHTML=l.innerHTML=o.innerHTML="";fm.style.color="var(--mu)";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
- C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};let pl={};try{const s=await plAll();s.docs.forEach(d=>pl[d.id]=d.data())}catch(e){}
- if($("#v-friends").hidden)return;
- const row=(uid,fb,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const p=pl[uid],nb=document.createElement("button");nb.type="button";nb.className="chip";nb.style.cssText="flex:1;text-align:left";
+ if($("#v-friends").hidden&&!$("#v-hub").hidden&&notes.length){const h=$("#hm");h.style.color="var(--mu)";h.textContent=notes.join(", ")+"."}}catch(e){}}
+/* 친구 목록은 이 계정에 이름이 있다. 등급·접속·절망도는 그 친구의 플레이어 기록을 20명씩만 받아 채운다. */
+const FR_PAGE=20;
+let frShown=FR_PAGE,frBusy=false,fPl={};
+function frList(){C.fr=C.fr||{};return Object.keys(C.fr).sort((a,b)=>String(C.fr[a]||"").localeCompare(String(C.fr[b]||""),"ko")||(a<b?-1:1))}
+function frIds(){const q=$("#fsq").value.trim().toLowerCase();return frList().filter(u=>!q||String(C.fr[u]||"").toLowerCase().includes(q))}
+async function loadFr(ids){await Promise.all(ids.filter(u=>fPl[u]==null).slice(0,FR_PAGE).map(async u=>{try{const s=await DB.doc("players/"+u).get();const d=s.exists?s.data():null;fPl[u]=d&&d.n?d:{}}catch(e){fPl[u]={}}}))}
+async function frMore(){if(frBusy||!C||!DB)return;const all=frIds();if(frShown>=all.length)return;const from=frShown;frBusy=true;frShown=Math.min(all.length,frShown+FR_PAGE);
+ try{await loadFr(all.slice(from,frShown));if(!$("#v-friends").hidden)paintFriends()}finally{frBusy=false}}
+function paintFriends(msg){const fm=$("#fm");if(typeof msg==="string"){fm.style.color="var(--mu)";fm.textContent=msg}
+ rqDraw();const q=$("#fql"),l=$("#ffl"),o=$("#fol");C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
+ const row=(uid,fb,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const p=fPl[uid]&&fPl[uid].n?fPl[uid]:null,nb=document.createElement("button");nb.type="button";nb.className="chip";nb.style.cssText="flex:1;text-align:left";
   nb.textContent=(p&&isOn(p)?"🟢 ":"")+cn(uid,(p&&p.n)||fb)+(p&&tiName(p.ti,p.tn)?" 「"+tiName(p.ti,p.tn)+"」":"")+(p?" ("+p.g+"등급 "+p.a+")":"");nb.onclick=()=>openProfile(uid);if(p&&C.fr&&C.fr[uid])nb.appendChild(frDz(p));w.appendChild(nb);w.className="fr-row";w.dataset.nm=String((p&&p.n)||fb||"").toLowerCase();
   btns.forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.textContent=t;b.onclick=fn;w.appendChild(b)});return w};
- const act=(a,u,nm)=>async()=>{try{await frDo(a,u,nm);friends()}catch(e){friends("지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다.");$("#fm").style.color="var(--bad)"}};
+ const act=(a,u,nm)=>async()=>{try{await frDo(a,u,nm);paintFriends("")}catch(e){paintFriends("지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다.");$("#fm").style.color="var(--bad)"}};
  const fill=(el,items,empty)=>{el.innerHTML="";if(!items.length){el.innerHTML="<p class='hint'>"+empty+"</p>";return}items.forEach(x=>el.appendChild(x))};
- fill(q,Object.keys(C.fq).map(u=>row(u,C.fq[u],[["수락",act("ok",u,C.fq[u])],["거절",()=>{delete C.fq[u];save();updNav();friends()}]])),"받은 신청이 없다.");
- fill(l,Object.keys(C.fr).map(u=>row(u,C.fr[u],[["1:1 대화",()=>{chat();setT("d");openDM(u,(pl[u]&&pl[u].n)||C.fr[u])}]])),"아직 친구가 없다. 다른 사람의 프로필에서 친구 추가를 눌러보자.");
- fill(o,Object.keys(C.fo).map(u=>row(u,"",[])),"보낸 신청이 없다.");
- fPl=pl;fRow=row;fFilter()}
-/* 친구 검색: 이름에 검색어가 들어간 사람만 보여 준다. 친구가 아닌 플레이어도 함께 찾아 준다. */
-let fPl={},fRow=null;
+ fill(q,Object.keys(C.fq).map(u=>row(u,C.fq[u],[["수락",act("ok",u,C.fq[u])],["거절",()=>{delete C.fq[u];save();updNav();paintFriends("")}]])),"받은 신청이 없다.");
+ const ids=frIds(),show=ids.slice(0,frShown),searching=$("#fsq").value.trim();
+ fill(l,show.map(u=>row(u,C.fr[u],[["1:1 대화",()=>{chat();setT("d");openDM(u,(fPl[u]&&fPl[u].n)||C.fr[u])}]])),searching?"검색 결과가 없다.":"아직 친구가 없다. 다른 사람의 프로필에서 친구 추가를 눌러보자.");
+ let more=$("#fr-more");
+ if(ids.length>show.length){if(!more){more=document.createElement("button");more.id="fr-more";more.type="button";more.className="btn g";more.onclick=()=>frMore();l.insertAdjacentElement("afterend",more)}more.hidden=false;more.textContent="친구 "+Math.min(FR_PAGE,ids.length-show.length)+"명 더 보기"}
+ else if(more)more.hidden=true;
+ fill(o,Object.keys(C.fo).map(u=>row(u,"",[])),"보낸 신청이 없다.");fFilter()}
+async function friends(msg){const fresh=$("#v-friends").hidden;show("friends");updNav();
+ if(!AUTH.uid){$("#fql").innerHTML=$("#ffl").innerHTML=$("#fol").innerHTML="";const more=$("#fr-more");if(more)more.hidden=true;rqDraw();const fm=$("#fm");fm.style.color="var(--mu)";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
+ if(fresh){frShown=FR_PAGE;fPl={}}
+ paintFriends(msg||"");if(!C||!DB||frBusy)return;frBusy=true;
+ try{await syncFr();if(typeof applyRes==="function")await applyRes();if($("#v-friends").hidden)return;const ids=frIds().slice(0,frShown);ids.forEach(u=>delete fPl[u]);await loadFr(ids);if(!$("#v-friends").hidden)paintFriends()}
+ catch(e){if(!$("#v-friends").hidden){const fm=$("#fm");fm.style.color="var(--bad)";fm.textContent="친구 목록을 불러오지 못했다. 잠시 뒤에 다시 열어 보자."}}
+ finally{frBusy=false}}
+/* 검색은 이미 받아 둔 친구 이름과 신청만 거른다. 전체 플레이어 목록은 읽지 않는다. */
 function fFilter(){const q=$("#fsq").value.trim().toLowerCase();
- ["#fql","#ffl","#fol"].forEach(s=>{const el=$(s),rows=[...el.querySelectorAll(".fr-row")];let n=0;rows.forEach(w=>{const ok=!q||w.dataset.nm.includes(q);w.hidden=!ok;if(ok)n++});
-  let e=el.querySelector(".fr-none");if(rows.length&&!n){if(!e){e=elT("p","hint fr-none","검색 결과가 없다.");el.appendChild(e)}}else if(e)e.remove()});
- const box=$("#fsb"),r=$("#fsr");box.hidden=!q;r.innerHTML="";if(!q||!fRow)return;
- const known=u=>u===UID||C.fr[u]||C.fq[u]||C.fo[u],hits=Object.keys(fPl).filter(u=>fPl[u]&&!known(u)&&String(fPl[u].n||"").toLowerCase().includes(q)).sort((a,b)=>(fPl[b].ts||0)-(fPl[a].ts||0)).slice(0,10);
- if(!hits.length){r.innerHTML="<p class='hint'>이름이 맞는 다른 플레이어가 없다.</p>";return}
- hits.forEach(u=>r.appendChild(fRow(u,"",[["친구 추가",async()=>{try{await frDo("req",u,fPl[u].n);friends(fPl[u].n+"님에게 친구 신청을 보냈다.")}catch(e){friends("지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다.");$("#fm").style.color="var(--bad)"}}]])))}
-$("#fsq").oninput=fFilter;
+ ["#fql","#fol"].forEach(s=>{const el=$(s),rows=[...el.querySelectorAll(".fr-row")];let n=0;rows.forEach(w=>{const ok=!q||w.dataset.nm.includes(q);w.hidden=!ok;if(ok)n++});
+  let e=el.querySelector(".fr-none");if(rows.length&&!n){if(!e){e=elT("p","hint fr-none","검색 결과가 없다.");el.appendChild(e)}}else if(e)e.remove()})}
+$("#fsq").oninput=()=>{if($("#v-friends").hidden||!AUTH.uid||!C)return;frShown=FR_PAGE;paintFriends()};
 
 /* 친구 목록의 절망도: 친구가 마지막으로 접속했을 때의 절망도에서, 그 뒤 흐른 시간만큼 자연 회복을 반영한 추정값을 보여 준다. */
 function frDz(p){const fall=!!p.fl,base=Math.max(0,Math.min(100,Number(p.dz)||0)),ts=Number(p.ts)||Date.now(),est=fall?100:p.hf?base:Math.max(0,base-HEAL_DZ*Math.floor(Math.max(0,Date.now()-ts)/HEAL_MS));

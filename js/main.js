@@ -193,7 +193,7 @@ let verTag=null,verShown=false;
 async function verCheck(){if(verShown||location.protocol==="file:")return;try{const r=await fetch(location.pathname+location.search,{method:"HEAD",cache:"no-store"});const t=r.headers.get("etag")||r.headers.get("last-modified");if(!t)return;if(verTag==null){verTag=t;return}if(t!==verTag){verShown=true;verBanner()}}catch(e){}}
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
-setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){syncPeek();guardPush();devClaim();applyRes();syncFr();applyGift();checkRaid();if(!$("#v-hub").hidden)drawRaids()}},30000);
+setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){syncPeek();guardPush();devClaim();applyGift();checkRaid();if(!$("#v-hub").hidden)drawRaids()}},30000);
 function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
@@ -258,7 +258,15 @@ let curView="";
 let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.scrollY;if(!m||y<1)return;m.style.minHeight=m.offsetHeight+"px";clearTimeout(keepT);
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&unRd){unRd();unRd=null}if(id!=="boss"&&unB){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){unC&&unC();unC=null;unP&&unP();unP=null}$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===id?"true":"false"));if(moved)window.scrollTo(0,0);else keepY()}
+/* 상단 메뉴: 마을·게시판·기록은 누르면 하위 항목이 나오고, 나머지는 바로 그 화면으로 간다. */
+const navGroup=id=>({hub:"town",shop:"town",bag:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record"})[id]||"";
+function navSync(id,moved){const g=navGroup(id);
+ document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
+ document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===id?"true":"false"));
+ if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
+ document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
+ if(typeof updNav==="function"&&C)updNav()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&unRd){unRd();unRd=null}if(id!=="boss"&&unB){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){unC&&unC();unC=null;unP&&unP();unP=null}$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -327,7 +335,7 @@ async function bigPic(uid){if(!uid)return "";if(uid===UID&&C&&C.img)return HIRES
 async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(uid);if(big&&!$("#imgo").hidden&&$("#imgoi").src===small)$("#imgoi").src=big}
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
 function regPlayer(){if(!DB||!C)return;try{clockSync()}catch(e){}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],dd:ADM[UID]&&C.doom?C.doom:null,rst:ADM[UID]&&C.rst?C.rst:null,rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:Date.now(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
+ DB.doc("players/"+UID).set({n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:TD[C.t]||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),ntc:ADM[UID]?(C.ntcl||[]):[],dd:ADM[UID]&&C.doom?C.doom:null,rst:ADM[UID]&&C.rst?C.rst:null,rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:(()=>{const q=petCur();return q?{s:q.sp,n:q.nm,l:petLv(q)}:null})(),hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,on:onlineStamp(),im:im,pf:C.pf||{},fl:C.fall?1:0,ts:Date.now()}).catch(()=>{})}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#pfdu").hidden=uid===UID;$("#gbox").hidden=true;$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -361,7 +369,10 @@ function updNav(){const cb=document.querySelector("#nav [data-v=chat]");if(cb&&C
  const bgb=document.querySelector("#nav [data-v=bag]");if(bgb&&C){const n=Array.isArray(C.rg)?C.rg.length:0;bgb.textContent=n?"마법·가방 ("+n+")":"마법·가방"}
  const h=document.querySelector("#nav [data-v=hub]");if(h&&C){let k=dqReady();try{k+=facReady()}catch(e){}h.textContent=k?"마을 ("+k+")":"마을"}
  {const nb2=document.querySelector("#nav [data-v=ntc]");if(nb2&&C){let k=0;try{k=NTC.filter(n=>Number(n.ts)>(C.ntcSeen||0)).length}catch(e){}nb2.textContent=k?"공지 ("+k+")":"공지"}}
- const ib=document.querySelector("#nav [data-v=inbox]");if(ib&&C){const k=(C.nt||[]).filter(n=>!n.r).length;ib.textContent=k?"알림 ("+(k>9?"9+":k)+")":"알림"}
+ const ib=document.querySelector("#nav [data-v=inbox]");if(ib&&C){const k=(C.nt||[]).filter(n=>!n.r).length;ib.textContent=k?"알림 ("+(k>9?"9+":k)+")":"알림";
+  const rp=document.querySelector("#nav [data-g=record]");const recOpen=document.querySelector('#nav .nav-sub[data-for="record"]');if(rp)rp.textContent=k&&recOpen&&recOpen.hidden?"기록 ("+(k>9?"9+":k)+")":"기록"}
+ {const nbP=document.querySelector("#nav [data-g=board]");const bdOpen=document.querySelector('#nav .nav-sub[data-for="board"]');const nk=(()=>{try{return NTC.filter(n=>Number(n.ts)>(C.ntcSeen||0)).length}catch(e){return 0}})();if(nbP)nbP.textContent=nk&&bdOpen&&bdOpen.hidden?"게시판 ("+nk+")":"게시판"}
+ {const townOpen=document.querySelector('#nav .nav-sub[data-for="town"]');if(h&&bgb&&townOpen&&townOpen.hidden){const hm=(h.textContent.match(/\((\d+)\)$/)||[])[1],bm=(bgb.textContent.match(/\((\d+)\)$/)||[])[1],sum=(Number(hm)||0)+(Number(bm)||0);if(sum)h.textContent="마을 ("+sum+")"}}
  // "이름 (3)" 꼴의 숫자는 작은 배지로 바꿔서, 숫자가 생겨도 탭 글자가 잘리지 않게 한다.
  document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}})}
 const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
@@ -435,7 +446,16 @@ $("#pf-save").onclick=()=>{const n=$("#en").value.trim();if(!n){$("#pfe").textCo
 
 let unH=null;
 
-$("#nav").onclick=e=>{const v=e.target.dataset&&e.target.dataset.v;if(v==="hub")hub();if(v==="shop")shop();if(v==="chat")chat();if(v==="friends")friends();if(v==="board")board(null);if(v==="ntc")ntcView();if(v==="arena")arena();if(v==="bag")bag();if(v==="titles")(recTab==="ttl"?titles():dex());if(v==="inbox")inbox();if(v==="roster")roster();if(v==="world")show("world");if(v==="setting"){show("setting");drawSetting()}};
+$("#nav").onclick=e=>{const b=e.target.closest&&e.target.closest("button");if(!b||!b.closest("#nav"))return;const g=b.dataset.g,v=b.dataset.v;
+ if(g&&b.parentElement.classList.contains("nav-bar")){const sub=document.querySelector('#nav .nav-sub[data-for="'+g+'"]');const open=sub&&!sub.hidden;const here=navGroup(curView)===g;
+  if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");updNav();return}
+  document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
+  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
+  if(v==="hub"){if(curView!=="hub")hub();else updNav();return}
+  if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
+  if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")(recTab==="ttl"?titles():dex());else updNav();return}
+  return}
+ if(v==="hub")hub();if(v==="shop")shop();if(v==="chat")chat();if(v==="friends")friends();if(v==="board")board(null);if(v==="ntc")ntcView();if(v==="arena")arena();if(v==="bag")bag();if(v==="titles")(recTab==="ttl"?titles():dex());if(v==="inbox")inbox();if(v==="roster")roster();if(v==="world")show("world");if(v==="setting"){show("setting");drawSetting()}};
 
 const SKID={};Object.keys(SK).forEach(a=>SKID[SK[a].id]={...SK[a],a});
 // Firebase는 빈 객체를 저장하지 않으므로, 불러온 뒤 arm이 사라져 있으면 다시 만든다.
@@ -470,14 +490,14 @@ function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{got:{
    b.onclick=()=>{if(!t.done){t.done=1;giveRw(TUT_DONE);note("quest","튜토리얼을 모두 마쳤다. "+rwTxt(TUT_DONE)+"과 칭호 '새내기 졸업'을 받았다.");save();checkTitles();drawTut();toast("튜토리얼 완료! "+rwTxt(TUT_DONE))}else{t.hide=1;save();drawTut()}};c.append(cp,b);w.appendChild(c)}
   else{const h=elT("button","chip","튜토리얼 숨기기");h.type="button";h.style.cssText="margin-top:8px;padding:6px 12px;font-size:.8rem";h.onclick=()=>{if(confirm("튜토리얼을 숨길까? 기록 화면의 칭호 탭 아래 '튜토리얼 다시 보기'로 다시 열 수 있다.")){t.hide=1;save();drawTut()}};w.appendChild(h)}}
  box.appendChild(w)}
-let ONL=[],onT=0;
+let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
-function beat(){if(!AUTH.uid||!C||!DB||LOCAL||document.visibilityState==="hidden")return;DB.doc("players/"+UID+"/on").set(Date.now()).catch(()=>{})}
-async function loadOnline(force){if(!AUTH.uid||!C||!XON())return;if(!force&&Date.now()-onT<PL_TTL)return;onT=Date.now();
- try{const sn=await plAll(force?0:PL_TTL);ONL=sn.docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"));if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n});drawOnline()}catch(e){}}
+function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
+/* 새로고침이나 게임 화면이 처음 열릴 때 한 번만 접속 시각을 남기고, 목록도 그때 한 번만 읽는다. */
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});loadOnline()}
+async function loadOnline(){if(!AUTH.uid||!C||!XON())return;
+ try{const sn=await plAll();ONL=sn.docs.map(d=>Object.assign({u:d.id},d.data()||{})).filter(p=>p.u===UID||isOn(p)).sort((a,b)=>String(a.n||"").localeCompare(String(b.n||""),"ko"));if(!ONL.some(p=>p.u===UID))ONL.push({u:UID,n:C.n,on:onlineStamp()});drawOnline()}catch(e){}}
 function drawOnline(){const w=$("#onlw"),b=$("#onl");if(!w||!C)return;w.hidden=!XON();if(w.hidden)return;b.textContent="지금 접속 중 "+ONL.length+"명"}
-setInterval(()=>{if(document.hidden)return;beat();loadOnline()},ON_MS);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){beat();loadOnline()}});
 
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
  $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
@@ -503,5 +523,5 @@ function retrait(){const r=rtReq();if(!r.ok)return;
  alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");bag()}
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
-function thmDraw(){const b=document.getElementById("thm");if(!b)return;const lt=document.documentElement.dataset.theme==="light";b.textContent=lt?"☾ 블랙":"☀ 화이트";b.title=lt?"블랙 모드로 바꾸기":"화이트 모드로 바꾸기";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}
-document.getElementById("thm").onclick=()=>thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");thmDraw();
+function thmDraw(){const lt=document.documentElement.dataset.theme==="light";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}
+thmDraw();

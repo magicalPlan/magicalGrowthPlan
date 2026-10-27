@@ -1,5 +1,4 @@
 <main>
-    <button type="button" id="thm" class="thm" aria-label="화면 모드 바꾸기"></button>
 <h1>魔法 成長記錄</h1>
 <p class="sub">마법에 희망하고 절망하라</p>
 <p class="hint" id="mode" style="text-align:center;margin:-14px 0 16px"></p>
@@ -7,19 +6,29 @@
 <div id="doom" hidden></div>
 <div id="ntc" hidden></div>
 <nav class="tabs" id="nav" hidden aria-label="화면 전환">
-    <button type="button" data-v="hub" aria-pressed="true">마을</button>
-    <button type="button" data-v="shop" aria-pressed="false">상점</button>
-    <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
-    <button type="button" data-v="chat" aria-pressed="false">채팅</button>
-    <button type="button" data-v="ntc" aria-pressed="false">공지</button>
-    <button type="button" data-v="board" aria-pressed="false">게시판</button>
-    <button type="button" data-v="arena" aria-pressed="false">대련</button>
-    <button type="button" data-v="friends" aria-pressed="false">친구</button>
-    <button type="button" data-v="titles" aria-pressed="false">기록</button>
-    <button type="button" data-v="inbox" aria-pressed="false">알림</button>
-    <button type="button" data-v="roster" aria-pressed="false">등록자</button>
-    <button type = "button" data-v="world" aria-pressed="false">세계관</button>
-    <button type = "button" data-v="setting" aria-pressed="false">설정</button>
+    <div class="nav-bar">
+        <button type="button" data-g="town" data-v="hub" aria-pressed="true" aria-expanded="false">마을</button>
+        <button type="button" data-v="chat" aria-pressed="false">채팅</button>
+        <button type="button" data-g="board" aria-pressed="false" aria-expanded="false">게시판</button>
+        <button type="button" data-v="arena" aria-pressed="false">대련</button>
+        <button type="button" data-v="friends" aria-pressed="false">친구</button>
+        <button type="button" data-g="record" aria-pressed="false" aria-expanded="false">기록</button>
+        <button type="button" data-v="world" aria-pressed="false">세계관</button>
+        <button type="button" data-v="setting" aria-pressed="false">설정</button>
+    </div>
+    <div class="nav-sub" data-for="town" hidden>
+        <button type="button" data-v="shop" aria-pressed="false">상점</button>
+        <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
+    </div>
+    <div class="nav-sub" data-for="board" hidden>
+        <button type="button" data-v="ntc" aria-pressed="false">공지</button>
+        <button type="button" data-v="board" aria-pressed="false">게시판</button>
+    </div>
+    <div class="nav-sub" data-for="record" hidden>
+        <button type="button" data-v="inbox" aria-pressed="false">알림</button>
+        <button type="button" data-v="titles" aria-pressed="false">기록</button>
+        <button type="button" data-v="roster" aria-pressed="false">등록자</button>
+    </div>
 </nav>
 
 
