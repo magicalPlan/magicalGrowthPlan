@@ -14,7 +14,7 @@ async function disAct(){const x=disInfo(disSlot(Date.now())),m=$("#hm");if(!x||!
  const add=(C.a||[]).includes(x.el)?2:1;if(!C.dr||C.dr.id!==x.id)C.dr={id:x.id,pts:0};C.dr.pts+=add;C.dr.at=Date.now();
  giveRw(DIS_HIT);titleState();C.stats.disActs=(C.stats.disActs||0)+1;guardAdd(5);save();checkTitles();
  try{await DB.doc("players/"+UID+"/dr").set(C.dr)}catch(e){}
- DRP[x.id]=Math.max(DRP[x.id]||0,0)+add;toast(x.ic+" "+VL[x.v].n+" "+x.nm+" 대응! 진압 +"+add+(add>1?" ("+x.el+" 속성 보너스)":"")+" · 골드 +"+DIS_HIT.g);disCheck();hubDis()}
+ DRP[x.id]=Math.max(DRP[x.id]||0,0)+add;toast(x.ic+" "+VL[x.v].n+" "+x.nm+" 대응! 진압 +"+add+(add>1?" ("+x.el+" 속성 보너스)":"")+" · 골드 +"+DIS_HIT.g);disCheck();hubDis();if(typeof loadFac==="function")loadFac().then(()=>{disCheck();if(!$("#v-hub").hidden)hubDis()})}
 // 진압되면 기여한 사람에게 보상을 주고 알린다(한 번만).
 function disCheck(){const x=disInfo(disSlot(Date.now()));if(!x||!C||!disDone(x))return;if(C.drw===x.id)return;C.drw=x.id;
  if(C.dr&&C.dr.id===x.id&&C.dr.pts>0){giveRw(DIS_WIN);note("disaster",VL[x.v].n+"의 "+x.nm+"이(가) 진압되었다! 함께 막아 낸 보상: "+rwTxt(DIS_WIN));toast(x.ic+" "+x.nm+" 진압! 보상 "+rwTxt(DIS_WIN))}

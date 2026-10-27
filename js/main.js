@@ -148,7 +148,7 @@ let verTag=null,verShown=false;
 async function verCheck(){if(verShown||location.protocol==="file:")return;try{const r=await fetch(location.pathname+location.search,{method:"HEAD",cache:"no-store"});const t=r.headers.get("etag")||r.headers.get("last-modified");if(!t)return;if(verTag==null){verTag=t;return}if(t!==verTag){verShown=true;verBanner()}}catch(e){}}
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
-setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();applyGift();checkRaid();if(!$("#v-hub").hidden)drawRaids()}},30000);
+setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();giftPing();checkRaid();if(!$("#v-hub").hidden)drawRaids()}},30000);
 function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
@@ -335,7 +335,7 @@ const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
-function bag(msg){C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRunes();drawPets();drawRetrait();drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";
+function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRunes();drawPets();drawRetrait();drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";if(fresh)applyGift();
  const rowEl=(label,sub,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;w.appendChild(i);
   btns.forEach(([t,fn,dis])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.textContent=t;b.disabled=!!dis;b.onclick=fn;w.appendChild(b)});return w};
@@ -352,16 +352,22 @@ function bag(msg){C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");draw
 function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let best=-1,soon=Infinity;
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
  return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
-async function applyGift(){if(!AUTH.uid||!C||!DB)return;try{const s=await once(DB.collection("gift/"+UID));if(!C)return;C.gs=C.gs||{};const rs=[],items=[];let tot=0;
- s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
-  if(v.g!=null&&v.ts!=null)items.push([f,f,v]);// 예전 방식(친구마다 한 칸)
-  Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>{if(v[k]&&typeof v[k]==="object")items.push([f,f+"_"+k,v[k]])})});
- items.filter(([f,key,v])=>GV[v.g]!=null&&typeof v.ts==="number"&&v.ts>(C.gs[key]||0)).sort((a,b)=>a[2].ts-b[2].ts).forEach(([f,key,v])=>{C.gs[key]=v.ts;
-  // 받은 선물은 바로 쓰이지 않고 '받은 선물함'에 보관된다. 가방에서 원할 때 꺼내 쓴다.
-  C.rg=Array.isArray(C.rg)?C.rg:[];C.rg.push({g:v.g,n:String(v.n||"누군가").slice(0,20),u:f,ts:v.ts});if(C.rg.length>RG_MAX)C.rg=C.rg.slice(-RG_MAX);
-  rs.push(String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 보냈다");note("gift",String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",f)});
- if(!rs.length)return;save();updNav();toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
- if(!$("#v-bag").hidden)bag();if(!$("#v-hub").hidden){hub();const h=$("#hm");h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}catch(e){}}
+// 받은 선물함: 앉아 있는 동안에는 giftn/{나}의 마지막 시각만 본다. 칸 전체는 마을에 들어올 때, 가방을 열 때, 그 시각이 새로워졌을 때 한 번만 받는다.
+let giftBell=0,giftBusy=false,giftAgain=false;
+async function giftPing(){if(!AUTH.uid||!C||!DB)return;let ts=0;
+ try{const s=await DB.doc("giftn/"+UID).get();const p=s.exists?s.data():null;ts=p&&typeof p.ts==="number"?p.ts:0}catch(e){return}
+ if(!ts||ts<=giftBell)return;giftBell=ts;applyGift()}
+async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=true;return}giftBusy=true;
+ try{do{giftAgain=false;try{const s=await once(DB.collection("gift/"+UID));if(!C)return;C.gs=C.gs||{};const rs=[],items=[];
+  s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
+   if(v.g!=null&&v.ts!=null)items.push([f,f,v]);// 예전 방식(친구마다 한 칸)
+   Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>{if(v[k]&&typeof v[k]==="object")items.push([f,f+"_"+k,v[k]])})});
+  items.filter(([f,key,v])=>GV[v.g]!=null&&typeof v.ts==="number"&&v.ts>(C.gs[key]||0)).sort((a,b)=>a[2].ts-b[2].ts).forEach(([f,key,v])=>{C.gs[key]=v.ts;
+   // 받은 선물은 바로 쓰이지 않고 '받은 선물함'에 보관된다. 가방에서 원할 때 꺼내 쓴다.
+   C.rg=Array.isArray(C.rg)?C.rg:[];C.rg.push({g:v.g,n:String(v.n||"누군가").slice(0,20),u:f,ts:v.ts});if(C.rg.length>RG_MAX)C.rg=C.rg.slice(-RG_MAX);
+   rs.push(String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 보냈다");note("gift",String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",f)});
+  if(!rs.length)continue;save();updNav();toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
+  if(!$("#v-bag").hidden)drawRG();if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}catch(e){}}while(giftAgain)}finally{giftBusy=false}}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+petEff("gift")));
 function rgUse(idx){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
@@ -384,7 +390,7 @@ $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;r
  go.onclick=async()=>{const m=$("#pfm");if(!sel){m.style.color="var(--bad)";m.textContent="보낼 선물을 골라야 한다.";return}
   const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
-  try{await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set({g:sel,ts:{".sv":"timestamp"},n:nmOf()});C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
+  try{await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set({g:sel,ts:{".sv":"timestamp"},n:nmOf()});try{await DB.doc("giftn/"+u).set({u:UID,g:sel,n:nmOf(),ts:{".sv":"timestamp"}})}catch(e){}C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
    C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
   catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙이 새 방식(네 칸)으로 바뀌었는지도 확인해야 한다."}
   go.disabled=false};

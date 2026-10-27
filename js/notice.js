@@ -111,7 +111,7 @@ function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["guard","마을 경쟁"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["guard","마을 경쟁"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}

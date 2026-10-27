@@ -2,7 +2,10 @@
    마을 탭은 chat 을, 프로필과 친구 목록은 goDM 과 openDM 을, 알림함은 goDM 을 그대로 부른다. */
 let admT={},admK=null;
 function admUI(){const b=document.querySelector("#ct [data-t=a]");if(b)b.hidden=!ADM[UID];try{drawNotice()}catch(e){}try{drawDoom()}catch(e){}}
-function watchAdm(){if(!ADM[UID])return;unC=apiWatchAdm(s=>{const th={};s.docs.forEach(d=>{const m=d.data();if(m&&m.k)(th[m.k]=th[m.k]||[]).push(m)});Object.values(th).forEach(a=>a.sort((x,y)=>x.ts-y.ts));admT=th;drawAdm()},()=>cmsg("대화 목록을 불러오지 못했다. 운영자 등록과 데이터베이스 규칙을 확인해야 한다."))}
+let admGen=0;
+async function watchAdm(){if(!ADM[UID])return;const gen=++admGen;const box=$("#al");if(box&&!Object.keys(admT).length)box.innerHTML="<p class='hint'>최근 대화를 불러오는 중...</p>";
+ try{const s=await apiAdmOnce();if(gen!==admGen||$("#v-chat").hidden||ct!=="a")return;const th={};s.docs.forEach(d=>{const m=d.data();if(m&&m.k)(th[m.k]=th[m.k]||[]).push(m)});Object.values(th).forEach(a=>a.sort((x,y)=>x.ts-y.ts));admT=th;drawAdm()}
+ catch(e){if(gen===admGen)cmsg("대화 목록을 불러오지 못했다. 운영자 등록과 데이터베이스 규칙을 확인해야 한다.")}}
 function admLabel(k){const nm={};(admT[k]||[]).forEach(m=>nm[m.u]=m.n);return Object.keys(nm).map(u=>cn(u,nm[u])).join(" ↔ ")}
 function drawAdm(){const l=$("#al");l.innerHTML="";const ks=Object.keys(admT).sort((a,b)=>{const x=admT[a],y=admT[b];return y[y.length-1].ts-x[x.length-1].ts});
  if(!ks.length){l.innerHTML="<p class='hint'>아직 1:1 대화가 없다.</p>"}
@@ -86,14 +89,14 @@ function avMap(){if(PLC&&AVT!==PLT){AVM={};AVK=new Set();PLC.docs.forEach(d=>{AV
 function avSet(av,u){const mp=avMap();if(!mp)return true;const im=mp[u];if(im&&!av.querySelector("img")){const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}return AVK.has(u)||Date.now()-avLast<300000}
 function avLoad(){if(!DB||avBusy)return;if(AVK&&Date.now()-avLast<300000)return;avBusy=true;avLast=Date.now();
  plAll(AVK?0:undefined).then(()=>{avBusy=false;document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))},()=>{avBusy=false})}
-function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer);ct=t;unC&&unC();unC=null;unP&&unP();unP=null;
+function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;unC&&unC();unC=null;unP&&unP();unP=null;if(t!=="a")admGen++
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";
  if(t==="g")unC=apiWatchGlobal(ms=>paint($("#gl"),ms,"g"),()=>cmsg("채팅을 불러오지 못했다."));
  // 마을 채팅: 단체 채팅과 같은 저장 공간을 쓰되 이름이 "c_{마을}_"로 시작한다. 내 마을의 대화만 불러온다.
  else if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav();
   unC=apiWatchVillage(C.v,ms=>{paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}
- else if(t==="a")watchAdm();else{peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="";
+ else if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="";
   dmApply();if(enterDm)dmList()}
  sync()}
 /* 1:1 목록: 탭을 열 때 우편함(이름, 받은 시각)만 한 번 받는다. 본문은 그 상대를 열 때 한 번 받는다.

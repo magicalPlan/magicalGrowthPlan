@@ -1,7 +1,8 @@
 /* 채팅이 서버와 주고받는 일. 화면(js/chat.js)은 여기만 부르고, 저장 경로는 이 파일이 안다. */
 function apiWatchGlobal(onDocs,onErr){return apiCol("chat").orderBy("ts","desc").limit(40).onSnapshot(s=>onDocs((s.docs||[]).map(d=>d.data()).filter(m=>m&&!m.vc)),onErr,POLL_FAST)}
 function apiWatchVillage(v,onDocs,onErr){return apiCol("chat").prefix("c_"+v+"_").limit(40).onSnapshot(s=>onDocs((s.docs||[]).map(d=>d.data()).filter(m=>m&&m.vc===v)),onErr,POLL_FAST)}
-function apiWatchAdm(onSnap,onErr){return apiCol("dm").limit(500).onSnapshot(onSnap,onErr)}
+/* 운영자 열람. 최근 500개를 한 번만 읽는다. 탭을 연 채로 반복해서 받지 않는다. */
+function apiAdmOnce(){return once(apiCol("dm").limit(500))}
 function apiPostMessage(col,id,data){return apiPut(col+"/"+id,data)}
 function apiDmBell(to,preview){const n=nmOf(),ts={".sv":"timestamp"};apiPut("rooms/xd"+to+"/"+UID,{n,ts}).catch(()=>{});apiPut("rooms/xd"+to+"/ts",ts).catch(()=>{});apiPut("dmn/"+to+"/"+UID,{n,x:String(preview||"").slice(0,40),ts}).catch(()=>{})}
 /* 1:1 본문. 그 대화 키만 한 번 읽는다. 목록을 보는 동안에는 부르지 않는다. */

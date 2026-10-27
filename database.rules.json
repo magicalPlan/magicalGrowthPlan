@@ -79,6 +79,14 @@
         }
       }
     },
+    // 선물 도착 표시: 받는 사람이 앉아 있는 동안 칸 전체 대신 이 시각만 본다. 보내는 사람은 자기 uid만 남긴다.
+    "giftn": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        ".write": "auth != null && newData.exists() && newData.child('u').val() === auth.uid && newData.child('g').isString() && newData.child('g').val().length <= 8 && newData.child('n').isString() && newData.child('n').val().length <= 20"
+      }
+    },
     // 선물: 같은 친구에게 하루 4개(칸 0~3), 한 칸은 24시간 뒤에 다시 쓸 수 있다
     "gift": {
       ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
@@ -150,6 +158,14 @@
         "$uid": {
           ".write": "auth != null && auth.uid === $uid"
         }
+      }
+    },
+
+    // 시설·등대·재해 기여만 모은 작은 기록. 사진이 든 등록자 전체는 읽지 않는다. 본인 칸만 쓴다.
+    "score": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
 
