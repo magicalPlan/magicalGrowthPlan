@@ -8,7 +8,7 @@ const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.
 const tf=(u,o)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof AbortController!=="function")return fetch(u,opt);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign(opt,{signal:ac.signal})).finally(()=>clearTimeout(t))};
 const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o)}catch(e){}}return r};
 const J=async mk=>{const r=await fx(mk);if(!r.ok)throw new Error(r.status);return r.json()};
-/* POLL_FAST 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드). 그 밖은 연결 없이 주기적으로 묻는다.
+/* POLL_FAST 와 collection().live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록, 정기 출정 자리). 그 밖은 연결 없이 주기적으로 묻는다.
    묻기가 실패하면 다음 간격을 두 배씩 늘린다(최대 60초). 한 번 성공하면 원래 간격으로 돌아온다.
    브라우저 탭이 화면에 보이지 않는 동안에는 묻지 않고 기다렸다가, 다시 보이면 이어서 묻는다. */
 const poll=(get,emit,err,ms)=>{let on=true,last="",t=null,first=true,base=ms||POLL_MS,gap=base;const run=async()=>{if(!on)return;if(!first&&document.hidden){t=setTimeout(run,1000);return}first=false;try{const j=await get(),k=JSON.stringify(j);if(k!==last){last=k;emit(j)}gap=base}catch(e){err&&err({code:"unavailable",message:String(e)});gap=Math.min(Math.max(gap*2,base*2),60000)}if(on)t=setTimeout(run,gap)};run();return()=>{on=false;clearTimeout(t)}};
@@ -40,10 +40,10 @@ const D=p=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,awai
  delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
  transact:async fn=>{for(let i=0;i<4;i++){const r=await fx(()=>U(p),{headers:{"X-Firebase-ETag":"true"}});if(!r.ok)throw new Error(r.status);const tag=r.headers.get("ETag");let cur=null;try{cur=await r.json()}catch(e){cur=null}if(cur===undefined)cur=null;const next=fn(cur);if(next===undefined)return cur;const w=await fx(()=>U(p),{method:"PUT",headers:tag?{"if-match":tag}:{},body:JSON.stringify(next)});if(w.status===412)continue;if(!w.ok)throw new Error(w.status);return next}throw new Error("412")},
  onSnapshot:(f,e,ms)=>{const pl=()=>poll(()=>J(()=>U(p)),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
-const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),by:f=>Q(c,{...o,ob:f}),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),end:k=>Q(c,{...o,en:k}),doc:id=>D(c+"/"+id),
+const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),by:f=>Q(c,{...o,ob:f}),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),end:k=>Q(c,{...o,en:k}),live:()=>Q(c,{...o,lv:1}),doc:id=>D(c+"/"+id),
  onSnapshot:(f,e,ms)=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else if(o.ob){q.push('orderBy="'+o.ob+'"');if(o.fr!=null)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)));if(o.en!=null)q.push("endAt="+encodeURIComponent(JSON.stringify(o.en)))}else{q.push('orderBy="$key"');if(o.pre){const start=o.af&&o.af>o.pre?o.af:o.pre,end=o.en!=null&&String(o.en)<o.pre+"\uf8ff"?o.en:o.pre+"\uf8ff";q.push("startAt="+encodeURIComponent(JSON.stringify(start)),"endAt="+encodeURIComponent(JSON.stringify(end)))}else if(o.fr)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)))}if(o.f)q.push("limitToFirst="+o.f);else if(o.l)q.push("limitToLast="+o.l);
  /* 찾기 목록(.indexOn)이 없으면 서버가 400을 낸다. 최근 1,500개를 통째로 받아 고르지 않는다. 실패하면 poll 이 간격을 늘린다. */
  const get=()=>J(()=>U(c,q.join("&")));
  const em=j=>f({docs:Object.keys(j||{}).map(k=>sn(k,j[k]))}),pl=()=>poll(get,em,e,ms);
- return ms===POLL_FAST?live(()=>U(c,q.join("&")),em,e,pl):pl()}});
+ return ms===POLL_FAST||o.lv?live(()=>U(c,q.join("&")),em,e,pl):pl()}});
 return{doc:D,collection:c=>Q(c,{})}}

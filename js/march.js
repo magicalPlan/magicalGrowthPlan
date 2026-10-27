@@ -15,10 +15,11 @@ const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+"
 const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
 const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-Date.now())};
 let xSnap={},xS=-1,unX=null,XR=null,xBusy=false,xAuto="",xPh="",xChK="",xMyV=null;
-/* 마을·출정 목록이 보이는 동안 이번 묶음(15자리)을 POLL_HUB(20초)마다 한 번 묻는다. 연결은 열지 않는다.
-   실패하면 poll 이 간격을 늘린다. 그 화면을 벗어나면 묻기를 멈춘다. 내가 참가·취소하면 화면은 그때 바로 고친다. */
+/* 마을·출정 목록이 보이는 동안 이번 묶음(15자리) 연결을 연다. 자리가 바뀔 때만 받는다.
+   연결이 거절되면 POLL_HUB(20초)마다 묻는 방식으로 돌아간다. 화면을 벗어나거나 묶음이 바뀌면 연결을 끊는다.
+   내가 참가·취소하면 화면은 그때 바로 고친다. */
 function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;xS=s;xSnap={};if(!XON())return;
- unX=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{},POLL_HUB)}
+ unX=DB.collection("rooms").prefix("xm"+s+"_").live().onSnapshot(sn=>{if(xS!==s)return;const o={};sn.docs.forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});xSnap=o;drawXAll()},e=>{},POLL_HUB)}
 function drawXAll(){["#hl","#rl"].forEach(q=>{const el=$(q);if(el&&!el.closest("[hidden]"))drawX(el)})}
 function xSay(t,bad){[$("#hm"),$("#rm")].forEach(e=>{if(e){e.style.color=bad?"var(--bad)":"var(--mu)";e.textContent=t}})}
 function drawX(el){el.innerHTML="";if(!C)return;
