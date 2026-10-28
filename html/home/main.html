@@ -2,7 +2,6 @@
 <h1>魔法 成長記錄</h1>
 <p class="sub">마법에 희망하고 절망하라</p>
 <p class="hint" id="mode" style="text-align:center;margin:-14px 0 16px"></p>
-<div id="doom" hidden></div>
 <div id="ntc" hidden></div>
 <nav class="tabs" id="nav" hidden aria-label="화면 전환">
     <div class="nav-bar">
@@ -72,6 +71,7 @@
 <script>includeHtml("html/world/world.html")</script>
 <script>includeHtml("html/setting/setting.html")</script>
 </main>
+<footer class="site-foot"><div id="doom" hidden></div></footer>
 <div id="alo" role="alertdialog" aria-modal="true" aria-labelledby="alt" hidden style="position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:60"><div class="card alert-card" style="max-width:420px;width:100%;text-align:center"><h2 id="alt"></h2><p id="alx" style="white-space:pre-wrap;margin:10px 0 4px"></p><button class="btn" id="alc" type="button">확인</button></div></div>
 <div id="pfo" role="dialog" aria-modal="true" aria-label="프로필" hidden style="position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:18px;z-index:50">
 <div class="card profile-modal" style="max-width:520px;width:100%;max-height:90vh;overflow:auto"><div id="pfb"></div><button class="btn" id="pfr" type="button">공명하기</button><button class="btn g" id="pff" type="button" hidden>친구 추가</button><button class="btn g" id="pfg" type="button" hidden>선물하기</button><button class="btn g" id="pfdm" type="button" hidden>1:1 대화</button><button class="btn g" id="pfdu" type="button" hidden>⚔ 대련 신청</button><div id="gbox" hidden></div><button class="btn g" id="pfc" type="button">닫기</button><p class="msg" id="pfm" role="alert"></p></div></div>
