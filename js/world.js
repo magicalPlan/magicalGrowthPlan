@@ -6,7 +6,13 @@ function worldFold(title,tone,nodes){const d=elT("details","world-fold"+(tone?" 
  d.addEventListener("toggle",()=>{const m=s.querySelector(".world-mark");if(m)m.textContent=d.open?"접기":"펼치기"});return d}
 function worldView(){show("world");const root=$("#v-world");if(!root||root.dataset.ready)return;root.dataset.ready="1";root.replaceChildren();
  root.append(elT("h2","world-page","세계관"),elT("p","world-lead","우리는 또다시 희망하고, 절망한다."));
- const village=(name,text)=>worldFold(name,"sub",[worldLines(text)]);
+
+const village = (name, text) => {
+  const box = elT("div", "world-village-box"); // 필요시 CSS 클래스명 변경
+  box.append(elT("h3", "world-name", name), worldLines(text)); // h3 태그를 사용하여 마을 이름 표시
+  return box;
+ };
+ 
  root.append(
   worldFold("개요","",[
    worldLines("우리가 사는 세계는 총 세 가지로 나뉜다."),
