@@ -208,13 +208,13 @@ html[data-theme="light"] .cm.me .cm-x{background:#f6e3e1;border-color:#d9b2ae}
 .cm-av.has{border-color:var(--gold);background:var(--pn2)}
 
 /* ─────────────────────────────────────────────────────────────
-   '멸망까지' 카운트다운: 오른쪽 위에 붙는 배너
+   '멸망까지' 카운트다운: 페이지 하단 가운데
    ───────────────────────────────────────────────────────────── */
-#doom{position:fixed;z-index:44;top:calc(10px + env(safe-area-inset-top,0px));right:12px;margin:0;width:min(232px,calc(100vw - 24px))}
-#doom:has(.doom-form:not([hidden])){width:min(300px,calc(100vw - 24px));z-index:46}
-/* 오른쪽 위 배너가 제목과 겹치지 않게, 카운트가 보일 때만 본문을 아래로 민다. */
-body:has(#doom:not([hidden])) main{padding-top:calc(116px + env(safe-area-inset-top,0px))}
-body:has(#doom .doom-form:not([hidden])) main{padding-top:calc(300px + env(safe-area-inset-top,0px))}
+body{min-height:100vh;display:flex;flex-direction:column}
+main{flex:1 0 auto;width:100%}
+.site-foot{display:flex;justify-content:center;padding:8px 18px calc(14px + env(safe-area-inset-bottom,0px))}
+.site-foot:not(:has(#doom:not([hidden]))){display:none}
+#doom{position:static;z-index:auto;width:min(420px,100%);margin:0}
 .doom-card{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:8px 12px 10px;border-radius:14px;
  border:1px solid #7d1a2e;background:radial-gradient(140% 120% at 100% 0%,#5a0f2255,transparent 60%),linear-gradient(180deg,#22091a,#120712);box-shadow:0 0 24px #7d1a2e33,inset 0 0 0 1px #00000066;overflow:hidden}
 .doom-card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,#ffffff04 22px 23px);pointer-events:none}
@@ -236,7 +236,7 @@ html[data-theme="light"] .doom-form input[type=date]{color-scheme:light}
 html[data-theme="light"] .doom-card{border-color:#c46a7a;background:radial-gradient(140% 120% at 100% 0%,#f5c6cf88,transparent 60%),linear-gradient(180deg,#fff3f4,#fbe7ea);box-shadow:0 4px 18px #a8283f1a}
 html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{color:#7a4450}
 html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
-@media (max-width:440px){#doom{top:calc(8px + env(safe-area-inset-top,0px));width:min(188px,calc(100vw - 20px));right:8px}.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s{font-size:.68rem}}
+@media (max-width:440px){.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s{font-size:.68rem}}
 html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}
 
 /* 시즌 초기화 (운영자 전용) */
