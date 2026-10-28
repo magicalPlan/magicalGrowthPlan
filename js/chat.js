@@ -141,15 +141,14 @@ $("#pchg").onclick=()=>{dmOpenGen++;unC&&unC();unC=null;peer=null;$("#dt").hidde
 // 엔터와 보내기 버튼 모두 폼 제출로 처리한다. 휴대폰 한글 키보드에서도 엔터가 확실히 먹는다.
 $("#cin").onsubmit=e=>{e.preventDefault();send()};
 
-/* 1:1 새 메시지 알림: 우편함에는 이름과 시각만 있다. 본문은 그 대화를 열 때 받는다.
+/* 1:1 새 메시지 알림: dmn/{나}의 이름·시각·미리보기만 본다. 본문은 그 대화를 열 때 받는다.
    C.dms = 보낸 사람별로 마지막으로 확인한 시각, C.dmu = 아직 안 읽은 사람, C.dmn = 보낸 사람 이름. */
 const goDM=(u,n)=>{const name=n||(C&&C.dmn&&C.dmn[u])||(C&&C.fr&&C.fr[u])||"상대";if($("#v-chat").hidden||ct!=="d"){ct="d";chat()}openDM(u,name)};
 let dmBusy=false;
-/* 1:1 알림 신호: rooms/xd{받는 사람}/{보낸 사람}과 dmn 에는 이름과 시각만 남긴다. 본문은 dm 에만 있다. */
+/* 1:1 알림은 dmn/{나}만 30초마다 본다. 이름·시각·미리보기가 거기 있다. 대화 목록을 열 때는 예전 우편함도 한 번 본다. */
 function dmBell(to,x){apiDmBell(to,x)}
 async function checkDM(){if(!AUTH.uid||!C||!DB||dmBusy)return;dmBusy=true;try{const got={};
  const take=(f,v)=>{if(!v||typeof v!=="object"||typeof v.ts!=="number")return;if(!got[f]||v.ts>got[f].ts)got[f]=v};
- try{const d=(await apiDmBox()).data()||{};Object.keys(d).forEach(f=>{if(f!=="ts")take(f,d[f])})}catch(e){}
  try{const s=await apiDmnList();s.docs.forEach(d=>take(d.id,d.data()))}catch(e){}
  if(!C)return;const first=!C.dms;C.dms=C.dms||{};C.dmu=C.dmu||{};C.dmn=C.dmn||{};let ch=false;
  for(const f of Object.keys(got)){const v=got[f];if(v.ts<=(C.dms[f]||0))continue;C.dms[f]=v.ts;ch=true;const n=String(v.n||"누군가").slice(0,20);C.dmn[f]=n;dmTouch(f,v.ts);
@@ -158,7 +157,7 @@ async function checkDM(){if(!AUTH.uid||!C||!DB||dmBusy)return;dmBusy=true;try{co
   C.dmu[f]=1;const x=String(v.x||"").slice(0,40);note("dm",n+"님에게서 1:1 메시지가 왔다"+(x?": "+x:"."),f);toast("✉ "+n+(x?": "+x:"님에게서 1:1 메시지가 왔다"),()=>goDM(f,n));ding()}
  if(ch){save();updNav();if(!$("#v-chat").hidden&&ct==="d")document.querySelectorAll("#pl2 .chip").forEach(c=>{if(c.dataset.id&&C.dmu[c.dataset.id]&&!/^● /.test(c.textContent))c.textContent="● "+c.textContent})}}
  catch(e){}finally{dmBusy=false}}
-setInterval(()=>{if(!document.hidden)checkDM()},10000);
+setInterval(()=>{if(!document.hidden)checkDM()},30000);
 $("#ct").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t&&DB)setT(t)};
 // 마을 채팅에 새 메시지가 오면(내가 보지 않는 동안) 탭에 ● 표시를 한다. 30초마다 가장 최근 메시지 한 개만 확인한다.
 let vcNew=false;function vcMark(){const b=document.querySelector("#ct [data-t=v]");if(b)b.textContent="마을 채팅"+(vcNew?" ●":"")}

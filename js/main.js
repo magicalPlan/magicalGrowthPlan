@@ -223,7 +223,7 @@ function navSync(id,moved){const g=navGroup(id);
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","trial","shop","chat","friends","bag","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&id!=="raid"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -426,8 +426,16 @@ $("#pf-save").onclick=()=>{const n=$("#en").value.trim();if(!n){$("#pfe").textCo
 
 let unH=null;
 
-$("#nav").onclick=e=>{const b=e.target.closest&&e.target.closest("button");if(!b||!b.closest("#nav"))return;const g=b.dataset.g,v=b.dataset.v;
- if(g&&b.parentElement.classList.contains("nav-bar")){const sub=document.querySelector('#nav .nav-sub[data-for="'+g+'"]');const open=sub&&!sub.hidden;const here=navGroup(curView)===g;
+$("#nav").onclick=e=>{
+   const b=e.target.closest&&e.target.closest("button");
+   if(!b||!b.closest("#nav"))return;
+   const g=b.dataset.g,v=b.dataset.v;
+   
+ if(g&&b.parentElement.classList.contains("nav-bar")) {
+   const sub=document.querySelector('#nav .nav-sub[data-for="'+g+'"]');
+   const open=sub&&!sub.hidden;
+   const here=navGroup(curView)===g;
+
   if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");updNav();return}
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
@@ -435,7 +443,21 @@ $("#nav").onclick=e=>{const b=e.target.closest&&e.target.closest("button");if(!b
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")(recTab==="ttl"?titles():dex());else updNav();return}
   return}
- if(v==="hub")hub();if(v==="shop")shop();if(v==="chat")chat();if(v==="friends")friends();if(v==="board")board(null);if(v==="ntc")ntcView();if(v==="arena")arena();if(v==="bag")bag();if(v==="titles")(recTab==="ttl"?titles():dex());if(v==="inbox")inbox();if(v==="roster")roster();if(v==="world")show("world");if(v==="setting"){show("setting");drawSetting()}};
+ if(v==="hub")hub();
+ if(v==="shop")shop();
+ if(v==="chat")chat();
+ if(v==="friends")friends();
+ if(v==="board")board(null);
+ if(v==="ntc")ntcView();
+ if(v==="arena")arena();
+ if(v==="bag")bag();
+ if(v==="titles")(recTab==="ttl"?titles():dex());
+ if(v==="inbox")inbox();
+ if(v==="roster")roster();
+ if(v==="world")show("world");
+ if(v==="setting"){show("setting");
+   drawSetting()
+}};
 
 const SKID={};Object.keys(SK).forEach(a=>SKID[SK[a].id]={...SK[a],a});
 // Firebase는 빈 객체를 저장하지 않으므로, 불러온 뒤 arm이 사라져 있으면 다시 만든다.
