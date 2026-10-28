@@ -18,13 +18,30 @@ function fallen(){if(C.fall)return;C.fallT=fallsRecent().concat(Date.now()).slic
 function witchBorn(){const L=fallLoss(1);C.fall={rid:Date.now(),mx:raidHp()*WITCH_HP,sd:0,st:0,w:1};titleState();C.stats.falls=(C.stats.falls||0)+1;C.stats.witch=(C.stats.witch||0)+1;C.dz=100;
  note("fall","절망을 견디지 못하고 절망의 마인이 되었다. 모든 마법소녀가 나를 막으러 올 것이다.");save();putRaid();regPlayer();checkTitles();
  alertBox("🜏 절망의 마인","일주일 사이 "+C.fallT.length+"번째 타락. 되풀이된 절망이 마침내 "+C.n+"을(를) 삼켰다.\n이번에는 그저 마수가 아니다. 검은 왕관이 머리 위에 떠오르고, "+VL[C.v].n+" 하늘이 어둡게 물든다.\n\n절망의 마인\n· 경험치 "+L.exl+", 골드 "+L.gl+"을(를) 잃었다 (골드 손실 두 배)"+(L.lv1<L.lv0?"\n· 레벨 "+L.lv0+" → "+L.lv1:"")+"\n· 체력이 평소의 "+WITCH_HP+"배다\n· 친구가 아니어도 모든 마법소녀가 맞설 수 있다\n· 내가 살아 있는 동안 "+VL[C.v].n+"에 '마인의 저주'가 내려 주민들의 자연 회복이 절반이 된다\n· 돌아온 뒤 "+(WITCH_SCAR/3600000)+"시간 동안 얻는 경험치가 절반이 된다");document.body.classList.add("witch-flash");setTimeout(()=>document.body.classList.remove("witch-flash"),2500)}
-function putRaid(){if(!DB||!C||!C.fall)return;const f=C.fall;thumb(C.img,im=>{DB.doc("raid/"+UID).set({u:UID,rid:f.rid,mx:f.mx,sd:f.sd||0,w:f.w?1:0,v:C.v,n:nmOf(),g:C.g,a:(C.a||[]).join(" · "),im,ts:Date.now()}).catch(()=>{})})}
-// 내가 타락한 상태라면 받은 피해를 합쳐서 쓰러졌는지 확인한다.
-async function checkRaid(){if(!C||!C.fall||!DB||!raidHere())return;const f=C.fall;let got=0;
- try{const r=await DB.doc("raid/"+UID).get();if(!r.exists)putRaid()}catch(e){}
+/* 사진 축소가 늦으면, 해소된 뒤에 예전 피해로 raid 칸을 다시 만든다. 새 저장이 나오면 이전 저장은 버린다.
+   쓰기가 끝난 뒤 이미 풀려 있으면 그 칸을 다시 지운다. */
+let raidSeq=0,raidSweep=false,raidDropAt={},raidFlAt={};
+const raidAlive=rid=>!!(C&&C.fall&&C.fall.rid===rid);
+function raidClear(){const seq=++raidSeq;if(!DB||!UID)return;DB.doc("raid/"+UID).delete().then(()=>{if(seq===raidSeq&&C&&C.fall)putRaid()}).catch(()=>{})}
+function putRaid(){if(!DB||!C||!C.fall)return;const seq=++raidSeq,rid=C.fall.rid;thumb(C.img,im=>{
+ if(seq!==raidSeq||!raidAlive(rid))return;const f=C.fall;
+ DB.doc("raid/"+UID).set({u:UID,rid:f.rid,mx:f.mx,sd:f.sd||0,w:f.w?1:0,v:C.v,n:nmOf(),g:C.g,a:(C.a||[]).join(" · "),im,ts:Date.now()}).then(()=>{if(raidAlive(rid))return;if(!C||!C.fall)raidClear();else putRaid()}).catch(()=>{})})}
+// 체력이 0이면 그 칸을 지운다. 한 번이라도 공격한 사람은 남의 칸도 지울 수 있다. 주인은 언제나 자기 칸을 지운다.
+function raidDrop(r){if(!r||!DB||!r.u||r.u===UID)return;const k=r.u+"_"+r.rid,now=Date.now();if(raidDropAt[k]&&now-raidDropAt[k]<15000)return;raidDropAt[k]=now;DB.doc("raid/"+r.u).delete().catch(()=>{})}
+// 1분이 지난 칸은 프로필의 타락 표시(fl)를 본다. 0이면 이미 해소된 사람인데 칸만 남은 것이다.
+function raidFlState(r){const t=Number(r.ts)||0;if(Date.now()-t<60000)return "ok";const c=raidFlAt[r.u];
+ if(c&&c.ts===t&&!c.busy)return c.fl===0?"clear":"ok";
+ if(!c||c.busy!==t){raidFlAt[r.u]={ts:t,fl:1,busy:t};DB.doc("players/"+r.u+"/fl").get().then(s=>{if(!raidFlAt[r.u]||raidFlAt[r.u].busy!==t)return;raidFlAt[r.u]={ts:t,fl:s.exists&&Number(s.data())===0?0:1,busy:0};applyRaids()}).catch(()=>{if(raidFlAt[r.u]&&raidFlAt[r.u].busy===t)raidFlAt[r.u].busy=0})}
+ return "wait"}
+// 내가 타락한 상태라면 받은 피해를 합쳐서 쓰러졌는지 확인한다. 마을 밖에서도 확인하고, 이미 풀렸으면 남은 칸을 지운다.
+async function checkRaid(){if(!C||!DB||!UID)return;
+ if(!C.fall){if(!raidSweep){raidSweep=true;raidClear()}return}
+ const f=C.fall;let got=0;
  try{const s=await once(rhits(UID,f.rid));got=sumHits(s.docs.map(d=>d.data()))}catch(e){}
- if(C.fall===f&&got+(f.sd||0)>=f.mx)recover()}
-function recover(){if(!C.fall)return;C.edge=0;const wt=!!C.fall.w;C.fall=null;C.dz=RECOVER_DZ;C.scar=Math.max(Number(C.scar)||0,Date.now()+(wt?WITCH_SCAR:SCAR_MS));/* 이미 남아 있는 더 긴 후유증(예: 마인의 3시간)을 짧게 덮어쓰지 않는다 */titleState();C.stats.recovered=(C.stats.recovered||0)+1;if(wt)C.fallT=[];note("fall",wt?"마인의 왕관이 부서지고 원래 모습으로 돌아왔다.":"타락에서 벗어나 원래 모습으로 돌아왔다.");save();checkTitles();if(DB)DB.doc("raid/"+UID).delete().catch(()=>{});regPlayer();
+ if(!C||C.fall!==f)return;
+ if(got+(Number(f.sd)||0)>=(Number(f.mx)||0)){recover();return}
+ try{const r=await DB.doc("raid/"+UID).get();if(!r.exists&&C.fall===f)putRaid()}catch(e){}}
+function recover(){if(!C.fall)return;C.edge=0;const wt=!!C.fall.w;C.fall=null;C.dz=RECOVER_DZ;C.scar=Math.max(Number(C.scar)||0,Date.now()+(wt?WITCH_SCAR:SCAR_MS));/* 이미 남아 있는 더 긴 후유증(예: 마인의 3시간)을 짧게 덮어쓰지 않는다 */titleState();C.stats.recovered=(C.stats.recovered||0)+1;if(wt)C.fallT=[];note("fall",wt?"마인의 왕관이 부서지고 원래 모습으로 돌아왔다.":"타락에서 벗어나 원래 모습으로 돌아왔다.");save();checkTitles();raidClear();regPlayer();
  if(!$("#v-raid").hidden||!$("#v-hub").hidden)hub();if(wt){alertBox("마인의 끝","수많은 마법소녀의 빛이 검은 왕관을 부쉈다. 마인의 저주가 걷히고, "+C.n+"은(는) 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n마인이었던 흔적으로 "+(WITCH_SCAR/3600000)+"시간 동안 얻는 경험치가 절반이 된다.\n타락 횟수 기록은 초기화되었다. 다시는 혼자 무너지지 않기를.");return}alertBox("귀환","친구들의 마법이 닿았다. 타락에서 벗어나 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n다만 타락의 후유증으로 "+(Math.ceil((C.scar-Date.now())/600000)/6>1?"약 "+(Math.round((C.scar-Date.now())/360000)/10)+"시간":"1시간")+" 동안 얻는 경험치가 절반이 된다.")}
 /* 타락 목록과 공격 기록은 마을이나 레이드 화면에서만 연다. 그 화면을 벗어나면 목록 연결과 공격 기록 묻기를 닫는다.
    목록은 연결을 열어 두고 바뀔 때만 받는다. 탭이 안 보이면 연결을 닫고, 다시 보이면 연다.
@@ -36,15 +53,16 @@ const raidKnown=r=>r&&raidHitN[r.u+"_"+r.rid]!=null;
 const raidHpOf=r=>Math.max(0,(Number(r.mx)||0)-(Number(r.sd)||0)-(raidKnown(r)?raidHitN[r.u+"_"+r.rid]:0));
 function raidWatchStop(){if(unRaid){try{unRaid()}catch(e){}unRaid=null}Object.keys(unHit).forEach(k=>{try{unHit[k]()}catch(e){}delete unHit[k]})}
 function watchRaidHits(r){if(!raidHere())return;const k=r.u+"_"+r.rid;if(unHit[k]||!DB)return;
- unHit[k]=rhits(r.u,r.rid).onSnapshot(s=>{const cur=raidDocs.find(x=>x&&x.u+"_"+x.rid===k);if(!cur)return;raidHitN[k]=sumHits((s.docs||[]).map(d=>d.data()));applyRaids()},()=>{if(raidHitN[k]==null)raidHitN[k]=0;applyRaids()},POLL_HUB)}
+ unHit[k]=rhits(r.u,r.rid).onSnapshot(s=>{const cur=raidDocs.find(x=>x&&x.u+"_"+x.rid===k);if(!cur)return;raidHitN[k]=sumHits((s.docs||[]).map(d=>d.data()));applyRaids()},()=>{},POLL_HUB)}
 function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&r.u&&r.u!==UID&&(C.fr[r.u]||r.w)),keep={};
  rs.forEach(r=>{keep[r.u+"_"+r.rid]=1;watchRaidHits(r)});
  Object.keys(unHit).forEach(k=>{if(keep[k])return;try{unHit[k]()}catch(e){}delete unHit[k];delete raidHitN[k]});
- const items=rs.map(r=>[r,raidHpOf(r)]),live=items.filter(([r,hp])=>raidKnown(r)&&hp>0);
+ const items=rs.map(r=>[r,raidHpOf(r)]),live=items.filter(([r,hp])=>raidKnown(r)&&hp>0&&raidFlState(r)==="ok");
  live.forEach(([r])=>{const key=r.u+"_"+r.rid;if(!(C.rsn&&C.rsn[key])){C.rsn=keepIds(C.rsn,key);if(r.w){const t="🜏 절망의 마인 강림! "+r.n+"이(가) "+((VL[r.v]||{}).n||"어느 마을")+"에서 마인이 되었다. 누구든 맞설 수 있다.";note("raid",t,r.u);toast(t);ding()}else note("raid",r.n+"님이 타락했다. 맞서서 되돌려 주자.",r.u)}});
- WCH=rs.filter(r=>r.w&&(!raidKnown(r)||raidHpOf(r)>0)).map(r=>({u:r.u,n:r.n,v:r.v,rid:r.rid,hp:raidHpOf(r),mx:r.mx}));if(C.fall&&C.fall.w&&!WCH.some(w=>w.u===UID))WCH.push({u:UID,n:C.n,v:C.v,rid:C.fall.rid,hp:C.fall.mx,mx:C.fall.mx});
- if(raidReady&&C.wj)Object.keys(C.wj).forEach(key=>{if(live.some(([r])=>r.u+"_"+r.rid===key))return;const it=items.find(([r])=>r.u+"_"+r.rid===key);if(it&&!raidKnown(it[0]))return;if(!it&&Date.now()-Number(C.wj[key]||0)<60000)return;
+ WCH=rs.filter(r=>r.w&&raidFlState(r)!=="clear"&&(!raidKnown(r)||raidHpOf(r)>0)).map(r=>({u:r.u,n:r.n,v:r.v,rid:r.rid,hp:raidHpOf(r),mx:r.mx}));if(C.fall&&C.fall.w&&!WCH.some(w=>w.u===UID))WCH.push({u:UID,n:C.n,v:C.v,rid:C.fall.rid,hp:C.fall.mx,mx:C.fall.mx});
+ if(raidReady&&C.wj)Object.keys(C.wj).forEach(key=>{if(live.some(([r])=>r.u+"_"+r.rid===key))return;const it=items.find(([r])=>r.u+"_"+r.rid===key);if(it&&(!raidKnown(it[0])||raidFlState(it[0])==="wait"))return;if(!it&&Date.now()-Number(C.wj[key]||0)<60000)return;
   delete C.wj[key];giveRw(WITCH_ALL);titleState();C.stats.witchSaves=(C.stats.witchSaves||0)+1;note("raid","함께 맞섰던 절망의 마인이 쓰러졌다! 토벌 보상: "+rwTxt(WITCH_ALL));toast("🜏 마인 토벌 성공! "+rwTxt(WITCH_ALL));save();checkTitles()});
+ items.forEach(([r,hp])=>{if((raidKnown(r)&&hp<=0)||raidFlState(r)==="clear")raidDrop(r)});
  if($("#v-hub").hidden)return;const l=$("#rdl");if(!l)return;l.innerHTML="";
  if(!live.length){l.innerHTML="<p class='hint'>타락한 친구가 없다.</p>";return}
  live.forEach(([r,hp])=>{const b=document.createElement("button");b.type="button";b.className="chip raid-chip";b.style.cssText="display:flex;justify-content:space-between;text-align:left";
@@ -65,7 +83,7 @@ function drawRaid(hits){rdLast=hits;const u=rdU,own=u===UID,r=rdR;if(!r)return;c
  const lg=$("#rdlg");lg.innerHTML="";const list=hits.slice().sort((a,b)=>(b.d||0)-(a.d||0));if(sd)list.push({n:(own?"나":r.n)+"의 저항",d:sd,self:1});
  if(!list.length)lg.innerHTML="<p class='hint' style='margin:0'>아직 아무도 맞서지 않았다.</p>";
  list.forEach(v=>{const p=document.createElement("p");p.textContent=(v.self?v.n:cn(v.u,v.n))+": 피해 "+(Number(v.d)||0)+(v.c?" ("+v.c+"회)":"");lg.appendChild(p)});
- rdBtn();if(rdHp<=0&&own)checkRaid()}
+ rdBtn();if(rdHp<=0&&own)checkRaid();else if(rdHp<=0)raidDrop(r)}
 function rdBtn(){const u=rdU,own=u===UID,b=$("#rdgo"),m=$("#rdm");if(!rdR)return;b.hidden=false;
  if(rdHp<=0){b.hidden=true;if(!m.textContent){m.style.color="var(--mu)";m.textContent=own?"그림자가 쓰러졌다. 원래 모습으로 돌아가는 중이다.":"쓰러뜨렸다! 곧 원래 모습으로 돌아온다."}return}
  if(own){const left=SELF_CD-(Date.now()-((C.fall&&C.fall.st)||0));b.disabled=left>0;b.textContent=left>0?"스스로 맞서기 ("+Math.ceil(left/1000)+"초 뒤)":"스스로 그림자와 맞선다 (피해 절반)"}
