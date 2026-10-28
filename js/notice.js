@@ -46,7 +46,8 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
   b.append(row,f)}}
 
 /* ── '멸망까지' 카운트다운 (D-14) ──
-   기간은 doom 한 칸이다. 로그인한 사람은 읽고, 운영자만 고친다. 시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
+   기간은 doom 한 칸뿐이다. 운영자가 다시 저장하면 그 날짜가 이전 날짜를 갈아 끼운다. 로그인한 사람은 읽고, 운영자만 고친다.
+   시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
    운영자가 시작일을 고르면 그날이 D-14, 14일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐). */
 const DOOM_DAYS=14;let DOOM=null;
 const doomOk=o=>!!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
@@ -56,14 +57,8 @@ function doomState(o){if(!doomOk(o))return null;const st=doomDay(o.d),end=st+DOO
  const e=new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
  const [,sm,sd]=o.d.split("-").map(Number);
  return {left,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
-async function doomLegacy(){let best=null,ok=false;
- for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/dd").get()).data();ok=true;if(doomOk(d)&&(!best||Number(d.ts||0)>Number(best.ts||0)))best=d}catch(e){}}
- return ok?best:undefined}
 async function loadDoom(){if(!XON())return;
- try{const r=await DB.doc("doom").get();
-  if(r.exists){const d=r.data();DOOM=doomOk(d)?d:null;drawDoom();return}
-  const old=await doomLegacy();if(doomOk(old)&&ADM[UID]){const rec={d:old.d,ts:Number(old.ts)||Date.now()};try{await DB.doc("doom").set(rec)}catch(e){}DOOM=rec}else if(old!==undefined)DOOM=old||null}
- catch(e){const old=await doomLegacy();if(old!==undefined)DOOM=old||null}
+ try{const r=await DB.doc("doom").get();const d=r.exists?r.data():null;DOOM=doomOk(d)?d:null}catch(e){}
  drawDoom()}
 function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),src=XON()?DOOM:(C&&C.doom)||null,st=doomState(src);
  if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
@@ -81,8 +76,11 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
   const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
   const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY)":"날짜를 골라야 한다."};inp.oninput=upd;upd();
   f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
-  const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}f.hidden=true;drawDoom();toast(v?"'멸망까지' 시작일을 "+doomState(v).startTx+"로 정했다.":"'멸망까지' 카운트다운을 껐다.")}
-   catch(e){msg.textContent="저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}go.disabled=off.disabled=false};
+  const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;msg.textContent="";
+   try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}
+   f.hidden=true;drawDoom();toast(v?"'멸망까지' 시작일을 "+doomState(v).startTx+"로 정했다. 모든 운영자와 플레이어가 이 날짜를 본다.":"'멸망까지' 카운트다운을 껐다.")}
+   catch(e){const c=String(e&&e.message||e);msg.style.color="var(--bad)";msg.textContent=c==="401"||c==="403"?"공통 칸(doom) 저장이 거절되었다. 데이터베이스 규칙에서 운영자 쓰기가 열려 있는지 확인해야 한다. (오류 "+c+")":"저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (오류 "+c+")"}
+   go.disabled=off.disabled=false};
   f.onsubmit=e=>{e.preventDefault();if(!/^\d{4}-\d{2}-\d{2}$/.test(inp.value)){msg.textContent="날짜를 골라야 한다.";return}put({d:inp.value,ts:Date.now()})};
   off.onclick=()=>{if(confirm("카운트다운을 끌까? 모두의 화면에서 사라진다."))put(null)};
   b.append(set,f)}}
