@@ -18,7 +18,8 @@ async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");if(c.
  if(r.pl[UID]){enter(c);return}if(r.st!=="lobby"||Object.keys(r.pl).length>=3)return rmsg("들어갈 수 없는 방이다.");
  r.pl[UID]=me();r.rd[UID]=false;await rref(c).set(r);enter(c)}catch(e){rmsg("입장하지 못했다.")}}
 function enter(c){code=c;room=null;myV=null;holdN=0;if(holdT){clearTimeout(holdT);holdT=null}clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#rrm").textContent="";unR&&unR();unR=null;watchRoom()}
-function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).onSnapshot(s=>{if(code!==c)return;if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.")}
+/* 방에 연결해 두고, 참가·준비·진행처럼 내용이 바뀔 때만 받는다. 연결이 거절되면 20초마다 방을 통째로 묻는다. */
+function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.",POLL_HUB)}
 /* 선택지가 떠 있는 동안에는 방을 반복해서 받지 않는다. 끝나면 결과를 한 번 읽고, 선택이 끝났으면 다시 이어 받는다. */
 function armChoice(r){const live=!!(r&&r.st==="run"&&r.ch&&r.step>=r.seq.length&&EVM[r.ch.id]);
  if(!live){holdN=0;if(holdT){clearTimeout(holdT);holdT=null}if(code&&DB&&!unR)watchRoom();return}
