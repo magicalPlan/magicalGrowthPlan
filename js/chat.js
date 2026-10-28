@@ -141,7 +141,7 @@ $("#pchg").onclick=()=>{dmOpenGen++;unC&&unC();unC=null;peer=null;$("#dt").hidde
 // 엔터와 보내기 버튼 모두 폼 제출로 처리한다. 휴대폰 한글 키보드에서도 엔터가 확실히 먹는다.
 $("#cin").onsubmit=e=>{e.preventDefault();send()};
 
-/* 1:1 새 메시지 알림: dmn/{나}의 이름·시각·미리보기만 본다. 본문은 그 대화를 열 때 받는다. */
+/* 1:1 새 메시지 알림: dmn/{나}의 이름·시각·미리보기만 본다. 본문은 그 대화를 열 때 받는다.
    C.dms = 보낸 사람별로 마지막으로 확인한 시각, C.dmu = 아직 안 읽은 사람, C.dmn = 보낸 사람 이름. */
 const goDM=(u,n)=>{const name=n||(C&&C.dmn&&C.dmn[u])||(C&&C.fr&&C.fr[u])||"상대";if($("#v-chat").hidden||ct!=="d"){ct="d";chat()}openDM(u,name)};
 let dmBusy=false;
