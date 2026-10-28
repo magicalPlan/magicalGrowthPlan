@@ -46,9 +46,8 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
   b.append(row,f)}}
 
 /* ── '멸망까지' 카운트다운 (D-14) ──
-   운영자가 시작일을 고르면 그날이 D-14, 14일 뒤가 D-DAY다. 모든 화면 위쪽에 보인다.
-   저장 위치는 공지와 같은 방식: 운영자 본인의 플레이어 기록(players/{운영자}/dd). 그 칸은 운영자 본인만 쓸 수 있어서
-   서버 규칙을 따로 추가하지 않아도 운영자만 날짜를 바꿀 수 있다. 값: {d:"2026-10-27"(시작일), ts:저장 시각} 또는 비어 있음(꺼짐). */
+   기간은 doom 한 칸이다. 로그인한 사람은 읽고, 운영자만 고친다. 시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
+   운영자가 시작일을 고르면 그날이 D-14, 14일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐). */
 const DOOM_DAYS=14;let DOOM=null;
 const doomOk=o=>!!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
 const doomYmd=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -57,16 +56,22 @@ function doomState(o){if(!doomOk(o))return null;const st=doomDay(o.d),end=st+DOO
  const e=new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
  const [,sm,sd]=o.d.split("-").map(Number);
  return {left,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
-async function loadDoom(){if(!XON())return;let best=null,ok=false;
- for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/dd").get()).data();ok=true;if(d&&typeof d==="object"&&(!best||Number(d.ts||0)>Number(best.ts||0)))best=d}catch(e){}}
- if(ok){DOOM=best&&best.d?best:null;drawDoom()}}
+async function doomLegacy(){let best=null,ok=false;
+ for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/dd").get()).data();ok=true;if(doomOk(d)&&(!best||Number(d.ts||0)>Number(best.ts||0)))best=d}catch(e){}}
+ return ok?best:undefined}
+async function loadDoom(){if(!XON())return;
+ try{const r=await DB.doc("doom").get();
+  if(r.exists){const d=r.data();DOOM=doomOk(d)?d:null;drawDoom();return}
+  const old=await doomLegacy();if(doomOk(old)&&ADM[UID]){const rec={d:old.d,ts:Number(old.ts)||Date.now()};try{await DB.doc("doom").set(rec)}catch(e){}DOOM=rec}else if(old!==undefined)DOOM=old||null}
+ catch(e){const old=await doomLegacy();if(old!==undefined)DOOM=old||null}
+ drawDoom()}
 function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),src=XON()?DOOM:(C&&C.doom)||null,st=doomState(src);
  if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
  b.innerHTML="";const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;if(!show)return;
  const c=elT("div","doom-card"+(live&&st.left<=3?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off"));
  const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"));
  if(live)l.append(elT("p","doom-s",st.left<=0?"오늘, 세계가 끝난다.":st.endTx+" 멸망 · "+st.startTx+" 시작"));
- else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다. 운영자만 보인다.":st.before?st.startTx+"에 시작한다 (D-14). 운영자만 보인다.":"멸망의 날("+st.endTx+")이 지났다. 운영자만 보인다."));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+")이 지났다."));
  c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.left):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
  b.appendChild(c);
@@ -76,13 +81,13 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
   const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
   const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY)":"날짜를 골라야 한다."};inp.oninput=upd;upd();
   f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
-  const put=async v=>{go.disabled=off.disabled=true;try{C.doom=v;save();if(XON()){await DB.doc("players/"+UID+"/dd").set(v);DOOM=v}f.hidden=true;drawDoom();toast(v?"'멸망까지' 시작일을 "+doomState(v).startTx+"로 정했다.":"'멸망까지' 카운트다운을 껐다.")}
+  const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}f.hidden=true;drawDoom();toast(v?"'멸망까지' 시작일을 "+doomState(v).startTx+"로 정했다.":"'멸망까지' 카운트다운을 껐다.")}
    catch(e){msg.textContent="저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}go.disabled=off.disabled=false};
   f.onsubmit=e=>{e.preventDefault();if(!/^\d{4}-\d{2}-\d{2}$/.test(inp.value)){msg.textContent="날짜를 골라야 한다.";return}put({d:inp.value,ts:Date.now()})};
   off.onclick=()=>{if(confirm("카운트다운을 끌까? 모두의 화면에서 사라진다."))put(null)};
   b.append(set,f)}}
 /* ── 시즌 초기화 ──
-   운영자가 '시즌 초기화'를 실행하면 운영자 본인의 플레이어 기록(players/{운영자}/rst)에 {id:실행 시각}을 남긴다(공지·카운트다운과 같은 방식).
+   운영자가 '시즌 초기화'를 실행하면 운영자 본인의 플레이어 기록(players/{운영자}/rst)에 {id:실행 시각}을 남긴다.
    접속할 때 한 번, 그리고 공지 탭을 열 때 한 번 이 표시를 확인한다. 내 캐릭터가 그보다 오래된 시즌이면(C.rsv < id) 한 번 초기화한다.
    남기는 것: 이름·성별·마을·등급·속성·특성, 프로필(사진·설정), 기록(칭호·도감·통계), 사역마(+품고 있는 알).
    이미 받은 보상·이미 본 알림 표시도 남긴다(초기화 뒤 같은 보상을 다시 받거나 옛 알림이 다시 뜨지 않게).
