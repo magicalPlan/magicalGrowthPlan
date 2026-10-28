@@ -77,14 +77,19 @@ function duFinish(win,why){const d=C.du;if(!d||d.fin)return duDraw();d.fin=1;d.r
  setTimeout(()=>{DB.doc("rooms/xb"+d.mid+"/"+UID).delete().catch(()=>{});if(d.ch)duDelInv(d.o,d.mid)},15000);duDraw()}
 function duGiveUp(){const d=C.du;if(!d||d.fin||!confirm("기권할까? 패배로 기록된다."))return;const me=Object.assign({},d.me||{},{gv:1});duWrite(me).catch(()=>{});duFinish(-1,"기권했다.")}
 function duWatch(){if(unDu){unDu();unDu=null}const d=C&&C.du;if(!d||d.fin||!DB)return;const mid=d.mid;unDu=DB.doc("rooms/xb"+mid).onSnapshot(s=>{if(C.du&&C.du.mid===mid)duTick(s.data()||{})},()=>{},POLL_FAST)}
-// 받은 대련 신청 확인(6초마다)
-async function duPoll(){if(!C||!XON()||!AUTH.uid)return;try{const s=await DB.doc("rooms/xa"+UID).get(),v=s.data()||{},now=Date.now();
+/* 받은 대련 신청. 대련장에 있거나, 내가 신청을 보내고 아직 응답 시간(2분) 안이면 10초마다 확인한다.
+   그 밖에는 60초마다 확인한다. 신청은 2분 동안 남으므로 마을에 있어도 알림은 온다.
+   탭이 숨으면 대련 중일 때만 확인한다. 상대에게 '대련 중'이라고 답하기 위해서다. */
+const DU_POLL_FAST=10000,DU_POLL_SLOW=60000;
+let duPollAt=0,duPollBusy=false;
+function duPollHot(){if($("#v-arena")&&!$("#v-arena").hidden)return true;const d=C&&C.du;return !!(d&&!d.fin&&d.ch&&Date.now()-(Number(d.t0)||0)<DU_INV+15000)}
+async function duPoll(){if(!C||!XON()||!AUTH.uid||duPollBusy)return;duPollBusy=true;duPollAt=Date.now();try{const s=await DB.doc("rooms/xa"+UID).get(),v=s.data()||{},now=Date.now();
  DUI=Object.keys(v).filter(k=>k!=="ts"&&v[k]&&typeof v[k]==="object"&&v[k].mid&&now-(Number(v[k].ts)||0)<DU_INV&&!(C.duSeen&&C.duSeen[v[k].mid])).map(k=>Object.assign({u:k},v[k]));
  // 대련 중에는 새 신청을 받지 않는다. 보낸 사람에게 '대련 중'이라고 답해 두면 그쪽 신청이 바로 취소된다.
  if(duOn()){DUI.filter(x=>x.mid!==C.du.mid).forEach(x=>{C.duSeen=keepIds(C.duSeen,x.mid);DB.doc("rooms/xb"+x.mid+"/"+UID).set({busy:1,n:nmOf(),ts:Date.now()}).then(()=>setTimeout(()=>DB.doc("rooms/xb"+x.mid+"/"+UID).delete().catch(()=>{}),180000)).catch(()=>{})});if(DUI.length)save();DUI=[]}
  DUI.forEach(x=>{const key="i_"+x.mid;if(!(C.duNt&&C.duNt[key])){C.duNt=keepIds(C.duNt,key);note("duel",String(x.n||"누군가")+"님이 대련을 신청했다! 대련장에서 받을 수 있다.");toast("⚔ "+String(x.n||"누군가")+"님의 대련 신청! (2분 안에 수락)");ding();save()}});
- updNav();const sig=DUI.map(x=>x.mid).join(",");if(sig!==duSig){duSig=sig;if(!$("#v-arena").hidden&&!(C.du&&!C.du.fin)&&!duFoc)duDraw()}}catch(e){}}
-setInterval(()=>{if(!document.hidden||duOn())duPoll()},10000);
+ updNav();const sig=DUI.map(x=>x.mid).join(",");if(sig!==duSig){duSig=sig;if(!$("#v-arena").hidden&&!(C.du&&!C.du.fin)&&!duFoc)duDraw()}}catch(e){}finally{duPollBusy=false}}
+setInterval(()=>{if(!C||!XON()||!AUTH.uid)return;if(document.hidden&&!duOn())return;const hot=duPollHot();if(!duPollAt){duPollAt=Date.now();if(!hot)return}if(Date.now()-duPollAt<(hot?DU_POLL_FAST:DU_POLL_SLOW))return;duPoll()},DU_POLL_FAST);
 function arena(){show("arena");$("#dum").textContent="";devDraw();duDraw();duPoll();if(C.du&&!C.du.fin)duWatch();dubT=0;duBoard();duRecLoad(true)}
 let duQ="",duFoc=false,duRulesOpen=false,duSig="";
 // 검색 결과만 다시 그린다(입력칸은 그대로 두어 글자를 치는 중에 끊기지 않게).

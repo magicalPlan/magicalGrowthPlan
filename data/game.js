@@ -23,7 +23,7 @@
 
    
    /* 앱 버전. 설정 화면 오른쪽 아래에 보이고, 켜질 때 이 브라우저(mgr_ver)에 같은 값을 남긴다. 버전을 맞출 때 이 문자열만 고친다. */
-   const APP_VER="1.0.0.2";
+   const APP_VER="1.0.0.3";
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련·레이드 상세처럼 바로 반영되어야 하는 곳만 쓴다.
@@ -304,7 +304,7 @@
    const PS=3600000,PGATHER=600000,PHEAL=3600000,PHEAL_WAIT=60000,PHEAL_MAX=3;
    const PNAMES=["하늘의 균열","검은 안개 포탈","핏빛 문","울부짖는 틈","잿빛 소용돌이","뒤틀린 별의 문"];
    // 필요 인원: 새벽(한국 시각 0시~6시)에 열린 포탈은 9~11명, 그 밖의 시간은 27~33명. 숫자만 고치면 바뀐다.
-   const P_DAWN=[9,11],P_DAY=[27,33],P_HURT=30;
+   const P_DAWN=[9,11],P_DAY=[9,11],P_HURT=30;
 
 
    /* 마을 경쟁: 일주일(월요일 0시 시작) 동안 마을 사람들의 점수를 합쳐 순위를 겨룬다. 한 사람의 주간 점수는 최대 1000.
