@@ -4,8 +4,8 @@ var APP_VER="1.0.0.4";
 /* 화면 HTML을 지금 읽고 있는 자리에 붙인다.
    이 호출은 본문을 읽는 동안 끝나야 한다. 아래 게임 스크립트는 버튼과 칸을 바로 찾는다.
    같은 버전의 화면은 이 브라우저에 남겨 두고, 다음 방문에서는 서버에 다시 묻지 않는다. */
-   
-function includeSweep(){
+
+function includeSweep() {
  try{
   var p="mgr_inc_"+APP_VER+"_";
   for(var i=localStorage.length-1;i>=0;i--){
