@@ -454,7 +454,7 @@ $("#nav").onclick=e=>{
  if(v==="titles")(recTab==="ttl"?titles():dex());
  if(v==="inbox")inbox();
  if(v==="roster")roster();
- if(v==="world")show("world");
+ if(v==="world"&&typeof worldView==="function")worldView();
  if(v==="setting"){show("setting");
    drawSetting()
 }};
