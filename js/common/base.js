@@ -9,7 +9,8 @@ const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 // 최근 참여 기록은 최대 6개만 남긴다. 새 id 를 넣고, 더 오래된 키부터 지운다.
 const keepIds=(o,id)=>{o=o||{};o[id]=true;const ks=Object.keys(o);ks.slice(0,Math.max(0,ks.length-6)).forEach(x=>delete o[x]);return o};
 // 서버 조회를 한 번만 받고 구독을 끊는다. 실시간으로 계속 지켜보는 곳이 아닌 곳에서 쓴다.
-const once=q=>new Promise((ok,no)=>{let un=null,done=false;un=q.onSnapshot(s=>{if(done)return;done=true;un&&un();ok(s)},e=>{if(done)return;done=true;un&&un();no(e)})});
+// grab 이 있으면 그 한 번만 받는다. 주기 조회가 쓰는 ETag 확인으로 들어가지 않는다.
+const once=q=>new Promise((ok,no)=>{if(q&&typeof q.grab==="function"){q.grab().then(ok,no);return}let un=null,done=false;un=q.onSnapshot(s=>{if(done)return;done=true;un&&un();ok(s)},e=>{if(done)return;done=true;un&&un();no(e)})});
 // 진짜 서버에 로그인된 상태. 이 브라우저 안에서만 도는 연습 저장소는 제외한다.
 const XON=()=>!!DB&&!LOCAL&&!!FBU;
 // 서버에 올릴 이름. 운영자 왕관 문자는 빼고 20자까지만 남긴다.
