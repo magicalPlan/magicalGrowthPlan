@@ -1,5 +1,5 @@
 /* 설정 화면. main.js 다음에 불러야 한다. 메뉴의 설정은 drawSetting 을 그대로 부른다.
-   앱 버전은 이 파일의 값(APP_VER)을 이 브라우저 mgr_ver 에 남긴다. 설정 화면 오른쪽 아래에서 같은 글을 본다. */
+   앱 버전은 include.js 의 APP_VER 를 이 브라우저 mgr_ver 에 남긴다. 설정 화면 오른쪽 아래에서 같은 글을 본다. */
 function verKeep(){const v=typeof APP_VER==="string"&&APP_VER?APP_VER:"1.0.0";try{localStorage.setItem("mgr_ver",v)}catch(e){}const el=$("#set-ver");if(el)el.textContent="앱 버전 "+v}
 verKeep();
 function drawSetting(){
