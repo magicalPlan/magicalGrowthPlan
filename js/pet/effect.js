@@ -16,10 +16,12 @@ const petCur=()=>C&&Array.isArray(C.pets)?C.pets.find(q=>q&&q.id===C.pet)||null:
    trial 올빼미: 재계약 판정 +L
    mana 까마귀: 마력석 확률 +3% × L
    up  고슴도치: 강화 확률 +2% × L
-   res 나비: 공명 절망도 감소 +2 × L */
+   res 나비: 공명 절망도 감소 +2 × L, 얼음장미 +1 × L
+   (기간 한정) lh 북극광 순록 +2% × L, lhmat 순록: 장기 토벌 시간마다 재료 1개 더 10% × L
+   boss 거울파편 요정: 보스 레이드 피해 +4% × L / raid 얼음장미 정령: 타락 레이드 피해 +5% × L */
 function petEff(k){const q=petCur();if(!q)return 0;const L=petLv(q),sp=q.sp;
  if(k==="ex")return sp==="rabbit"?.02*L:sp==="hope"?.02*L:0;if(k==="gd")return sp==="sparrow"?.02*L:sp==="hope"?.02*L:sp==="dragon"?.03*L:0;
  if(k==="dz")return sp==="jelly"?.02*L:sp==="hope"?.02*L:0;if(k==="pw")return sp==="fox"||sp==="dragon"?3*L:sp==="hope"?2*L:0;
- if(k==="heal")return sp==="cat"?(L>=5?2:L>=3?1:0):0;if(k==="lh")return sp==="turtle"||sp==="dragon"?.02*L:0;
+ if(k==="heal")return sp==="cat"?(L>=5?2:L>=3?1:0):0;if(k==="lh")return sp==="turtle"||sp==="dragon"||sp==="reindeer"?.02*L:0;if(k==="lhmat")return sp==="reindeer"?.1*L:0;if(k==="boss")return sp==="mirror"?.04*L:0;if(k==="raid")return sp==="rose"?.05*L:0;
  if(k==="gift")return sp==="sheep"?.1*L:0;if(k==="shop")return sp==="mouse"?.02*L:0;if(k==="trial")return sp==="owl"?L:0;if(k==="mana")return sp==="crow"?.03*L:0;
- if(k==="up")return sp==="hedgehog"?2*L:0;if(k==="res")return sp==="butterfly"?2*L:0;return 0}
+ if(k==="up")return sp==="hedgehog"?2*L:0;if(k==="res")return sp==="butterfly"?2*L:sp==="rose"?L:0;return 0}

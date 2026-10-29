@@ -91,7 +91,7 @@ $("#rdgo").onclick=async()=>{const u=rdU,r=rdR,own=u===UID,m=$("#rdm"),b=$("#rdg
  if(own){if(!C.fall||SELF_CD-(Date.now()-(C.fall.st||0))>0)return;const d=Math.max(1,Math.round((pw()+R(10))/2));C.fall.sd=(C.fall.sd||0)+d;C.fall.st=Date.now();save();putRaid();
   m.style.color="var(--mu)";m.textContent="스스로의 그림자에 맞섰다. 피해 "+d+".";drawRaid(rdLast||[]);return}
  if(!((C.fr&&C.fr[u])||r.w)||C.fall||C.dz>=90||HIT_CD-(Date.now()-(C.rc[u]||0))>0)return;b.disabled=true;
- try{const ref=DB.doc("raidhit/"+u+"/"+r.rid+"/"+UID),old=await ref.get(),o=(old.exists&&old.data())||{},lt=armedSk("light"),d=Math.round((pw()+R(10))*(lt?3:1)*(C.a.includes("불")?1.2:1));
+ try{const ref=DB.doc("raidhit/"+u+"/"+r.rid+"/"+UID),old=await ref.get(),o=(old.exists&&old.data())||{},lt=armedSk("light"),d=Math.round((pw()+R(10))*(lt?3:1)*(C.a.includes("불")?1.2:1)*(1+petEff("raid")));
   await ref.set({u:UID,n:nmOf(),d:(Number(o.d)||0)+d,c:(Number(o.c)||0)+1,ts:Date.now()});if(lt)useSk("light");C.rc[u]=Date.now();const hg=r.w?WITCH_HIT:8,hz=r.w?WITCH_DZ:RAID_DZ;C.gd=(C.gd||0)+hg;titleState();C.stats.raidHits=(C.stats.raidHits||0)+1;if(r.w){C.wj=C.wj||{};C.wj[u+"_"+r.rid]=C.wj[u+"_"+r.rid]||Date.now()}gain(0,hz);
   const hits=await pullRaidHits(u,r);if(rdU!==u||rdR!==r)return;const hp=r.mx-(Number(r.sd)||0)-sumHits(hits||[]);let t=(lt?"구원의 빛! ":"")+(r.w?"절망의 마인 ":"타락한 ")+r.n+"에게 "+d+"의 피해를 주었다. (골드 +"+hg+", "+(r.w?"마인의":"그림자의")+" 절망이 스며들어 절망도 +"+hz+")";
   if(hp<=0&&r.w){giveRw(WITCH_LAST);C.stats.raidKills=(C.stats.raidKills||0)+1;C.stats.witchKills=(C.stats.witchKills||0)+1;guardAdd(50);note("raid","절망의 마인 "+r.n+"에게 마지막 일격을 넣었다!",u);t="마지막 일격! 절망의 마인 "+r.n+"의 왕관이 부서졌다. (골드 +"+(hg+WITCH_LAST.g)+", 마력석 +"+WITCH_LAST.m+") 토벌 보상은 잠시 뒤 따로 받는다."}

@@ -13,6 +13,7 @@ const TITLE_RECORD=[
 ["pet_1","첫 사역마","사역마의 알을 처음으로 부화시켰다.",c=>(c.pets||[]).length>=1||(c.stats?.hatched||0)>=1],
 ["pet_max","마음이 통하는 사이","사역마와의 친밀도가 최고 단계에 이르렀다.",c=>(c.pets||[]).some(q=>q&&(q.xp||0)>=140)],
 ["pet_leg","전설의 목격자","전설의 사역마를 만났다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="hope"||q.sp==="dragon"))||!!c.stats?.petLeg],
+["pet_snow","서리 궁전의 손님","2026년 겨울, 서리 여왕의 알에서 기간 한정 사역마를 깨웠다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="reindeer"||q.sp==="mirror"||q.sp==="rose"))||(c.stats?.petEv||0)>=1],
 ["pet_dex","사역마 박사","서로 다른 사역마를 3종 이상 만났다.",c=>Object.keys(c.petSeen||{}).length>=3],
 ["boss_read","간파의 눈","보스의 패턴에 맞는 대응으로 20번 공격했다.",c=>((c.stats||{}).bossRead||0)>=20],
 ["dev_1","대련장의 별","대련 이벤트에서 1위를 차지했다.",c=>c.devR===1,"secret","모두와 같은 힘으로 겨뤄 가장 높이 섰다."],
