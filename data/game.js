@@ -90,10 +90,6 @@
       const RS_REPAY=["maint-20261018","restore-apology-20261016"];
 
 
-      /* 고정 운영자: 데이터베이스의 admins 칸과 상관없이 항상 운영자로 인정할 계정(uid). 운영자를 늘리려면 이 목록에 uid를 더한다. */
-      const ADMIN_FIXED=["TLXwyHDof5hs2maSugjRj8OcA9G3",  "SvQ1nHzfKwf4kpBCIyT8FqUxYMc2"];
-
-
       /* 자연 회복: 10분마다 절망도가 10씩 내려간다. 게임을 꺼 둔 동안 지난 시간도 다시 접속하면 한꺼번에 반영된다.
       타락 중에는 회복되지 않는다. 특성·속성 보정 없이 정확히 HEAL_DZ만큼 내려간다. 숫자만 고치면 바뀐다. */
       const HEAL_MS=600000,HEAL_DZ=10;

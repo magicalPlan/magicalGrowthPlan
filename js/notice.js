@@ -96,7 +96,7 @@ const RST_KEEP=["n","s","v","a","g","t","img","pf","rel","picSig","titles","ti",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
-async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM).concat(typeof ADMIN_FIXED!=="undefined"?ADMIN_FIXED:[]));
+async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
 async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad();if(!R||!C)return;

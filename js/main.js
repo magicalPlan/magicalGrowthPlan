@@ -65,9 +65,11 @@ async function checkComp(){if(!C||!AUTH.tok||!AUTH.key||compBusy||Date.now()-com
  got.forEach((x,i)=>setTimeout(()=>alertBox("🎁 "+x[4],x[5]+"\n\n받은 보상: "+cxTxt(x)),i*400));if(!$("#v-hub").hidden)hub()}finally{compBusy=false}}
 async function idt(path,body){const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:"+path+"?key="+encodeURIComponent(AUTH.key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||"ERR");return j}
 async function refresh(){const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+encodeURIComponent(AUTH.key),{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(AUTH.rt)});const j=await r.json();if(!r.ok)throw new Error("REFRESH");AUTH.tok=j.id_token;AUTH.rt=j.refresh_token;keep("mgr_rt",AUTH.rt);return j}
-const admFix=o=>{ADMIN_FIXED.forEach(u=>o[u]=true);return o};
-let ADM=admFix({}),signup=false,sct=null;
-// 운영자는 서버의 admins 목록(콘솔에서만 수정 가능)에 있는 계정이다. 이름으로는 판단하지 않는다.
+let ADM={},unAdm=null,signup=false,sct=null;
+// 운영자는 서버의 admins 칸에 있는 계정이다. 이름이나 코드에 적힌 계정으로는 판단하지 않는다.
+function admApply(data){const before=Object.keys(ADM).sort().join(),next={};
+ if(data&&typeof data==="object")Object.keys(data).forEach(u=>{if(u&&data[u]!=null)next[u]=true});
+ ADM=next;if(typeof admUI==="function")admUI();if(before!==Object.keys(ADM).sort().join()&&typeof $==="function"&&$("#v-hub")&&!$("#v-hub").hidden&&typeof hub==="function")hub()}
 /* 서버 저장. 실패하면 조용히 넘어가지 않고 화면 위에 경고를 띄운다(저장이 다시 되면 사라진다). */
 let saveErr="";
 function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
@@ -176,7 +178,9 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
   if(bk&&bk.n){C=bk;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;saveCloud(true)}}
   // 서버 기록도 백업도 없지만 예전에 캐릭터가 있었던 계정이면(players에 흔적이 남아 있으면) 바로 새로 만들지 않고 복구 방법을 고르게 한다.
   if(!C&&!RESTORE_FULL.some(r=>r[1]===UID)){let pp=null;try{pp=(await DB.doc("players/"+UID).get()).data()}catch(e){}if(pp&&pp.n){const r=await rescueAsk(pp);if(r==="out"){AUTH.uid=null;try{localStorage.removeItem("mgr_rt")}catch(e){}location.reload();return}if(r==="base"){C=rescueBuild(pp);saveCloud(true);setTimeout(()=>alertBox("기본 정보로 복구","이름·등급·레벨·속성·특성·마을·프로필·장착 무기·전투력을 되살렸다.\n골드·아이템·친구 목록·일부 칭호는 돌아오지 않았다.\n\n평소 쓰던 기기에 백업이 남아 있다면 운영자에게 알려 주자."),800)}}}}
- DB.collection("admins").onSnapshot(sn=>{const before=Object.keys(ADM).join();ADM=admFix({});sn.docs.forEach(d=>ADM[d.id]=true);admUI();if(before!==Object.keys(ADM).join()&&!$("#v-hub").hidden)hub()},e=>{},300000);
+ if(unAdm){try{unAdm()}catch(e){}unAdm=null}
+ try{const s=await DB.doc("admins").get();admApply(s.exists?s.data():null)}catch(e){}
+ unAdm=DB.doc("admins").live().onSnapshot(sn=>admApply(sn.exists?sn.data():null),()=>{},300000);
  try{await rstCheck(true)}catch(e){}
  const frx=fullRestore();
  if(frx)save();
