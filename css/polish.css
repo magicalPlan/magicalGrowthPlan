@@ -320,3 +320,7 @@ html[data-theme="light"] .cf-need span.no{color:#b8304a;border-color:#b8304a66}
 html[data-theme="light"] .rel-go{background:#fffcf6}
 html[data-theme="light"] .rel-r{color:#7a5f22;border-color:#9a7a3688}
 html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
+
+/* 장기 의뢰의 이벤트 보스. 카드 틀은 보스 레이드와 같고, 색만 구분한다. */
+.boss-card.e{--c:#1d4e5c}
+.boss-card.e .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
