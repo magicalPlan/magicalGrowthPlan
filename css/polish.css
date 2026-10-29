@@ -282,3 +282,19 @@ html[data-theme="light"] .world-fold.despair{border-color:#c46a7a;background:lin
 html[data-theme="light"] .world-fold.despair .world-name{color:#7d1a2e}
 html[data-theme="light"] .world-mark{color:#7a5f22;border-color:#c4a15a}
 @media (max-width:440px){.world-page{font-size:1.45rem;letter-spacing:.18em}.world-name{font-size:1.15rem;letter-spacing:.06em}}
+
+/* 공방 제작 (마을 › 제작) */
+.cf-mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;margin:6px 0 4px}
+.cf-mat{display:flex;align-items:center;gap:8px;text-align:left;padding:10px 12px;min-width:0}
+.cf-mat b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-ic{font-size:1.15rem;width:1.4em;text-align:center;flex:0 0 auto}
+.cf-n{font-variant-numeric:tabular-nums;font-weight:700;color:#d8c79a}
+.cf-need{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
+.cf-need span{font-size:.78rem;padding:1px 7px;border-radius:999px;border:1px solid #ffffff22;white-space:nowrap}
+.cf-need span.ok{color:#9fd8a8;border-color:#9fd8a855}
+.cf-need span.no{color:#ff8da0;border-color:#ff8da055}
+.cf-r.lock{opacity:.55}
+html[data-theme="light"] .cf-n{color:#7a5f22}
+html[data-theme="light"] .cf-need span{border-color:var(--ln)}
+html[data-theme="light"] .cf-need span.ok{color:#2e7d3a;border-color:#2e7d3a66}
+html[data-theme="light"] .cf-need span.no{color:#b8304a;border-color:#b8304a66}
