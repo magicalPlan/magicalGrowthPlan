@@ -12,6 +12,8 @@ const cfHave=id=>((C.inv||{})[id]||0);
    C.inv 에만 더하고 저장은 하지 않는다. 부른 쪽이 원래 하던 대로 저장한다. 얻은 것이 없으면 빈 글자를 돌려준다. */
 function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonus=MAT_VIL[C.v];
  (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+n})});
+ // 북극광 순록(기간 한정 사역마): 장기 토벌 시간마다 재료 1개 더
+ if(times&&(tables||[]).includes("lh_hr")&&typeof petEff==="function"){const pe=petEff("lhmat"),ids=(MAT_DROP.lh_hr||[]).map(x=>x[0]);for(let i=0;i<times;i++)if(Math.random()<pe){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}
  if(bonus&&got[bonus])got[bonus]++;
  const ks=Object.keys(got);if(!ks.length)return "";
  ks.forEach(id=>{C.inv[id]=(C.inv[id]||0)+got[id]});C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+ks.reduce((s,id)=>s+got[id],0);

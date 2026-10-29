@@ -324,3 +324,9 @@ html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
 /* 장기 의뢰의 이벤트 보스. 카드 틀은 보스 레이드와 같고, 색만 구분한다. */
 .boss-card.e{--c:#1d4e5c}
 .boss-card.e .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
+
+/* 기간 한정 사역마 · 서리 여왕의 알 */
+.pet-r4{color:#9fd8ff;text-shadow:0 0 10px rgba(140,200,255,.55)}
+.pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
+html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
+html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
