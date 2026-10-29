@@ -1,4 +1,6 @@
-/* 세계관. 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
+/* 세계관. 개요 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
+   개요 칸은 html/world/overview.html, 이벤트는 html/world/event.html, Q&A는 html/world/qa.html.
+   탭은 html/home/main.html, 전환은 js/main.js 의 show 와 navGroup.
    서버에 묻지 않는다. 로그인하지 않아도 된다. */
 function worldLines(text){const p=elT("p","world-p");String(text).split("\n").forEach((line,i)=>{if(i)p.appendChild(document.createElement("br"));p.appendChild(document.createTextNode(line))});return p}
 function worldFold(title,tone,nodes){const d=elT("details","world-fold"+(tone?" "+tone:""));const s=document.createElement("summary");
@@ -31,3 +33,5 @@ const village = (name, text) => {
    worldLines("이름 없는 세계의 절망과 괴로움 등 부정적인 감정을 기반으로 돌아가는 세계. 최근 새로운 마왕이 즉위했으며, 현재 전쟁의 원인은 그 마왕. 허나 마왕의 정체는 베일에 싸여있다. 상상하기도 싫은 권악징선과 약육강식만이 존재하는 세계. 아이들은 거대한 꽃이 가득 만발한 ‘시작의 꽃밭’에서 자라난다. 이 중 1만 년에 한번 태어나는 특별한 아이가 마왕이 된다. 마수, 하급 마인, 상급 마인, 마왕 순의 계급 체재가 있다."),
    worldLines("특별한 목적을 가지고 아이를 꽃밭에서 데려오면 부모가 될 수 있다. 허나 대부분의 마인의 ‘특별한 목적’은 가족 구성이라기보단 비윤리적인 이유가 대부분이다."),
    worldLines("타르타로스에는 불문율이 있다. 이는 ‘어린 마인을 건드리지 않는다’는 내용으로, 이런 불문율이 생긴 데에는 두 가지 이유가 있다. 첫째로는 종족 유지. 두번째로는 어린아이로 변신하여 허점을 노리는 마인이 많았기 때문. 따라서 마인들은 14살까지는 보호받다가, 14살이 되는 순간 약육강식의 세계에 던져진다.")]))}
+function worldEvent(){show("wev")}
+function worldQa(){show("wqa")}

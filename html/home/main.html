@@ -11,7 +11,7 @@
         <button type="button" data-g="act" aria-pressed="false" aria-expanded="false">실전</button>
         <button type="button" data-v="friends" aria-pressed="false">친구</button>
         <button type="button" data-g="record" aria-pressed="false" aria-expanded="false">기록</button>
-        <button type="button" data-v="world" aria-pressed="false">세계관</button>
+        <button type="button" data-g="world" aria-pressed="false" aria-expanded="false">세계관</button>
         <button type="button" data-v="setting" aria-pressed="false">설정</button>
     </div>
     <div class="nav-sub" data-for="chat" hidden>
@@ -32,6 +32,11 @@
     <div class="nav-sub" data-for="board" hidden>
         <button type="button" data-v="ntc" aria-pressed="false">공지</button>
         <button type="button" data-v="board" aria-pressed="false">게시판</button>
+    </div>
+    <div class="nav-sub" data-for="world" hidden>
+        <button type="button" data-v="world" aria-pressed="false">개요</button>
+        <button type="button" data-v="wev" aria-pressed="false">이벤트</button>
+        <button type="button" data-v="wqa" aria-pressed="false">Q&A</button>
     </div>
     <div class="nav-sub" data-for="record" hidden>
         <button type="button" data-v="inbox" aria-pressed="false">알림</button>
@@ -81,7 +86,9 @@
 <script>includeHtml("html/act/ord.html")</script>
 <script>includeHtml("html/notice/notice.html")</script>
 <script>includeHtml("html/trial/trial.html")</script>
-<div id="v-world" hidden></div>
+<script>includeHtml("html/world/overview.html")</script>
+<script>includeHtml("html/world/event.html")</script>
+<script>includeHtml("html/world/qa.html")</script>
 <script>includeHtml("html/setting/setting.html")</script>
 </main>
 <footer class="site-foot"><div id="doom" hidden></div></footer>

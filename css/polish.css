@@ -246,7 +246,7 @@ html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 1
 html[data-theme="light"] .rst-card h2{color:#a8283f!important}
 
 /* 세계관: 화면을 열 때 그린 큰 제목. 제목을 누르면 본문이 펼쳐진다. */
-#v-world{max-width:740px;margin:0 auto}
+#v-world,#v-wev,#v-wqa{max-width:740px;margin:0 auto}
 .world-page{text-align:center;letter-spacing:.32em;font-size:1.85rem;color:#f6edd4;text-shadow:0 0 22px #e6c56a55,0 2px 0 #000}
 .world-page::before,.world-page::after{content:"";display:block;height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,#e6c56a,#fff6d2,#e6c56a,transparent)}
 .world-page::before{width:46%;margin-bottom:12px}.world-page::after{width:28%;margin-top:12px}
