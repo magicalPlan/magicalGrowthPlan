@@ -92,7 +92,7 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
    공용 데이터(채팅·1:1·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. */
 let RST=null;
-const RST_KEEP=["n","s","v","a","g","t","img","pf","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg",
+const RST_KEEP=["n","s","v","a","g","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
