@@ -56,3 +56,20 @@ function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv(
  C.stats.crafts=(C.stats.crafts||0)+k;fields["stats/crafts"]=C.stats.crafts;
  apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});titleState();checkTitles();
  craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":""))}
+
+/* 속성의 프리즘: 가방에서 '사용'을 누르면 아래 상자가 열린다. 바꿀 속성(가진 것)과 새 속성(아직 없는 것)을 고르고 확인하면 바뀐다.
+   준비해 둔 마법은 속성이 맞을 때만 쓰이므로(armedSk), 사라진 속성의 마법은 저절로 쓰이지 않는다. 숫자는 data/game.js 의 PRISM_DZ. */
+let prismOn=false,prismPick=null;
+function prismBox(){const box=elT("div","card prism-box"),own=C.a||[],free=AT.filter(t=>!own.includes(t[0]));
+ if(prismPick==null&&own.length===1)prismPick={from:own[0],to:null};prismPick=prismPick||{from:null,to:null};
+ const chipRow=(list,key)=>{const r=elT("div","row");list.forEach(t=>{const b=elT("button","chip",t[0]);b.type="button";b.style.setProperty("--c",t[1]);b.title=t[2];b.setAttribute("aria-pressed",prismPick[key]===t[0]?"true":"false");b.onclick=()=>{prismPick[key]=t[0];bag()};r.appendChild(b)});return r};
+ box.appendChild(elT("p","hint","바꿀 속성"));box.appendChild(chipRow(AT.filter(t=>own.includes(t[0])),"from"));
+ box.appendChild(elT("p","hint","새 속성"));box.appendChild(chipRow(free,"to"));
+ const to=AT.find(t=>t[0]===prismPick.to);if(to)box.appendChild(elT("p","hint",to[0]+" 속성: "+to[2]+" · 마법 「"+((SK[to[0]]||{}).nm||"")+"」"));
+ const ok=!!prismPick.from&&!!prismPick.to,b=elT("button","btn"+(ok?"":" g"),ok?"「"+prismPick.from+"」을(를) 「"+prismPick.to+"」(으)로 바꾼다":"두 속성을 모두 골라야 한다");b.type="button";b.disabled=!ok;b.onclick=prismUse;box.appendChild(b);return box}
+function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.includes(p.from)||own.includes(p.to)||!AT.some(t=>t[0]===p.to))return;
+ if((C.inv.prism||0)<1)return;if(C.fall){bag("타락한 동안에는 프리즘이 빛을 굴절시키지 못한다.");$("#bgm").style.color="var(--bad)";return}
+ if(!confirm("속성 「"+p.from+"」을(를) 「"+p.to+"」(으)로 바꿀까?\n\n· 「"+p.from+"」의 효과와 마법은 사라진다\n· 되돌릴 수 없다 (다시 바꾸려면 프리즘이 하나 더 필요하다)\n· 절망도가 "+PRISM_DZ+" 오른다"))return;
+ C.inv.prism--;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
+ note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
+ const t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+PRISM_DZ+" 올랐다.");bag()}

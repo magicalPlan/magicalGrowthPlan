@@ -298,3 +298,7 @@ html[data-theme="light"] .cf-n{color:#7a5f22}
 html[data-theme="light"] .cf-need span{border-color:var(--ln)}
 html[data-theme="light"] .cf-need span.ok{color:#2e7d3a;border-color:#2e7d3a66}
 html[data-theme="light"] .cf-need span.no{color:#b8304a;border-color:#b8304a66}
+/* 속성의 프리즘 (가방) */
+.prism-box{margin:-2px 0 8px}
+.prism-box .row{margin:4px 0 10px;flex-wrap:wrap}
+.prism-box .hint{margin:4px 0 0}
