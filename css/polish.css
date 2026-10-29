@@ -338,3 +338,18 @@ html[data-theme="light"] #clue .dq.clue-on{border-color:#1f7a86}
 .pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
 html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
 html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
+
+/* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) */
+.clp-card{--c:#3a5f8f;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.14),transparent 70%),var(--card,#14121f)!important;border-color:#6fa8dc88!important}
+.clp-bar{position:relative;height:14px;margin:10px 0 6px;overflow:visible}
+.clp-bar i{background:linear-gradient(90deg,#3a6fa8,#9fd8ff)!important}
+.clp-tick{position:absolute;top:-3px;width:2px;height:20px;margin-left:-1px;background:#ffffff55}
+.clp-tick.on{background:#9fd8ff;box-shadow:0 0 6px #9fd8ff}
+.clp-num{font-weight:700;color:#9fd8ff;margin:4px 0}
+.clp-ms{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.clp-ms .dq.clp-ready{border-color:#9fd8ff;box-shadow:inset 3px 0 0 #9fd8ff}
+html[data-theme="light"] .clp-card{background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important;border-color:#5a9fd4!important}
+html[data-theme="light"] .clp-num{color:#1f6fa8}
+html[data-theme="light"] .clp-tick{background:#00000033}
+html[data-theme="light"] .clp-tick.on{background:#1f6fa8;box-shadow:none}
+html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:inset 3px 0 0 #1f6fa8}

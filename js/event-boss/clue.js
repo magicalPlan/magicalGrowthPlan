@@ -34,6 +34,7 @@ function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;const now
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));
  if(done&&ok){const pe=petDrop("lh");if(pe)pick.evs.push(pe)}
  if(done){const mt=ok?matGain([CLUE_DROP.ok],L.hr):matGain([CLUE_DROP.fail]);if(mt)pick.evs.push(mt)}
+ if(typeof clpGain==="function"){const cp=clpGain("clue",{ok,done,hr:hrs});if(cp)pick.evs.push(cp)}
  const head=!done?"중간에 돌아왔다.":ok?"탐색 성공!":"단서는 놓쳤지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  const lines=pick.evs.map(e=>"· "+e).concat(pick.found.map(x=>"· 추가 조사 — "+x[1]+"\n  "+x[2]));
  note("quest",L.nm+": "+head+" ("+rw+")");save();checkTitles();

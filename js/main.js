@@ -299,7 +299,7 @@ function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.
  const gd=Math.round(L[4]*hrs*mul),ex=Math.round(L[5]*hrs*mul),dz=Math.round(L[6]*hrs+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
  C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
- C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}
+ C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  note("quest",L[1]+": "+head+" ("+rw+")");save();checkTitles();
  alertBox("🗺 "+L[1]+" · "+(done?(ok?"성공":"실패"):"철수"),head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);hubLH();if(typeof readProg==="function")readProg()}

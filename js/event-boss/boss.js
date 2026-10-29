@@ -13,7 +13,7 @@ function ebMatName(id){const m=typeof MATM!=="undefined"&&MATM[id];return m?m[2]
 function ebDropTxt(){return (EBOSS.drop||[]).map(([id,n])=>ebMatName(id)+" "+n).join(", ")}
 function ebGrant(){C.inv=C.inv||{};const bits=[];(EBOSS.drop||[]).forEach(([id,n])=>{const c=Math.max(0,Number(n)||0);if(!id||!c)return;C.inv[id]=(C.inv[id]||0)+c;bits.push(ebMatName(id)+" +"+c)});return bits.join(", ")}
 function ebNext(now){const end=bpEnd(now),d=new Date(now),cut=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()>=12?24:12).getTime();return Math.min(end,cut)}
-function eboss(){show("ord");const m=$("#ebm");if(m){m.textContent="";m.style.color=""} if(!C)return;ebDay();if(typeof clueDraw==="function")clueDraw();
+function eboss(){show("ord");const m=$("#ebm");if(m){m.textContent="";m.style.color=""} if(!C)return;ebDay();if(typeof clueDraw==="function")clueDraw();if(typeof clpDraw==="function")clpDraw();
  if(!DB){drawEboss([]);if(m){m.style.color="var(--mu)";m.textContent="이벤트 보스를 쓸 수 없다."}return}
  drawEboss(null);loadEboss();ebClaimOld()}
 async function loadEboss(){if(!C||!DB||$("#v-ord").hidden||ebBusy)return;ebBusy=true;

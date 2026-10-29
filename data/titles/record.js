@@ -13,6 +13,8 @@ const TITLE_RECORD=[
 ["pet_1","첫 사역마","사역마의 알을 처음으로 부화시켰다.",c=>(c.pets||[]).length>=1||(c.stats?.hatched||0)>=1],
 ["pet_max","마음이 통하는 사이","사역마와의 친밀도가 최고 단계에 이르렀다.",c=>(c.pets||[]).some(q=>q&&(q.xp||0)>=140)],
 ["pet_leg","전설의 목격자","전설의 사역마를 만났다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="hope"||q.sp==="dragon"))||!!c.stats?.petLeg],
+["clp_100","단서 수집가","단서 조각을 100개 찾았다.",c=>(c.stats?.clpN||0)>=100],
+["clp_goal","드러난 진실","모두와 함께 단서 조각을 모아 숨겨진 진실에 닿았다.",c=>!!c.stats?.clpGoal],
 ["pet_snow","서리 속의 손님","2026년 겨울, 서리 드래곤의 알에서 기간 한정 사역마를 깨웠다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="reindeer"||q.sp==="mirror"||q.sp==="rose"))||(c.stats?.petEv||0)>=1],
 ["pet_dex","사역마 박사","서로 다른 사역마를 3종 이상 만났다.",c=>Object.keys(c.petSeen||{}).length>=3],
 ["boss_read","간파의 눈","보스의 패턴에 맞는 대응으로 20번 공격했다.",c=>((c.stats||{}).bossRead||0)>=20],
