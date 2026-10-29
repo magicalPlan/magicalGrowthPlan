@@ -26,11 +26,10 @@
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
-      타락 목록과 정기 출정 자리는 collection().live() 로 같은 연결을 연다. 처음 한 번 받고, 그 뒤엔 바뀔 때만 받는다.
-      타락 목록 연결과 마을 쪽 피해 합계는 마을이나 레이드 화면에서만 열고, 그 화면을 벗어나면 닫는다.
-      레이드 화면의 공격 기록은 연결로 받지 않는다. 들어가 있는 동안 그 한 건만 POLL_MS 마다 다시 읽는다.
-      POLL_HUB 는 그 화면에서 묻는 타락 체력이다. 연결을 열지 않고 이 간격으로만 묻는다.
-      POLL_HUB 를 POLL_FAST 와 같은 값으로 두면 타락 체력도 연결이 열린다. */
+      정기 출정 자리는 collection().live() 로 연결을 연다. 처음 한 번 받고, 그 뒤엔 바뀔 때만 받는다.
+      타락 명단은 마을 화면에서만 POLL_HUB 마다 raid 칸 하나를 읽는다. 마을을 벗어나면 닫는다. 사람마다 체력을 따로 읽지 않는다.
+      체력과 공격 기록은 그 레이드에 들어간 뒤에만, 그 한 건을 POLL_MS 마다 읽는다.
+      POLL_HUB 를 POLL_FAST 와 같은 값으로 두면 그 간격으로 묻는 읽기에도 연결이 열린다. */
    const POLL_MS=4000,POLL_FAST=2500,POLL_HUB=20000;
 
 

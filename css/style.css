@@ -277,8 +277,8 @@ textarea::placeholder{color:#6f6785}
 
 /* 칭호 표시 */
 .ttl-tag{color:#e6c56a;font-size:.88rem;letter-spacing:.04em}
-.dm-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}.dm-head h2{flex:1;min-width:0;margin:0}.dm-png{width:auto!important;margin:0!important;padding:7px 12px!important;font-size:.85rem}
-.dm-set{position:relative;flex:0 0 auto}.dm-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:8;min-width:160px;margin:0;padding:8px;display:flex;flex-direction:column;gap:6px}.dm-menu .btn{width:100%;margin:0;padding:8px 12px;font-size:.85rem}
+.dm-head{display:flex;align-items:center;gap:8px;margin:4px 0 8px}.dm-head h2{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dm-png{width:auto!important;margin:0!important;padding:7px 12px!important;font-size:.85rem}
+.dm-set{position:relative;flex:0 0 auto}.dm-menu{position:absolute;right:calc(100% + 8px);top:0;z-index:8;width:max-content;height:100%;margin:0;padding:0;display:flex;flex-direction:row;align-items:stretch;gap:6px;background:transparent;border:0;box-shadow:none}.dm-menu .btn{width:auto;height:100%;margin:0;padding:7px 12px;font-size:.85rem;white-space:nowrap}.dm-head:has(.dm-menu:not([hidden])) h2{padding-right:200px}
 .ttl-chip{display:inline-block;margin:0 0 0 4px;padding:0 7px;border:1px solid #b89b5e88;border-radius:999px;font-size:.72rem;color:#e6c56a;vertical-align:1px}
 
 /* 마을 시설 화면: 넓은 화면에서는 2×2 */
