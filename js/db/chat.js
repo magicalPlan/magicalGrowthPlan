@@ -7,6 +7,9 @@ function apiWatchVillage(v,onDocs,onErr){return apiCol("chat").prefix("c_"+v+"_"
 function apiAdmOnce(){return once(apiCol("dm").limit(500))}
 function apiPostMessage(col,id,data){return apiPut(col+"/"+id,data)}
 function apiDmBell(to,preview){const n=nmOf(),ts={".sv":"timestamp"};apiPut("rooms/xd"+to+"/"+UID,{n,ts}).catch(()=>{});apiPut("rooms/xd"+to+"/ts",ts).catch(()=>{});apiPut("dmn/"+to+"/"+UID,{n,x:String(preview||"").slice(0,40),ts}).catch(()=>{})}
+/* 채팅방 나가기. 상대 우편함에 퇴장만 남긴다. 대화 본문은 지우지 않아서, 남은 사람은 저장할 수 있고 새 메시지를 보내면 다시 이어진다. */
+function apiDmLeave(to){return apiPut("dmn/"+to+"/"+UID,{n:nmOf(),ts:{".sv":"timestamp"},left:1})}
+function apiDmDrop(id){return DB.doc("rooms/xd"+UID+"/"+id).delete()}
 
 /* 1:1 본문. 그 대화 키만 한 번 읽는다. 목록을 보는 동안에는 부르지 않는다. */
 function apiDmThread(k){return once(apiCol("dm").where("k","==",k))}

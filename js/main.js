@@ -215,11 +215,11 @@ let curView="";
 let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.scrollY;if(!m||y<1)return;m.style.minHeight=m.offsetHeight+"px";clearTimeout(keepT);
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
-/* 상단 메뉴: 마을·게시판·기록은 누르면 하위 항목이 나오고, 나머지는 바로 그 화면으로 간다. */
-const navGroup=id=>({hub:"town",shop:"town",bag:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record"})[id]||"";
+/* 상단 메뉴: 채팅·마을·게시판·기록은 누르면 하위 항목이 나오고, 나머지는 바로 그 화면으로 간다. */
+const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record"})[id]||"";
 function navSync(id,moved){const g=navGroup(id);
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
- document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===id?"true":"false"));
+ document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id)?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
@@ -337,7 +337,7 @@ $("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null};
 $("#pfo").onclick=e=>{if(e.target===$("#pfo"))$("#pfc").click()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$("#pfc").click()});
 
-function updNav(){const cb=document.querySelector("#nav [data-v=chat]");if(cb&&C){const k=Object.keys(C.dmu||{}).length;cb.textContent=k?"채팅 ("+k+")":"채팅";document.title=(k?"("+k+") ":"")+"魔法 成長記錄"}
+function updNav(){const cb=document.querySelector("#nav [data-g=chat]");if(cb&&C){const k=Object.keys(C.dmu||{}).length,chatOpen=document.querySelector('#nav .nav-sub[data-for="chat"]'),folded=!chatOpen||chatOpen.hidden;cb.textContent=k&&folded?"채팅 ("+k+")":"채팅";const dm=document.querySelector("#nav [data-ct=d]");if(dm)dm.textContent=k&&!folded?"1:1 채팅 ("+k+")":"1:1 채팅";document.title=(k?"("+k+") ":"")+"魔法 成長記錄"}
  const b=document.querySelector("#nav [data-v=friends]");if(b){const n=Object.keys((C&&C.fq)||{}).length+Object.keys((C&&C.rqIn)||{}).length;b.textContent=n?"친구 ("+n+")":"친구"}
  const dub=document.querySelector("#nav [data-v=arena]");if(dub&&C){const n=(typeof DUI!=="undefined"?DUI.length:0),on=C.du&&!C.du.fin;dub.textContent=on?"대련 ⚔":n?"대련 ("+n+")":"대련"}
  const bgb=document.querySelector("#nav [data-v=bag]");if(bgb&&C){const n=Array.isArray(C.rg)?C.rg.length:0;bgb.textContent=n?"마법·가방 ("+n+")":"마법·가방"}
@@ -346,9 +346,9 @@ function updNav(){const cb=document.querySelector("#nav [data-v=chat]");if(cb&&C
  const ib=document.querySelector("#nav [data-v=inbox]");if(ib&&C){const k=(C.nt||[]).filter(n=>!n.r).length;ib.textContent=k?"알림 ("+(k>9?"9+":k)+")":"알림";
   const rp=document.querySelector("#nav [data-g=record]");const recOpen=document.querySelector('#nav .nav-sub[data-for="record"]');if(rp)rp.textContent=k&&recOpen&&recOpen.hidden?"기록 ("+(k>9?"9+":k)+")":"기록"}
  {const nbP=document.querySelector("#nav [data-g=board]");const bdOpen=document.querySelector('#nav .nav-sub[data-for="board"]');const nk=(()=>{try{return NTC.filter(n=>Number(n.ts)>(C.ntcSeen||0)).length}catch(e){return 0}})();if(nbP)nbP.textContent=nk&&bdOpen&&bdOpen.hidden?"게시판 ("+nk+")":"게시판"}
- {const townOpen=document.querySelector('#nav .nav-sub[data-for="town"]');if(h&&bgb&&townOpen&&townOpen.hidden){const hm=(h.textContent.match(/\((\d+)\)$/)||[])[1],bm=(bgb.textContent.match(/\((\d+)\)$/)||[])[1],sum=(Number(hm)||0)+(Number(bm)||0);if(sum)h.textContent="마을 ("+sum+")"}}
+ {const townP=document.querySelector("#nav [data-g=town]"),townOpen=document.querySelector('#nav .nav-sub[data-for="town"]');if(townP&&h&&bgb){const folded=!townOpen||townOpen.hidden,hm=(h.textContent.match(/\((\d+)\)$/)||[])[1],bm=(bgb.textContent.match(/\((\d+)\)$/)||[])[1],sum=(Number(hm)||0)+(Number(bm)||0);townP.textContent=folded&&sum?"마을 ("+sum+")":"마을"}}
  // "이름 (3)" 꼴의 숫자는 작은 배지로 바꿔서, 숫자가 생겨도 탭 글자가 잘리지 않게 한다.
- document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}})}
+ document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}});if(typeof vcMark==="function")vcMark()}
 const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
@@ -439,13 +439,14 @@ $("#nav").onclick=e=>{
   if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");updNav();return}
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
-  if(v==="hub"){if(curView!=="hub")hub();else updNav();return}
+  if(g==="town"){if(!here)hub();else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")(recTab==="ttl"?titles():dex());else updNav();return}
+  if(g==="chat"){if(curView!=="chat"){ct="g";chat()}else updNav();return}
   return}
+ if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;ct=t;chat();return}
  if(v==="hub")hub();
  if(v==="shop")shop();
- if(v==="chat")chat();
  if(v==="friends")friends();
  if(v==="board")board(null);
  if(v==="ntc")ntcView();
