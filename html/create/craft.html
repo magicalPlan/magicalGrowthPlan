@@ -1,4 +1,11 @@
-<!-- 제작 화면. 동작은 js/create/craft.js. 마을 하위 탭은 html/home/main.html. 화면 전환은 js/main.js. 캐릭터 제작은 html/create/create.html 이다. -->
+<!-- 제작(공방) 화면. 동작은 js/create/craft.js, 숫자는 data/craft.js. 마을 하위 탭은 html/home/main.html. 화면 전환은 js/main.js. 캐릭터 제작은 html/create/create.html 이다. -->
 <div id="v-craft" hidden>
+<div class="card"><h2>공방 제작</h2><p class="hint" style="margin:0" id="cfh"></p></div>
+<h2>재료</h2>
+<p class="hint">재료는 상점에서 팔지 않는다. 출정, 장기 토벌, 보스 레이드에서 얻는다. 재료를 누르면 얻는 곳이 보인다.</p>
+<div class="cf-mats" id="cfm"></div>
 <h2>제작</h2>
+<div class="row shopq" id="cfq"></div>
+<div class="wgrid" id="cfl"></div>
+<p class="msg" id="cfmsg" role="alert"></p>
 </div>

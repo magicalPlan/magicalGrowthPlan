@@ -8,5 +8,7 @@ const TITLE_GEAR=[
 ["rune_1","첫 각인","마력 각인을 처음 새겼다.",c=>Object.values(c.rn||{}).some(v=>v>0)],
 ["rune_all","각인의 대가","네 가지 마력 각인을 모두 최고 단계까지 새겼다.",c=>["pow","calm","wis","luck"].every(k=>((c.rn||{})[k]||0)>=5)],
 ["shop_1","첫 손님","상점에서 물건을 처음 구입했다.",c=>(c.stats?.purchases||0)>=1],
-["shop_10","단골손님","상점에서 물건을 10회 구입했다.",c=>(c.stats?.purchases||0)>=10]
+["shop_10","단골손님","상점에서 물건을 10회 구입했다.",c=>(c.stats?.purchases||0)>=10],
+["craft_1","첫 작품","공방에서 처음으로 무언가를 만들었다.",c=>(c.stats?.crafts||0)>=1],
+["craft_30","공방의 장인","공방에서 30개를 만들었다.",c=>(c.stats?.crafts||0)>=30]
 ];

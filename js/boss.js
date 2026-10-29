@@ -66,9 +66,9 @@ async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOS
   if(hp<=0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,list);return}
   const weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
   const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p,c:(Number(mine.c)||0)+1,ts:Date.now(),t0:Number(mine.t0)||Date.now()};if(bScaled(k,b.id))rec.hp0=bhpScaled(k,list);else if(k==="d")rec.hp0=Number(mine.hp0)||(list.length?(Number((bFirst(list)||{}).hp0)||0):0)||dHpNow();if(mine.x||hp-d<=0)rec.x=1;await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
-  if(fire)useSk("fire");if(dexAdd("bs",b.def[0]))note("dex","도감에 새 보스가 기록되었다: "+b.def[0]);C.wb[k]++;C.wbp=keepIds(C.wbp,b.id);C.gd=(C.gd||0)+cfg.hit;titleState();C.stats.bossHits=(C.stats.bossHits||0)+1;if(good)C.stats.bossRead=(C.stats.bossRead||0)+1;guardAdd(3);const dz=ef[2]?0:cfg.dz+ef[1];if(dz)gain(0,dz);else save();checkTitles();
+  if(fire)useSk("fire");if(dexAdd("bs",b.def[0]))note("dex","도감에 새 보스가 기록되었다: "+b.def[0]);C.wb[k]++;C.wbp=keepIds(C.wbp,b.id);C.gd=(C.gd||0)+cfg.hit;titleState();C.stats.bossHits=(C.stats.bossHits||0)+1;if(good)C.stats.bossRead=(C.stats.bossRead||0)+1;guardAdd(3);const mt=matGain(["boss"]);const dz=ef[2]?0:cfg.dz+ef[1];if(dz)gain(0,dz);else save();checkTitles();
   const say=good?(act==="def"?" 반격을 막고 되받아쳤다!":act==="weak"?" 모인 마력을 꿰뚫었다! 약점 적중!":" 빈틈에 강타가 꽂혔다!"):act==="str"&&pt.id==="charge"?" 돌진에 반격당했다!":act==="weak"?" 약점을 찾지 못했다.":act==="def"?" 조심스럽게 싸웠다.":"";
-  m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(hp-d<=0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");
+  m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(mt?" "+mt+".":"")+(hp-d<=0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");
   drawBoss(k,b,await bossList(b))}
  catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 데이터베이스 규칙에서 wboss 경로가 열려 있는지 확인해야 한다.";bt.disabled=false}}
 // 처치 보상: 참가했고, 보스가 쓰러졌고, 아직 안 받았을 때만

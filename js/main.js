@@ -259,7 +259,7 @@ function navSync(id,moved){const g=navGroup(id);
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -295,7 +295,7 @@ function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.
  const gd=Math.round(L[4]*hrs*mul),ex=Math.round(L[5]*hrs*mul),dz=Math.round(L[6]*hrs+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
  C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
- C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}
+ C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  note("quest",L[1]+": "+head+" ("+rw+")");save();checkTitles();
  alertBox("🗺 "+L[1]+" · "+(done?(ok?"성공":"실패"):"철수"),head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);hubLH();if(typeof readProg==="function")readProg()}
@@ -397,6 +397,7 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
  if(!own.length)it.innerHTML="<p class='hint'>가진 아이템이 없다. 상점에서 살 수 있다.</p>";
  C.arm=C.arm||{};own.forEach(x=>{const id=x[0],on=armed(id);
   // 희망의 결정: 준비 없이 바로 쓰는 아이템. 절망도 하락량은 HOPE_DZ만 고치면 바뀐다.
+  if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]]));if(prismOn)it.appendChild(prismBox());return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]]));return}
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[]))});
@@ -425,18 +426,18 @@ async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=t
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+petEff("gift")));
 function rgUse(idx){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
- const b0=C.dz;let sum=0;list.forEach(x=>sum+=rgVal(x.g));C.rg=idx==="all"?[]:C.rg.filter((x,i)=>i!==idx);titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(0,-sum);updNav();
- const who=[...new Set(list.map(x=>x.n))].join(", ");note("gift",who+"님의 선물을 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");bag((list.length>1?"선물 "+list.length+"개를 열었다. ":who+"님의 "+ITM.find(x=>x[0]===list[0].g)[1]+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}
+ const b0=C.dz;let sum=0,xs=0;list.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});C.rg=idx==="all"?[]:C.rg.filter((x,i)=>i!==idx);titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(xs,-sum);updNav();
+ const who=[...new Set(list.map(x=>x.n))].join(", ");note("gift",who+"님의 선물을 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");bag((list.length>1?"선물 "+list.length+"개를 열었다. ":who+"님의 "+ITM.find(x=>x[0]===list[0].g)[1]+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":""))}
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=Array.isArray(C.rg)?C.rg:[];
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!rg.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
  rg.map((x,i)=>[x,i]).reverse().forEach(([x,i])=>{const it=ITM.find(t=>t[0]===x.g);if(!it)return;const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const c=elT("div","chip");c.style.cssText="flex:1;text-align:left;cursor:default";
-  c.append(elT("b","","🎁 "+it[1]),elT("small","",x.n+"님이 보냄 · "+bdAgo(x.ts)+" · 절망도 -"+rgVal(x.g)));c.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
+  c.append(elT("b","","🎁 "+it[1]),elT("small","",x.n+"님이 보냄 · "+bdAgo(x.ts)+" · 절망도 -"+rgVal(x.g)+(GIFT_EX[x.g]?" · 경험치 +"+GIFT_EX[x.g]:"")));c.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
   const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(i);w.append(c,b);box.appendChild(w)});
  if(rg.length>1){const a=elT("button","btn g","모두 열기 (절망도 -"+rg.reduce((s,x)=>s+rgVal(x.g),0)+")");a.type="button";a.disabled=!!C.fall;a.onclick=()=>rgUse("all");box.appendChild(a)}}
 $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;return}C.inv=C.inv||{};gb.hidden=false;gb.innerHTML="";
  const sl=giftSlot(u);gb.appendChild(elT("p","hint","이 친구에게 오늘 보낼 수 있는 선물 "+sl.left+" / "+GIFT_DAY+"개"+(sl.i<0?" · 약 "+cdTxt(sl.soon-Date.now())+" 뒤에 다시 보낼 수 있다":"")));
- const own=ITM.filter(x=>x[0][0]==="g"&&(C.inv[x[0]]||0)>0);if(!own.length){gb.appendChild(elT("p","hint","가방에 선물이 없다. 상점에서 살 수 있다."));return}
+ const own=ITM.filter(x=>x[0][0]==="g"&&(C.inv[x[0]]||0)>0);if(!own.length){gb.appendChild(elT("p","hint","가방에 선물이 없다. 상점에서 사거나 공방에서 만들 수 있다."));return}
  let sel=null;const row=document.createElement("div");row.className="row";row.style.margin="10px 0";
  own.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=x[1]+" x"+C.inv[x[0]];b.setAttribute("aria-pressed","false");
   b.onclick=()=>{sel=x[0];row.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"))};row.appendChild(b)});
