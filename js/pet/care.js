@@ -14,12 +14,12 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{petEvMelt()}catc
  else{eb.append(elT("b","","사역마의 알 "+(C.eggs||0)+"개"),elT("small","","상점가 "+PET_EGG_G+"골드(하루 1개) · 출정에서 가끔, 장기 토벌 성공 시 종종 줍는다. 품으면 1시간 뒤 깨어난다. (일반 70% · 희귀 27% · 전설 3%)"));
   const a=elT("div","pet-act"),b1=elT("button","chip","알 품기");b1.type="button";b1.disabled=!(C.eggs>0);b1.onclick=petIncubate;const b2=elT("button","chip","알 사기 ("+PET_EGG_G+"골드)");b2.type="button";b2.disabled=(C.gd||0)<PET_EGG_G||C.eggBuy===today();b2.onclick=petBuyEgg;a.append(b1,b2);eb.appendChild(a)}
  box.appendChild(ec);
- // 기간 한정: 서리 여왕의 알. 이벤트 기간이거나 가지고 있을 때만 보인다. 상점에서는 살 수 없다.
+ // 기간 한정: 서리 드래곤의 알. 이벤트 기간이거나 가지고 있을 때만 보인다. 상점에서는 살 수 없다.
  if(petEvOn()||(C.eggsEv||0)>0){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),end=new Date(PET_EV.to-1);vc.append(elT("span","pet-ic",PET_EV.ic),vb);
   vb.append(elT("b","pet-r4",PET_EV.nm+" "+(C.eggsEv||0)+"개 · 기간 한정"),elT("small","",PET_EV.ds),
    elT("small","","11월 1일 ~ 11월 14일에만 출정·장기 토벌 성공 때 사역마의 알처럼 줍는다(상점에서는 팔지 않는다). 전설 "+Math.round(PET_EV.leg*100)+"% · 기간 한정 사역마 "+Math.round(PET_EV.lim*100)+"% · 나머지는 일반·희귀. 기간이 끝나면 품지 않은 알은 녹아 평범한 사역마의 알이 된다."+(petEvOn()?" (남은 기간 "+cdTxt(PET_EV.to-now)+")":"")),
    elT("small","","기간 한정 사역마: "+Object.values(PETS).filter(x=>x[3]===4).map(x=>x[2]+" "+x[1]).join(" · ")));
-  const a=elT("div","pet-act"),b=elT("button","chip","서리 여왕의 알 품기");b.type="button";b.disabled=!(C.eggsEv>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
+  const a=elT("div","pet-act"),b=elT("button","chip",PET_EV.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
  {const all=Object.values(PETS),seen=all.filter(x=>C.petSeen[x[0]]);box.appendChild(elT("p","hint","만난 사역마 "+seen.length+" / "+all.length+"종: "+all.map(x=>C.petSeen[x[0]]?x[2]:"❔").join(" ")))}
  if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}
  C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),on=C.pet===q.id,nx=PET_LV[L],c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);

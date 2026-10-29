@@ -3,14 +3,14 @@
 // 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
 function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
  if(Math.random()<p){C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 가방에서 품을 수 있다.");out.push("🥚 사역마의 알을 주웠다!")}
- // 기간 한정: 서리 여왕의 알은 따로 굴린다.
+ // 기간 한정: 서리 드래곤의 알은 따로 굴린다.
  if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;note("quest",PET_EV.nm+"을(를) 주웠다! 11월 14일까지만 얻을 수 있는 알이다.");try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
  return out.join(" ")}
-// 이벤트 기간인지. 기간 한정 사역마와 서리 여왕의 알은 이 안에서만 얻는다.
+// 이벤트 기간인지. 기간 한정 사역마와 서리 드래곤의 알은 이 안에서만 얻는다.
 const petEvOn=()=>{const t=Date.now();return t>=PET_EV.from&&t<PET_EV.to};
-// 기간이 끝났는데 품지 않은 서리 여왕의 알이 남아 있으면 평범한 사역마의 알로 바꾼다.
+// 기간이 끝났는데 품지 않은 서리 드래곤의 알이 남아 있으면 평범한 사역마의 알로 바꾼다.
 function petEvMelt(){if(!C||!(C.eggsEv>0)||Date.now()<PET_EV.to)return false;const n=C.eggsEv;C.eggs=(C.eggs||0)+n;C.eggsEv=0;note("quest","이벤트가 끝나 "+PET_EV.nm+" "+n+"개가 녹아 평범한 사역마의 알이 되었다.");save();return true}
-// 서리 여왕의 알 부화: 전설 3%, 기간 한정 3%, 나머지는 일반·희귀를 평소 비율로.
+// 서리 드래곤의 알 부화: 전설 3%, 기간 한정 3%, 나머지는 일반·희귀를 평소 비율로.
 function petRollEv(){const r=Math.random(),pick=rar=>{const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]};
  if(r<PET_EV.leg)return pick(3);if(r<PET_EV.leg+PET_EV.lim)return pick(4);const a=PET_RATE.find(x=>x[0]===1)[1],b=PET_RATE.find(x=>x[0]===2)[1];return pick(Math.random()<a/(a+b)?1:2)}
 function petIncubateEv(){petEvMelt();if(!(C.eggsEv>0)||C.egg)return;if((C.pets||[]).length>=PET_MAX){petMsg("사역마는 "+PET_MAX+"마리까지 데리고 있을 수 있다. 한 마리를 보내 주어야 새로 품을 수 있다.",1);return}
