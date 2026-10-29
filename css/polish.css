@@ -32,7 +32,7 @@ h2.fold-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fold-btn{flex:0 0 auto!important;min-width:0!important;padding:4px 11px!important;font-family:inherit!important;font-size:.76rem!important;border-radius:999px!important}
 
 /* 5. 입력칸: 검색칸·숫자칸·고르기칸도 같은 모양으로 */
-input[type=text],input[type=password],input[type=search],input[type=number],textarea,select{transition:border-color .15s,box-shadow .15s}
+input[type=text],input[type=password],input[type=email],input[type=search],input[type=number],textarea,select{transition:border-color .15s,box-shadow .15s}
 input[type=search],input[type=number]{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px}
 #shopqn{width:64px;padding:8px}
 select{font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px;padding:10px 12px}

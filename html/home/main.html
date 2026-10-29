@@ -8,7 +8,7 @@
         <button type="button" data-g="town" aria-pressed="true" aria-expanded="false">마을</button>
         <button type="button" data-g="chat" aria-pressed="false" aria-expanded="false">채팅</button>
         <button type="button" data-g="board" aria-pressed="false" aria-expanded="false">게시판</button>
-        <button type="button" data-v="arena" aria-pressed="false">대련</button>
+        <button type="button" data-g="act" aria-pressed="false" aria-expanded="false">실전</button>
         <button type="button" data-v="friends" aria-pressed="false">친구</button>
         <button type="button" data-g="record" aria-pressed="false" aria-expanded="false">기록</button>
         <button type="button" data-v="world" aria-pressed="false">세계관</button>
@@ -23,6 +23,11 @@
         <button type="button" data-v="hub" aria-pressed="false">마을</button>
         <button type="button" data-v="shop" aria-pressed="false">상점</button>
         <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
+        <button type="button" data-v="craft" aria-pressed="false">제작</button>
+    </div>
+    <div class="nav-sub" data-for="act" hidden>
+        <button type="button" data-v="arena" aria-pressed="false">대련</button>
+        <button type="button" data-v="ord" aria-pressed="false">장기 의뢰</button>
     </div>
     <div class="nav-sub" data-for="board" hidden>
         <button type="button" data-v="ntc" aria-pressed="false">공지</button>
@@ -45,6 +50,7 @@
 <script>includeHtml("html/shop/shop.html")</script>
 <script>includeHtml("html/chat/chat.html")</script>
 <script>includeHtml("html/bag/bag.html")</script>
+<script>includeHtml("html/create/craft.html")</script>
 <script>includeHtml("html/record/titles.html")</script>
 <script>includeHtml("html/friends/friends.html")</script>
 <script>includeHtml("html/roster/roster.html")</script>
@@ -72,6 +78,7 @@
 <script>includeHtml("html/board/board.html")</script>
 <script>includeHtml("html/wave/wave.html")</script>
 <script>includeHtml("html/duel/arena.html")</script>
+<script>includeHtml("html/act/ord.html")</script>
 <script>includeHtml("html/notice/notice.html")</script>
 <script>includeHtml("html/trial/trial.html")</script>
 <div id="v-world" hidden></div>

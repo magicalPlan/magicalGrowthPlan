@@ -1,4 +1,5 @@
 /* 대련. main.js 다음에 불러야 한다. 대련장, 신청과 수락, 수 고르기, 구인 게시판, 대련 이벤트.
+   화면은 html/duel/arena.html. 상위 메뉴는 실전(html/home/main.html). 옆의 장기 의뢰는 html/act/ord.html 과 js/act/ord.js 이다.
    마을 화면은 duWatch 를, 메뉴와 프로필은 arena, duChallenge 를, 주기 확인은 devClaim, duPoll 을 그대로 부른다. */
 let unDu=null,DUI=[],duVer={},duBusy=false;
 // 대련 중 표시: 대련을 시작하면 내 플레이어 기록에 시작 시각(db)을 남기고, 끝나면 0으로 지운다.

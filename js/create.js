@@ -1,5 +1,6 @@
 /* 캐릭터 제작. main.js 다음에 불러야 한다. 성별, 마을, 속성, 등급과 특성 뽑기, 시작.
-   처음 들어오면 boot 가 rc 를 그대로 부른다. */
+   화면은 html/create/create.html. 처음 들어오면 boot 가 rc 를 그대로 부른다.
+   마을 탭의 제작 화면은 js/create/craft.js 와 html/create/craft.html 이다. */
 let pimg=null;
 $("#im").onchange=e=>{const f=e.target.files[0];e.target.value="";pick(f,d=>{pimg=d;const p=$("#pv");p.src=d;p.hidden=false})};
 let sg=null,sv=null,sa=null,hs=[],pk=null,busy=false;

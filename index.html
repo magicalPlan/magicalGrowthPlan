@@ -14,14 +14,14 @@
         </script>
         
         <link rel="preload" href="fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
-        <link rel="stylesheet" href="css/style.css?v=dmfloat">
+        <link rel="stylesheet" href="css/style.css?v=mail">
         <link rel="stylesheet" href="css/theme-light.css">
         <!-- UI 다듬기: 이 한 줄을 지우면 예전 모습으로 돌아간다 -->
         <link rel="stylesheet" href="css/polish.css?v=world">
     </head>
 
     <body>
-        <script src="js/common/include.js?v=1.0.0.7"></script>    <!-- 화면 HTML을 붙인다. 화면을 고친 배포에서는 include.js 의 APP_VER 과 이 주소의 버전을 같이 올린다. -->
+        <script src="js/common/include.js?v=1.0.0.14"></script>    <!-- 화면 HTML을 붙인다. 화면을 고친 배포에서는 include.js 의 APP_VER 과 이 주소의 버전을 같이 올린다. -->
 
         <script>includeHtml("html/home/main.html")</script>  <!-- 홈 화면 -->
 
@@ -50,7 +50,7 @@
         <script src="js/db/local.js"></script>
         <script src="js/db/remote.js"></script>
         <script src="js/db/players.js"></script>
-        <script src="js/main.js"></script>
+        <script src="js/main.js?v=1.0.0.14"></script>
         <script src="js/trial.js"></script>
         <script src="js/village.js"></script>
         <script src="js/weapon.js"></script>
@@ -58,7 +58,8 @@
         <script src="js/room.js"></script>
         <script src="js/notice.js"></script>
         <script src="js/board.js"></script>
-        <script src="js/duel.js"></script>
+        <script src="js/duel.js"></script>    <!-- 실전 하위 대련. html/duel/arena.html -->
+        <script src="js/act/ord.js?v=1.0.0.14"></script>    <!-- 실전 하위 장기 의뢰. html/act/ord.html -->
         <script src="js/friends/friend.js"></script>
         <script src="js/dex.js"></script>
         <script src="js/boss.js"></script>
@@ -78,12 +79,13 @@
         <script src="js/shop.js"></script>
         <script src="js/alarm/toast.js"></script>
         <script src="js/alarm/inbox.js"></script>
-        <script src="js/create.js"></script>    
+        <script src="js/create.js"></script>    <!-- 캐릭터 제작. html/create/create.html -->
+        <script src="js/create/craft.js?v=1.0.0.13"></script>    <!-- 마을 하위 제작 탭. html/create/craft.html -->
         <script src="js/pet/effect.js"></script>
         <script src="js/pet/egg.js"></script>
         <script src="js/pet/care.js"></script>
         <script src="js/quest/daily.js"></script>
-        <script src="js/setting/setting.js"></script>
+        <script src="js/setting/setting.js?v=1.0.0.12"></script>
         <script src="js/world.js"></script>
     </body>
 </html>
