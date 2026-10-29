@@ -302,3 +302,21 @@ html[data-theme="light"] .cf-need span.no{color:#b8304a;border-color:#b8304a66}
 .prism-box{margin:-2px 0 8px}
 .prism-box .row{margin:4px 0 10px;flex-wrap:wrap}
 .prism-box .hint{margin:4px 0 0}
+/* 관계란 (프로필 창) */
+.rel-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.rel-row{display:flex;gap:8px;align-items:stretch}
+.rel-go{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--ln);background:#ffffff08;color:inherit;font:inherit;cursor:pointer}
+.rel-go:hover{border-color:#b89b5e}
+.rel-av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:2px solid #b89b5e;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;background:#ffffff0a}
+.rel-av img{width:100%;height:100%;object-fit:cover}
+.rel-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rel-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.rel-r{font-size:.8rem;padding:1px 8px;border-radius:999px;border:1px solid #b89b5e88;color:#d8c79a}
+.rel-d{color:var(--mu);overflow-wrap:anywhere}
+.rel-del{flex:0 0 auto;min-width:0;padding:0 12px}
+.rel-box{margin:6px 0 4px}
+.rel-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rel-btns .btn{width:auto;flex:1}
+html[data-theme="light"] .rel-go{background:#fffcf6}
+html[data-theme="light"] .rel-r{color:#7a5f22;border-color:#9a7a3688}
+html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
