@@ -148,7 +148,7 @@ let verTag=null,verShown=false;
 async function verCheck(){if(verShown||location.protocol==="file:")return;try{const r=await fetch(location.pathname+location.search,{method:"HEAD",cache:"no-store"});const t=r.headers.get("etag")||r.headers.get("last-modified");if(!t)return;if(verTag==null){verTag=t;return}if(t!==verTag){verShown=true;verBanner()}}catch(e){}}
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
-setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();giftPing();checkRaid()}},30000);
+setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();checkRaid()}},30000);
 function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
@@ -259,7 +259,7 @@ function navSync(id,moved){const g=navGroup(id);
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>$("#v-"+v).hidden=v!==id);if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved)window.scrollTo(0,0);else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -407,11 +407,13 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
 function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let best=-1,soon=Infinity;
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
  return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
-// 받은 선물함: 앉아 있는 동안에는 giftn/{나}의 마지막 시각만 본다. 칸 전체는 마을에 들어올 때, 가방을 열 때, 그 시각이 새로워졌을 때 한 번만 받는다.
-let giftBell=0,giftBusy=false,giftAgain=false;
-async function giftPing(){if(!AUTH.uid||!C||!DB)return;let ts=0;
- try{const s=await DB.doc("giftn/"+UID).get();const p=s.exists?s.data():null;ts=p&&typeof p.ts==="number"?p.ts:0}catch(e){return}
- if(!ts||ts<=giftBell)return;giftBell=ts;applyGift()}
+/* 받은 선물함: 접속할 때 giftn/{나}의 마지막 시각을 한 번 보고, 머무는 동안은 연결로 그 시각이 새로워질 때만 받는다.
+   칸 전체는 그 시각이 새로워졌을 때, 마을에 들어올 때, 가방을 열 때 한 번만 받는다.
+   연결이 거절되면 30초마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다. */
+let giftBell=0,giftBusy=false,giftAgain=false,unGift=null,giftGen=0;
+function giftWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unGift)return;const gen=++giftGen,take=sn=>{if(gen!==giftGen||!AUTH.uid||!C)return;const p=sn.exists?sn.data():null,ts=p&&typeof p.ts==="number"?p.ts:0;if(!ts||ts<=giftBell)return;giftBell=ts;applyGift()};
+ DB.doc("giftn/"+UID).get().then(take).catch(()=>{});
+ unGift=DB.doc("giftn/"+UID).live().onSnapshot(take,()=>{},30000)}
 async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=true;return}giftBusy=true;
  try{do{giftAgain=false;try{const s=await once(DB.collection("gift/"+UID));if(!C)return;C.gs=C.gs||{};const rs=[],items=[];
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;

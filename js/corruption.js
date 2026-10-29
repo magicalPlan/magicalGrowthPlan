@@ -40,13 +40,12 @@ async function checkRaid(){if(!C||!DB||!UID)return;
 function recover(){if(!C.fall)return;C.edge=0;const wt=!!C.fall.w;C.fall=null;C.dz=RECOVER_DZ;C.scar=Math.max(Number(C.scar)||0,Date.now()+(wt?WITCH_SCAR:SCAR_MS));/* 이미 남아 있는 더 긴 후유증(예: 마인의 3시간)을 짧게 덮어쓰지 않는다 */titleState();C.stats.recovered=(C.stats.recovered||0)+1;if(wt)C.fallT=[];note("fall",wt?"마인의 왕관이 부서지고 원래 모습으로 돌아왔다.":"타락에서 벗어나 원래 모습으로 돌아왔다.");save();checkTitles();raidClear();regPlayer();
  if(!$("#v-raid").hidden||!$("#v-hub").hidden)hub();if(wt){alertBox("마인의 끝","수많은 마법소녀의 빛이 검은 왕관을 부쉈다. 마인의 저주가 걷히고, "+C.n+"은(는) 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n마인이었던 흔적으로 "+(WITCH_SCAR/3600000)+"시간 동안 얻는 경험치가 절반이 된다.\n타락 횟수 기록은 초기화되었다. 다시는 혼자 무너지지 않기를.");return}alertBox("귀환","친구들의 마법이 닿았다. 타락에서 벗어나 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n다만 타락의 후유증으로 "+(Math.ceil((C.scar-Date.now())/600000)/6>1?"약 "+(Math.round((C.scar-Date.now())/360000)/10)+"시간":"1시간")+" 동안 얻는 경험치가 절반이 된다.")}
 /* 마을에서는 타락한 사람의 이름만 본다. 명단은 raid 칸 하나라서, 사람마다 체력·공격 기록을 따로 읽지 않는다.
-   마을을 벗어나면 그 읽기를 닫는다. 레이드에 들어간 뒤에만 그 한 사람의 체력과 공격 기록을 POLL_MS 마다 읽는다.
-   명단은 연결로 받지 않는다. 이미 타락한 사람이 첫 응답에 빠지면 알림도 같이 없기 때문이다.
-   POLL_HUB(20초)마다 지금 있는 칸을 읽고, 탭이 안 보이면 쉬었다가 다시 보이면 이어서 읽는다.
-   칸을 orderBy로 찾으면서 바뀜 확인(ETag)을 같이 붙이면 서버가 400을 낸다. 그래서 그 칸 전체를 그대로 읽는다.
+   마을에 들어올 때 그 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나거나 탭이 안 보이면 연결을 닫는다.
+   연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다. 그 조건과 바뀜 확인을 같이 쓰면 서버가 400을 낸다.
+   레이드에 들어간 뒤에만 그 한 사람의 체력과 공격 기록을 POLL_MS 마다 읽는다.
    칸이 있으면 공격 합계를 기다리기 전에 목록과 알림을 만든다. 체력이 0인 칸은 그 레이드에 들어간 쪽에서 지운다. */
-let unRaid=null,raidDocs=[],raidReady=false;
-function raidWatchStop(){if(unRaid){try{unRaid()}catch(e){}unRaid=null}}
+let unRaid=null,raidDocs=[],raidReady=false,raidGen=0;
+function raidWatchStop(){raidGen++;if(unRaid){try{unRaid()}catch(e){}unRaid=null}}
 function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&r.u&&r.u!==UID&&(C.fr[r.u]||r.w));
  rs.forEach(r=>{const key=r.u+"_"+r.rid;if(!(C.rsn&&C.rsn[key])){C.rsn=keepIds(C.rsn,key);if(r.w){const t="🜏 절망의 마인 강림! "+r.n+"이(가) "+((VL[r.v]||{}).n||"어느 마을")+"에서 마인이 되었다. 누구든 맞설 수 있다.";note("raid",t,r.u);toast(t);ding()}else note("raid",r.n+"님이 타락했다. 맞서서 되돌려 주자.",r.u)}});
  WCH=rs.filter(r=>r.w).map(r=>({u:r.u,n:r.n,v:r.v,rid:r.rid,hp:Math.max(0,(Number(r.mx)||0)-(Number(r.sd)||0)),mx:r.mx}));if(C.fall&&C.fall.w&&!WCH.some(w=>w.u===UID))WCH.push({u:UID,n:C.n,v:C.v,rid:C.fall.rid,hp:C.fall.mx,mx:C.fall.mx});
@@ -57,7 +56,9 @@ function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&
  rs.forEach(r=>{const b=document.createElement("button");b.type="button";b.className="chip raid-chip";b.style.textAlign="left";
   if(r.w)b.classList.add("witch-chip");b.textContent=(r.w?"🜏 절망의 마인 ":"타락한 ")+cn(r.u,r.n);b.onclick=()=>openRaid(r.u);l.appendChild(b)})}
 function drawRaids(){if(!DB||!C||$("#v-hub").hidden)return;if(unRaid){applyRaids();return}
- unRaid=DB.doc("raid").onSnapshot(sn=>{raidDocs=raidKids(sn.exists?sn.data():null).filter(r=>r.u);raidReady=true;applyRaids()},()=>{},POLL_HUB)}
+ const gen=++raidGen,take=sn=>{if(gen!==raidGen||$("#v-hub").hidden)return;raidDocs=raidKids(sn.exists?sn.data():null).filter(r=>r.u);raidReady=true;applyRaids()};
+ DB.doc("raid").get().then(take).catch(()=>{});
+ unRaid=DB.doc("raid").live().onSnapshot(take,()=>{},POLL_HUB)}
 const raidHitKey=list=>(list||[]).map(v=>[v&&v.u,v&&v.d,v&&v.c].join(":")).join("|");
 function raidLogFail(){if(rdLast)return;const box=$("#rdlg");if(box)box.innerHTML="<p class='hint' style='margin:0'>공격 기록을 불러오지 못했다.</p>"}
 function pullRaidHits(u,r){const n=++rdReq;return DB.doc("raidhit/"+u+"/"+r.rid).get().then(s=>{const hits=raidKids(s.exists?s.data():null);if(n===rdReq&&rdU===u&&rdR===r)drawRaid(hits);if(rdU!==u||rdR!==r)return null;return hits})}

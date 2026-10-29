@@ -32,9 +32,22 @@ function hubDis(){const box=$("#hdi");if(!box||!C)return;box.innerHTML="";const 
  cp.append(elT("b","",x.ic+" "+VL[x.v].n+" · "+x.nm+(x.v===C.v?" (우리 마을)":"")),elT("small","",done?"진압 완료! 효과가 끝났고 시설은 다시 쓸 수 있다.":"효과: "+x.ef+" · 진압 "+pts+" / "+DIS_GOAL+" · "+x.el+" 속성은 대응 점수 2배 · 진압되면 바로 끝 · 길어도 "+(()=>{const mm=Math.max(1,Math.ceil((x.T1-now)/60000));return (mm>=60?Math.floor(mm/60)+"시간 ":"")+(mm%60)+"분"})()),bar);
  const left=DIS_CD-(now-((C.dr&&C.dr.at)||0)),b=elT("button","chip",done?"완료":left>0?Math.ceil(left/60000)+"분 뒤":"대응");b.type="button";b.disabled=done||left>0||!!C.fall;b.onclick=disAct;w.append(cp,b);box.appendChild(w);
  if(!done)box.appendChild(elT("p","hint","대응할 때마다 골드 "+DIS_HIT.g+", 마을 경쟁 점수 5. 진압되면 대응한 모두에게 "+rwTxt(DIS_WIN)+"."))}
-/* 제압 점수는 이 칸만 다시 읽는다. 점수가 목표에 닿으면 효과를 끄고, 시설 버튼도 다시 쓸 수 있게 그린다. */
-let disPull=0,disSeen=null;
-async function disPullNow(force){const now=Date.now(),x=disInfo(disSlot(now));if(!x||now<x.T0||now>=x.T1||!DB||typeof XON!=="function"||!XON())return;if(!force&&(disDone(x)||now-disPull<25000))return;disPull=now;
+/* 제압 점수는 tally/dr/{재해} 한 칸만 본다. 점수가 목표에 닿으면 효과를 끄고, 시설 버튼도 다시 쓸 수 있게 그린다.
+   마을이나 시설 화면에서는 들어올 때 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 화면을 벗어나거나 진압되면 연결을 닫는다.
+   연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다.
+   내 마을 재해이거나 내가 점수를 보탠 뒤에는, 다른 화면에서 5분마다 읽어 효과가 끝나게 한다.
+   탭이 안 보이거나, 이미 진압됐거나, 나와 상관없는 재해이면 읽지 않는다. */
+let disPull=0,disSeen=null,unDis=null,disGen=0,disWatchId="";
+const disOnTown=()=>{if(typeof $!=="function")return false;const h=$("#v-hub"),f=$("#v-fac");return !!((h&&!h.hidden)||(f&&!f.hidden))};
+function disWatchStop(){disGen++;disWatchId="";if(unDis){try{unDis()}catch(e){}unDis=null}}
+function disWatchStart(x){if(unDis&&disWatchId===x.id)return;disWatchStop();const id=x.id,gen=++disGen;disWatchId=id;
+ const take=sn=>{if(gen!==disGen)return;const p=sn.exists?sn.data():null;if(p&&p.pts)DRP[id]=Math.max(DRP[id]||0,Number(p.pts)||0);disPaint()};
+ if(!document.hidden)DB.doc("tally/dr/"+id).get().then(take).catch(()=>{});
+ unDis=DB.doc("tally/dr/"+id).live().onSnapshot(take,()=>{},POLL_HUB)}
+async function disPullNow(force){const now=Date.now(),x=disInfo(disSlot(now));if(!x||now<x.T0||now>=x.T1||!DB||typeof XON!=="function"||!XON()||!C){disWatchStop();return}
+ if(disDone(x)){disWatchStop();return}const onTown=disOnTown();if(onTown){disWatchStart(x);if(!force)return}else disWatchStop();
+ if(!force){if(document.hidden)return;const mine=x.v===C.v||!!(C.dr&&C.dr.id===x.id);if(!mine||now-disPull<300000)return}
+ disPull=now;
  try{const s=await DB.doc("tally/dr/"+x.id).get(),p=s.exists?s.data():null;if(p&&p.pts)DRP[x.id]=Math.max(DRP[x.id]||0,Number(p.pts)||0)}catch(e){}}
 function disPaint(){const k=(()=>{const x=disLive(Date.now());return x?x.id:"-"})(),flip=disSeen!==k;disSeen=k;disAlert();disCheck();
  if(typeof $==="function"&&!$("#v-hub").hidden)hubDis();
