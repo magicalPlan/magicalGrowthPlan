@@ -290,7 +290,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!(t instanceof HTMLIma
 $("#imgo").addEventListener("click",e=>{if(e.target.id!=="imgoi")imgClose()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")imgClose()});
 const lhOf=k=>LH.find(x=>x[0]===k),lhOn=()=>!!(C&&C.lh&&lhOf(C.lh.k));
-function lhStart(k){const L=lhOf(k);if(!L||lhOn())return;if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
+function lhStart(k){const L=lhOf(k);if(!L||lhOn())return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
  const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();save();note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");hubLH()}
 function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
@@ -309,9 +309,10 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
   cp.append(elT("b","","🗺 "+L[1]+(done?" · 귀환!":" · 토벌 중")),elT("small","",done?"토벌을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L[3])*100)+"%"),bar);
   const b=elT("button","chip",done?"보상 받기":"철수");b.type="button";b.onclick=()=>lhClaim(!done);w.append(cp,b);box.appendChild(w);
   if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."));return}
+ if(typeof clueOn==="function"&&clueOn())box.appendChild(elT("p","hint","단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다."));
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]);
   cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+Math.round(L[4]*L[2]*(1+.1*(L[2]-1)/1.67))+", 경험치 약 "+Math.round(L[5]*L[2]*(1+.1*(L[2]-1)/1.67))+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]*L[2]));
-  const b=elT("button","chip","출발");b.type="button";b.disabled=!!C.fall;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
+  const b=elT("button","chip","출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn());b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
 // 돌아올 시각이 되면 한 번 알린다.
 setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){h.nt=1;save();const L=lhOf(h.k);note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if(!$("#v-hub").hidden)hubLH()},30000);
 
