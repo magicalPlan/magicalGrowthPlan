@@ -41,8 +41,21 @@ function drawSetting(){
  setLinked="";
  $("#setm").textContent="";
  verKeep();
+ oddsDraw();
  if(on)mailNote();
 }
+function oddsTxt(p){const n=Math.round(Number(p)*1e6)/10000;if(!isFinite(n))return "-";return n.toFixed(4).replace(/0+$/,"").replace(/\.$/,"")+"%"}
+function oddsRows(pairs){const ul=elT("ul","set-odd-list");pairs.forEach(([lab,p])=>{if(!(p>0))return;const li=elT("li","set-odd");li.append(elT("span","",lab),elT("b","",oddsTxt(p)));ul.appendChild(li)});return ul}
+function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"||typeof PET_RATE==="undefined"||typeof PET_EV==="undefined")return;box.innerHTML="";
+ const rate={};PET_RATE.forEach(([k,p])=>{rate[k]=p});
+ const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다."));
+ egg.appendChild(oddsRows([[PET_RARE[1],rate[1]],[PET_RARE[2],rate[2]],[PET_RARE[3],rate[3]]]));
+ const rest=1-(PET_EV.leg||0)-(PET_EV.lim||0),base=(rate[1]||0)+(rate[2]||0)||1,ev=elT("div","set-odd-box");
+ ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","전설과 기간 한정이 먼저 정해진다. 나머지는 일반과 희귀가 사역마의 알과 같은 비율로 나뉜다."));
+ ev.appendChild(oddsRows([[PET_RARE[3],PET_EV.leg],[PET_RARE[4],PET_EV.lim],[PET_RARE[1],rest*(rate[1]||0)/base],[PET_RARE[2],rest*(rate[2]||0)/base]]));
+ box.append(egg,ev)}
+(function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
+ d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
 $("#set-theme").onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()};
 $("#set-srv").onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."};
 $("#set-mail").onclick=()=>{const b=$("#set-mail-box");if(!b||!AUTH.uid)return;b.hidden=!b.hidden;if(!b.hidden){$("#set-pw-box").hidden=true;const box=$("#set-mail-idbox");if(box)box.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}};

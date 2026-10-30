@@ -275,6 +275,14 @@ html[data-theme="light"] .rst-card h2{color:#a8283f!important}
 .world-fold.sub{margin-top:10px;border-radius:12px;background:#00000033;box-shadow:none}
 .world-fold.sub>summary{padding:12px 14px}
 .world-fold.sub .world-name{font-size:1.05rem;letter-spacing:.08em}
+.qa-item{margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid #b89b5e44}
+.qa-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.qa-q,.qa-a{display:flex;gap:8px;align-items:flex-start}
+.qa-q{margin:0 0 6px;font-weight:700;line-height:1.6}
+.qa-a .world-p{flex:1;margin:0}
+.qa-tag{flex:none;font-family:"Gowun Batang",serif;color:#e6c56a;letter-spacing:.08em}
+html[data-theme="light"] .qa-item{border-bottom-color:#c4a15a66}
+html[data-theme="light"] .qa-tag{color:#7a5f22}
 
 html[data-theme="light"] .world-page{color:#6e5316;text-shadow:none}
 html[data-theme="light"] .world-lead{color:#7a5f22}

@@ -34,4 +34,16 @@ const village = (name, text) => {
    worldLines("특별한 목적을 가지고 아이를 꽃밭에서 데려오면 부모가 될 수 있다. 허나 대부분의 마인의 ‘특별한 목적’은 가족 구성이라기보단 비윤리적인 이유가 대부분이다."),
    worldLines("타르타로스에는 불문율이 있다. 이는 ‘어린 마인을 건드리지 않는다’는 내용으로, 이런 불문율이 생긴 데에는 두 가지 이유가 있다. 첫째로는 종족 유지. 두번째로는 어린아이로 변신하여 허점을 노리는 마인이 많았기 때문. 따라서 마인들은 14살까지는 보호받다가, 14살이 되는 순간 약육강식의 세계에 던져진다.")]))}
 function worldEvent(){show("wev")}
-function worldQa(){show("wqa")}
+/* Q&A. 글은 data/world/qa.json.
+   한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
+   답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
+const WORLD_QA_URL="data/world/qa.json?v=1";
+function worldQaItem(it){const q=String(it&&it.q||"").trim();if(!q)return null;const box=elT("div","qa-item"),qp=elT("p","qa-q");
+ qp.append(elT("b","qa-tag","Q"),document.createTextNode(q));const ap=elT("div","qa-a");ap.append(elT("b","qa-tag","A"),worldLines(it.a||""));box.append(qp,ap);return box}
+function worldQaDraw(root,list){(Array.isArray(list)?list:[]).forEach(sec=>{if(!sec||!sec.title)return;const nodes=(Array.isArray(sec.qa)?sec.qa:[]).map(worldQaItem).filter(Boolean);
+  root.appendChild(worldFold(String(sec.title),sec.tone||"",nodes.length?nodes:[elT("p","hint","아직 적힌 질문이 없다.")]))})}
+let wqaBusy=false;
+function worldQa(){show("wqa");const root=$("#v-wqa");if(!root||root.dataset.ready||wqaBusy)return;wqaBusy=true;
+ fetch(WORLD_QA_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(list=>{
+  if(!root||root.dataset.ready)return;const err=root.querySelector(".qa-err");if(err)err.remove();worldQaDraw(root,list);root.dataset.ready="1"}).catch(()=>{
+  wqaBusy=false;if(root&&!root.querySelector(".qa-err"))root.appendChild(elT("p","hint qa-err","Q&A를 불러오지 못했다. 새로고침해 보자."))})}
