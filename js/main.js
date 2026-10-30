@@ -142,7 +142,7 @@ function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOf
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
-function boot(){natHeal();if(C){titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}checkTitles()}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
+function boot(){natHeal();if(C){const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles()}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
  C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */
@@ -159,8 +159,9 @@ function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style
  const b1=elT("button","btn","① 로그아웃하고 평소 쓰던 기기에서 접속하기");b1.type="button";b1.onclick=()=>{o.remove();res("out")};
  const b2=elT("button","btn g","② 여기서 기본 정보로 복구하기");b2.type="button";b2.onclick=()=>{if(!confirm("기본 정보로 복구하면, 평소 기기의 백업으로는 자동 복구되지 않을 수 있다. 정말 여기서 복구할까?"))return;o.remove();res("base")};
  c.append(b1,b2);o.appendChild(c);document.body.appendChild(o)})}
-function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv=Math.max(1,Number(p.lv)||1),ex=Math.max(xpAt(lv),Number(p.ex)||0);
- const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:2,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{huntsWon:Number(p.cl)||0},
+function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv0=Math.max(1,Number(p.lv)||1);let ex=Math.max(0,Number(p.ex)||0);
+ if(ex>0&&ex<xpAt(lv0)&&typeof lvOfV2==="function"&&lvOfV2(ex)===lv0)ex=xpCurve(ex,2);ex=Math.max(ex,xpAt(lv0));
+ const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:3,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",stats:{huntsWon:Number(p.cl)||0},
   pf:p.pf&&typeof p.pf==="object"?p.pf:{},fc:p.fc&&typeof p.fc==="object"?p.fc:{},wf:Number(p.wf)||0,rescued:Date.now(),
   // 예전 보상·개인 지급은 이미 받은 것으로 친다(기본 정보 복구로 두 번 받지 않게). 이번 복구 보상만 새로 받는다.
   cmp:Object.fromEntries(COMP.map(x=>x[0]).concat(GRANT.map(x=>x[0])).filter(id=>id!=="restore-apology-20261016"&&id!=="maint-20261018").map(id=>[id,1]))};
@@ -172,7 +173,7 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
  try{const s=await DB.doc("accounts/"+UID).get();d=s.exists?s.data():null;accSeen=d?Number(d.ts)||null:null}catch(e){const c=String(e.message||e);throw new Error("서버에서 계정 정보를 읽지 못했다. "+(c==="401"||c==="403"?"데이터베이스 규칙에서 읽기가 막혀 있다. 규칙을 게시했는지 확인해야 한다.":c==="404"?"데이터베이스를 찾지 못했다. 데이터베이스를 만들었는지, 주소가 맞는지 확인해야 한다.":"서버에 접속하지 못했다. 주소와 인터넷 연결을 확인해야 한다.")+" (오류: "+c+", 주소: "+FBU+")")}
  C=null;if(d&&d.c){C=d.c;accMark();accReady=true;
   // 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다. 캐릭터 전체를 백업으로 갈아끼우지 않는다.
-  try{const raw=localStorage.getItem("mgr_pend_"+UID);if(raw){const f=JSON.parse(raw);if(f&&typeof f==="object"){applyPend(C,f);if(f["prog/ex"]!=null){C.ex=f["prog/ex"];C.lv=lvOf(C.ex);if(f["prog/xv"]!=null)C.xv=f["prog/xv"]}saveCloud(true)}}}catch(e){}}
+  try{const raw=localStorage.getItem("mgr_pend_"+UID);if(raw){const f=JSON.parse(raw);if(f&&typeof f==="object"){applyPend(C,f);if(f["prog/ex"]!=null){C.ex=f["prog/ex"];if(f["prog/xv"]!=null)C.xv=f["prog/xv"]}if(typeof xpMigrate==="function")xpMigrate();saveCloud(true)}}}catch(e){}}
  else{let bk=null;try{bk=JSON.parse(localStorage.getItem("mgr_bk_"+UID))}catch(e){}
   // 서버에 캐릭터가 없는데 이 브라우저에 이 계정의 백업이 있으면 그걸로 되살리고 서버에 다시 올린다.
   if(bk&&bk.n){C=bk;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;saveCloud(true)}}

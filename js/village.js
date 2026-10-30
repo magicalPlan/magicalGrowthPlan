@@ -12,14 +12,14 @@ let progBusy=false,progAgain=false;
 async function readProg(){if(!C||!AUTH.uid||LOCAL||!DB)return;if(progBusy){progAgain=true;return}progBusy=true;
  try{do{progAgain=false;if(savePending&&typeof saveCloud==="function"){try{await saveCloud(true)}catch(e){}}if(savePending)break;
   let p=null;try{const s=await DB.doc("accounts/"+UID+"/prog").get();p=s.exists?s.data():null}catch(e){break}if(savePending)break;
-  if(p&&p.ex!=null){xpMigrate();const mine=Math.max(0,Number(C.ex)||0),srv=Math.max(0,Number(p.ex)||0),ex=Math.max(mine,srv),lv=lvOf(ex),px=C.ex,plv=C.lv,pxv=Number(C.xv)||0;
-   C.ex=ex;C.xv=2;C.lv=lv;
-   if(ex!==srv||(Number(p.lv)||0)!==lv||(Number(p.xv)||0)!==2||C.ex!==px||C.lv!==plv||pxv!==2){if(typeof accBase!=="undefined"&&accBase&&Number(accBase.ex)===ex&&Number(accBase.lv)===lv&&Number(accBase.xv)===2){accBase.ex=srv;if((Number(p.lv)||0)!==lv)accBase.lv=Number(p.lv)||0}save()}}
-  else{const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=2;
-   if(C.ex!==ex0||C.lv!==lv0||C.xv!==xv0)save();else{try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":2,ts:Date.now(),sid:MY_SID})}catch(e){}}}}while(progAgain)}
+  if(p&&p.ex!=null){xpMigrate();const mine=Math.max(0,Number(C.ex)||0),got=xpCurve(p.ex,p.xv==null||p.xv===""?2:p.xv),ex=Math.max(mine,got),lv=lvOf(ex),px=C.ex,plv=C.lv,pxv=Number(C.xv)||0;
+   C.ex=ex;C.xv=3;C.lv=lv;
+   if(ex!==got||(Number(p.lv)||0)!==lv||(Number(p.xv)||0)!==3||C.ex!==px||C.lv!==plv||pxv!==3){if(typeof accBase!=="undefined"&&accBase&&Number(accBase.ex)===ex&&Number(accBase.lv)===lv&&Number(accBase.xv)===3){accBase.ex=got;if((Number(p.lv)||0)!==lv)accBase.lv=Number(p.lv)||0}save()}}
+  else{const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=3;
+   if(C.ex!==ex0||C.lv!==lv0||C.xv!==xv0)save();else{try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":3,ts:Date.now(),sid:MY_SID})}catch(e){}}}}while(progAgain)}
  finally{progBusy=false}if(!$("#v-hub").hidden){pmCleanup();paintLv()}}
-function pmCleanup(){if(!C)return;if(!(AUTH.uid&&!LOCAL&&DB)&&!(C.xv>=2)){xpMigrate();save()}if(C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=lvOf(C.ex)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
-function hub(){const fresh=$("#v-hub").hidden,online=!!(C&&AUTH.uid&&!LOCAL&&DB);show("hub");if(!fresh||!online)pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);
+function pmCleanup(){if(!C)return;xpMigrate();if(C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=lvOf(C.ex)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
+function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH.uid&&!LOCAL&&DB);show("hub");if(!fresh||!online)pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);
  const tt=titleById(C.ti),wn=C.wp>=0?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음",cell=(k,x)=>"<div><small>"+k+"</small><b>"+x+"</b></div>",lv=hubLv(),lvKeep=C.lv;if(C.xv>=2)C.lv=lv;const power=pw();if(C.xv>=2)C.lv=lvKeep;const into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
  $("#hc").innerHTML="<div class='hc-top'>"+(C.img?"<img class='av' alt='프로필 이미지' src='"+C.img+"'>":"<div class='av hc-noimg' aria-hidden='true'>"+esc(String(C.n).slice(0,1))+"</div>")+"<div class='hc-id'><h2>"+esc(cn(UID,C.n))+"</h2><p>"+v.n+" · "+C.s+" · "+C.a.join("·")+"</p>"+(tt?"<p class='hc-ti'>✦ "+tt[1]+"</p>":"")+"</div><span class='hc-grade'>"+C.g+"</span></div>"
   +"<div class='hc-grid'>"+cell("레벨","<span id='hclv'>"+lv+"</span>")+cell("토벌",C.cl+"회")+cell("전투력","<span id='hcpw'>"+power+"</span>")+cell("골드",C.gd||0)+cell("무기",wn)+cell("특성",C.t)+"</div>"+(petCur()?"<p class='hc-pet'>"+PETS[petCur().sp][2]+" "+PETS[petCur().sp][1]+" "+esc(petCur().nm)+" · 친밀도 "+petLv(petCur())+"단계</p>":"")
