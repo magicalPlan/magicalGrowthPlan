@@ -396,8 +396,9 @@ const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
 function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRunes();drawPets();drawRetrait();drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";if(fresh)applyGift();
- const rowEl=(label,sub,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
-  i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;w.appendChild(i);
+ const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
+  i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
+  if(ic){const t=document.createElement("div");t.style.minWidth="0";t.append(...i.childNodes);i.classList.add("it-row");i.append(ic,t)}w.appendChild(i);
   btns.forEach(([t,fn,dis])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.textContent=t;b.disabled=!!dis;b.onclick=fn;w.appendChild(b)});return w};
  const it=$("#bgi");it.innerHTML="";const own=ITM.filter(x=>(C.inv[x[0]]||0)>0);
  if(!own.length)it.innerHTML="<p class='hint'>가진 아이템이 없다. 상점에서 살 수 있다.</p>";
@@ -405,8 +406,8 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   // 희망의 결정: 준비 없이 바로 쓰는 아이템. 절망도 하락량은 HOPE_DZ만 고치면 바뀐다.
   if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]]));if(prismOn)it.appendChild(prismBox());return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
-   if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]]));return}
-  it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[]))});
+   if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
+  it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
  bagWeapons(rowEl);
  if(!C.wps.length&&!own.length)bm.textContent=msg||""}
 // 이 친구에게 쓸 수 있는 빈 칸 번호와, 다 찼다면 가장 빨리 비는 시각
@@ -440,14 +441,14 @@ function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!rg.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
  rg.map((x,i)=>[x,i]).reverse().forEach(([x,i])=>{const it=ITM.find(t=>t[0]===x.g);if(!it)return;const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const c=elT("div","chip");c.style.cssText="flex:1;text-align:left;cursor:default";
-  c.append(elT("b","","🎁 "+it[1]),elT("small","",x.n+"님이 보냄 · "+bdAgo(x.ts)+" · 절망도 -"+rgVal(x.g)+(GIFT_EX[x.g]?" · 경험치 +"+GIFT_EX[x.g]:"")));c.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
+  c.append((()=>{const t=elT("b","",(ITEM_IMG[x.g]?"":"🎁 ")+it[1]),ic=itIc(x.g,"sm");if(ic)t.prepend(ic);return t})(),elT("small","",x.n+"님이 보냄 · "+bdAgo(x.ts)+" · 절망도 -"+rgVal(x.g)+(GIFT_EX[x.g]?" · 경험치 +"+GIFT_EX[x.g]:"")));c.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
   const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(i);w.append(c,b);box.appendChild(w)});
  if(rg.length>1){const a=elT("button","btn g","모두 열기 (절망도 -"+rg.reduce((s,x)=>s+rgVal(x.g),0)+")");a.type="button";a.disabled=!!C.fall;a.onclick=()=>rgUse("all");box.appendChild(a)}}
 $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;return}C.inv=C.inv||{};gb.hidden=false;gb.innerHTML="";
  const sl=giftSlot(u);gb.appendChild(elT("p","hint","이 친구에게 오늘 보낼 수 있는 선물 "+sl.left+" / "+GIFT_DAY+"개"+(sl.i<0?" · 약 "+cdTxt(sl.soon-Date.now())+" 뒤에 다시 보낼 수 있다":"")));
  const own=ITM.filter(x=>x[0][0]==="g"&&(C.inv[x[0]]||0)>0);if(!own.length){gb.appendChild(elT("p","hint","가방에 선물이 없다. 상점에서 사거나 공방에서 만들 수 있다."));return}
  let sel=null;const row=document.createElement("div");row.className="row";row.style.margin="10px 0";
- own.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=x[1]+" x"+C.inv[x[0]];b.setAttribute("aria-pressed","false");
+ own.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=x[1]+" x"+C.inv[x[0]];{const ic=itIc(x[0],"sm");if(ic)b.prepend(ic)}b.setAttribute("aria-pressed","false");
   b.onclick=()=>{sel=x[0];row.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"))};row.appendChild(b)});
  const go=document.createElement("button");go.type="button";go.className="btn";go.textContent="보내기";go.disabled=sl.i<0;
  go.onclick=async()=>{const m=$("#pfm");if(!sel){m.style.color="var(--bad)";m.textContent="보낼 선물을 골라야 한다.";return}

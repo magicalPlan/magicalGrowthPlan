@@ -32,6 +32,6 @@ function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="de
  const row=elT("div","row");row.style.marginBottom="10px";row.append(rw("절반 보상",Math.ceil(t/2),"h",d.half),rw("완성 보상",t,"f",d.full));hd.appendChild(row);
  const l=$("#dex-list");l.innerHTML="";dexItems(d.k).forEach(it=>{const has=dexHas(C,d.k,it.id),c=elT("div","chip sq dex-it"+(has?"":" lock"));
   const star=(d.k==="bs"&&C.dex.bs&&C.dex.bs[it.id]>=2)||(d.k==="wp"&&has&&wlv(Number(it.id.slice(1)))>=5)?" ★":"";
-  c.append(elT("small","dex-tag",it.tag),elT("b","",has?it.nm+star:"???"),elT("small","",has?it.ds:it.hint));l.appendChild(c)});
+  if(d.k==="it"){const ic=itIc(it.id,"lg");if(ic)c.appendChild(ic)}c.append(elT("small","dex-tag",it.tag),elT("b","",has?it.nm+star:"???"),elT("small","",has?it.ds:it.hint));l.appendChild(c)});
  const m=$("#dex-msg");m.style.color="var(--mu)";m.textContent=msg||(d.k==="bs"?"★는 처치까지 함께한 보스다.":d.k==="wp"?"★는 +5까지 강화한 무기다.":d.k==="ev"?"마을 전용 이벤트는 그 마을 출신과 함께 출정해야 만날 수 있다.":"");if(fresh)readDex()}
 $("#rec-t").onclick=e=>{const t=e.target.dataset&&e.target.dataset.r;if(t==="dex")dex();else if(t==="ttl")titles()};

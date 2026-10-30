@@ -4,6 +4,8 @@ const $=s=>document.querySelector(s);
 const R=n=>Math.floor(Math.random()*n);
 // 요소를 만들어 클래스와 글자를 한 번에 넣는다. cls 나 txt 를 비우면 그 항목은 건너뛴다.
 const elT=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+// 아이템 도트 그림. 그림이 없는 아이템이면 null. cls: "lg"(카드 위 큰 그림) · "sm"(글 앞 작은 그림). 목록은 data/game.js 의 ITEM_IMG.
+const itIc=(id,cls)=>{if(typeof ITEM_IMG==="undefined"||!ITEM_IMG[id])return null;const i=document.createElement("img");i.src="img/items/"+id+".png?v="+ITEM_IMG_V;i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic"+(cls?" "+cls:"");return i};
 // 채팅·게시글에 넣을 글에서 HTML 로 읽힐 문자를 글자 그대로 보이게 바꾼다.
 const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 // 최근 참여 기록은 최대 6개만 남긴다. 새 id 를 넣고, 더 오래된 키부터 지운다.

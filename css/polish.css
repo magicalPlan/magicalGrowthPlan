@@ -454,3 +454,15 @@ html[data-theme="light"] .clue-hr{color:#0f5f6a;background:#d3eef0;border-color:
 html[data-theme="light"] .clue-chip{background:#fffcf6;border-color:var(--ln)}
 html[data-theme="light"] .clue-chip.good{color:#2e7d3a}html[data-theme="light"] .clue-chip.bad{color:#b8304a}
 html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .clue-chip.clp{color:#1f6fa8}
+
+/* 아이템 도트 그림 (img/items, js/common/base.js 의 itIc) */
+.it-ic{image-rendering:pixelated;image-rendering:crisp-edges;flex:0 0 auto;filter:drop-shadow(0 2px 3px #0006)}
+.it-ic.lg{display:block;width:56px;height:56px;margin:0 auto 6px}
+.it-ic.sm{width:24px;height:24px;vertical-align:-6px;margin-right:6px}
+.it-row{display:flex!important;align-items:center;justify-content:flex-start!important;gap:12px}
+.it-row>div{flex:1;text-align:left}
+.it-row>.it-ic{width:40px;height:40px}
+.dex-it.lock .it-ic{filter:brightness(0) opacity(.35)}
+.chip.sq .it-ic.lg{margin-top:2px}
+html[data-theme="light"] .it-ic{filter:drop-shadow(0 1px 2px #0003)}
+html[data-theme="light"] .dex-it.lock .it-ic{filter:brightness(0) opacity(.2)}
