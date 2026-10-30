@@ -71,4 +71,4 @@ $("#set-pw-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$(
   m.textContent="비밀번호를 바꿨다. 다음 로그인부터 새 비밀번호를 쓴다."}
  catch(err){m.textContent=mailErr(err,"pw")}
  btn.disabled=false};
-$("#set-out").onclick=()=>{const o=$("#b-out");if(o)o.click()};
+$("#set-out").onclick=()=>logOut();

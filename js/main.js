@@ -79,7 +79,7 @@ function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
   const f=elT("form","row");f.style.cssText="margin-top:8px;flex-wrap:nowrap";const i=elT("input");i.type="password";i.placeholder="비밀 코드";i.setAttribute("aria-label","비밀 코드");i.style.flex="1";const b=elT("button","btn","저장하기");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
   f.onsubmit=async e=>{e.preventDefault();const v=i.value.trim().normalize("NFC");let ok=false;try{ok=await codeOk(v)}catch(x){}if(!ok){i.value="";i.placeholder="코드가 맞지 않다";return}AUTH.jc=v;keep("mgr_jc_"+AUTH.uid,v);saveErr="";saveCloud(true)};w.appendChild(f);return}
  w.textContent="⚠ 캐릭터가 서버에 저장되지 않고 있다 (오류 "+c+(lastSaveErr&&lastSaveErr.msg?" · 서버 응답: "+lastSaveErr.msg+" · "+lastSaveErr.kb+"KB":"")+"). "+(bad?"로그인 키는 '"+tp+"' 프로젝트 것인데 데이터베이스는 '"+dp+"' 프로젝트다. 웹 API 키와 데이터베이스 주소가 같은 프로젝트 것인지 확인해야 한다.":c==="401"||c==="403"?"다시 로그인하면 대부분 해결된다. 계속되면 운영자에게 이 화면을 보여 주자. 이 브라우저에는 백업이 남아 있다."+saveDiag:"인터넷 연결을 확인하자. 연결되면 자동으로 다시 저장한다.");
- if(c==="401"||c==="403"){const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>{const o=$("#b-out");if(o)o.click();else location.reload()};row.append(rb,lb);w.appendChild(row)}}
+ if(c==="401"||c==="403"){const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.append(rb,lb);w.appendChild(row)}}
 // 로그인 토큰이 어느 Firebase 프로젝트 것인지 읽는다(점검용).
 function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));return p.aud||""}catch(e){return ""}}
 /* 저장이 401/403(권한 없음)으로 막히면 바로 포기하지 않고 차례로 다시 시도한다.
@@ -240,7 +240,7 @@ $("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isCompo
 $("#lmode-id").onclick=()=>lmode(false);$("#lmode-em").onclick=()=>lmode(true);
 $("#lsw").onclick=()=>{signup=!signup;$("#lcd").hidden=true;$("#lcode").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent="";lmode(lmailMode)};
 $("#lloc").onclick=()=>{DB=local();LOCAL=true;UID="나";FBU="";mode(0);boot()};
-$("#b-out").onclick=()=>{keep("mgr_rt","");location.reload()};
+function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}
  if(DB){mode(1);boot();return}
@@ -486,7 +486,7 @@ $("#nav").onclick=e=>{
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
   if(g==="town"){if(!here)hub();else updNav();return}
-  if(g==="act"){if(!here)arena();else updNav();return}
+  if(g==="act"){if(!here)ord();else updNav();return}
   if(g==="world"){if(!here)worldView();else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")(recTab==="ttl"?titles():dex());else updNav();return}
