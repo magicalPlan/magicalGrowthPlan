@@ -46,7 +46,7 @@ function petDexCard(P){const lim=P[3]===4,got=petMet(P[0]),c=elT("div","chip sq 
  c.appendChild(elT("small","dex-tag",got?(lim?"기간 한정":(PET_RARE[P[3]]||"")):(lim?"기간 한정":"사역마")));
  c.appendChild(elT("b",got?"pet-r"+P[3]:"",got?P[1]:"???"));
  c.appendChild(elT("small","",got?P[4]:(lim?"우연이 닿아야만 만날 수 있는 이들이 있다.":"아직 만나지 못한 사역마이다.")));
- if(got)c.appendChild(elT("small","pet-dex-fx","성능: "+P[5](1)));
+ if(got)c.appendChild(elT("small","pet-dex-fx",""+P[5](1)));
  return c}
 function petDexAll(){return typeof PETS==="undefined"?[]:Object.values(PETS)}
 function petDexN(){return petDexAll().filter(x=>petMet(x[0])).length}

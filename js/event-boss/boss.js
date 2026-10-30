@@ -10,8 +10,9 @@ function ebHpEst(){if(!DB)return Math.max(BOSS_SCALE.d.min,Math.round(witchHpOf(
 function ebHp(list){const withHp=(list||[]).filter(v=>v&&v.u&&Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):ebHpEst()}
 function ebDead(list){return list.length>0&&(list.some(v=>v&&v.x)||sumHits(list)>=ebHp(list))}
 function ebMatName(id){const m=typeof MATM!=="undefined"&&MATM[id];return m?m[2]+" "+m[1]:id}
-function ebDropTxt(){return (EBOSS.drop||[]).map(([id,n])=>ebMatName(id)+" "+n).join(", ")}
-function ebGrant(){C.inv=C.inv||{};const bits=[];(EBOSS.drop||[]).forEach(([id,n])=>{const c=Math.max(0,Number(n)||0);if(!id||!c)return;C.inv[id]=(C.inv[id]||0)+c;bits.push(ebMatName(id)+" +"+c)});return bits.join(", ")}
+function ebDropTxt(){const bits=(EBOSS.drop||[]).map(([id,n])=>ebMatName(id)+" "+n);if(typeof clpOn==="function"&&clpOn()&&CLP.drop&&CLP.drop.eb)bits.push(CLP.ic+" "+CLP.nm+" "+CLP.drop.eb);return bits.join(", ")}
+function ebGrant(){C.inv=C.inv||{};const bits=[];(EBOSS.drop||[]).forEach(([id,n])=>{const c=Math.max(0,Number(n)||0);if(!id||!c)return;C.inv[id]=(C.inv[id]||0)+c;bits.push(ebMatName(id)+" +"+c)});
+ if(typeof clpGain==="function"){const cp=clpGain("eb");if(cp)bits.push(cp)}return bits.join(", ")}
 function ebNext(now){const end=bpEnd(now),d=new Date(now),cut=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()>=12?24:12).getTime();return Math.min(end,cut)}
 function eboss(){show("ord");const m=$("#ebm");if(m){m.textContent="";m.style.color=""} if(!C)return;ebDay();if(typeof clueDraw==="function")clueDraw();if(typeof clpDraw==="function")clpDraw();
  if(!DB){drawEboss([]);if(m){m.style.color="var(--mu)";m.textContent="이벤트 보스를 쓸 수 없다."}return}
