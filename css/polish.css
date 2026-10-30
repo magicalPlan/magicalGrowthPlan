@@ -338,6 +338,23 @@ html[data-theme="light"] #clue .dq.clue-on{border-color:#1f7a86}
 .pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
 html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
 html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
+#pet-dex{margin-top:28px}
+#pet-dex .wgrid{margin:0 0 8px}
+.pet-dex-it{cursor:default}
+.pet-dex-it .pet-ic{font-size:1.7rem;line-height:1}
+.pet-dex-it.lock{border-style:dashed;opacity:.78}
+#dex-list .pet-dex-it.lock{opacity:.78}
+#dex-list .pet-dex-it.lock>small:last-child{display:block}
+#dex-list .pet-dex-it.lim.lock{opacity:1}
+.pet-dex-it .pet-dex-fx{color:#d8c79a}
+.pet-dex-lim-h{color:#9fd8ff;border-bottom-color:#8cc8ff55}
+.pet-dex-it.lim{border-color:#8cc8ff88;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.2),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #8cc8ff33}
+.pet-dex-it.lim .dex-tag{color:#9fd8ff!important}
+.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(140,200,255,.08) 0 8px,transparent 8px 16px),#14121f}
+html[data-theme="light"] .pet-dex-lim-h{color:#1f6fa8;border-bottom-color:#5a9fd4}
+html[data-theme="light"] .pet-dex-it.lim{border-color:#5a9fd4;background:linear-gradient(180deg,#eef5fb,#f6f0e5);box-shadow:none}
+html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(90,159,212,.16) 0 8px,transparent 8px 16px),#f4f8fc}
+html[data-theme="light"] .pet-dex-it .pet-dex-fx{color:#6b5216}
 
 /* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) */
 .clp-card{--c:#3a5f8f;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.14),transparent 70%),var(--card,#14121f)!important;border-color:#6fa8dc88!important}
