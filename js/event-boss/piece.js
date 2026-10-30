@@ -44,18 +44,23 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  Object.entries(r.mat||{}).forEach(([id,k])=>b.push((typeof cfName==="function"?cfName(id):id)+" "+k));
  if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
 
-/* 장기 의뢰 맨 위의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다. */
+/* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.
+   위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳. */
 function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),before=now<CLP.from,after=now>=CLP.to;box.innerHTML="";
  const c=elT("div","card clp-card");box.appendChild(c);
- c.append(elT("p","boss-tag",CLP.ic+" 서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"11월 14일까지 · 남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"),elT("p","hint",CLP.ds));
- if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 14일 24시까지 출정, 장기 토벌, 단서 탐색에서 "+CLP.nm+"을(를) 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));return}
- const pct=Math.min(1,CLPN/CLP.goal),bar=elT("div","bar clp-bar"),f=elT("i");f.style.width=(pct*100)+"%";bar.appendChild(f);
- CLP.ms.forEach(s=>{const t=elT("span","clp-tick"+(CLPN>=CLP.goal*s[0]?" on":""));t.style.left=(s[0]*100)+"%";bar.appendChild(t)});
- c.append(bar,elT("p","clp-num","모두가 찾은 조각 "+CLPN.toLocaleString()+" / "+CLP.goal.toLocaleString()+" ("+Math.floor(pct*100)+"%)"+(CLPN>=CLP.goal?" · 목표 달성!":"")),
-  elT("p","","내가 찾은 조각 "+me.n.toLocaleString()+"개"+(me.n<1?" · 1개 이상 찾아야 단계 보상을 받을 수 있다":"")));
- const ul=elT("div","clp-ms");CLP.ms.forEach((s,i)=>{const need=Math.ceil(CLP.goal*s[0]),reach=CLPN>=need,got=!!me.got[i],w=elT("div","dq"+(got?" done":reach?" clp-ready":"")),cp=elT("div","dq-copy");
-  cp.append(elT("b","",(got?"✓ ":reach?"🎁 ":"· ")+s[2]+" · "+need.toLocaleString()+"개"),elT("small","",clpRwTxt(s[1])));w.appendChild(cp);
-  const b=elT("button","chip",got?"받았다":reach?"보상 받기":"아직");b.type="button";b.disabled=got||!reach||me.n<1;b.onclick=()=>clpClaim(i);w.appendChild(b);ul.appendChild(w)});c.appendChild(ul);
- if(CLPTOP.length){const ol=elT("ol","boss-rank");c.appendChild(elT("p","boss-info","가장 많이 찾은 마법소녀"));CLPTOP.forEach(t=>ol.appendChild(elT("li",t.u===UID?"me":"",cn(t.u,t.n)+" · "+(Number(t.pt)||0)+"개")));c.appendChild(ol)}
- c.appendChild(elT("p","boss-info","찾는 곳: 단서 탐색(시간당 약 2.5개, 가장 많이) · 장기 토벌 성공(시간당 "+Math.round(CLP.drop.lh*100)+"% 확률) · 정기·고독한 출정(성공 "+Math.round(CLP.drop.x_ok*100)+"%, 실패 "+Math.round(CLP.drop.x_fail*100)+"% 확률)"));
+ const hd=elT("div","clp-hd");hd.append(elT("span","clp-ic",CLP.ic),(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
+ c.appendChild(elT("p","clp-ds",CLP.ds));
+ if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 14일 24시까지 출정, 장기 토벌, 단서 탐색에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
+ const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");
+ big.append(elT("b",null,CLPN.toLocaleString()),elT("span",null," / "+CLP.goal.toLocaleString()+"개"),elT("em",null,CLPN>=CLP.goal?"목표 달성!":Math.floor(pct*100)+"%"));c.appendChild(big);
+ const bar=elT("div","bar clp-bar"),f=elT("i");f.style.width=(pct*100)+"%";bar.appendChild(f);
+ CLP.ms.forEach(s=>{const t=elT("span","clp-tick"+(CLPN>=CLP.goal*s[0]?" on":""));t.style.left=(s[0]*100)+"%";bar.appendChild(t)});c.appendChild(bar);
+ const grid=elT("div","clp-ms");CLP.ms.forEach((s,i)=>{const need=Math.ceil(CLP.goal*s[0]),reach=CLPN>=need,got=!!me.got[i],w=elT("div","clp-m"+(got?" got":reach?" ready":""));
+  w.append(elT("small","clp-mn",(got?"✓ ":reach?"🎁 ":"")+need.toLocaleString()+"개"),elT("b",null,s[2]),elT("small","clp-mr",clpRwTxt(s[1])));
+  if(!reach)w.appendChild(elT("span","clp-lock","🔒 "+(need-CLPN).toLocaleString()+"개 남음"));
+  else{const b=elT("button","chip",got?"받았다":me.n<1?"조각 1개 필요":"보상 받기");b.type="button";b.disabled=got||me.n<1;b.onclick=()=>clpClaim(i);w.appendChild(b)}grid.appendChild(w)});c.appendChild(grid);
+ const ft=elT("div","clp-ft");ft.appendChild(elT("p","clp-me","내가 찾은 조각 "+me.n.toLocaleString()+"개"+(me.n<1?" · 1개 이상 찾아야 보상을 받는다":"")));
+ if(CLPTOP.length){const tp=elT("div","clp-top");tp.appendChild(elT("small",null,"많이 찾은 마법소녀"));CLPTOP.slice(0,5).forEach((t,i)=>tp.appendChild(elT("span","clp-chip"+(t.u===UID?" me":""),["🥇","🥈","🥉","4","5"][i]+" "+cn(t.u,t.n)+" "+(Number(t.pt)||0))));ft.appendChild(tp)}
+ const wh=elT("div","clp-where");wh.appendChild(elT("small",null,"찾는 곳"));[["🔍 단서 탐색","시간당 약 2.5개"],["🗺 장기 토벌","시간당 "+Math.round(CLP.drop.lh*100)+"%"],["⚑ 출정","성공 "+Math.round(CLP.drop.x_ok*100)+"%"]].forEach(([a,b])=>{const sp=elT("span","clp-chip");sp.append(elT("b",null,a+" "),document.createTextNode(b));wh.appendChild(sp)});ft.appendChild(wh);
+ c.appendChild(ft);if(typeof ordMarks==="function")ordMarks();
  if(!noFetch&&(Date.now()-clpAt>30000))clpLoad()}

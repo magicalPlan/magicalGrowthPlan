@@ -1,14 +1,26 @@
-<!-- 장기 의뢰의 단서 조각(맨 위 #clp, data/clue/piece.js · js/event-boss/piece.js), 이벤트 보스와 단서 탐색.
+<!-- 장기 의뢰: 단서 조각(#clp, data/clue/piece.js · js/event-boss/piece.js), 이벤트 보스(#ebl), 단서 탐색(#clue).
      보스 숫자와 이름표는 data/event-boss/boss.js, 싸움은 js/event-boss/boss.js.
      탐색 시간과 보상은 data/clue/hunt.js, 조사 문장은 data/clue/script.js, 동작은 js/event-boss/clue.js.
+     넓은 화면은 위에 두 칸(단서 조각 · 이벤트 보스), 아래에 단서 탐색 한 줄, 좁은 화면은 위의 탭으로 하나씩 본다. 탭은 js/act/ord.js.
      실전 하위 탭은 html/home/main.html, 전환은 js/act/ord.js. -->
-<div id="v-ord" hidden>
-<h2>장기 의뢰</h2>
-<p class="hint">닿지 못한 염원과 사랑이 얼어붙어 탄생한 '눈의 여왕'<br />소중한 것을 되찾고 싶다면, 온 몸을 다해 부딪혀라.</p>
-<div id="clp"></div>
-<div id="ebl"></div>
-<p class="msg" id="ebm" role="alert"></p>
-<h2>단서 탐색</h2>
-<p class="hint">눈의 여왕이 남긴 흔적을 찾아 떠난다. 1시간, 3시간, 6시간, 12시간 중 하나를 고른다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다.</p>
-<div class="hist" id="clue"></div>
+<div id="v-ord" hidden data-tab="clp">
+<div class="ord-hero">
+<p class="ord-kicker">❄ 기간 한정 장기 의뢰</p>
+<h2 class="ord-title">눈의 여왕</h2>
+<p class="ord-lead">닿지 못한 염원과 사랑이 얼어붙어 탄생한 '눈의 여왕'. 소중한 것을 되찾고 싶다면, 온 몸을 다해 부딪혀라.</p>
+</div>
+<div class="ord-tabs" role="tablist" aria-label="장기 의뢰 보기">
+<button type="button" role="tab" data-p="clp" aria-selected="true">🧩 단서 조각<i class="ord-dot" hidden></i></button>
+<button type="button" role="tab" data-p="boss" aria-selected="false">⚔ 이벤트 보스<i class="ord-dot" hidden></i></button>
+<button type="button" role="tab" data-p="clue" aria-selected="false">🔍 단서 탐색<i class="ord-dot" hidden></i></button>
+</div>
+<div class="ord-grid">
+<section class="ord-pane" data-p="clp"><div id="clp"></div></section>
+<section class="ord-pane" data-p="boss"><div id="ebl"></div><p class="msg" id="ebm" role="alert"></p></section>
+<section class="ord-pane" data-p="clue">
+<div class="ord-head"><h3>🔍 단서 탐색</h3>
+<details class="ord-help"><summary>안내</summary><p>눈의 여왕이 남긴 흔적을 찾아 떠난다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다. 단서 조각이 가장 많이 나오는 곳이다.</p></details></div>
+<div id="clue"></div>
+</section>
+</div>
 </div>

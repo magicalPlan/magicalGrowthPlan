@@ -5,7 +5,7 @@
 const clueOf=id=>(CLUE||[]).find(x=>x.id===id);
 const clueOn=()=>!!(C&&C.clue&&clueOf(C.clue.k));
 const clueBonus=hr=>1+.1*Math.max(0,hr-1)/1.67;
-function clueDraw(){const box=$("#clue");if(!box||!C)return;if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();
+function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==="function")setTimeout(ordMarks,0);if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();
  if(clueOn()){const h=C.clue,L=clueOf(h.k),done=now>=h.t1,w=elT("div","dq clue-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
   f.style.width=Math.min(100,(now-h.t0)/Math.max(1,h.t1-h.t0)*100)+"%";bar.appendChild(f);
   cp.append(elT("b","","🔍 "+L.nm+(done?" · 귀환!":" · 탐색 중")),elT("small","",done?"탐색을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L.pw)*100)+"%"),bar);
@@ -13,9 +13,13 @@ function clueDraw(){const box=$("#clue");if(!box||!C)return;if(C.clue&&!clueOf(C
   if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 장기 토벌과 정기 출정에는 참가할 수 없다."));return}
  if(typeof lhOn==="function"&&lhOn())box.appendChild(elT("p","hint","장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다."));
  else if(C.mj&&Date.now()<C.mj.T0)box.appendChild(elT("p","hint","정기 출정에 참가 신청한 동안에는 떠날 수 없다."));
- const pv=pw();CLUE.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L.pw),bonus=clueBonus(L.hr);
-  cp.append(elT("b","",L.nm+" · "+L.hr+"시간"),elT("small","",L.ds+" 권장 전투력 "+L.pw+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+Math.round(L.g*L.hr*bonus)+", 경험치 약 "+Math.round(L.ex*L.hr*bonus)+(L.m?", 마력석 "+L.m+"+":"")+" · 절망도 +"+L.dz*L.hr));
-  const b=elT("button","chip","출발");b.type="button";b.disabled=!!C.fall||(typeof lhOn==="function"&&lhOn())||!!(C.mj&&Date.now()<C.mj.T0);b.onclick=()=>clueStart(L.id);w.append(cp,b);box.appendChild(w)})}
+ // 탐색 고르기: 카드 격자. 위에 이름과 시간, 가운데 설명, 아래에 성공 확률과 보상을 작은 칩으로 보여 준다.
+ const pv=pw(),grid=elT("div","clue-grid");CLUE.forEach(L=>{const c=lhChance(pv,L.pw),bonus=clueBonus(L.hr),w=elT("div","clue-card"+(c<.4?" hard":""));
+  const top=elT("div","clue-top");top.append(elT("b","",L.nm),elT("span","clue-hr",L.hr+"시간"));w.append(top,elT("p","clue-ds",L.ds));
+  const chips=elT("div","clue-chips"),chip=(t,cls)=>chips.appendChild(elT("span","clue-chip"+(cls?" "+cls:""),t));
+  chip("성공 "+Math.round(c*100)+"%",c<.4?"bad":c>=.7?"good":"");chip("권장 "+L.pw);chip("💰 "+Math.round(L.g*L.hr*bonus));chip("✨ "+Math.round(L.ex*L.hr*bonus));if(L.m)chip("💎 "+L.m+"+");chip("절망 +"+L.dz*L.hr,"dz");
+  if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn())chip("🧩 약 "+Math.round(L.hr*(CLP.drop.clue.base+CLP.drop.clue.extra)),"clp");w.appendChild(chips);
+  const b=elT("button","btn g clue-go","출발");b.type="button";b.disabled=!!C.fall||(typeof lhOn==="function"&&lhOn())||!!(C.mj&&Date.now()<C.mj.T0);b.onclick=()=>clueStart(L.id);w.appendChild(b);grid.appendChild(w)});box.appendChild(grid)}
 function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toast("타락한 동안에는 탐색을 떠날 수 없다.");return}
  if(typeof lhOn==="function"&&lhOn()){toast("장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다.");return}
  if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
