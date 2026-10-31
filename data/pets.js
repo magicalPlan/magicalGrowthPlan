@@ -29,3 +29,5 @@ const PETS={rabbit:["rabbit","별토끼","🐇",1,"귀에 별가루가 묻은 �
    · 기간이 끝나면 품지 않은 서리 드래곤의 알은 녹아서 평범한 사역마의 알이 된다(이미 품고 있던 알은 그대로 깨어난다). */
 const PET_EV={from:Date.UTC(2026,9,31,15),to:Date.UTC(2026,10,14,15),nm:"서리 드래곤의 알",ic:"❄️",ds:"얼음 궁전 깊은 곳, 서리 드래곤이 품고 있던 알. 차갑게 반짝이지만, 귀를 대면 작은 심장 소리가 들린다.",leg:.03,lim:.03};
 const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DROP_X=.02,PET_DROP_LH=.15,PET_PAT=5,PET_FEED=5,PET_SNACK_G=30,PET_SNACK_N=3,PET_XP_RUN=1,PET_MAX=3,PET_LV=[0,20,50,90,140];
+/* 유대의 증거: 사역마를 보내 줄 때 그 사역마의 친밀도 단계에 따라 남기는 개수. [0단계, 1, 2, 3, 4, 5단계]. 동작은 js/pet/care.js 의 petBye. */
+const PET_BOND=[0,1,1,3,3,4];
