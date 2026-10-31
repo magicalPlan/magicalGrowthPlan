@@ -1,5 +1,6 @@
 /* 마을 시설과 희망의 등대. main.js 다음에 불러야 한다. 기부, 단계, 이용.
    시설 합계와 단계는 vfac/{마을} 만 읽는다. 등대 합계와 재해 진압 합계는 tally 한 칸이다.
+   마을이나 시설 화면에서는 등대 합계에 연결해 두고, 그 칸이 바뀌면 화면만 고친다. 화면을 벗어나면 연결을 닫는다.
    score 전체는 그 합계가 아직 없을 때 한 클라이언트만 한 번 옮겨 적는다. 상위 5명은 시설 탭에서만 받는다. */
 const facUsed=k=>!!(C.fu&&C.fu.d===today()&&C.fu.u&&C.fu.u[k]);
 const facQuake=()=>typeof disMine==="function"&&disMine()==="quake";
@@ -47,9 +48,18 @@ async function scoreSeedOnce(){let cur=null;try{const s=await DB.doc("tally/wf")
 function tallyWfAdd(pts,v){if(!DB||!UID||!pts||!VL[v])return;DB.doc("tally/wf").transact(cur=>{const b=cur&&typeof cur.sum==="number"?cur:{sum:0,A:0,B:0,C:0,D:0,top:[]};const o={sum:Math.min(1e8,(Number(b.sum)||0)+pts),A:Number(b.A)||0,B:Number(b.B)||0,C:Number(b.C)||0,D:Number(b.D)||0,top:Array.isArray(b.top)?b.top.filter(t=>t&&t.u!==UID):[]};
  o[v]=Math.min(1e8,(Number(b[v])||0)+pts);o.top.push({u:UID,n:String(typeof nmOf==="function"?nmOf():C.n||"").replace(/👑/g,"").slice(0,20),v,pt:Math.min(1e7,Number(C.wf)||0)});o.top=o.top.sort((a,b)=>b.pt-a.pt).slice(0,5);return o}).catch(()=>{})}
 function tallyDr(id,add){if(!DB||!id||!add)return;DB.doc("tally/dr/"+String(id).slice(0,40)).transact(cur=>({pts:Math.min(100000,(Number(cur&&cur.pts)||0)+add)})).catch(()=>{})}
+function wfPack(wf){return wf&&typeof wf.sum==="number"?{sum:Number(wf.sum)||0,v:{A:Number(wf.A)||0,B:Number(wf.B)||0,C:Number(wf.C)||0,D:Number(wf.D)||0},top:Array.isArray(wf.top)?wf.top:[]}:null}
+/* 마을·시설 화면에 있는 동안 등대 합계를 연결로 본다. 처음 한 번 받고, 이후에는 바뀐 합계만 반영한다.
+   이미 화면에 있는 합계보다 작은 값은 무시한다. 방금 기부한 점수가 서버에 닿기 전에 덮이지 않게 한다.
+   연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. */
+let unWf=null,wfGen=0;
+function wfWatchStop(){if(!unWf)return;wfGen++;if(unWf){try{unWf()}catch(e){}unWf=null}}
+function wfWatchStart(){if(!DB||typeof XON!=="function"||!XON()||unWf)return;const gen=++wfGen;
+ const paint=sn=>{if(gen!==wfGen||!C)return;const d=wfPack(sn.exists?sn.data():null);if(!d||!wfApply(d))return;if(typeof $!=="function")return;if(!$("#v-hub").hidden&&typeof hubFac==="function")hubFac();if(!$("#v-fac").hidden&&typeof facView==="function")facView(true)};
+ unWf=DB.doc("tally/wf").live().onSnapshot(paint,()=>{},POLL_HUB)}
 async function tallyLoad(){let wf=null;try{const s=await DB.doc("tally/wf").get();wf=s.exists?s.data():null}catch(e){}
  if(!wf||typeof wf.sum!=="number"){await scoreSeedOnce();try{const s=await DB.doc("tally/wf").get();wf=s.exists?s.data():null}catch(e){}}
- if(wf&&typeof wf.sum==="number")wfApply({sum:Number(wf.sum)||0,v:{A:Number(wf.A)||0,B:Number(wf.B)||0,C:Number(wf.C)||0,D:Number(wf.D)||0},top:Array.isArray(wf.top)?wf.top:[]});
+ const d=wfPack(wf);if(d)wfApply(d);
  const x=typeof disInfo==="function"?disInfo(disSlot(Date.now())):null;if(!x)return;
  try{const s=await DB.doc("tally/dr/"+x.id).get(),p=s.exists?s.data():null;if(p&&p.pts)DRP[x.id]=Math.max(DRP[x.id]||0,Number(p.pts)||0)}catch(e){}}
 async function loadFac(){if(!C||!XON())return;if(facBusy){facAgain=true;return}facBusy=true;try{do{facAgain=false;await pubScore();await vfacSync(C.v,false);await tallyLoad();facNotice();facAt=Date.now()}while(facAgain)}finally{facBusy=false}}
@@ -79,7 +89,7 @@ function facGive(k,g,st){const pts=g+st*FAC_STONE,m=$("#fm2");if(g&&(C.gd||0)<g)
 var WFD={sum:0,v:{},top:[]};
 function wfLvOf(d){let l=0;for(const T of WF_LV){if(d.sum<T||!Object.keys(VL).every(k=>(d.v[k]||0)>=T*WF_SHARE))break;l++}return l}
 const wfLv=()=>wfLvOf(WFD);
-function wfApply(d){const b=C.wfl,l=wfLvOf(d);WFD=d;if(b==null){C.wfl=l;save();return}if(l>b){wfUp(l);C.wfl=l}}
+function wfApply(d){if(!d||!(Number(d.sum)>=0))return false;if(Number(d.sum)<(Number(WFD&&WFD.sum)||0))return false;const b=C?C.wfl:null,l=wfLvOf(d);WFD=d;if(!C)return true;if(b==null){C.wfl=l;save();return true}if(l>b){wfUp(l);C.wfl=l}return true}
 function wfUp(l){if(l>=WF_LV.length&&(Number(C.wf)||0)>0)C.wfDone=1;note("fac","🗼 희망의 등대가 "+l+"단계가 되었다! 모든 마을에 새 빛: "+WF_EFF[l-1]);toast("🗼 희망의 등대 "+l+"단계! "+WF_EFF[l-1]);ding();save();checkTitles()}
 // 다음 단계까지 모자란 것: 전체 점수, 그리고 기준에 못 미친 마을
 function wfNeed(){const l=wfLv(),T=WF_LV[l];if(!T)return null;return{T,left:Math.max(0,T-WFD.sum),low:Object.keys(VL).filter(k=>(WFD.v[k]||0)<T*WF_SHARE)}}

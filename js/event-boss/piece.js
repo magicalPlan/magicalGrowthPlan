@@ -3,7 +3,8 @@
    출정(js/room.js 의 settle), 장기 토벌(js/main.js 의 lhClaim), 단서 탐색(js/event-boss/clue.js 의 clueClaim), 이벤트 보스 토벌 보상(js/event-boss/boss.js 의 ebGrant)은 clpGain 을 그대로 부른다.
    내 기록은 C.clp = {id, n: 찾은 개수, got: {단계 번호: 1}}.
    서버 합계는 tally/clue/{CLP.id} = {n: 합계, top: [{u, n: 이름, pt: 그 사람이 찾은 개수}]} 한 칸이다(희망의 등대 tally/wf 와 같은 방식).
-   그 칸에 쓸 수 없으면 재해 진압 합계와 같은 tally/dr/{CLP.id} 에 대신 쓴다. 읽을 때는 두 칸 중 큰 값을 쓴다. */
+   그 칸에 쓸 수 없으면 재해 진압 합계와 같은 tally/dr/{CLP.id} 에 대신 쓴다. 읽을 때는 두 칸 중 큰 값을 쓴다.
+   장기 의뢰 화면이 열려 있고 이벤트 중일 때만 두 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다. */
 let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0;
 const clpOn=()=>{const t=Date.now();return t>=CLP.from&&t<CLP.to};
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
@@ -26,9 +27,16 @@ function clpAdd(n){if(!DB||!UID||!n||typeof XON==="function"&&!XON())return;cons
  const step=cur=>{const b=cur&&typeof cur.n==="number"?cur:{n:0,top:[]},o={n:Math.min(1e8,(Number(b.n)||0)+n),top:(Array.isArray(b.top)?b.top:[]).filter(t=>t&&t.u!==UID)};
   if(typeof b.pts==="number")o.pts=o.n;o.top.push({u:UID,n:nm,pt:me.n});o.top=o.top.sort((a,x)=>x.pt-a.pt).slice(0,5);return o};
  CLPN+=n;DB.doc(clpPath()).transact(step).then(v=>{if(v)clpTake(v)}).catch(()=>DB.doc(clpAlt()).transact(cur=>{const o=step(cur);o.pts=o.n;return o}).then(v=>{if(v)clpTake(v)}).catch(()=>{}))}
-function clpTake(v){if(!v)return;CLPN=Math.max(CLPN,Number(v.n)||0,Number(v.pts)||0);if(Array.isArray(v.top))CLPTOP=v.top}
+function clpTake(v){if(!v)return false;const k=Math.max(Number(v.n)||0,Number(v.pts)||0);if(k<CLPN)return false;CLPN=k;if(Array.isArray(v.top))CLPTOP=v.top;return true}
+/* 장기 의뢰를 보고 있는 동안에만 합계 두 칸을 연결로 본다. 처음 한 번 받고, 이후에는 더 커진 합계만 반영한다.
+   연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. */
+let unClp=null,clpGen=0;
+function clpWatchStop(){if(!unClp)return;clpGen++;unClp.forEach(u=>{try{u()}catch(e){}});unClp=null}
+function clpWatchStart(){if(!DB||typeof XON!=="function"||!XON()||unClp)return;const now=Date.now();if(now<CLP.from||now>=CLP.to)return;const gen=++clpGen;
+ const take=v=>{if(gen!==clpGen||!clpTake(v))return;if(typeof $==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clpDraw(true)};
+ unClp=[clpPath(),clpAlt()].map(p=>DB.doc(p).live().onSnapshot(sn=>take(sn.exists?sn.data():null),()=>{},POLL_HUB))}
 async function clpLoad(){if(!DB||clpBusy)return;clpBusy=true;try{const rs=await Promise.all([clpPath(),clpAlt()].map(p=>DB.doc(p).get().then(s=>s.exists?s.data():null).catch(()=>null)));
-  let n=0,top=[];rs.forEach(v=>{if(!v)return;const k=Math.max(Number(v.n)||0,Number(v.pts)||0);if(k>=n){n=k;if(Array.isArray(v.top))top=v.top}});CLPN=Math.max(CLPN,n);CLPTOP=top;clpAt=Date.now()}finally{clpBusy=false}
+  let n=0,top=[];rs.forEach(v=>{if(!v)return;const k=Math.max(Number(v.n)||0,Number(v.pts)||0);if(k>=n){n=k;if(Array.isArray(v.top))top=v.top}});if(n>=CLPN){CLPN=n;CLPTOP=top}clpAt=Date.now()}finally{clpBusy=false}
  if($("#v-ord")&&!$("#v-ord").hidden)clpDraw(true)}
 
 // 단계 보상 받기: 합계가 그 단계에 닿았고, 조각을 1개 이상 찾았고, 아직 안 받았을 때만.
@@ -63,5 +71,6 @@ function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.
  const ft=elT("div","clp-ft");ft.appendChild(elT("p","clp-me","내가 찾은 조각 "+me.n.toLocaleString()+"개"+(me.n<1?" · 1개 이상 찾아야 보상을 받는다":"")));
  if(CLPTOP.length){const tp=elT("div","clp-top");tp.appendChild(elT("small",null,"많이 찾은 마법소녀"));CLPTOP.slice(0,5).forEach((t,i)=>tp.appendChild(elT("span","clp-chip"+(t.u===UID?" me":""),["🥇","🥈","🥉","4","5"][i]+" "+cn(t.u,t.n)+" "+(Number(t.pt)||0))));ft.appendChild(tp)}
  const wh=elT("div","clp-where");wh.appendChild(elT("small",null,"찾는 곳"));[["🔍 단서 탐색","시간당 약 2.5개"],["🗺 장기 토벌","시간당 "+Math.round(CLP.drop.lh*100)+"%"],["⚑ 출정","성공 "+Math.round(CLP.drop.x_ok*100)+"%"],["❄ 이벤트 보스","토벌 보상 "+CLP.drop.eb+"개"]].forEach(([a,b])=>{const sp=elT("span","clp-chip");sp.append(elT("b",null,a+" "),document.createTextNode(b));wh.appendChild(sp)});ft.appendChild(wh);
- c.appendChild(ft);if(typeof ordMarks==="function")ordMarks();
- if(!noFetch&&(Date.now()-clpAt>30000))clpLoad()}
+ c.appendChild(ft); if(typeof ordMarks==="function")ordMarks();
+ if(!before&&!after){if(!unClp)clpWatchStart();if(!clpAt)clpLoad()}
+ else{if(unClp)clpWatchStop();if(!noFetch&&Date.now()-clpAt>30000)clpLoad()}}
