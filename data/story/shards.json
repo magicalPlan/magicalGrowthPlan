@@ -1,0 +1,79 @@
+{
+  "shards": [
+    {
+      "id": "shard-1",
+      "title": "기억의 파편 1",
+      "cast": {
+        "???": { "name": "???", "img": "assets/standing/some_winter_girl_crop.png", "side": "right" }
+      },
+      "start": "meet",
+      "nodes": {
+        "meet": {
+          "lines": [
+            { "who": "???", "text": "안녕." },
+            { "who": "???", "text": "할머니랑 더 있지, 왜 따라오니?" }
+          ],
+          "choose": [
+            { "label": "그냥.", "next": "plain" },
+            { "label": "네 곁에 있는 게 좋아서.", "next": "stay" },
+            { "label": "할머니에게 사과해.", "next": "sorry" }
+          ]
+        },
+        "plain": {
+          "lines": [
+            { "who": "???", "text": "넌 생각도 없이 행동하는구나. 바보같아." }
+          ]
+        },
+        "stay": {
+          "lines": [
+            { "who": "???", "text": "알랑방귀나 뀌는 게 꼴보기 싫어." }
+          ]
+        },
+        "sorry": {
+          "lines": [
+            { "who": "???", "text": "겨우 그런 말이나 하려고 나한테 온 거야?" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shard-2",
+      "title": "기억의 파편 2",
+      "cast": {},
+      "start": "dim",
+      "nodes": {
+        "dim": {
+          "lines": [
+            { "who": "", "text": "이 기억은 아직 흐릿하다." }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shard-3",
+      "title": "기억의 파편 3",
+      "cast": {},
+      "start": "dim",
+      "nodes": {
+        "dim": {
+          "lines": [
+            { "who": "", "text": "이 기억은 아직 흐릿하다." }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shard-4",
+      "title": "기억의 파편 4",
+      "cast": {},
+      "start": "dim",
+      "nodes": {
+        "dim": {
+          "lines": [
+            { "who": "", "text": "이 기억은 아직 흐릿하다." }
+          ]
+        }
+      }
+    }
+  ]
+}

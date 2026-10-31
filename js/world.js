@@ -33,7 +33,23 @@ const village = (name, text) => {
    worldLines("이름 없는 세계의 절망과 괴로움 등 부정적인 감정을 기반으로 돌아가는 세계. 최근 새로운 마왕이 즉위했으며, 현재 전쟁의 원인은 그 마왕. 허나 마왕의 정체는 베일에 싸여있다. 상상하기도 싫은 권악징선과 약육강식만이 존재하는 세계. 아이들은 거대한 꽃이 가득 만발한 ‘시작의 꽃밭’에서 자라난다. 이 중 1만 년에 한번 태어나는 특별한 아이가 마왕이 된다. 마수, 하급 마인, 상급 마인, 마왕 순의 계급 체재가 있다."),
    worldLines("특별한 목적을 가지고 아이를 꽃밭에서 데려오면 부모가 될 수 있다. 허나 대부분의 마인의 ‘특별한 목적’은 가족 구성이라기보단 비윤리적인 이유가 대부분이다."),
    worldLines("타르타로스에는 불문율이 있다. 이는 ‘어린 마인을 건드리지 않는다’는 내용으로, 이런 불문율이 생긴 데에는 두 가지 이유가 있다. 첫째로는 종족 유지. 두번째로는 어린아이로 변신하여 허점을 노리는 마인이 많았기 때문. 따라서 마인들은 14살까지는 보호받다가, 14살이 되는 순간 약육강식의 세계에 던져진다.")]))}
-function worldEvent(){show("wev")}
+
+/* 이벤트 스토리. 글과 선택지는 data/story/shards.json, 창은 js/story/vn.js 의 vnOpen.
+   기억의 파편 버튼을 누르면 그 이야기만 띄운다. JSON을 한 번 읽어 이 탭에 기억해 두고, 서버에는 저장하지 않는다.
+   글을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
+const WORLD_STORY_URL="data/story/shards.json?v=2";
+let worldStoryBusy=false;
+function worldShard(story){const b=elT("button","world-shard",story.title||"기억의 파편");b.type="button";b.onclick=()=>{if(typeof vnOpen==="function")vnOpen(story)};return b}
+function worldEventDraw(root,book){const list=Array.isArray(book&&book.shards)?book.shards:[];
+ root.appendChild(elT("p","world-lead","기억의 파편. 누르면 그 기억이 대화로 펼쳐진다."));
+ if(!list.length){root.appendChild(elT("p","hint","아직 적힌 기억이 없다."));return}
+ list.forEach(story=>{if(story&&story.start)root.appendChild(worldShard(story))})}
+function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.ready||worldStoryBusy)return;worldStoryBusy=true;
+ fetch(WORLD_STORY_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{
+  if(!root||root.dataset.ready)return;const err=root.querySelector(".story-err");if(err)err.remove();worldEventDraw(root,book);root.dataset.ready="1"}).catch(()=>{
+  worldStoryBusy=false;if(root&&!root.querySelector(".story-err"))root.appendChild(elT("p","hint story-err","기억을 불러오지 못했다. 새로고침해 보자."))})}
+
+  
 /* Q&A. 글은 data/world/qa.json.
    한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
    답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
