@@ -3,7 +3,8 @@
    · 알 얻기: 상점가 PET_EGG_G골드(하루 1개), 출정 성공 시 PET_DROP_X 확률, 장기 토벌 성공 시 PET_DROP_LH 확률.
    · 부화: 알을 품으면 PET_HATCH(1시간) 뒤에 깨어난다. 종류는 희귀도 확률(일반 70% · 희귀 27% · 전설 3%)로 정해진다.
    · 친밀도: 쓰다듬기(하루 1번, +PET_PAT), 간식(PET_SNACK_G골드, 하루 3번, +PET_FEED), 함께 출정 성공(+PET_XP_RUN). 단계 기준 PET_LV.
-   · 최대 PET_MAX마리까지 데리고 있을 수 있고, '보내 주기'로 자리를 비울 수 있다.
+   · 캐릭터마다 '가질 수 있는 사역마 상한'(C.petMax, 처음엔 PET_MAX=3마리)까지 데리고 있을 수 있고, '보내 주기'로 자리를 비울 수 있다.
+     공방에서 만드는 '사역마 조련 허가증'을 쓰면 상한이 1 오른다. 늘릴 수 있는 것은 PET_MAX_UP(3)마리까지라서 최대 6마리다.
    효과 크기는 petEff()에서 숫자만 고치면 바뀐다. */
 const PETS={rabbit:["rabbit","별토끼","🐇",1,"귀에 별가루가 묻은 토끼. 새로운 것을 배우는 걸 좋아한다.",L=>"출정 경험치 +"+2*L+"%"],
  sparrow:["sparrow","바람참새","🐦",1,"반짝이는 것을 물어 오는 작은 새.",L=>"출정 골드 +"+2*L+"%"],
@@ -31,3 +32,5 @@ const PET_EV={from:Date.UTC(2026,9,31,15),to:Date.UTC(2026,10,14,15),nm:"서리 
 const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DROP_X=.02,PET_DROP_LH=.15,PET_PAT=5,PET_FEED=5,PET_SNACK_G=30,PET_SNACK_N=3,PET_XP_RUN=1,PET_MAX=3,PET_LV=[0,20,50,90,140];
 /* 유대의 증거: 사역마를 보내 줄 때 그 사역마의 친밀도 단계에 따라 남기는 개수. [0단계, 1, 2, 3, 4, 5단계]. 동작은 js/pet/care.js 의 petBye. */
 const PET_BOND=[0,1,1,3,3,4];
+/* 사역마 조련 허가증으로 늘릴 수 있는 상한 수. 기본 상한은 PET_MAX. 동작은 js/pet/care.js 의 petCap · petLicense. */
+const PET_MAX_UP=3;
