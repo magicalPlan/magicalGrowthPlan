@@ -6,6 +6,8 @@ let craftQ=1,craftBusy=false;
 
 // 이름표: 아이템이면 ITM, 재료면 MAT 에서 찾는다.
 const cfName=id=>{const m=MATM[id];if(m)return m[2]+" "+m[1];const x=ITM.find(t=>t[0]===id);return x?x[1]:id};
+// 화면용 이름: 도트 그림이 있으면 이모지 없이 이름만(그림을 따로 붙인다).
+const cfNm=id=>{const m=MATM[id];if(m&&typeof ITEM_IMG!=="undefined"&&ITEM_IMG[id])return m[1];return cfName(id)};
 const cfHave=id=>((C.inv||{})[id]||0);
 
 /* 재료 얻기: MAT_DROP 의 표 이름 목록을 받아 줄마다 굴린다. times 가 있으면 그 표를 그만큼 반복한다(장기 토벌의 시간마다).
@@ -33,15 +35,15 @@ function craft(msg){if(!C)return;C.inv=C.inv||{};const fresh=$("#v-craft").hidde
  const mm=$("#cfmsg");mm.style.color="var(--mu)";mm.textContent=msg||"";if(msg&&again)toast(msg);
  // 가진 재료
  const ml=$("#cfm");ml.innerHTML="";MAT.forEach(m=>{const c=elT("button","chip cf-mat");c.type="button";c.title=m[3]+" 얻는 곳: "+m[4];c.onclick=()=>{mm.style.color="var(--mu)";mm.textContent=m[2]+" "+m[1]+": "+m[3]+" 얻는 곳: "+m[4]+"."};
-  c.append(elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});
+  c.append(itIc(m[0],"sm")||elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});
  // 만들 수량
  const qb=$("#cfq");qb.innerHTML="";qb.appendChild(elT("span","shopq-l","만들 수량"));
  [1,5,10,99].forEach(n=>{const b=elT("button","chip",n===99?"최대":n+"개");b.type="button";b.setAttribute("aria-pressed",craftQ===n?"true":"false");b.onclick=()=>{craftQ=n;craft()};qb.appendChild(b)});
  // 제작법
  const rl=$("#cfl");rl.innerHTML="";RCP.forEach(r=>{const lock=lv<r[5],mx=lock?0:cfMax(r),k=Math.min(craftQ,mx),g=cfGold(r),b=document.createElement("button");b.type="button";b.className="chip sq cf-r"+(lock?" lock":"");
   const it=ITM.find(t=>t[0]===r[1]),ds=it?it[2]:(MATM[r[1]]||[])[3]||"";
-  {const ic=itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfName(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
-  const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfName(id)+" "+cfHave(id)+"/"+n);need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
+  {const ic=itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
+  const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfNm(id)+" "+cfHave(id)+"/"+n);{const ic=itIc(id,"xs");if(ic)s.prepend(ic)}need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
   const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":"");
   b.appendChild(elT("small",null,st));b.appendChild(elT("small",null,"보유 "+cfHave(r[1])));
   b.setAttribute("aria-label",cfName(r[1])+" 만들기. "+st+". "+r[6]);b.disabled=lock||mx<=0;b.onclick=()=>doCraft(r[0]);rl.appendChild(b)});

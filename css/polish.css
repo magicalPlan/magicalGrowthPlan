@@ -495,3 +495,7 @@ html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .c
 .chip.sq .it-ic.lg{margin-top:2px}
 html[data-theme="light"] .it-ic{filter:drop-shadow(0 1px 2px #0003)}
 html[data-theme="light"] .dex-it.lock .it-ic{filter:brightness(0) opacity(.2)}
+
+/* 재료 도트: 공방 재료 칸과 필요한 재료 칩 */
+.it-ic.xs{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
+.cf-mat .it-ic.sm{width:28px;height:28px;margin:0;vertical-align:middle}
