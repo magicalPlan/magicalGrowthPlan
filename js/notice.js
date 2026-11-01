@@ -101,21 +101,37 @@ const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
 async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
-async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad();if(!R||!C)return;
- if((Number(C.rsv)||0)>=R.id)return;
- if(Number(C.born)>R.id){C.rsv=R.id;save();return}// 초기화 뒤에 새로 만든 캐릭터
- rstApply(R,boot)}
+/* 한 명만 회귀: 그 계정의 캐릭터 기록(accounts/{대상})을 바로 되돌린다. 접속 중이 아니어도 서버 기록은 이미 초기화된다.
+   players/{대상}/rr 에 시각을 남겨, 접속 중인 화면이 옛 캐릭터를 다시 저장하면 그 시각을 보고 한 번 더 되돌린다. */
+async function rstOneLoad(){if(!XON()||!UID)return null;let best=null;
+ for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/rstu/"+UID).get()).data();const id=d&&Number(d.id)||0;if(id>0&&(!best||id>best.id))best={id,by:u}}catch(e){}}
+ return best}
+async function rstRr(){if(!XON()||!UID)return 0;try{const s=await DB.doc("players/"+UID+"/rr").get();return s.exists?Number(s.data())||0:0}catch(e){return 0}}
+async function rstFresh(){if(!C||!UID||!DB)return;const id=await rstRr();if(!id||id<=(Number(lget("mgr_rr_"+UID))||0))return;try{localStorage.removeItem("mgr_pend_"+UID)}catch(e){}try{keep("mgr_rr_"+UID,String(id))}catch(e){}}
+async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=await rstOneLoad(),rr=await rstRr();if(!C)return;
+ const cur=Number(C.rsv)||0,gid=R?R.id:0,oid=Math.max(one?one.id:0,rr),gDue=gid>cur,oDue=oid>cur;if(!gDue&&!oDue)return;
+ const due=Math.max(gDue?gid:0,oDue?oid:0);
+ if(Number(C.born)>due){C.rsv=due;save();return}// 표시보다 뒤에 새로 만든 캐릭터
+ rstApply({id:due},boot,oDue&&oid>=(gDue?gid:0))}
+/* 접속 중인 회귀 표시. players/{나}/rr 는 숫자 하나다. 접속할 때 한 번 확인한 뒤(rstCheck)에는 연결로 두고, 그 숫자가 커질 때만 받는다.
+   15초마다 다시 묻지 않는다. 연결이 거절되면 2분마다 묻되, 같으면 본문은 받지 않는다. 탭이 안 보이면 연결을 닫고, 다시 보이면 연다. */
+let unRr=null,rrGen=0;
+function rrWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unRr)return;const uid=UID,gen=++rrGen;
+ const take=sn=>{if(gen!==rrGen||!C||UID!==uid)return;const id=sn.exists?Number(sn.data())||0:0;if(!(id>(Number(C.rsv)||0)))return;
+  if(Number(C.born)>id){C.rsv=id;try{keep("mgr_rr_"+uid,String(id))}catch(e){}save();return}rstApply({id},false,true)};
+ unRr=DB.doc("players/"+uid+"/rr").live().onSnapshot(take,()=>{},120000)}
 /* 회귀: 캐릭터를 만들 때 고른 첫 속성만 남긴다. 재계약 시험으로 뒤에 붙은 속성은 지운다. */
 function rstAttrs(list){const a=(Array.isArray(list)?list:[]).filter(x=>typeof AT!=="undefined"&&AT.some(t=>t[0]===x));return a.length?[a[0]]:["불"]}
-function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined)keep[k]=C[k]});
+function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={};RST_KEEP.forEach(k=>{if(base[k]!==undefined)keep[k]=base[k]});
  keep.a=rstAttrs(keep.a);
- C=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:R.id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
- if(typeof eggFix==="function")eggFix();
- C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,100);
- note("notice","🌑 새 시즌이 시작되었다. 이름·처음 속성·특성·사역마와 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.");
+ const next=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
+ next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,100);
+ const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
+function rstApply(R,boot,one){C=rstShape(C,R.id);if(one){try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}try{clearPend()}catch(e){}}
+ note("notice",one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·처음 속성·특성·사역마와 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.":"🌑 새 시즌이 시작되었다. 이름·처음 속성·특성·사역마와 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.");
  save();try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}try{if(typeof raidClear==="function")raidClear()}catch(e){}
- const msg="운영자가 시즌을 초기화했다.\n\n남은 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마\n처음으로 돌아간 것: 등급(E)·시험으로 얻은 속성·레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n새로운 이야기를 시작하자.";
- if(boot)setTimeout(()=>alertBox("🌑 새 시즌",msg),900);else{alertBox("🌑 새 시즌",msg);try{hub()}catch(e){}}}
+ const msg=(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마\n처음으로 돌아간 것: 등급(E)·시험으로 얻은 속성·레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
+ if(boot)setTimeout(()=>alertBox(one?"🌑 개인 회귀":"🌑 새 시즌",msg),900);else{alertBox(one?"🌑 개인 회귀":"🌑 새 시즌",msg);try{hub()}catch(e){}}}
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
@@ -136,7 +152,7 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
   alertBox("🌑 시즌 초기화 완료","플레이어들은 다음 접속, 또는 공지 탭을 열 때 각자 초기화된다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
   msg.textContent=""}
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화 표시를 저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (아무것도 바뀌지 않았다)"}btn.disabled=false}
-function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
+function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
   elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마는 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
   elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
@@ -151,4 +167,30 @@ function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hi
   try{const w=await apiVfacRecover(s=>{rm.textContent=s});rm.style.color="var(--mu)";rm.textContent="복구했다. 플레이어 "+w.players+"명 중 기여 "+w.used+"명."+(w.skipped?" 마을이 없는 기록 "+w.skipped+"명.":"")+(w.failRead?" 읽지 못한 플레이어 "+w.failRead+"명.":"")+(w.failWrite?" 쓰지 못한 칸 "+w.failWrite+"개.":"")+(w.removed?" 옛 순위 "+w.removed+"개 삭제.":"");
    alertBox("🏛 시설 기여 복구",rm.textContent+(w.lines.length?"\n\n"+w.lines.join("\n"):"\n\n옮길 시설 기여가 없었다.")+"\n\n마을 탭에 다시 들어가면 맞춘 단계가 보인다.");}
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
- rc.append(rb,rm);box.appendChild(rc)}
+ rc.append(rb,rm);box.appendChild(rc);
+ const pc=elT("div","card rst-card rst-one");pc.style.marginTop="12px";pc.append(elT("h2","","👤 개인 회귀 (운영자 전용)"),
+  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 되돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마는 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+  elT("p","hint","접속 중이 아니어도 서버 기록을 바로 되돌린다. 접속 중이면 그 화면에도 바로 반영된다. 채팅·게시판·선물·마을·보스와 다른 사람의 기록은 그대로 둔다."));
+ const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
+ const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc)}
+async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(inp.value||"").trim();
+ if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
+ let name="";try{const s=await DB.doc("players/"+uid+"/n").get();if(s.exists&&typeof s.data()==="string")name=s.data().replace(/👑/g,"").trim().slice(0,20)}catch(e){}
+ const who=name?name+" ("+uid+")":uid;
+ const t=prompt(who+" 의 캐릭터를 지금 서버에서 되돌린다. 접속 중이 아니어도 적용된다. 채팅·게시판·선물·마을·보스와 다른 사람의 기록은 그대로다. 되돌릴 수 없다.\n\n계속하려면 '회귀'라고 입력해 줘.");
+ if((t||"").trim()!=="회귀"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="기록을 되돌리는 중이다. 창을 닫지 말자...";
+ try{const R={id:Date.now(),ts:Date.now()};
+  if(uid===UID){await DB.doc("players/"+UID+"/rr").set(R.id);await DB.doc("players/"+UID+"/rstu/"+uid).set(R);rstApply(R,false,true);msg.textContent="이 계정을 지금 회귀했다.";inp.value=""}
+  else{const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");
+   const ch=rstShape(acc.c,R.id);await DB.doc("accounts/"+uid).patch({c:ch,prog:{lv:ch.lv||1,ex:ch.ex||0,xv:ch.xv||3},ts:Date.now()});
+   await DB.doc("players/"+uid+"/rr").set(R.id);await DB.doc("players/"+UID+"/rstu/"+uid).set(R);
+   const pub=rstPub(ch),late=[];
+   try{await DB.doc("players/"+uid).patch(pub)}catch(e){late.push("공개 카드")}
+   try{await DB.doc("who/"+uid).patch({g:String(ch.g||"").slice(0,2),a:String(pub.a||"").slice(0,40),lv:ch.lv||1,pw:pub.pw||0,dz:0,fl:null,rv:R.id,db:null})}catch(e){late.push("명부")}
+   try{await DB.doc("raid/"+uid).delete()}catch(e){}
+   msg.textContent=who+" 의 캐릭터를 서버에서 지금 되돌렸다."+(late.length?" "+late.join(", ")+"은 그 사람이 다음에 접속하면 맞춰진다.":"");inp.value=""}}
+ catch(e){const c=String(e&&e.message||e);msg.style.color="var(--bad)";msg.textContent=c==="401"||c==="403"?"이 계정의 기록을 운영자가 직접 바꾸지 못했다. 데이터베이스 규칙에서 운영자의 계정 읽기와 쓰기가 열려 있는지 확인해야 한다.":c==="empty"?"그 UID의 캐릭터 기록을 찾지 못했다.":"저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
+ btn.disabled=false}
+function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
+ return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
