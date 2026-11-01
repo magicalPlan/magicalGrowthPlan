@@ -62,6 +62,7 @@ input::placeholder,textarea::placeholder{color:var(--mu);opacity:.7}
 
 /* 9. 마력 각인: 이름과 설명이 엉켜 줄바꿈되던 것을 위아래로 정리 */
 #bgr>div>.chip:first-child{display:block!important;padding:10px 12px}
+#bgr>div>.chip.rn-row:first-child{display:flex!important}
 #bgr>div>.chip:first-child b{display:block;margin-bottom:2px}
 #bgr>div>.chip:last-child{align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:.85rem;white-space:nowrap}
 
@@ -549,3 +550,7 @@ html[data-theme="light"] .vn-sil{background:
 html[data-theme="light"] .vn-sil-name{color:#5c4510}
 @media (max-width:640px){.vn-text{font-size:1rem;min-height:6em}.vn-sil{height:min(42vh,360px)}.world-shard{letter-spacing:.06em}}
 @media (prefers-reduced-motion:reduce){.vn-fig img{filter:none}}
+
+/* 마력 각인 도트(js/main.js 의 drawRunes). 아직 새기지 않은 각인은 흐리게 */
+.rn-row.rn-off>.it-ic{filter:grayscale(.85) opacity(.45)}
+.rn-ic{font-size:26px;width:40px;text-align:center;flex:0 0 auto}

@@ -557,7 +557,9 @@ function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
  $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
  RN.forEach(([k,nm,ic,ef])=>{const L=rnLv(k),mx=L>=RN_MAX,cost=rnCost(L),w=document.createElement("div");w.style.cssText="display:flex;gap:8px";
-  const i=elT("div","chip");i.style.cssText="flex:1;text-align:left;cursor:default";i.append(elT("b","",ic+" "+nm+" "+L+" / "+RN_MAX),elT("small","",(L?"지금: "+ef(L):"아직 새기지 않았다")+(mx?" (최고 단계)":" → 다음: "+ef(L+1))));
+  const i=elT("div","chip it-row rn-row"+(L?"":" rn-off"));i.style.cssText="flex:1;text-align:left;cursor:default";const tx=elT("div");tx.style.minWidth="0";tx.append(elT("b","",nm+" "+L+" / "+RN_MAX),elT("small","",(L?"지금: "+ef(L):"아직 새기지 않았다")+(mx?" (최고 단계)":" → 다음: "+ef(L+1))));
+  // 각인 도트 그림(assets/runes/{키}.png). 그림을 못 불러오면 원래 아이콘 글자로 바꾼다.
+  const im=document.createElement("img");im.src="assets/runes/"+k+".png?v="+RN_IMG_V;im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="it-ic";im.onerror=()=>im.replaceWith(elT("span","rn-ic",ic));i.append(im,tx);
   i.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
   const b=elT("button","chip",mx?"완성":"새기기 (마력석 "+cost+"개)");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=mx||have<cost;b.onclick=()=>rnUp(k);w.append(i,b);box.appendChild(w)})}
 function rnUp(k){const r=RN.find(x=>x[0]===k),L=rnLv(k),cost=rnCost(L);if(!r||L>=RN_MAX||((C.inv||{}).mana||0)<cost)return;
