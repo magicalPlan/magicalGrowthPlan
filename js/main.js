@@ -72,14 +72,51 @@ function admApply(data){const before=Object.keys(ADM).sort().join(),next={};
  ADM=next;if(typeof admUI==="function")admUI();if(before!==Object.keys(ADM).sort().join()&&typeof $==="function"&&$("#v-hub")&&!$("#v-hub").hidden&&typeof hub==="function")hub()}
 /* 서버 저장. 실패하면 조용히 넘어가지 않고 화면 위에 경고를 띄운다(저장이 다시 되면 사라진다). */
 let saveErr="";
+/* 저장이 거절된 이유. 상태 코드, 서버가 돌려준 문장, 다시 시도한 결과(saveDiag)를 나눠 안내 문구를 고른다. */
+function saveCause(c){const raw=String(c||""),msg=String(lastSaveErr&&lastSaveErr.msg||"").replace(/\s+/g," ").trim(),kb=Number(lastSaveErr&&lastSaveErr.kb)||0,diag=String(saveDiag||"");
+ const tp=tokProj(),dp=(String(FBU||"").match(/^https:\/\/([^.]+?)(-default-rtdb)?\./)||[])[1]||"";
+ if(tp&&dp&&tp!==dp)return {id:"project",tp,dp};
+ if(raw==="timeout"||/abort/i.test(raw))return {id:"timeout"};
+ if(raw==="offline"||/failed to fetch|networkerror|load failed|offline/i.test(raw))return {id:"offline"};
+ if(raw==="404")return {id:"gone"};
+ if(raw==="400")return {id:"format",msg,kb};
+ if(raw==="413")return {id:"size",kb};
+ if(raw==="412")return {id:"clash"};
+ if(raw==="401"||raw==="403"){
+  if(/갱신 실패/.test(diag)||/expired|TOKEN_EXPIRED|credential is no longer valid/i.test(msg))return {id:"login"};
+  if(/작은 저장 성공/.test(diag))return {id:"body",kb:kb||Number((diag.match(/(\d+)KB/)||[])[1])||0,msg};
+  if(/쓰기 권한/.test(diag))return {id:"rule"};
+  if(!AUTH.jc)return {id:"code"};
+  return {id:"denied",code:raw,msg}}
+ if(/^\d{3}$/.test(raw))return {id:"http",code:raw,msg};
+ return {id:"unknown",code:raw,msg}}
 function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
- if(!c){if(w)w.remove();saveErr="";return}if(saveErr===c&&w)return;saveErr=c;if(!w){w=elT("p","fallbar");w.id="savewarn";w.style.cssText="margin:6px 0 0;text-align:left";m.after(w)}
- const tp=tokProj(),dp=(FBU.match(/^https:\/\/([^.]+?)(-default-rtdb)?\./)||[])[1]||"",bad=tp&&dp&&tp!==dp;
- if((c==="401"||c==="403")&&!bad&&!AUTH.jc){w.innerHTML="";w.append(elT("b","","⚠ 캐릭터를 서버에 처음 저장하려면 비밀 코드가 필요하다"),elT("span","","계정을 만들 때 입력한 비밀 코드를 넣으면 바로 저장된다. 그전까지는 이 브라우저에만 백업된다."));
-  const f=elT("form","row");f.style.cssText="margin-top:8px;flex-wrap:nowrap";const i=elT("input");i.type="password";i.placeholder="비밀 코드";i.setAttribute("aria-label","비밀 코드");i.style.flex="1";const b=elT("button","btn","저장하기");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
+ if(!c){if(w)w.remove();saveErr="";lastSaveErr=null;return}
+ const why=saveCause(c),key=why.id+"|"+(why.code||"")+"|"+(why.kb||"")+"|"+String(why.msg||"").slice(0,80);
+ if(saveErr===key&&w)return;saveErr=key;if(!w){w=elT("div","fallbar");w.id="savewarn";w.style.cssText="margin:6px 0 0;text-align:left";m.after(w)}
+ w.innerHTML="";
+ const title=elT("b",""),body=elT("span","");
+ const say=(h,t)=>{title.textContent="⚠ "+h;body.textContent=t};
+ if(why.id==="project")say("로그인 키와 데이터베이스가 서로 다른 프로젝트다.","웹 API 키는 '"+why.tp+"' 프로젝트이고, 데이터베이스는 '"+why.dp+"' 프로젝트다. 둘을 같은 프로젝트로 맞춘 뒤 다시 저장해야 한다.");
+ else if(why.id==="timeout")say("서버가 20초 안에 응답하지 않아 캐릭터를 저장하지 못했다.","잠시 뒤에 자동으로 다시 시도한다. 그때까지 바뀐 내용은 이 브라우저에 남아 있다.");
+ else if(why.id==="offline")say("네트워크에 연결되지 않아 캐릭터를 저장하지 못했다.","연결되면 자동으로 다시 저장한다. 그때까지 바뀐 내용은 이 브라우저에 남아 있다.");
+ else if(why.id==="gone")say("데이터베이스 주소를 찾지 못해 캐릭터를 저장하지 못했다.","서버 주소가 맞는지 확인해야 한다.");
+ else if(why.id==="format")say("서버가 캐릭터 기록의 형식을 거절했다.",(why.msg?"서버가 알린 이유: "+why.msg.slice(0,140)+". ":"")+(why.kb?why.kb+"KB. ":"")+"이름이나 설정에 서버가 받지 않는 문자가 있을 수 있다.");
+ else if(why.id==="size")say("캐릭터 기록이 너무 커서 서버가 거절했다.",(why.kb?why.kb+"KB. ":"")+"프로필 사진을 줄인 뒤 다시 저장해 보자.");
+ else if(why.id==="clash")say("다른 저장과 겹쳐 이번 저장이 거절되었다.","잠시 뒤에 자동으로 다시 시도한다.");
+ else if(why.id==="login")say("로그인이 만료되어 캐릭터를 저장하지 못했다.","다시 로그인해야 서버에 남는다. 바뀐 내용은 이 브라우저에 남아 있다.");
+ else if(why.id==="body")say("서버 규칙이 이 캐릭터 기록을 거절했다.","로그인은 정상이다. 기록"+(why.kb?" "+why.kb+"KB":"")+"가 규칙에 맞지 않는다. 운영자에게 이 화면을 보여 주자."+(why.msg?" ("+why.msg.slice(0,120)+")":""));
+ else if(why.id==="rule")say("이 계정은 캐릭터를 서버에 쓸 권한이 없다.","데이터베이스 규칙에서 계정 저장이 막혀 있다. 운영자에게 이 화면을 보여 주자.");
+ else if(why.id==="code")say("캐릭터를 서버에 처음 저장하려면 비밀 코드가 필요하다.","계정을 만들 때 입력한 비밀 코드를 넣으면 바로 저장된다. 그전까지는 이 브라우저에만 남는다.");
+ else if(why.id==="denied")say("서버가 저장을 거절했다 (오류 "+why.code+").",(why.msg?why.msg.slice(0,140)+". ":"")+"다시 로그인한 뒤 다시 저장해 보자. 바뀐 내용은 이 브라우저에 남아 있다.");
+ else if(why.id==="http")say("서버가 오류 "+why.code+"로 응답해서 저장하지 못했다.",why.msg?why.msg.slice(0,140):"잠시 뒤에 자동으로 다시 시도한다.");
+ else say("캐릭터를 저장하지 못했다.",(why.code?why.code+". ":"")+(why.msg?why.msg.slice(0,140):"잠시 뒤에 자동으로 다시 시도한다."));
+ w.append(title,document.createTextNode(" "),body);
+ if(why.id==="code"){const f=elT("form","row");f.style.cssText="margin-top:8px;flex-wrap:nowrap";const i=elT("input");i.type="password";i.placeholder="비밀 코드";i.setAttribute("aria-label","비밀 코드");i.style.flex="1";const b=elT("button","btn","저장하기");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
   f.onsubmit=async e=>{e.preventDefault();const v=i.value.trim().normalize("NFC");let ok=false;try{ok=await codeOk(v)}catch(x){}if(!ok){i.value="";i.placeholder="코드가 맞지 않다";return}AUTH.jc=v;keep("mgr_jc_"+AUTH.uid,v);saveErr="";saveCloud(true)};w.appendChild(f);return}
- w.textContent="⚠ 캐릭터가 서버에 저장되지 않고 있다 (오류 "+c+(lastSaveErr&&lastSaveErr.msg?" · 서버 응답: "+lastSaveErr.msg+" · "+lastSaveErr.kb+"KB":"")+"). "+(bad?"로그인 키는 '"+tp+"' 프로젝트 것인데 데이터베이스는 '"+dp+"' 프로젝트다. 웹 API 키와 데이터베이스 주소가 같은 프로젝트 것인지 확인해야 한다.":c==="401"||c==="403"?"다시 로그인하면 대부분 해결된다. 계속되면 운영자에게 이 화면을 보여 주자. 이 브라우저에는 백업이 남아 있다."+saveDiag:"인터넷 연결을 확인하자. 연결되면 자동으로 다시 저장한다.");
- if(c==="401"||c==="403"){const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.append(rb,lb);w.appendChild(row)}}
+ const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};row.appendChild(rb);
+ if(why.id==="login"||why.id==="denied"||why.id==="rule"||why.id==="body"){const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.appendChild(lb)}
+ w.appendChild(row)}
 // 로그인 토큰이 어느 Firebase 프로젝트 것인지 읽는다(점검용).
 function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));return p.aud||""}catch(e){return ""}}
 /* 저장이 401/403(권한 없음)으로 막히면 바로 포기하지 않고 차례로 다시 시도한다.
