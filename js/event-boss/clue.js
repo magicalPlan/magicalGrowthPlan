@@ -18,7 +18,7 @@ function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==
   const top=elT("div","clue-top");top.append(elT("b","",L.nm),elT("span","clue-hr",L.hr+"시간"));w.append(top,elT("p","clue-ds",L.ds));
   const chips=elT("div","clue-chips"),chip=(t,cls)=>chips.appendChild(elT("span","clue-chip"+(cls?" "+cls:""),t));
   chip("성공 "+Math.round(c*100)+"%",c<.4?"bad":c>=.7?"good":"");chip("권장 "+L.pw);chip("💰 "+Math.round(L.g*L.hr*bonus));chip("✨ "+Math.round(L.ex*L.hr*bonus));if(L.m)chip("💎 "+L.m+"+");chip("절망 +"+L.dz*L.hr,"dz");
-  if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn())chip("🧩 약 "+Math.round(L.hr*(CLP.drop.clue.base+CLP.drop.clue.extra)),"clp");w.appendChild(chips);
+  if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn()){const sp=elT("span","clue-chip clp");if(typeof clpImg==="function")sp.appendChild(clpImg());sp.appendChild(document.createTextNode(" 약 "+Math.round(L.hr*(CLP.drop.clue.base+CLP.drop.clue.extra))));chips.appendChild(sp)}w.appendChild(chips);
   const b=elT("button","btn g clue-go","출발");b.type="button";b.disabled=!!C.fall||(typeof lhOn==="function"&&lhOn())||!!(C.mj&&Date.now()<C.mj.T0);b.onclick=()=>clueStart(L.id);w.appendChild(b);grid.appendChild(w)});box.appendChild(grid)}
 function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toast("타락한 동안에는 탐색을 떠날 수 없다.");return}
  if(typeof lhOn==="function"&&lhOn()){toast("장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다.");return}

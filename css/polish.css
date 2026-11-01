@@ -418,6 +418,7 @@ html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:i
 .clp-card{padding:16px 18px!important}
 .clp-hd{display:flex;align-items:center;gap:12px}
 .clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:radial-gradient(circle,#2a4a70,#141c2c);border:1px solid #6fa8dc66}
+.clp-ic-img{display:block;width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges}
 .clp-ht h2{margin:2px 0 0!important;border:0!important;padding:0!important;font-size:1.2rem}
 .clp-ht .boss-tag{margin:0}
 .clp-ds{margin:10px 0 12px;color:var(--mu);font-size:.86rem;line-height:1.55}

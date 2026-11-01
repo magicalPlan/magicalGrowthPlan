@@ -68,10 +68,11 @@ function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof stor
   if(!slot.childNodes.length)slot.remove()}).catch(()=>{if(gen===clpStoryGen&&slot.isConnected)slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
 
 /* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.
-   위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳. */
+   위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳.
+   제목 옆 퍼즐 칸은 assets/event_items/wt_puzzle_piece.png. 조각을 찾았다는 문구(clpGain)는 CLP.ic 이모티콘을 그대로 쓴다. */
 function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),before=now<CLP.from,after=now>=CLP.to;box.innerHTML="";
  const c=elT("div","card clp-card");box.appendChild(c);
- const hd=elT("div","clp-hd");hd.append(elT("span","clp-ic",CLP.ic),(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
+ const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
  c.appendChild(elT("p","clp-ds",CLP.ds));
  if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 14일 24시까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
  const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");
