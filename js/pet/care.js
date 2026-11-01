@@ -17,13 +17,13 @@ function petLicense(){if(!C||(C.inv.license||0)<1)return;const cur=petCap();if(c
 function petBye(q){const L=petLv(q),k=Math.max(0,Number(PET_BOND[L])||0);if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."+(k?"\n(유대의 증거 "+k+"개를 남기고 간다)":"")))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;
  if(k){C.inv=C.inv||{};C.inv.bond=(C.inv.bond||0)+k;try{dexAdd("it","bond")}catch(e){}note("quest",q.nm+"이(가) 유대의 증거 "+k+"개를 남기고 떠났다.")}
  save();regPlayer();bag(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다."+(k?" 그 자리에 유대의 증거 "+k+"개가 남았다.":""))}
-function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{petEvMelt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
+function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix==="function"&&eggFix())save()}catch(e){}try{petEvMelt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
  box.appendChild(elT("p","hint","곁을 지키는 작은 마수. '함께하기'로 정한 한 마리의 효과를 받는다. 쓰다듬고, 간식을 주고, 함께 출정할수록 친밀도가 올라 효과가 커진다.\n허나 그 역시 마수, 세 마리 이상 데리고 다니는 것은 권장하지 않는다."));
  box.appendChild(elT("p","hint pet-cap","데리고 있는 사역마 "+C.pets.length+" / "+petCap()+"마리"+(petCap()<petCapMax()?" · 공방의 '사역마 조련 허가증'으로 "+petCapMax()+"마리까지 늘릴 수 있다.":" (최대)")));
 
  // 알
  const ec=elT("div","card pet-card"),eb=elT("div","pet-body");ec.append(elT("span","pet-ic","🥚"),eb);
- if(C.egg){const done=now>=C.egg.t1;if(C.egg.ev)ec.querySelector(".pet-ic").textContent=PET_EV.ic;eb.append(elT("b","",done?(C.egg.ev?PET_EV.nm+"에 금이 간다!":"알이 흔들린다!"):(C.egg.ev?PET_EV.nm+"을(를) 품는 중":"알을 품는 중")),elT("small","",done?"곧 무언가 깨어날 것 같다.":"부화까지 "+cdTxt(C.egg.t1-now)));const a=elT("div","pet-act"),b=elT("button","chip",done?"부화시키기":"기다리는 중");b.type="button";b.disabled=!done;b.onclick=petHatch;a.appendChild(b);eb.appendChild(a)}
+ if(C.egg){const left=Number(C.egg.t1)-now,done=isFinite(left)&&left<=0;if(C.egg.ev)ec.querySelector(".pet-ic").textContent=PET_EV.ic;eb.append(elT("b","",done?(C.egg.ev?PET_EV.nm+"에 금이 간다!":"알이 흔들린다!"):(C.egg.ev?PET_EV.nm+"을(를) 품는 중":"알을 품는 중")),elT("small","",done?"곧 무언가 깨어날 것 같다.":(isFinite(left)?"부화까지 "+cdTxt(left):"부화 시각을 확인하지 못했다.")));const a=elT("div","pet-act"),b=elT("button","chip",done?"부화시키기":"기다리는 중");b.type="button";b.disabled=!done;b.onclick=petHatch;a.appendChild(b);eb.appendChild(a)}
  else{eb.append(elT("b","","사역마의 알 "+(C.eggs||0)+"개"),elT("small","","상점가 "+PET_EGG_G+"골드(하루 1개) · 출정에서 가끔, 장기 토벌 성공 시 종종 줍는다. 품으면 1시간 뒤 깨어난다. (일반 70% · 희귀 27% · 전설 3%)"));
   const a=elT("div","pet-act"),b1=elT("button","chip","알 품기");b1.type="button";b1.disabled=!(C.eggs>0);b1.onclick=petIncubate;const b2=elT("button","chip","알 사기 ("+PET_EGG_G+"골드)");b2.type="button";b2.disabled=(C.gd||0)<PET_EGG_G||C.eggBuy===today();b2.onclick=petBuyEgg;a.append(b1,b2);eb.appendChild(a)}
  box.appendChild(ec);

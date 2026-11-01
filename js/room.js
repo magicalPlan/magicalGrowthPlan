@@ -3,7 +3,7 @@
    문장은 출발 시각부터 2.2초마다 드러난다. 방장 화면이 꺼지거나 탭이 뒤로 가도 시각은 흐르고, 선택 마감과 결과 기록은 방에 있는 누구든 이어 쓴다. */
 /* 매지컬 마치: 방 */
 let room=null,code=null,unR=null,unL=null,tick=null;
-const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:C.a.join(""),g:C.g,t:C.t,p:pw(),v:C.v,f:armed("flag")?1:0,m:armed("map")?1:0,w:C.wp,sk:["water","wind","dark"].filter(armedSk),dz:C.dz||0});
+const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:(Array.isArray(C.a)?C.a:C.a?[C.a]:[]).join(""),g:C.g,t:C.t,p:pw(),v:C.v,f:armed("flag")?1:0,m:armed("map")?1:0,w:C.wp,sk:["water","wind","dark"].filter(armedSk),dz:C.dz||0});
 const rref=c=>DB.doc("rooms/"+c);
 const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.color="var(--bad)";$("#hm").textContent=t}};
 // 매지컬 마치 화면 열기(마을 화면의 정기 출정 목록에서 바로 참가할 수 있어 버튼은 없앴다)
@@ -14,10 +14,13 @@ function watchList(){rmsg("");if(LOCAL)rmsg("혼자 하기에서는 정기 출�
 async function mk(pub){if(!DB)return rmsg("방 기능을 쓸 수 없다.");const c=Math.random().toString(36).slice(2,6).toUpperCase();
  const r={code:c,pub,host:UID,st:"lobby",pl:{[UID]:me()},rd:{[UID]:true},seq:[],step:0,ok:true,ev:0,total:3+R(3),ts:Date.now()};
  try{await rref(c).set(r);enter(c)}catch(e){rmsg("방을 만들지 못했다.")}}
-async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");if(c.length!==4)return rmsg("코드는 4자다.");
- try{const s=await rref(c).get();if(!s.exists)return rmsg("그런 방이 없다.");const r=s.data();r.seq=r.seq||[];r.rd=r.rd||{};
- if(r.pl[UID]){enter(c);return}if(r.st!=="lobby"||Object.keys(r.pl).length>=3)return rmsg("들어갈 수 없는 방이다.");
- r.pl[UID]=me();r.rd[UID]=false;await rref(c).set(r);enter(c)}catch(e){rmsg("입장하지 못했다.")}}
+async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");c=String(c||"").trim().toUpperCase();if(c.length!==4)return rmsg("코드는 4자다.");
+ try{const s=await rref(c).get();if(!s.exists)return rmsg("그런 방이 없다.");const r=s.data()||{};r.seq=r.seq||[];r.rd=r.rd||{};r.pl=r.pl||{};
+  if((r.st==="done"||r.st==="run")&&roomStale(r,Date.now())){await rref(c).delete().catch(()=>{});return rmsg("끝난 출정 방이라 정리했다. 다시 참가할 수 있다.")}
+  if(r.pl[UID]){enter(c);return}
+  if(r.st!=="lobby")return rmsg("이미 출발한 방이라 들어갈 수 없다.");
+  if(Object.keys(r.pl).length>=3)return rmsg("정원이 찬 방이다.");
+  r.pl[UID]=me();r.rd[UID]=false;r.ts=Date.now();await rref(c).set(r);enter(c)}catch(e){rmsg("입장하지 못했다.")}}
 function enter(c){code=c;room=null;myV=null;holdN=0;choiceK="";roomBye=false;if(holdT){clearTimeout(holdT);holdT=null}clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#lg").dataset.m="";$("#rrm").textContent="";unR&&unR();unR=null;watchRoom()}
 /* 방에 연결해 두고, 참가·준비·진행처럼 내용이 바뀔 때만 받는다. 연결이 거절되면 20초마다 방을 통째로 묻는다. */
 function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.",POLL_HUB)}
@@ -78,11 +81,13 @@ function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.p
 // 방장이 창을 닫아 남은 방, 오래된 투표 기록을 정리한다. rooms 전체를 받지 않는다.
 // 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방과 오래된 정기 출정 자리만 지운다.
 let lastSweep=0;
+// 끝난 방(done)은 결과 시각으로부터 10분이 지나면 지운다. 진행이 멈춘 방(run)도 마지막 기록으로부터 10분이 지나면 지운다. 기다리는 방(lobby)은 1시간이 지나야 지운다.
+function roomStale(v,now){if(!v||typeof v!=="object")return false;const ts=Number(v.ts)||0,doneAt=Number(v.doneAt)||0,age=now-(ts||now),doneAge=now-(doneAt||ts||now);
+ if(v.st==null)return !v.ts||age>300000;if(v.st==="done")return doneAge>=X_AFTER||age>120000;if(v.st==="run")return age>=X_AFTER;return !v.ts||age>3600000}
 async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;return {at:now,u:UID}});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
-async function sweepRooms(){if(!DB||!UID||Date.now()-lastSweep<600000)return;lastSweep=Date.now();if(!(await sweepClaim()))return;let keys=[];try{keys=Object.keys((await DB.doc("rooms").peek())||{})}catch(e){return}
+async function sweepRooms(){if(!DB||!UID||Date.now()-lastSweep<600000)return;if(!(await sweepClaim()))return;lastSweep=Date.now();let keys=[];try{keys=Object.keys((await DB.doc("rooms").peek())||{})}catch(e){lastSweep=0;try{await DB.doc("tally/roomsweep").set({at:0,u:""})}catch(e2){}return}
  const now=Date.now(),party=keys.filter(id=>id!==code&&/^[A-Z0-9]{4}(v_.+)?$/.test(id));
- for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(!v)return;const age=now-(Number(v.ts)||0);
-  const stale=v.st==null?(!v.ts||age>300000):(!v.ts||(v.st==="done"&&age>120000)||(v.st==="run"&&age>1800000)||(v.st==="lobby"&&age>3600000));if(stale)DB.doc("rooms/"+id).delete().catch(()=>{})}))}
+ for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(v&&roomStale(v,now))DB.doc("rooms/"+id).delete().catch(()=>{})}))}
  if(typeof xSweep==="function")xSweep(keys)}
 /* 지금까지 공개할 문장 수. phaseAt 부터 한 줄에 XSTEP. 이미 지난 문장은 화면을 켜는 즉시 따라잡는다. */
 function shownCount(r){const seq=r.seq||[];if(!r||r.st==="lobby")return 0;if(r.st==="done")return seq.length;if(typeof r.phaseAt!=="number")return Math.min(seq.length,r.step||0);

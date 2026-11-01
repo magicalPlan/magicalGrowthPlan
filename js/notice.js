@@ -110,6 +110,7 @@ function rstAttrs(list){const a=(Array.isArray(list)?list:[]).filter(x=>typeof A
 function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined)keep[k]=C[k]});
  keep.a=rstAttrs(keep.a);
  C=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:R.id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
+ if(typeof eggFix==="function")eggFix();
  C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,100);
  note("notice","🌑 새 시즌이 시작되었다. 이름·처음 속성·특성·사역마와 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.");
  save();try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}try{if(typeof raidClear==="function")raidClear()}catch(e){}

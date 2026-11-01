@@ -28,19 +28,26 @@ function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;
   if(xGone){const seat=xSnap["e"+xGone.i];if(!seat||!seat[UID]||Date.now()>xGone.till)xGone=null}drawXAll()},e=>{},POLL_HUB)}
 function drawXAll(){["#hl","#rl"].forEach(q=>{const el=$(q);if(el&&!el.closest("[hidden]"))drawX(el)})}
 function xSay(t,bad){[$("#hm"),$("#rm")].forEach(e=>{if(e){e.style.color=bad?"var(--bad)":"var(--mu)";e.textContent=t}})}
+/* 참가 쓰기가 거절된 이유. 상태 코드와 끊김을 나눠, 같은 "참가하지 못했다"로 뭉개지지 않게 한다. */
+function xErrKind(e){const name=e&&e.name,m=String(e&&e.message||"");if(name==="AbortError"||/abort/i.test(m))return "timeout";if(/^(401|403|400|404|412|413)$/.test(m))return m;if(/^\d{3}$/.test(m))return m;if(/failed to fetch|networkerror|load failed|offline|network/i.test(m))return "offline";return ""}
+function xNetWhy(e){const c=xErrKind(e);if(c==="timeout")return "서버 응답이 20초 안에 오지 않았다.";if(c==="offline")return "네트워크에 연결되지 않았다.";if(c==="401")return "로그인이 만료되었다. 새로고침한 뒤 다시 로그인해 보자.";if(c==="403")return "서버가 기록을 거절했다. 위쪽 로그인 경고가 있으면 그 안내를 먼저 해결해야 한다.";if(c==="400")return "서버가 기록 형식을 거절했다.";if(c==="404")return "서버에서 출정 자리 주소를 찾지 못했다.";if(c==="412")return "다른 기록과 겹쳐 서버가 저장을 거절했다.";if(c==="413")return "참가 기록이 너무 커서 서버가 거절했다.";if(/^\d{3}$/.test(c))return "서버가 오류 코드 "+c+"로 응답했다.";const raw=String(e&&e.message||"").replace(/\s+/g," ").slice(0,80);return raw?raw:"원인을 확인하지 못했다."}
+function xJoinWhy(e,dropped){const lost=dropped?"이전 출정 자리는 지워졌고, ":"";return lost+"참가하지 못했다. "+xNetWhy(e)+(xErrKind(e)==="401"?"":" 잠시 뒤에 다시 시도해 보자.")}
 function drawX(el){el.innerHTML="";if(!C)return;
  if(!XON()){el.innerHTML="<p class='hint'>"+(LOCAL?"혼자 하기에서는 정기 출정이 열리지 않는다. 서버에 연결해 로그인하면 출정할 수 있다.":"서버에 연결되어야 정기 출정에 참가할 수 있다.")+"</p>";return}
  const now=Date.now(),ls=xLs(),mj=C.mj;el.appendChild(elT("p","x-cd",xCdTxt()));
  if(mj){const x=xInfo(mj.s,mj.i),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",now<x.T0?"출발 "+xHM(x.T0)+" · 출발 시각에 자동으로 출발한다.":"출정 중이다."));b.type="button";b.onclick=xView;w.append(cp,b);el.appendChild(w)}
- for(let i=0;i<XN;i++){const x=xInfo(ls,i),m=xOverlay(x,(ls===xS?xSnap["e"+i]:null)||{}),ids=xParty(x,m),inI=!!(mj&&mj.id===x.id),full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
+ for(let i=0;i<XN;i++){const x=xInfo(ls,i),m=xOverlay(x,(ls===xS?xSnap["e"+i]:null)||{}),ids=xParty(x,m),onSrv=ids.includes(UID)&&(!mj||mj.id===x.id),inI=!!(mj&&mj.id===x.id)||onSrv,full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
   const ab=x.d===4,weak=ab&&pw()<ABYSS_MIN&&!inI,w=elT("div","xm"+(inI?" on":"")+(ab?" abyss":"")),cp=elT("div","xm-copy");
   cp.append(elT("b","",(ab?"🜏 ":"")+x.nm),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · 파티 "+ids.length+"/"+XMAX+(ids.length?" · "+ids.map(u=>cn(u,m[u].n)).join(", "):"")));
-  const b=elT("button","chip",inI?"참가 취소":full?"정원 마감":lock?"참가 불가":weak?"전투력 부족":mj?"이쪽으로 변경":"참가");b.type="button";b.disabled=full||lock||weak;b.onclick=()=>inI?xLeave():xJoin(ls,i);w.append(cp,b);el.appendChild(w)}}
+  const b=elT("button","chip",inI?"참가 취소":full?"정원 마감":lock?"참가 불가":weak?"전투력 부족":mj?"이쪽으로 변경":"참가");b.type="button";b.disabled=full||lock||weak;b.onclick=()=>{if(inI){if(!(C.mj&&C.mj.id===x.id))C.mj={id:x.id,s:x.s,i:x.i,T0:x.T0};xLeave()}else xJoin(ls,i)};w.append(cp,b);el.appendChild(w)}}
 async function xJoin(s,i){const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("장기 토벌을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}
  if(C.fall)return xSay("타락한 동안에는 출정할 수 없다.",1);if(C.dz>=90)return xSay("절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.",1);
  if(Date.now()>=x.close)return xSay("이 출정은 참가가 마감되었다.",1);if(x.d===4&&pw()<ABYSS_MIN)return xSay("심연에는 전투력 "+ABYSS_MIN+" 이상만 들어갈 수 있다. (지금 "+pw()+")",1);
+ if(C.mj&&xExpired(C.mj))xRelease();
  const mj=C.mj;if(mj&&mj.id===x.id)return;if(mj&&mj.s!==s)return xSay("이미 참가한 출정이 있다. 그 출정이 끝난 뒤에 참가할 수 있다.",1);
- if(xParty(x,(xS===s?xSnap["e"+i]:null)||{}).length>=XMAX)return xSay("정원이 찼다.",1);
+ const party=xParty(x,(xS===s?xSnap["e"+i]:null)||{});
+ if(party.includes(UID)){C.mj={id:x.id,s,i,T0:x.T0};save();drawXAll();xSay(x.nm+" 출정에 이미 참가해 있다. "+xHM(x.T0)+"에 출발한다.");return}
+ if(party.length>=XMAX)return xSay("정원이 찼다.",1);
  const job=++xJob,me0=me();C.mj={id:x.id,s,i,T0:x.T0};xGone=mj?{s:mj.s,i:mj.i,till:Date.now()+20000}:null;
  if(xS===s){if(mj&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];(xSnap["e"+i]=xSnap["e"+i]||{})[UID]=Object.assign({},me0,{jt:Date.now()})}
  drawXAll();xSay(x.nm+" 출정에 참가했다. "+xHM(x.T0)+"에 자동으로 출발한다. 준비한 아이템과 마법은 참가한 순간을 기준으로 쓰인다.");
@@ -48,10 +55,10 @@ async function xJoin(s,i){const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("
  try{if(mj){await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete();dropped=true}
   await DB.doc(xSeat(s,i)+"/"+UID).set(Object.assign({},me0,{jt:{".sv":"timestamp"}}));DB.doc(xSeat(s,i)+"/ts").set(Date.now()).catch(()=>{});
   if(job!==xJob){if(!C.mj||C.mj.id!==x.id)await DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});return}save()}
- catch(e){if(job!==xJob)return;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];save();drawXAll();xSay("참가하지 못했다. 잠시 뒤에 다시 시도해 보자. 계속 안 되면 캐릭터가 서버에 저장돼 있는지(위쪽 경고)를 확인해야 한다.",1)}}
+ catch(e){if(job!==xJob)return;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];save();drawXAll();xSay(xJoinWhy(e,dropped),1)}}
 async function xLeave(){const mj=C.mj;if(!mj||Date.now()>=xInfo(mj.s,mj.i).close)return;const job=++xJob;C.mj=null;xGone={s:mj.s,i:mj.i,till:Date.now()+20000};
  if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)hub();
- try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete()}catch(e){}if(job!==xJob)return}
+ try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete()}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=Object.assign({},me(),{jt:Date.now()})}save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e),1)}}
 // 처음부터 다시 계산한다. 같은 씨앗, 같은 파티, 같은 표라면 누구의 화면에서든 결과가 같다.
 function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[];let wait=null;
  Object.keys(X.pl).forEach(u=>r.pl[u]=X.pl[u]);
@@ -62,16 +69,23 @@ function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],d
    if(X.picks[c]==null){wait={c,Ws,Wd:Ws+CHOICE_MS};break}resolveChoice(r,X.picks[c]);c++}});
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
  return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(r.seq.length-1)+800}}
-function xAbandon(why){if(!C)return;const j=C.mj;C.mj=null;if(XR)XR.gone=1;save();note("march",why);drawXAll();if(j)xAuto=j.id}
+function xAbandon(why){if(!C)return;const j=C.mj;C.mj=null;if(XR){XR.gone=1;XR.why=why}save();note("march",why);drawXAll();xSay(why,1);if(j){xAuto=j.id;if(XON())DB.doc(xSeat(j.s,j.i)+"/"+UID).delete().catch(()=>{})}}
+// 끝난 출정에 아직 묶여 있으면 참가를 풀어 준다. 결과를 이미 받았거나, 끝난 뒤 10분이 지났거나, 출발 후 진행 한도와 10분이 지났으면 묶인 것이다.
+function xExpired(j){if(!j)return false;const s=Number(j.s),i=Number(j.i),T0=Number(j.T0);if(!Number.isFinite(s)||!Number.isFinite(i)||!Number.isFinite(T0))return true;
+ if(XR&&XR.id===j.id&&XR.fin)return true;if(XR&&XR.id===j.id&&XR.res&&XR.res.done&&Number.isFinite(XR.res.endAt)&&Date.now()>=XR.res.endAt+X_AFTER)return true;return Date.now()>=T0+X_RUN_MAX+X_AFTER}
+function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Number(j.i),id=j.id;C.mj=null;if(XR&&XR.id===id)XR=null;if(why){note("march",why);xSay(why,1)}save();drawXAll();if(XON()&&Number.isFinite(s)&&Number.isFinite(i))DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{})}
+function xMarkDone(s,i){if(!XON()||!Number.isFinite(Number(s))||!Number.isFinite(Number(i)))return;const seat=xSeat(s,i);DB.doc(seat+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return Date.now()}).catch(()=>{});setTimeout(()=>{DB.doc(seat).delete().catch(()=>{})},X_AFTER)}
+/* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
+function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 자리를 서버에서 찾지 못했다. 참가가 저장되지 않았거나 출발 전에 지워져 출발하지 못했다.";if(jtOf(mine)>x.close)return x.nm+" 출정은 서버에 기록된 참가 시각이 마감("+xHM(x.close)+") 이후라 출발하지 못했다. 마감 전에 눌렀다면 기기 시각이 서버보다 느린지 확인해 보자.";return "마감 전에 먼저 참가한 "+XMAX+"명이 차서 "+x.nm+" 출정에 들어가지 못했다. 이번 출정은 정원 "+XMAX+"명이다."}
 /* 진행 중 표시(xBusy)가 40초 넘게 풀리지 않으면 멈춘 것으로 보고 풀어 준다(새로고침 없이 출정이 다시 진행된다). */
 let xBusyT=0;
 async function xTick(){const j=C&&C.mj;if(xBusy&&Date.now()-xBusyT>40000)xBusy=false;if(!j||!XON()||xBusy||Date.now()<j.T0)return;
  if(XR&&XR.id===j.id&&XR.res&&XR.res.wait&&Date.now()<XR.res.wait.Wd+3000)return;xBusy=true;xBusyT=Date.now();
  try{const x=xInfo(j.s,j.i),late=Date.now()-x.T0;if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fin:"",drawn:-1};
   if(late>X_HARD_LIMIT&&!XR.fin){xAbandon(x.nm+" 출정이 너무 오래 끝나지 않아 정리했다. 다시 참가할 수 있다.");return}
-  if(!XR.pl){let d=null;try{d=(await DB.doc(xSeat(x.s,x.i)).get()).data()||{}}catch(e){if(late>X_FETCH_GIVEUP)xAbandon(x.nm+" 출정 정보를 서버에서 불러오지 못해 정리했다. 잠시 뒤에 다시 참가해 보자.");return}
+  if(!XR.pl){let d=null;try{d=(await DB.doc(xSeat(x.s,x.i)).get()).data()||{}}catch(e){if(late>X_FETCH_GIVEUP)xAbandon(x.nm+" 출정 자리를 불러오지 못해 출발하지 못했다. "+xNetWhy(e)+" 잠시 뒤에 다시 참가해 보자.");return}
    const ids=xParty(x,d);
-   if(!ids.includes(UID)){xAbandon(ids.length?"정원이 차서 "+x.nm+" 출정에 참가하지 못했다.":x.nm+" 출정 기록을 찾지 못해 출발하지 못했다.");return}
+   if(!ids.includes(UID)){xAbandon(xSeatMiss(x,d));return}
    XR.pl={};ids.forEach(u=>XR.pl[u]=d[u]);
    // 파티가 확정되어 실제로 출발하는 순간 한 번만 알린다(새로고침해도 다시 울리지 않는다).
    if(!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}}
@@ -81,7 +95,7 @@ async function xTick(){const j=C&&C.mj;if(xBusy&&Date.now()-xBusyT>40000)xBusy=f
    catch(e){if(Date.now()<R0.wait.Wd+X_VOTE_GIVEUP)return;p=[]}// 표를 끝내 못 읽으면 운명에 맡기고 계속 진행한다.
    XR.picks[R0.wait.c]=p;R0=xReplay(XR)}
   XR.res=R0;
-  if(R0.done&&Date.now()>=R0.endAt&&!XR.fin){let h="";try{h=settle(R0.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";C.mj=null;save();drawXAll();if(h)xSound(R0.r&&R0.r.ok?"win":"lose")}}
+  if(R0.done&&Date.now()>=R0.endAt&&!XR.fin){let h="";try{h=settle(R0.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;C.mj=null;save();drawXAll();xMarkDone(ss,ii);if(h)xSound(R0.r&&R0.r.ok?"win":"lose")}}
  catch(e){}finally{xBusy=false}}
 function xView(){show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){hub();return}
@@ -90,8 +104,8 @@ function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR
  const pl=X&&X.pl?X.pl:xOverlay(x,(xS===x.s&&xSnap["e"+x.i])||{}),ids=X&&X.pl?Object.keys(pl):xParty(x,pl),l=$("#xpl"),key=ids.join(",");
  if(l.dataset.k!==key){l.dataset.k=key;l.innerHTML="";ids.forEach(u=>{const p=pl[u]||{},d=elT("div","chip",(p.tn?"「"+String(p.tn).slice(0,20)+"」 ":"")+cn(u,p.n)+(u===UID?" (나)":"")+" · "+(p.g||"-")+"등급 "+(p.a||"")+" · 전투력 "+(p.p||0));d.style.textAlign="left";if(u!==UID){d.style.cursor="pointer";d.onclick=()=>openProfile(u)}l.appendChild(d)})}
  const g=$("#xlg"),cv=$("#xch");
- if(!X||!X.res){$("#xs").textContent=X&&X.gone?"이번 출정에는 참가하지 못했다.":now<x.T0?"전투 "+x.total+"번 예정 · "+(now<x.close?"마감까지 "+xFmt(x.close-now)+" · ":"참가 마감 · ")+"출발까지 "+xFmt(x.T0-now):"출발 준비 중...";
-  if(g.dataset.w!=="1"){g.dataset.w="1";g.innerHTML="<p>출발을 기다리고 있다.</p>"}cv.hidden=true;return}
+ if(!X||!X.res){const why=X&&X.gone?(X.why||"이번 출정에는 참가하지 못했다."):"";$("#xs").textContent=why||(now<x.T0?"전투 "+x.total+"번 예정 · "+(now<x.close?"마감까지 "+xFmt(x.close-now)+" · ":"참가 마감 · ")+"출발까지 "+xFmt(x.T0-now):"출발 준비 중...");
+  const mark=why?"g":"1";if(g.dataset.w!==mark){g.dataset.w=mark;g.innerHTML="";g.appendChild(elT("p","",why||"출발을 기다리고 있다."))}cv.hidden=true;return}
  g.dataset.w="";const R0=X.res,r=R0.r,w=R0.wait;let n=0;while(n<r.seq.length&&R0.lineAt(n)<=now)n++;
  if(X.drawn!==n||X.fd!==!!X.fin){X.drawn=n;X.fd=!!X.fin;g.innerHTML=r.seq.slice(0,n).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";if(X.fin&&n>=r.seq.length)g.innerHTML+=X.fin}
  $("#xs").textContent=X.fin?"출정 종료":w&&n>=r.seq.length?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중";
@@ -106,9 +120,13 @@ $("#xb").onclick=()=>hub();
 // 출정이 멈춘 것처럼 보이면(예정보다 1분 넘게 안 끝나거나, 출발 후 3분째 준비 중) 직접 정리할 수 있다.
 $("#xq").onclick=()=>{if(!confirm("이 출정을 정리하고 빠져나올까? 이번 출정의 보상은 받지 못한다."))return;xAbandon("출정을 직접 정리하고 빠져나왔다.");hub()};
 // 오래된 출정 자리. rooms 전체를 다시 받지 않고, sweepRooms 가 넘겨 준 키만 지운다.
-function xSweep(keys){if(!XON()||!keys||!keys.length)return;const cur=xSlot();
- keys.forEach(id=>{const m=String(id).match(/^x[mv]x?(\d+)_/);if(m&&Number(m[1])<cur-XKEEP)DB.doc("rooms/"+id).delete().catch(()=>{})})}
+// 끝난 시각이 있으면 그로부터 10분 뒤에, 없으면 출발 후 진행 한도+10분이 지나면 자리와 표 기록을 지운다.
+function xSweep(keys){if(!XON()||!keys||!keys.length)return;const now=Date.now();
+ keys.forEach(id=>{const xm=String(id).match(/^xm(\d+)_e\d+$/),xv=String(id).match(/^xvx(\d+)_/),s=xm?Number(xm[1]):xv?Number(xv[1]):NaN;if(!Number.isFinite(s))return;const T0=(s+1)*XS;
+  if(now>=T0+X_RUN_MAX+X_AFTER){DB.doc("rooms/"+id).delete().catch(()=>{});return}
+  if(!xm||now<T0)return;DB.doc("rooms/"+id).get().then(sn=>{const v=sn&&sn.exists?sn.data():null,done=Number(v&&v.done)||0;if(done&&now-done>=X_AFTER)DB.doc("rooms/"+id).delete().catch(()=>{})}).catch(()=>{})})}
 setInterval(()=>{if(!C||!DB)return;const now=Date.now(),hubOn=!$("#v-hub").hidden,rmOn=!$("#v-rooms").hidden,xOn=!$("#v-xm").hidden;
+ if(C.mj&&xExpired(C.mj)){const fin=XR&&XR.id===C.mj.id&&XR.fin;xRelease(fin?"출정 결과가 정리되어 다시 참가할 수 있다.":"지난 출정이 끝난 뒤 10분이 지나 자리를 정리했다. 다시 참가할 수 있다.")}
  if(XON()&&(hubOn||rmOn||xOn)){watchX(xOn&&C.mj&&now<C.mj.T0?C.mj.s:xLs());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh){xPh=ph;drawXAll()}document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
  else if(unX){unX();unX=null;xS=-1}
  if(C.mj&&now>=C.mj.T0&&xAuto!==C.mj.id&&(hubOn||rmOn)){xAuto=C.mj.id;xView()}

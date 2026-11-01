@@ -10,4 +10,4 @@ const dayN=d=>Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e
 const agoTxt=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<60?m+"분 전":m<1440?Math.floor(m/60)+"시간 전":Math.floor(m/1440)+"일 전"};
 
 // 남은 밀리초를 "2시간 3분" 또는 "4분 5초" 또는 "6초" 로 만든다. 1시간은 3600초, 1분은 60초.
-const cdTxt=ms=>{const t=Math.ceil(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+"시간 "+m+"분":m?m+"분 "+s+"초":s+"초"};
+const cdTxt=ms=>{ms=Number(ms);if(!isFinite(ms))return "";const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+"시간 "+m+"분":m?m+"분 "+s+"초":Math.max(0,s)+"초"};

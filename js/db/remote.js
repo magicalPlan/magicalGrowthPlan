@@ -1,6 +1,9 @@
 /* Firebase Realtime Database. main.js 보다 먼저 불러야 한다.
    토큰이 만료되면 main.js 의 refresh 를 부른다. 계정 저장이 거절되면 lastSaveErr 에 이유를 남긴다. */
 let lastSaveErr=null;
+const acctWhy=e=>e&&e.name==="AbortError"?"timeout":"offline";
+function acctFail(p,body,e){if(!String(p).startsWith("accounts/"))return;lastSaveErr={st:0,msg:acctWhy(e),kb:Math.round(String(body||"").length/1024)}}
+async function acctHttp(p,body,r){if(!String(p).startsWith("accounts/"))return;let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(String(body||"").length/1024)}}
 function fbdb(base){base=base.replace(/\/+$/,"");
 const U=(p,q)=>base+"/"+p+".json?"+(AUTH.tok?"auth="+encodeURIComponent(AUTH.tok)+(q?"&":""):"")+(q||"");
 const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.stringify(v))});
@@ -38,8 +41,8 @@ const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fa
  document.addEventListener("visibilitychange",vis);open();
  return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(stopPoll)stopPoll()}};
 const D=(p,lv)=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,await J(()=>U(p))),
- set:async d=>{const body=JSON.stringify(d),r=await fx(()=>U(p),{method:"PUT",body});if(!r.ok){/* 서버가 알려 준 거절 이유를 기억해 두었다가 오류 안내에 보여 준다(원인 찾기용). */if(p.startsWith("accounts/")){let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(body.length/1024)}}throw new Error(r.status)}},
- patch:async d=>{const body=JSON.stringify(d),r=await fx(()=>U(p),{method:"PATCH",body});if(!r.ok){if(p.startsWith("accounts/")){let t="";try{t=await r.text()}catch(e){}lastSaveErr={st:r.status,msg:String(t).replace(/\s+/g," ").slice(0,160),kb:Math.round(body.length/1024)}}throw new Error(r.status)}},
+ set:async d=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PUT",body})}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
+ patch:async d=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PATCH",body})}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
  peek:async()=>J(()=>U(p,"shallow=true")),
  delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
  transact:async fn=>{for(let i=0;i<4;i++){const r=await fx(()=>U(p),{headers:{"X-Firebase-ETag":"true"}});if(!r.ok)throw new Error(r.status);const tag=r.headers.get("ETag");let cur=null;try{cur=await r.json()}catch(e){cur=null}if(cur===undefined)cur=null;const next=fn(cur);if(next===undefined)return cur;const w=await fx(()=>U(p),{method:"PUT",headers:tag?{"if-match":tag}:{},body:JSON.stringify(next)});if(w.status===412)continue;if(!w.ok)throw new Error(w.status);return next}throw new Error("412")},
