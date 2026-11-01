@@ -8,8 +8,8 @@ function fbdb(base){base=base.replace(/\/+$/,"");
 const U=(p,q)=>base+"/"+p+".json?"+(AUTH.tok?"auth="+encodeURIComponent(AUTH.tok)+(q?"&":""):"")+(q||"");
 const sn=(id,v)=>({id,exists:v!=null,data:()=>v==null?undefined:JSON.parse(JSON.stringify(v))});
 /* 서버 요청에 시간 제한(20초)을 둔다. 휴대폰 네트워크에서 요청이 응답 없이 멈추면, 그 요청을 기다리던 출정 진행이 새로고침 전까지 영영 멈췄다. */
-const tf=(u,o)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof AbortController!=="function")return fetch(u,opt);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),20000);return fetch(u,Object.assign(opt,{signal:ac.signal})).finally(()=>clearTimeout(t))};
-const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o)}catch(e){}}return r};
+const tf=(u,o,ms)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof AbortController!=="function")return fetch(u,opt);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||20000);return fetch(u,Object.assign(opt,{signal:ac.signal})).finally(()=>clearTimeout(t))};
+const fx=async(mk,o,ms)=>{let r=await tf(mk(),o,ms);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o,ms)}catch(e){}}return r};
 /* SAME: 데이터가 그대로라 서버가 본문 없이 304를 준 경우. JSON과 겹치지 않는 표식이다. */
 const SAME={};
 const J=async(mk,bag)=>{const o=bag?{headers:{"X-Firebase-ETag":"true"}}:null;if(bag&&bag.tag)o.headers["if-none-match"]=bag.tag;const r=await fx(mk,o);if(r.status===304)return SAME;if(!r.ok)throw new Error(r.status);if(bag){const tag=r.headers.get("ETag");if(tag)bag.tag=tag}return r.json()};
@@ -41,10 +41,10 @@ const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fa
  document.addEventListener("visibilitychange",vis);open();
  return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(stopPoll)stopPoll()}};
 const D=(p,lv)=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,await J(()=>U(p))),
- set:async d=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PUT",body})}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
+ set:async(d,ms)=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PUT",body},ms)}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
  patch:async d=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PATCH",body})}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
  peek:async()=>J(()=>U(p,"shallow=true")),
- delete:async()=>{const r=await fx(()=>U(p),{method:"DELETE"});if(!r.ok)throw new Error(r.status)},
+ delete:async ms=>{const r=await fx(()=>U(p),{method:"DELETE"},ms);if(!r.ok)throw new Error(r.status)},
  transact:async fn=>{for(let i=0;i<4;i++){const r=await fx(()=>U(p),{headers:{"X-Firebase-ETag":"true"}});if(!r.ok)throw new Error(r.status);const tag=r.headers.get("ETag");let cur=null;try{cur=await r.json()}catch(e){cur=null}if(cur===undefined)cur=null;const next=fn(cur);if(next===undefined)return cur;const w=await fx(()=>U(p),{method:"PUT",headers:tag?{"if-match":tag}:{},body:JSON.stringify(next)});if(w.status===412)continue;if(!w.ok)throw new Error(w.status);return next}throw new Error("412")},
  live:()=>D(p,1),
  onSnapshot:(f,e,ms)=>{const pl=()=>poll(bag=>J(()=>U(p),bag),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST||lv?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
