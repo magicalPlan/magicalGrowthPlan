@@ -5,7 +5,7 @@
 /* 친구: 신청 -> 수락의 양방향 구조. 친구 목록은 내 계정에 저장하고, 신청/수락/삭제 알림은 서버의 fmsg(받는 사람만 읽을 수 있음)로 주고받는다. */
 const sendF=(to,t)=>DB.doc("fmsg/"+to+"/"+UID).set({t,ts:{".sv":"timestamp"},n:nmOf()});
 async function frDo(a,u,nm){C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
- if(a==="req"){await sendF(u,"req");C.fo[u]=Date.now()}
+ if(a==="req"){await sendF(u,"req");C.fo[u]={ts:Date.now(),n:String(nm||"").slice(0,20)}}
  else if(a==="ok"){await sendF(u,"ok");C.fr[u]=C.fq[u]||nm||"";delete C.fq[u]}
  else if(a==="del"){await sendF(u,"del");delete C.fr[u]}
  save();updNav();checkTitles()}
@@ -36,10 +36,12 @@ function frIds(){const q=$("#fsq").value.trim().toLowerCase();return frList().fi
 async function loadFr(ids){await Promise.all(ids.filter(u=>fPl[u]==null).slice(0,FR_PAGE).map(async u=>{try{const s=await DB.doc("players/"+u).get();const d=s.exists?s.data():null;fPl[u]=d&&d.n?d:{}}catch(e){fPl[u]={}}}))}
 async function frMore(){if(frBusy||!C||!DB)return;const all=frIds();if(frShown>=all.length)return;const from=frShown;frBusy=true;frShown=Math.min(all.length,frShown+FR_PAGE);
  try{await loadFr(all.slice(from,frShown));if(!$("#v-friends").hidden)paintFriends()}finally{frBusy=false}}
+function foNm(u){const v=C.fo&&C.fo[u];return v&&typeof v==="object"?String(v.n||""):""}
 function paintFriends(msg){const fm=$("#fm");if(typeof msg==="string"){fm.style.color="var(--mu)";fm.textContent=msg}
  rqDraw();const q=$("#fql"),l=$("#ffl"),o=$("#fol");C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
- const row=(uid,fb,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const p=fPl[uid]&&fPl[uid].n?fPl[uid]:null,nb=document.createElement("button");nb.type="button";nb.className="chip";nb.style.cssText="flex:1;text-align:left";
-  nb.textContent=(p&&isOn(p)?"🟢 ":"")+cn(uid,(p&&p.n)||fb)+(p&&tiName(p.ti,p.tn)?" 「"+tiName(p.ti,p.tn)+"」":"")+(p?" ("+p.g+"등급 "+p.a+")":"");nb.onclick=()=>openProfile(uid);if(p&&C.fr&&C.fr[uid])nb.appendChild(frDz(p));w.appendChild(nb);w.className="fr-row";w.dataset.nm=String((p&&p.n)||fb||"").toLowerCase();
+ const row=(uid,fb,btns)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px;align-items:stretch";const p=fPl[uid]&&fPl[uid].n?fPl[uid]:null,nb=document.createElement("button");nb.type="button";nb.className="chip";nb.style.cssText="flex:1;min-width:0;text-align:left";
+  const label=(p&&isOn(p)?"🟢 ":"")+cn(uid,(p&&p.n)||fb)+(p&&tiName(p.ti,p.tn)?" 「"+tiName(p.ti,p.tn)+"」":"")+(p?" ("+p.g+"등급 "+p.a+")":"");
+  nb.textContent=label.trim()?label:"기록을 찾지 못했다";nb.onclick=()=>openProfile(uid);if(p&&C.fr&&C.fr[uid])nb.appendChild(frDz(p));w.appendChild(nb);w.className="fr-row";w.dataset.nm=String((p&&p.n)||fb||"").toLowerCase();
   btns.forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.textContent=t;b.onclick=fn;w.appendChild(b)});return w};
  const act=(a,u,nm)=>async()=>{try{await frDo(a,u,nm);paintFriends("")}catch(e){paintFriends("지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다.");$("#fm").style.color="var(--bad)"}};
  const fill=(el,items,empty)=>{el.innerHTML="";if(!items.length){el.innerHTML="<p class='hint'>"+empty+"</p>";return}items.forEach(x=>el.appendChild(x))};
@@ -49,12 +51,12 @@ function paintFriends(msg){const fm=$("#fm");if(typeof msg==="string"){fm.style.
  let more=$("#fr-more");
  if(ids.length>show.length){if(!more){more=document.createElement("button");more.id="fr-more";more.type="button";more.className="btn g";more.onclick=()=>frMore();l.insertAdjacentElement("afterend",more)}more.hidden=false;more.textContent="친구 "+Math.min(FR_PAGE,ids.length-show.length)+"명 더 보기"}
  else if(more)more.hidden=true;
- fill(o,Object.keys(C.fo).map(u=>row(u,"",[])),"보낸 신청이 없다.");fFilter()}
+ fill(o,Object.keys(C.fo).map(u=>row(u,foNm(u),[])),"보낸 신청이 없다.");fFilter()}
 async function friends(msg){const fresh=$("#v-friends").hidden;show("friends");updNav();
  if(!AUTH.uid){$("#fql").innerHTML=$("#ffl").innerHTML=$("#fol").innerHTML="";const more=$("#fr-more");if(more)more.hidden=true;rqDraw();const fm=$("#fm");fm.style.color="var(--mu)";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
  if(fresh){frShown=FR_PAGE;fPl={}}
  paintFriends(msg||"");if(!C||!DB||frBusy)return;frBusy=true;
- try{await syncFr();if(typeof applyRes==="function")await applyRes();if($("#v-friends").hidden)return;const ids=frIds().slice(0,frShown);ids.forEach(u=>delete fPl[u]);await loadFr(ids);if(!$("#v-friends").hidden)paintFriends()}
+ try{await syncFr();if(typeof applyRes==="function")await applyRes();if($("#v-friends").hidden)return;const ids=frIds().slice(0,frShown),sent=Object.keys(C.fo||{});ids.concat(sent).forEach(u=>delete fPl[u]);await loadFr(ids);await loadFr(sent);if(!$("#v-friends").hidden)paintFriends()}
  catch(e){if(!$("#v-friends").hidden){const fm=$("#fm");fm.style.color="var(--bad)";fm.textContent="친구 목록을 불러오지 못했다. 잠시 뒤에 다시 열어 보자."}}
  finally{frBusy=false}}
 /* 검색은 이미 받아 둔 친구 이름과 신청만 거른다. 전체 플레이어 목록은 읽지 않는다. */
