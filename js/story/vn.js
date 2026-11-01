@@ -114,16 +114,17 @@ function vnStand (host,line) {
   const cast = vnCast(vnState.story, who), side = cast.side === "left" ? "left" : "right";
   host.dataset.side = side;
   const src = String(line && line.stand || cast.img || "").trim(), fig = elT("div", "vn-fig");
+
   if (src) {
     const img = document.createElement("img");
     img.alt = "";
     img.src =src;
     img.addEventListener("error", () => { 
       img.remove();
-      fig.appendChild(vnSil(cast.name))
     });
     fig.appendChild(img)
-  } else fig.appendChild (vnSil (cast.name) ); host.appendChild(fig)
+  }
+  host.appendChild(fig)
 }
 
 function vnSil (name) {

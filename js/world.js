@@ -37,6 +37,11 @@ const village = (name, text) => {
 /* 세계관 > 이벤트. 이야기는 이 탭에서 열지 않는다.
    잠금 플래그는 data/story/lock.js 의 STORY_LOCK 과 storyFlag.
    storyFlag 가 true 인 이야기만 장기 의뢰의 단서 조각 칸에서 '스토리 보기'로 연다. */
+/**
+ * 세계관 > 이벤트 탭에 무엇을 그릴지는 js/world.js의 worldEvent에서 정합니다. 이 함수는 잠금 플래그를 보지 않고, 항상 "이 기억은 아직 잠겨 있다"는 안내만 붙입니다.
+이야기가 열리는 조건은 data/story/lock.js의 STORY_LOCK과 storyFlag입니다. 그 결과가 참일 때 버튼을 만드는 곳은 js/event-boss/piece.js의 clpStories이고, 버튼은 장기 의뢰의 단서 조각 칸에만 생깁니다.
+이벤트가 끝난 뒤 세계관 탭에서 스토리를 계속 열려면 lock.js의 개수·날짜만 풀어서는 되지 않습니다. worldEvent가 그 플래그를 읽어 이야기 버튼을 그리도록 js/world.js를 바꿔야 합니다.
+ */
 function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.ready)return;root.dataset.ready="1";
  root.appendChild(elT("p","world-lead","이 기억은 아직 잠겨 있다."));
  root.appendChild(elT("p","hint","장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."))}

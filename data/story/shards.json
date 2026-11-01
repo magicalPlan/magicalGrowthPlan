@@ -161,7 +161,7 @@
       "title": "눈의 여왕 기억의 파편 3",
       "cast": {
         "???": { "name": "???", "img": "assets/standing/some_winter_girl_crop.png", "side": "right" },
-        "snow_queen": { "name": "눈의 여왕", "img": "", "sie": "right" }
+        "snow_queen": { "name": "눈의 여왕", "img": "", "side": "right" }
       },
       "start": "dim",
       "nodes": {
@@ -200,7 +200,7 @@
       "title": "눈의 여왕 최종장",
       "cast": {
         "???": { "name": "???", "img": "assets/standing/some_winter_girl_crop.png", "side": "right" },
-        "snow_queen": { "name": "눈의 여왕", "img": "", "sie": "right" }
+        "snow_queen": { "name": "눈의 여왕", "img": "", "side": "right" }
       },
       "start": "dim",
       "nodes": {

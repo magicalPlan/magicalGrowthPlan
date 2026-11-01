@@ -8,6 +8,9 @@
      at  이 시각을 지난 뒤여야 한다. 없으면 개수만 본다.
    at 는 한국 시간 0시다. Date.UTC 의 월은 0부터라 11월은 10이고, 시각 15는 한국 0시다.
    개수나 날짜를 바꾸면 이 목록만 고친다. 대사를 고치면 아래 STORY_URL 의 v 숫자를 올린다. */
+   /*
+   테스트 시:: storyLoad().then(book => vnOpen(book.shards.find(s => s.id === "shard-1")))
+   */
 const STORY_URL="data/story/shards.json?v=3";
 const STORY_LOCK=[
  {id:"shard-1",n:2500},
