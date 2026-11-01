@@ -180,7 +180,7 @@ function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOf
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
-function boot(){natHeal();if(C){const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles()}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
+function boot(){natHeal();if(C){if(typeof ntTrim==="function"&&ntTrim())save();const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles()}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
  C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */

@@ -30,6 +30,7 @@ input[type=text],input[type=password],input[type=email]{width:100%;padding:12px 
 .hist{display:grid;gap:8px;margin-top:8px}
 .hist .chip{text-align:left;display:flex;justify-content:space-between}
 .btn{width:100%;padding:13px;font:inherit;font-weight:700;color:var(--bt);background:var(--hi);border:0;border-radius:12px;cursor:pointer;margin-top:8px}
+a.btn{display:block;text-align:center;text-decoration:none}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.g{background:transparent;color:var(--ink);border:1px solid var(--ln)}
 .msg{min-height:1.5em;margin:8px 0 0;color:var(--bad);font-size:.95rem}
