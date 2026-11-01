@@ -442,6 +442,11 @@ html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:i
 .clp-chip{font-size:.8rem;padding:3px 10px;border-radius:999px;border:1px solid var(--ln);background:#ffffff08;white-space:nowrap}
 .clp-chip.me{border-color:#d8c79a;color:#f3d27a}
 .clp-chip b{font-weight:600}
+.clp-stories{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.clp-story{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid #6fa8dc88;background:#ffffff06}
+.clp-story-name{font-weight:700;min-width:0}
+.clp-story .chip{flex:0 0 auto;margin:0}
+html[data-theme="light"] .clp-story{background:#fffcf6;border-color:#5a9fd4}
 
 /* 단서 탐색 카드 격자 */
 .clue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}

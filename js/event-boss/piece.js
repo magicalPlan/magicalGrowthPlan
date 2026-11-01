@@ -53,6 +53,20 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  Object.entries(r.mat||{}).forEach(([id,k])=>b.push((typeof cfName==="function"?cfName(id):id)+" "+k));
  if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
 
+/* 잠긴 이야기. data/story/lock.js 의 storyFlag 가 true 인 것만 '스토리 보기'로 연다.
+   글은 STORY_URL 을 이 브라우저에서 한 번만 읽는다. 합계는 이미 받아 둔 CLPN 을 쓰고, 여기서 서버에 다시 묻지 않는다. */
+let storyBook=null,storyBookP=null,clpStoryGen=0;
+function storyLoad(){if(typeof STORY_URL==="undefined")return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
+ storyBookP=fetch(STORY_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
+function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyFlag!=="function")return;
+ const open=STORY_LOCK.filter(lock=>storyFlag(lock,CLPN,Date.now()));if(!open.length)return;
+ const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);
+ storyLoad().then(book=>{if(gen!==clpStoryGen||!slot.isConnected)return;const list=Array.isArray(book&&book.shards)?book.shards:[];
+  open.forEach(lock=>{const story=list.find(s=>s&&s.id===lock.id);if(!story||!story.start)return;const row=elT("div","clp-story");
+   row.appendChild(elT("span","clp-story-name",story.title||"이야기"));const b=elT("button","chip","스토리 보기");b.type="button";
+   b.onclick=()=>{if(!storyFlag(lock,CLPN,Date.now()))return;if(typeof vnOpen==="function")vnOpen(story)};row.appendChild(b);slot.appendChild(row)});
+  if(!slot.childNodes.length)slot.remove()}).catch(()=>{if(gen===clpStoryGen&&slot.isConnected)slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
+
 /* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.
    위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳. */
 function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),before=now<CLP.from,after=now>=CLP.to;box.innerHTML="";
@@ -71,6 +85,6 @@ function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.
  const ft=elT("div","clp-ft");ft.appendChild(elT("p","clp-me","내가 찾은 조각 "+me.n.toLocaleString()+"개"+(me.n<1?" · 1개 이상 찾아야 보상을 받는다":"")));
  if(CLPTOP.length){const tp=elT("div","clp-top");tp.appendChild(elT("small",null,"많이 찾은 마법소녀"));CLPTOP.slice(0,5).forEach((t,i)=>tp.appendChild(elT("span","clp-chip"+(t.u===UID?" me":""),["🥇","🥈","🥉","4","5"][i]+" "+cn(t.u,t.n)+" "+(Number(t.pt)||0))));ft.appendChild(tp)}
  const wh=elT("div","clp-where");wh.appendChild(elT("small",null,"찾는 곳"));[["🔍 단서 탐색","시간당 약 2.5개"],["🗺 장기 토벌","시간당 "+Math.round(CLP.drop.lh*100)+"%"],["⚑ 출정","성공 "+Math.round(CLP.drop.x_ok*100)+"%"],["❄ 이벤트 보스","토벌 보상 "+CLP.drop.eb+"개"]].forEach(([a,b])=>{const sp=elT("span","clp-chip");sp.append(elT("b",null,a+" "),document.createTextNode(b));wh.appendChild(sp)});ft.appendChild(wh);
- c.appendChild(ft); if(typeof ordMarks==="function")ordMarks();
+ c.appendChild(ft);clpStories(c);if(typeof ordMarks==="function")ordMarks();
  if(!before&&!after){if(!unClp)clpWatchStart();if(!clpAt)clpLoad()}
  else{if(unClp)clpWatchStop();if(!noFetch&&Date.now()-clpAt>30000)clpLoad()}}

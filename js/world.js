@@ -34,20 +34,12 @@ const village = (name, text) => {
    worldLines("특별한 목적을 가지고 아이를 꽃밭에서 데려오면 부모가 될 수 있다. 허나 대부분의 마인의 ‘특별한 목적’은 가족 구성이라기보단 비윤리적인 이유가 대부분이다."),
    worldLines("타르타로스에는 불문율이 있다. 이는 ‘어린 마인을 건드리지 않는다’는 내용으로, 이런 불문율이 생긴 데에는 두 가지 이유가 있다. 첫째로는 종족 유지. 두번째로는 어린아이로 변신하여 허점을 노리는 마인이 많았기 때문. 따라서 마인들은 14살까지는 보호받다가, 14살이 되는 순간 약육강식의 세계에 던져진다.")]))}
 
-/* 이벤트 스토리. 글과 선택지는 data/story/shards.json, 창은 js/story/vn.js 의 vnOpen.
-   기억의 파편 버튼을 누르면 그 이야기만 띄운다. JSON을 한 번 읽어 이 탭에 기억해 두고, 서버에는 저장하지 않는다.
-   글을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
-const WORLD_STORY_URL="data/story/shards.json?v=2";
-let worldStoryBusy=false;
-function worldShard(story){const b=elT("button","world-shard",story.title||"기억의 파편");b.type="button";b.onclick=()=>{if(typeof vnOpen==="function")vnOpen(story)};return b}
-function worldEventDraw(root,book){const list=Array.isArray(book&&book.shards)?book.shards:[];
- root.appendChild(elT("p","world-lead","기억의 파편. 누르면 그 기억이 대화로 펼쳐진다."));
- if(!list.length){root.appendChild(elT("p","hint","아직 적힌 기억이 없다."));return}
- list.forEach(story=>{if(story&&story.start)root.appendChild(worldShard(story))})}
-function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.ready||worldStoryBusy)return;worldStoryBusy=true;
- fetch(WORLD_STORY_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{
-  if(!root||root.dataset.ready)return;const err=root.querySelector(".story-err");if(err)err.remove();worldEventDraw(root,book);root.dataset.ready="1"}).catch(()=>{
-  worldStoryBusy=false;if(root&&!root.querySelector(".story-err"))root.appendChild(elT("p","hint story-err","기억을 불러오지 못했다. 새로고침해 보자."))})}
+/* 세계관 > 이벤트. 이야기는 이 탭에서 열지 않는다.
+   잠금 플래그는 data/story/lock.js 의 STORY_LOCK 과 storyFlag.
+   storyFlag 가 true 인 이야기만 장기 의뢰의 단서 조각 칸에서 '스토리 보기'로 연다. */
+function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.ready)return;root.dataset.ready="1";
+ root.appendChild(elT("p","world-lead","이 기억은 아직 잠겨 있다."));
+ root.appendChild(elT("p","hint","장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."))}
 
   
 /* Q&A. 글은 data/world/qa.json.
