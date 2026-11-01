@@ -31,7 +31,20 @@ const bpEff=(p,a)=>a==="str"?(p.id==="rest"?[1.3,0,0]:p.id==="charge"?[1,3,0]:[1
 function bpAt(id,t){const sl=Math.floor(t/BP_MS),g=rng(hs32(id+"#"+sl))();let a=0;for(const p of BP){a+=p.w/100;if(g<a)return p}return BP[0]}
 const bpEnd=t=>(Math.floor(t/BP_MS)+1)*BP_MS;
 const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
-const bossList=async b=>{const s=await once(DB.collection("wboss/"+b.id));return s.docs.map(d=>d.data()).filter(Boolean)};
+/* 참가자 전원은 보스 화면에 들어올 때 한 번만 받는다. 공격할 때는 내 기록과 합계(meta)만 읽고 쓴다.
+   meta 는 같은 wboss 칸 안에 두므로 규칙을 더 열지 않는다. 화면의 순위는 u 가 있는 기록만 쓴다. */
+const bossListP={};
+const bossList=b=>{const id=b&&b.id;if(!id||!DB)return Promise.resolve([]);if(bossListP[id])return bossListP[id];
+ const p=DB.collection("wboss/"+id).grab(40000).then(s=>(s.docs||[]).map(d=>d.data()).filter(v=>v&&v.u)).finally(()=>{if(bossListP[id]===p)delete bossListP[id]});bossListP[id]=p;return p};
+let bossSnap={};
+function bossWhy(e){const name=e&&e.name,m=String(e&&e.message||e);if(m==="403")return "공격하지 못했다. 데이터베이스 규칙에서 wboss 경로가 열려 있는지 확인해야 한다.";if(m==="401")return "공격하지 못했다. 로그인이 만료되었다. 새로고침한 뒤 다시 로그인해 보자.";if(name==="AbortError"||m==="timeout"||/abort/i.test(m))return "공격하지 못했다. 서버 응답이 시간 안에 오지 않았다. 잠시 뒤에 다시 눌러 보자.";if(m==="offline"||/failed to fetch|network|offline/i.test(m))return "공격하지 못했다. 네트워크에 연결되지 않았다.";return "공격하지 못했다. 잠시 뒤에 다시 눌러 보자."}
+function bossBar(id,list,hpOf){const snap=bossSnap[id],mx=snap&&Number(snap.hp0)>0?Number(snap.hp0):hpOf();const dealt=snap&&snap.sum!=null?Number(snap.sum):sumHits(list||[]);const dead=!!(list||[]).some(v=>v&&v.x)||!!(snap&&snap.x)||(mx>0&&dealt>=mx);return{mx,dead,hp:dead?0:Math.max(0,mx-dealt),n:Math.max((list||[]).filter(v=>v&&v.u).length,snap&&snap.n||0)}}
+function bossMinePatch(list,rec){const next=(list||[]).filter(v=>v&&v.u&&v.u!==rec.u);next.push(rec);return next}
+function bossMetaNote(id,list,hp0){if(!id||!(hp0>0))return;const sum=sumHits(list),n=(list||[]).filter(v=>v&&v.u).length,x=(list||[]).some(v=>v&&v.x)||sum>=hp0?1:null,prev=bossSnap[id];
+ bossSnap[id]={hp0:prev&&Number(prev.hp0)>0?Number(prev.hp0):hp0,sum:Math.max(sum,prev&&prev.sum||0),n:Math.max(n,prev&&prev.n||0),x:x||(prev&&prev.x)||null};
+ DB.doc("wboss/"+id+"/meta").transact(cur=>{const p=cur&&typeof cur==="object"?cur:null,hp=Number(p&&p.hp0)||hp0,sm=Math.max(Number(p&&p.sum)||0,sum),dead=(p&&p.x)||x||sm>=hp;if(p&&Number(p.hp0)===hp&&Number(p.sum)>=sm&&(!dead||p.x))return undefined;return{hp0:hp,sum:sm,n:Math.max(Number(p&&p.n)||0,n),x:dead?1:null}}).then(m=>{if(!m||!(Number(m.hp0)>0))return;const loc=bossSnap[id];if(loc&&Number(loc.sum)>Number(m.sum))return;bossSnap[id]=m}).catch(()=>{})}
+async function bossHitRead(id){const [ms,mineS]=await Promise.all([DB.doc("wboss/"+id+"/meta").get(),DB.doc("wboss/"+id+"/"+UID).get()]);let meta=ms.exists&&ms.data()&&Number(ms.data().hp0)>0?ms.data():null;const loc=bossSnap[id];if(meta&&(!loc||Number(meta.sum)>=Number(loc.sum||0)))bossSnap[id]=meta;else if(loc&&Number(loc.hp0)>0)meta=loc;const mine=mineS.exists&&mineS.data()&&mineS.data().u?mineS.data():null;return{meta,mine}}
+async function bossMetaAdd(id,hp0,add,first){let applied=false;const after=await DB.doc("wboss/"+id+"/meta").transact(cur=>{applied=false;const p=cur&&typeof cur==="object"?cur:null,hp=Number(p&&p.hp0)||hp0,sum0=Number(p&&p.sum)||0;if(p&&(p.x||(hp>0&&sum0>=hp)))return undefined;applied=true;const sum=sum0+add;return{hp0:hp,sum,n:(Number(p&&p.n)||0)+(first?1:0),x:sum>=hp?1:null}});if(applied&&after&&after.hp0)bossSnap[id]=after;else if(!applied&&after&&Number(after.hp0)>0)bossSnap[id]=after;return applied?after:null}
 // 공격 횟수: 오전·오후 보스는 반나절마다, 주간 보스는 하루마다 다시 채워진다.
 function bossDay(){const hk=bossOf("d").id;if(!C.wb||C.wb.day!==today())C.wb={day:today(),h:hk,d:0,w:0};else if(C.wb.h!==hk){C.wb.h=hk;C.wb.d=0}}
 function bossView(){show("boss");$("#bsm").textContent="";bossDay();unB&&unB();unB=null;const box=$("#bsl");box.innerHTML="";
@@ -41,13 +54,13 @@ function bossView(){show("boss");$("#bsm").textContent="";bossDay();unB&&unB();u
 let bossBusy=false;
 async function loadBoss(){if(!C||!DB||$("#v-boss").hidden||bossBusy)return;bossBusy=true;
  try{const rows=await Promise.all(["d","w"].map(async k=>{const b=bossOf(k);let list=[];try{list=await bossList(b)}catch(e){}return{k,b,list}}));
-  if($("#v-boss").hidden||!C)return;rows.forEach(({k,b,list})=>drawBoss(k,b,list))}finally{bossBusy=false}}
+  if($("#v-boss").hidden||!C)return;rows.forEach(({k,b,list})=>{const hp=bhp(k,list,b.id);if(hp>0)bossMetaNote(b.id,list,hp);drawBoss(k,b,list)})}finally{bossBusy=false}}
 function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const cfg=BOSS[k],def=b.def;
  if(list==null){c.innerHTML="";c.append(elT("p","boss-tag",(b.nm||cfg.nm)+" · "+(b.until||cfg.until)),elT("h2","",def[0]),elT("p","hint","처치 여부와 공격 기록을 불러오는 중..."));return}
- bossLast[k]=list;const dead=bossDead(k,list,b.id),mx=bhp(k,list,b.id),hp=dead?0:Math.max(0,mx-sumHits(list));
+ bossLast[k]=list;const info=bossBar(b.id,list,()=>bhp(k,list,b.id)),dead=info.dead,mx=info.mx,hp=info.hp;
  const rank=list.slice().sort((a,x)=>(x.d||0)-(a.d||0)),mine=list.find(v=>v.u===UID),weak=(C.a||[]).includes(def[2]);c.innerHTML="";
  c.append(elT("p","boss-tag",(b.nm||cfg.nm)+" · "+(b.until||cfg.until)),elT("h2","",def[0]),elT("p","hint",def[1]),elT("p","boss-weak"+(weak?" on":""),"약점: "+def[2]+" 속성"+(weak?" · 내 속성이라 피해 30% 증가!":"")));
- const bar=elT("div","bar"),fill=elT("i");fill.style.width=(hp/mx*100)+"%";bar.appendChild(fill);c.append(bar,elT("p","hint","HP "+hp+" / "+mx+" · 참가자 "+list.length+"명"));
+ const bar=elT("div","bar"),fill=elT("i");fill.style.width=(hp/mx*100)+"%";bar.appendChild(fill);c.append(bar,elT("p","hint","HP "+hp+" / "+mx+" · 참가자 "+info.n+"명"));
  c.appendChild(elT("p","","내 피해 "+(mine?Number(mine.d)||0:0)+(mine?" ("+(rank.indexOf(mine)+1)+"위)":" (아직 참가하지 않았다)")));
  if(rank.length){const ol=elT("ol","boss-rank");rank.slice(0,5).forEach(v=>{const li=elT("li",v.u===UID?"me":"",cn(v.u,v.n)+" · 피해 "+(Number(v.d)||0)+" ("+(Number(v.c)||0)+"회)");ol.appendChild(li)});c.appendChild(ol)}
  if(dead){c.appendChild(elT("p","boss-dead","처치 완료!"));const got=C.wbc&&C.wbc[b.id],joined=C.wbp&&C.wbp[b.id];
@@ -62,7 +75,8 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const
  if(bScaled(k,b.id)||k==="d"){const wait=bossTopN==null&&!list.length,est=bScaled(k,b.id)?bossHpEst(k):dHpNow();c.appendChild(elT("p","boss-info","체력: 첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+est.toLocaleString()+")")))}
  c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOSS[k],m=$("#bsm");bossDay();if(C.fall||C.dz>=90||C.wb[k]>=cfg.t)return;bt.disabled=true;const pt=bpAt(b.id,Date.now()),ef=bpEff(pt,act),good=pt.best===act;
- try{await bossTopPw();const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
+ try{if(bScaled(k,b.id)){await hitBossFast(k,b,cfg,m,pt,ef,good,act);return}
+  await bossTopPw();const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
   if(hp<=0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,list);return}
   const weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)*(1+petEff("boss"))));
   const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p,c:(Number(mine.c)||0)+1,ts:Date.now(),t0:Number(mine.t0)||Date.now()};if(bScaled(k,b.id))rec.hp0=bhpScaled(k,list);else if(k==="d")rec.hp0=Number(mine.hp0)||(list.length?(Number((bFirst(list)||{}).hp0)||0):0)||dHpNow();if(mine.x||hp-d<=0)rec.x=1;await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
@@ -70,7 +84,20 @@ async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOS
   const say=good?(act==="def"?" 반격을 막고 되받아쳤다!":act==="weak"?" 모인 마력을 꿰뚫었다! 약점 적중!":" 빈틈에 강타가 꽂혔다!"):act==="str"&&pt.id==="charge"?" 돌진에 반격당했다!":act==="weak"?" 약점을 찾지 못했다.":act==="def"?" 조심스럽게 싸웠다.":"";
   m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(mt?" "+mt+".":"")+(hp-d<=0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");
   drawBoss(k,b,await bossList(b))}
- catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 데이터베이스 규칙에서 wboss 경로가 열려 있는지 확인해야 한다.";bt.disabled=false}}
+ catch(e){m.style.color="var(--bad)";m.textContent=bossWhy(e);drawBoss(k,b,bossLast[k]||[])}}
+async function hitBossFast(k,b,cfg,m,pt,ef,good,act){const id=b.id,read=await bossHitRead(id);let meta=read.meta,mine=read.mine;
+ if(!meta){let list=null,failed=false;try{list=await bossList(b)}catch(e){failed=true;list=(bossLast[k]||[]).slice()}if(failed&&!list.length)throw new Error("timeout");if(!list.some(v=>Number(v&&v.hp0)>0))await bossTopPw();const hpSeed=bhp(k,list,id);if(!(hpSeed>0))throw new Error("timeout");bossMetaNote(id,list,hpSeed);meta=bossSnap[id];if(!mine)mine=list.find(v=>v&&v.u===UID)||null}
+ const hp0=Number(meta&&meta.hp0)||0,sum=Number(meta&&meta.sum)||0;
+ if(!hp0)throw new Error("timeout");
+ if((meta&&meta.x)||sum>=hp0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,bossLast[k]||[]);return}
+ const mineRec=mine||{},weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)*(1+petEff("boss"))));
+ const rec={u:UID,n:nmOf(),d:(Number(mineRec.d)||0)+d,p:Number(mineRec.p)||pw(),c:(Number(mineRec.c)||0)+1,ts:Date.now(),t0:Number(mineRec.t0)||Date.now(),hp0};if(mineRec.x||sum+d>=hp0)rec.x=1;
+ await DB.doc("wboss/"+id+"/"+UID).set(rec);
+ try{await bossMetaAdd(id,hp0,d,!mineRec.u)}catch(e){const prev=bossSnap[id]||{hp0,sum,n:0};bossSnap[id]={hp0,sum:(Number(prev.sum)||0)+d,n:(Number(prev.n)||0)+(!mineRec.u?1:0),x:prev.x||rec.x||null}}
+ if(fire)useSk("fire");if(dexAdd("bs",b.def[0]))note("dex","도감에 새 보스가 기록되었다: "+b.def[0]);C.wb[k]++;C.wbp=keepIds(C.wbp,b.id);C.gd=(C.gd||0)+cfg.hit;titleState();C.stats.bossHits=(C.stats.bossHits||0)+1;if(good)C.stats.bossRead=(C.stats.bossRead||0)+1;guardAdd(3);const mt=matGain(["boss"]);const dz=ef[2]?0:cfg.dz+ef[1];try{if(dz)gain(0,dz);else save()}catch(e){}checkTitles();
+ const say=good?(act==="def"?" 반격을 막고 되받아쳤다!":act==="weak"?" 모인 마력을 꿰뚫었다! 약점 적중!":" 빈틈에 강타가 꽂혔다!"):act==="str"&&pt.id==="charge"?" 돌진에 반격당했다!":act==="weak"?" 약점을 찾지 못했다.":act==="def"?" 조심스럽게 싸웠다.":"";
+ m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(mt?" "+mt+".":"")+(sum+d>=hp0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");
+ drawBoss(k,b,bossMinePatch(bossLast[k]||[],rec))}
 // 처치 보상: 참가했고, 보스가 쓰러졌고, 아직 안 받았을 때만
 async function claimBoss(b){if(!C.wbp||!C.wbp[b.id]||(C.wbc&&C.wbc[b.id]))return null;let list=[];try{list=await bossList(b)}catch(e){return null}
  if(!bossDead(b.k,list,b.id))return null;const cfg=BOSS[b.k],top=list.slice().sort((a,x)=>(x.d||0)-(a.d||0))[0],mvp=!!top&&top.u===UID,r={g:cfg.kill.g,m:cfg.kill.m+(mvp?cfg.mvp:0)};
