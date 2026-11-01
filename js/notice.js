@@ -92,7 +92,7 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    시험으로 얻은 속성은 지운다. 속성은 만든 순서로 쌓이므로 맨 앞 하나만 남긴다.
    이미 받은 보상·이미 본 알림 표시도 남긴다(초기화 뒤 같은 보상을 다시 받거나 옛 알림이 다시 뜨지 않게).
    등급은 가장 낮은 E로 되돌린다. 그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
-   공용 데이터(채팅·1:1·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. */
+   공용 데이터(채팅·1:1 본문과 방 목록 rooms/xd·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. 출정·대련 방(rooms의 xm·xv·xa·xb·xr)은 남긴다. */
 let RST=null;
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
@@ -119,6 +119,9 @@ function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
  for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ /* 1:1 방 목록은 rooms/xd{uid}. 출정(xm·xv)·대련(xa·xb·xr) 방은 같은 rooms 아래에 있으므로 통째로 지우지 않는다. */
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>String(k).indexOf("xd")===0);
+  let bad=0;for(const k of ks){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("1:1 방 목록 "+bad+"/"+ks.length+"개");else done.push("1:1 방 목록 "+ks.length+"개")}catch(e){fail.push("1:1 방 목록 ("+String(e&&e.message||e)+")")}
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
@@ -135,7 +138,7 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
 function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
   elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마는 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지'는 남는다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
  const rc=elT("div","card rst-card");rc.style.marginTop="12px";rc.append(elT("h2","","🏛 시설 기여 복구 (운영자 전용)"),
