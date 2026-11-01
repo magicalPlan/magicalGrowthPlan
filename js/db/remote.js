@@ -12,7 +12,7 @@ const tf=(u,o,ms)=>{const opt=Object.assign({cache:"no-store"},o);if(typeof Abor
 const fx=async(mk,o,ms)=>{let r=await tf(mk(),o,ms);if(r.status===401&&AUTH.rt&&AUTH.key){try{await refresh();r=await tf(mk(),o,ms)}catch(e){}}return r};
 /* SAME: 데이터가 그대로라 서버가 본문 없이 304를 준 경우. JSON과 겹치지 않는 표식이다. */
 const SAME={};
-const J=async(mk,bag)=>{const o=bag?{headers:{"X-Firebase-ETag":"true"}}:null;if(bag&&bag.tag)o.headers["if-none-match"]=bag.tag;const r=await fx(mk,o);if(r.status===304)return SAME;if(!r.ok)throw new Error(r.status);if(bag){const tag=r.headers.get("ETag");if(tag)bag.tag=tag}return r.json()};
+const J=async(mk,bag,ms)=>{const o=bag?{headers:{"X-Firebase-ETag":"true"}}:null;if(bag&&bag.tag)o.headers["if-none-match"]=bag.tag;const r=await fx(mk,o,ms);if(r.status===304)return SAME;if(!r.ok)throw new Error(r.status);if(bag){const tag=r.headers.get("ETag");if(tag)bag.tag=tag}return r.json()};
 /* POLL_FAST 와 live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록, 재해 점수, 선물 도착, 1:1 도착, 회귀 표시, 정기 출정 자리, 마수 포탈). 그 밖은 연결 없이 주기적으로 묻는다.
    처음 받을 때 ETag를 기억한다. 다음부터는 그 값을 보내서, 같으면 본문 없이 304만 받고 화면은 그대로 둔다. 바뀔 때만 본문을 받아 반영한다.
    연결이 거절되어 이 묻기로 돌아와도 같다. 출정·타락 목록·채팅도 그대로인 동안에는 전문을 다시 받지 않는다.
@@ -51,7 +51,7 @@ const D=(p,lv)=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id
 const qq=o=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else if(o.ob){q.push('orderBy="'+o.ob+'"');if(o.fr!=null)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)));if(o.en!=null)q.push("endAt="+encodeURIComponent(JSON.stringify(o.en)))}else{q.push('orderBy="$key"');if(o.pre){const start=o.af&&o.af>o.pre?o.af:o.pre,end=o.en!=null&&String(o.en)<o.pre+"\uf8ff"?o.en:o.pre+"\uf8ff";q.push("startAt="+encodeURIComponent(JSON.stringify(start)),"endAt="+encodeURIComponent(JSON.stringify(end)))}else if(o.fr)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)))}if(o.f)q.push("limitToFirst="+o.f);else if(o.l)q.push("limitToLast="+o.l);return q.join("&")};
 const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),by:f=>Q(c,{...o,ob:f}),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),end:k=>Q(c,{...o,en:k}),live:()=>Q(c,{...o,lv:1}),doc:id=>D(c+"/"+id),
  /* 한 번만 읽기. 주기 조회의 ETag 확인으로 들어가지 않는다. */
- grab:async()=>{const j=await J(()=>U(c,qq(o)));return{docs:Object.keys(j||{}).map(k=>sn(k,j[k]))}},
+ grab:async ms=>{const j=await J(()=>U(c,qq(o)),null,ms);return{docs:Object.keys(j||{}).map(k=>sn(k,j[k]))}},
  onSnapshot:(f,e,ms)=>{
  /* 찾기 목록(.indexOn)이 없으면 서버가 400을 낸다. 최근 1,500개를 통째로 받아 고르지 않는다. 실패하면 poll 이 간격을 늘린다. */
  const get=bag=>J(()=>U(c,qq(o)),bag);

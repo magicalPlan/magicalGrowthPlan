@@ -1,6 +1,6 @@
 /* 마수 포탈. main.js 다음에 불러야 한다. 집결, 출동, 치유.
    마을 화면은 hubPortal 과 pTick 을, 알림은 portalView 를 그대로 부른다.
-   참가 명단은 마을·포탈 화면이 열려 있는 동안만 연결하고, 사람이 늘거나 치유가 바뀔 때만 받는다. */
+   참가 명단은 열린 포탈만 먼저 한 번씩 읽어 그린 뒤에 연결한다. 마을·포탈 화면이 열려 있는 동안만 연결하고, 사람이 늘거나 치유가 바뀔 때만 받는다. */
 const pDawn=t=>{const hr=Math.floor((t/3600000+9)%24);return hr<6};
 function pInfo(h){const id="p"+h,g=rng(hs32(id)),p=n=>Math.floor(g()*n),m=p(50),v="ABCD"[p(4)],r=p(1000),T0=h*PS+m*60000,rg=pDawn(T0)?P_DAWN:P_DAY,need=rg[0]+r%(rg[1]-rg[0]+1);
  return{id,h,v,need,nm:VL[v].n+" "+PNAMES[p(PNAMES.length)],T0,G:T0+PGATHER,E:T0+PGATHER+PHEAL}}
@@ -22,29 +22,36 @@ function pClaim(x,st){if(!C||!C.pj||!C.pj[x.id]||(C.pc&&C.pc[x.id])||pNow()<x.G)
  if(st.win){C.gd=(C.gd||0)+50;C.stats.portalWins=(C.stats.portalWins||0)+1;gain(30,5);guardAdd(30);note("portal",x.nm+" 토벌 성공! "+st.joined.length+"명이 함께했다. 골드 50, 마을 점수 30")}
  else{C.gd=(C.gd||0)+10;gain(10,8);guardAdd(5);note("portal",x.nm+"에 정원이 모이지 않아 주민 "+st.W+"명이 다쳤다. 치유를 도와주자. (골드 10, 마을 점수 5)")}
  save();checkTitles()}
-function pBtn(){const b=$("#b-portal");if(!b||!C)return;const now=pNow(),list=pCur(),g=list.find(x=>now<x.G),hl=list.find(x=>{const st=pState(x,pData[x.id]);return !st.gather&&st.left>0});b.textContent=g?"마수 포탈 (열림! "+xFmt(g.G-now)+")":hl?"마수 포탈 (치유 필요)":"마수 포탈"}
+function pBtn(){const b=$("#b-portal");if(!b||!C)return;const now=pNow(),list=pCur(),g=list.find(x=>now<x.G),hl=list.find(x=>{if(!pSeen[x.id])return false;const st=pState(x,pData[x.id]);return !st.gather&&st.left>0});b.textContent=g?"마수 포탈 (열림! "+xFmt(g.G-now)+")":hl?"마수 포탈 (치유 필요)":"마수 포탈"}
 function pNote(){if(!C||!XON())return;const now=pNow();pCur().forEach(x=>{if(now>=x.G||(C.pn&&C.pn[x.id]))return;C.pn=keepIds(C.pn,x.id);save();const t="☄ "+x.nm+"이(가) 열렸다! "+xHM(x.G)+"까지 "+x.need+"명이 모여야 한다.";note("portal",t);toast(t,portalView);ding()});pBtn()}
-let pWatch={},pWatchKey="",pSeen={},pMiss={},pAct="";
-function pWatchStop(){Object.keys(pWatch).forEach(id=>{try{pWatch[id]()}catch(e){}delete pWatch[id]});pWatchKey=""}
+let pWatch={},pWatchKey="",pWatchGen=0,pWarm={},pSeen={},pMiss={},pAct="";
+function pWatchStop(){pWatchGen++;Object.keys(pWatch).forEach(id=>{try{pWatch[id]()}catch(e){}delete pWatch[id]});pWatchKey="";pWarm={}}
 function pApply(id,data){pSeen[id]=1;data=data&&typeof data==="object"?data:{};
  if(pAct===id+"/j"&&pData[id]&&pData[id].j&&pData[id].j[UID]){data=Object.assign({},data);data.j=Object.assign({},data.j||{},{[UID]:pData[id].j[UID]})}
  pData[id]=data;const x=pInfo(Number(String(id).slice(1)));if(x&&x.id===id)pClaim(x,pState(x,pData[id]));if(!$("#v-portal").hidden)pRender();if(!$("#v-hub").hidden)hubPortal();pBtn()}
-/* 마을·포탈 화면에서만 지금 열린 포탈에 연결한다. 연결이 거절되면 20초마다 묻는 방식으로 돌아간다. */
-function pWatchSync(){if(!C||!XON()||!DB||document.hidden||($("#v-hub").hidden&&$("#v-portal").hidden)){pWatchStop();return}
- const ids=pCur().map(x=>x.id),key=ids.join(",");if(key===pWatchKey&&ids.every(id=>pWatch[id]))return;pWatchStop();pWatchKey=key;
- ids.forEach(id=>{pWatch[id]=DB.doc("portal/"+id).live().onSnapshot(s=>{if(!pWatch[id])return;pApply(id,s.exists?s.data()||{}:{})},()=>{},POLL_HUB)})}
+function pLive(id,gen){if(gen!==pWatchGen||pWatch[id]||document.hidden||!$("#v-hub")||!$("#v-portal")||($("#v-hub").hidden&&$("#v-portal").hidden))return;pWatch[id]=DB.doc("portal/"+id).live().onSnapshot(s=>{if(!pWatch[id])return;pApply(id,s.exists?s.data()||{}:{})},()=>{},POLL_HUB)}
+/* 마을·포탈 화면에서만 지금 열린 포탈을 본다. 아직 못 받은 포탈은 한 번 읽어 그린 뒤에 연결한다. 읽기와 연결을 동시에 열지 않는다.
+   연결이 거절되면 20초마다 묻는 방식으로 돌아간다. */
+function pWatchSync(){if(!C||!XON()||!DB||document.hidden||!$("#v-hub")||!$("#v-portal")||($("#v-hub").hidden&&$("#v-portal").hidden)){pWatchStop();return Promise.resolve()}
+ const xs=pCur(),ids=xs.map(x=>x.id),key=ids.join(",");
+ if(key!==pWatchKey){pWatchGen++;pWatchKey=key;Object.keys(pWatch).forEach(id=>{if(ids.indexOf(id)<0){try{pWatch[id]()}catch(e){}delete pWatch[id]}});Object.keys(pWarm).forEach(id=>{if(ids.indexOf(id)<0)delete pWarm[id]})}
+ if(ids.every(id=>pWatch[id]||pWarm[id]))return Promise.resolve();
+ const gen=pWatchGen,jobs=[];
+ xs.forEach(x=>{const id=x.id;if(pWatch[id]||pWarm[id])return;if(pSeen[id]){pLive(id,gen);return}pWarm[id]=1;jobs.push(pFetch(x).then(d=>{if(gen!==pWatchGen)return;if(d!=null)pApply(id,d);pLive(id,gen)}).finally(()=>{delete pWarm[id]}))});
+ return Promise.all(jobs)}
 async function pSettle(){if(!C||!XON())return;const now=pNow();
  for(const id of Object.keys(C.pj||{})){if(C.pc&&C.pc[id])continue;const x=pInfo(Number(String(id).slice(1)));if(!x||x.id!==id||now<x.G)continue;
   if(pWatch[id]){if(pSeen[id])pClaim(x,pState(x,pData[id]||{}));continue}
   if(pMiss[id])continue;pMiss[id]=1;const d=await pFetch(x);if(d==null){pMiss[id]=0;continue}pApply(id,d)}}
-function pTick(){if(typeof clockSync==="function")clockSync();pNote();pWatchSync();return pSettle()}
+function pTick(){if(typeof clockSync==="function")clockSync();pNote();return Promise.resolve(pWatchSync()).then(()=>pSettle())}
 setInterval(()=>{if(document.hidden){pWatchStop();return}pTick()},10000);
 /* 마을 탭 요약: 진행 중인 마수 포탈과 이번 주 마을 순위를 짧게 보여 준다. 누르면 자세한 화면으로 간다. */
 function hubPortal(){const box=$("#hpo");if(!box||!C)return;box.innerHTML="";if(!XON()){box.appendChild(elT("p","hint","서버에 연결되어야 마수 포탈이 열린다."));return}
  const now=pNow(),list=pCur().sort((a,b)=>a.T0-b.T0).reverse();
  if(!list.length){box.appendChild(elT("p","hint","지금 열린 포탈이 없다. 한 시간에 한 번, 예고 없이 열린다."));return}
- list.forEach(x=>{const st=pState(x,pData[x.id]),w=elT("div","dq"+(st.gather?" done":"")),cp=elT("div","dq-copy");let sub,lab;
-  if(st.gather){const sp=elT("small","",x.need+"명 필요 · "+st.joined.length+"명 출동 · 마감까지 ");const t=elT("b","",xFmt(x.G-now));t.style.display="inline";t.dataset.pt=x.G;sp.appendChild(t);cp.append(elT("b","","☄ "+x.nm),sp);lab=st.joined.includes(UID)?"출동함":"출동"}
+ list.forEach(x=>{const seen=!!pSeen[x.id],st=pState(x,pData[x.id]),w=elT("div","dq"+(seen&&st.gather?" done":"")),cp=elT("div","dq-copy");let lab;
+  if(!seen){cp.append(elT("b","","☄ "+x.nm),elT("small","","인원을 불러오는 중..."));lab="보기"}
+  else if(st.gather){const sp=elT("small","",x.need+"명 필요 · "+st.joined.length+"명 출동 · 마감까지 ");const t=elT("b","",xFmt(x.G-now));t.style.display="inline";t.dataset.pt=x.G;sp.appendChild(t);cp.append(elT("b","","☄ "+x.nm),sp);lab=st.joined.includes(UID)?"출동함":"출동"}
   else if(st.win){cp.append(elT("b","",x.nm),elT("small","","토벌 성공 · "+st.joined.length+"명이 함께했다"));lab="보기"}
   else{cp.append(elT("b","",x.nm),elT("small","",st.left>0?"부상자 "+st.left+"명 남음 · 치유가 필요하다":"부상자를 모두 치유했다"));lab=st.left>0?"치유":"보기"}
   const b=elT("button","chip",lab);b.type="button";b.onclick=portalView;w.append(cp,b);box.appendChild(w)})}
@@ -80,9 +87,10 @@ function pRender(timeOnly){const box=$("#pl3");if(!box||!C)return;const now=pNow
  if(timeOnly){box.querySelectorAll("[data-pt]").forEach(e=>{const t=Number(e.dataset.pt);e.textContent=xFmt(t-now)});return}
  box.innerHTML="";if(!XON()){box.appendChild(elT("p","hint","서버에 연결되어야 마수 포탈에 갈 수 있다."));return}
  if(!list.length){box.appendChild(elT("p","hint","지금 열린 마수 포탈이 없다. 포탈은 예고 없이, 한 시간에 한 번 어딘가에 열린다. 열리면 화면 위에 알림이 뜬다."));return}
- list.forEach(x=>{const d=pData[x.id]||{},st=pState(x,d),c=elT("div","card boss-card w");c.style.marginBottom="12px";
+ list.forEach(x=>{const d=pData[x.id]||{},seen=!!pSeen[x.id],st=pState(x,d),c=elT("div","card boss-card w");c.style.marginBottom="12px";
   const cd=(lab,t)=>{const p=elT("p","hint",lab+" ");const s=elT("b","",xFmt(t-now));s.dataset.pt=t;p.appendChild(s);return p};
   c.append(elT("p","boss-tag",VL[x.v].n+"에 열린 포탈"),elT("h2","",x.nm));
+  if(!seen){c.appendChild(elT("p","hint","인원을 불러오는 중..."));box.appendChild(c);return}
   if(st.gather){c.append(elT("p","","필요 인원 "+x.need+"명 · 모인 인원 "+st.joined.length+"명"),cd("집결 마감까지",x.G));
    const bar=elT("div","bar"),f=elT("i");f.style.width=Math.min(100,st.joined.length/x.need*100)+"%";bar.appendChild(f);c.appendChild(bar);
    if(st.joined.length)c.appendChild(elT("p","boss-info","출동: "+st.joined.map(u=>cn(u,st.j[u].n)).join(", ")));
