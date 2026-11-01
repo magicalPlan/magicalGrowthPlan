@@ -8,7 +8,7 @@ let ntCat="all",ntNew=new Set(),ntShown=10;
 const NT_PAGE=10;
 const ntCatOf=k=>{const c=NT_CAT.find(x=>x[2]&&x[2].includes(k));return c?c[0]:"etc"};
 const ntIn=(n,cat)=>cat==="all"||ntCatOf(n.k)===cat;
-function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(!keep||fresh)ntShown=NT_PAGE;C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
+function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(fresh&&typeof checkDM==="function")checkDM();if(!keep||fresh)ntShown=NT_PAGE;C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
  // 화면을 처음 열 때 안 읽은 알림을 기억해 두고(종류를 바꿔도 '새 알림' 표시가 남게), 바로 읽음으로 바꾼다.
  if(!keep)ntNew=new Set(C.nt.filter(n=>!n.r).map(n=>n.ts+"|"+n.t));
  const cb=$("#ntcat");cb.innerHTML="";NT_CAT.forEach(([k,nm])=>{const all=C.nt.filter(n=>ntIn(n,k)),nw=all.filter(n=>ntNew.has(n.ts+"|"+n.t)).length;if(k==="etc"&&!all.length)return;

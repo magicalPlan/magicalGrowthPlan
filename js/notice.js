@@ -84,36 +84,44 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
   f.onsubmit=e=>{e.preventDefault();if(!/^\d{4}-\d{2}-\d{2}$/.test(inp.value)){msg.textContent="날짜를 골라야 한다.";return}put({d:inp.value,ts:Date.now()})};
   off.onclick=()=>{if(confirm("카운트다운을 끌까? 모두의 화면에서 사라진다."))put(null)};
   b.append(set,f)}}
+  
 /* ── 시즌 초기화 ──
    운영자가 '시즌 초기화'를 실행하면 운영자 본인의 플레이어 기록(players/{운영자}/rst)에 {id:실행 시각}을 남긴다.
    접속할 때 한 번, 그리고 공지 탭을 열 때 한 번 이 표시를 확인한다. 내 캐릭터가 그보다 오래된 시즌이면(C.rsv < id) 한 번 초기화한다.
-   남기는 것: 이름·성별·마을·등급·속성·특성, 프로필(사진·설정), 기록(칭호·도감·통계), 사역마(+품고 있는 알).
+   남기는 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필(사진·설정), 기록(칭호·도감·통계), 사역마(+품고 있는 알).
+   시험으로 얻은 속성은 지운다. 속성은 만든 순서로 쌓이므로 맨 앞 하나만 남긴다.
    이미 받은 보상·이미 본 알림 표시도 남긴다(초기화 뒤 같은 보상을 다시 받거나 옛 알림이 다시 뜨지 않게).
-   그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
-   공용 데이터(채팅·1:1·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. */
+   등급은 가장 낮은 E로 되돌린다. 그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
+   공용 데이터(채팅·1:1 본문과 방 목록 rooms/xd·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. 출정·대련 방(rooms의 xm·xv·xa·xb·xr)은 남긴다. */
 let RST=null;
-const RST_KEEP=["n","s","v","a","g","t","img","pf","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg",
+const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
-async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM).concat(typeof ADMIN_FIXED!=="undefined"?ADMIN_FIXED:[]));
+async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
 async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad();if(!R||!C)return;
  if((Number(C.rsv)||0)>=R.id)return;
  if(Number(C.born)>R.id){C.rsv=R.id;save();return}// 초기화 뒤에 새로 만든 캐릭터
  rstApply(R,boot)}
+/* 회귀: 캐릭터를 만들 때 고른 첫 속성만 남긴다. 재계약 시험으로 뒤에 붙은 속성은 지운다. */
+function rstAttrs(list){const a=(Array.isArray(list)?list:[]).filter(x=>typeof AT!=="undefined"&&AT.some(t=>t[0]===x));return a.length?[a[0]]:["불"]}
 function rstApply(R,boot){const keep={};RST_KEEP.forEach(k=>{if(C[k]!==undefined)keep[k]=C[k]});
- C=Object.assign({lv:1,ex:0,xv:2,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:R.id,nt:[]});
+ keep.a=rstAttrs(keep.a);
+ C=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:R.id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
  C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,100);
- note("notice","🌑 새 시즌이 시작되었다. 이름·속성·특성·사역마와 프로필·기록은 그대로 남고, 나머지는 처음부터 다시 시작한다.");
+ note("notice","🌑 새 시즌이 시작되었다. 이름·처음 속성·특성·사역마와 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.");
  save();try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}try{if(typeof raidClear==="function")raidClear()}catch(e){}
- const msg="운영자가 시즌을 초기화했다.\n\n남은 것: 이름·성별·마을·등급·속성·특성, 프로필, 칭호·도감·기록, 사역마\n처음으로 돌아간 것: 레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n새로운 이야기를 시작하자.";
+ const msg="운영자가 시즌을 초기화했다.\n\n남은 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마\n처음으로 돌아간 것: 등급(E)·시험으로 얻은 속성·레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n새로운 이야기를 시작하자.";
  if(boot)setTimeout(()=>alertBox("🌑 새 시즌",msg),900);else{alertBox("🌑 새 시즌",msg);try{hub()}catch(e){}}}
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
  for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ /* 1:1 방 목록은 rooms/xd{uid}. 출정(xm·xv)·대련(xa·xb·xr) 방은 같은 rooms 아래에 있으므로 통째로 지우지 않는다. */
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>String(k).indexOf("xd")===0);
+  let bad=0;for(const k of ks){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("1:1 방 목록 "+bad+"/"+ks.length+"개");else done.push("1:1 방 목록 "+ks.length+"개")}catch(e){fail.push("1:1 방 목록 ("+String(e&&e.message||e)+")")}
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
@@ -129,8 +137,8 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화 표시를 저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (아무것도 바뀌지 않았다)"}btn.disabled=false}
 function drawRst(){const box=$("#rstbox");if(!box)return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
-  elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·등급·속성·특성, 프로필, 칭호·도감·기록, 사역마는 남는다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지'는 남는다."),
+  elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마는 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
  const rc=elT("div","card rst-card");rc.style.marginTop="12px";rc.append(elT("h2","","🏛 시설 기여 복구 (운영자 전용)"),

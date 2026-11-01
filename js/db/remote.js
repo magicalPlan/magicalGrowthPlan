@@ -10,7 +10,7 @@ const fx=async(mk,o)=>{let r=await tf(mk(),o);if(r.status===401&&AUTH.rt&&AUTH.k
 /* SAME: 데이터가 그대로라 서버가 본문 없이 304를 준 경우. JSON과 겹치지 않는 표식이다. */
 const SAME={};
 const J=async(mk,bag)=>{const o=bag?{headers:{"X-Firebase-ETag":"true"}}:null;if(bag&&bag.tag)o.headers["if-none-match"]=bag.tag;const r=await fx(mk,o);if(r.status===304)return SAME;if(!r.ok)throw new Error(r.status);if(bag){const tag=r.headers.get("ETag");if(tag)bag.tag=tag}return r.json()};
-/* POLL_FAST 와 live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록, 정기 출정 자리, 마수 포탈). 그 밖은 연결 없이 주기적으로 묻는다.
+/* POLL_FAST 와 live() 만 EventSource 로 연결을 연다(채팅·대련·보고 있는 레이드, 타락 목록, 재해 점수, 선물 도착, 1:1 도착, 정기 출정 자리, 마수 포탈). 그 밖은 연결 없이 주기적으로 묻는다.
    처음 받을 때 ETag를 기억한다. 다음부터는 그 값을 보내서, 같으면 본문 없이 304만 받고 화면은 그대로 둔다. 바뀔 때만 본문을 받아 반영한다.
    연결이 거절되어 이 묻기로 돌아와도 같다. 출정·타락 목록·채팅도 그대로인 동안에는 전문을 다시 받지 않는다.
    묻기가 실패하면 다음 간격을 두 배씩 늘린다(최대 60초). 한 번 성공하면 원래 간격으로 돌아온다.

@@ -35,13 +35,23 @@ const rnCost=L=>L+2;
 // 몸에 새긴 각인 단계. 없으면 0, RN_MAX 를 넘기지 않는다.
 function rnLv(k){return C&&C.rn?Math.min(RN_MAX,Math.max(0,Number(C.rn[k])||0)):0}
 
-/* 레벨과 경험치. 레벨이 오를수록 다음 레벨까지 필요한 경험치가 늘어난다. 숫자는 data/game.js 의 XP_BASE, XP_STEP.
+/* 레벨과 경험치. 숫자는 data/game.js 의 XP_BASE, XP_STEP, XP_BEND, XP_BEND_DIV.
+   21→22까지는 40부터 10씩 늘어난다. 22→23부터는 (L-20)²/4 를 더한다.
    xpNeed(L) 은 L 에서 L+1 로 가는 경험치. xpAt(L) 은 레벨 L 이 시작되는 누적 경험치. lvOf 는 누적 경험치로 본 레벨. */
-function xpNeed(lv){return XP_BASE+XP_STEP*(Math.max(1,Number(lv)||1)-1)}
-function xpAt(lv){const n=Math.max(1,Number(lv)||1)-1;return XP_BASE*n+XP_STEP*n*(n-1)/2}
+function xpNeed(lv){lv=Math.max(1,Number(lv)||1);const lin=XP_BASE+XP_STEP*(lv-1),over=lv-(XP_BEND||20);return over>0?lin+Math.floor(over*over/(XP_BEND_DIV||4)):lin}
+function xpSqSum(m){m=Math.floor(Number(m)||0);if(m<=0)return 0;return Math.round((m*(m+1)*(2*m+1)/6-((m+1)>>1))/4)}
+function xpAt(lv){const n=Math.max(1,Number(lv)||1)-1,lin=XP_BASE*n+XP_STEP*n*(n-1)/2,bend=XP_BEND||20,div=XP_BEND_DIV||4,m=n-bend;if(!(m>0))return lin;if(div===4)return lin+xpSqSum(m);let s=0;for(let i=1;i<=m;i++)s+=Math.floor(i*i/div);return lin+s}
 function lvOf(ex){ex=Math.max(0,Number(ex)||0);let L=1;while(L<9999&&xpAt(L+1)<=ex)L++;return L}
-// 예전 방식(40마다 1레벨)으로 쌓인 경험치를 새 방식으로 옮긴다. 레벨은 그대로 두고, 그 레벨 안에서 채운 비율도 그대로 옮긴다. 한 번만.
-function xpMigrate(){if(!C||C.xv>=2)return;const ex=Math.max(0,Number(C.ex)||0),L=1+Math.floor(ex/40),r=(ex-(L-1)*40)/40;C.ex=xpAt(L)+Math.floor(r*xpNeed(L));C.lv=L;C.xv=2}
+function xpNeedV2(lv){return XP_BASE+XP_STEP*(Math.max(1,Number(lv)||1)-1)}
+function xpAtV2(lv){const n=Math.max(1,Number(lv)||1)-1;return XP_BASE*n+XP_STEP*n*(n-1)/2}
+function lvOfV2(ex){ex=Math.max(0,Number(ex)||0);let L=1;while(L<9999&&xpAtV2(L+1)<=ex)L++;return L}
+/* 예전 곡선의 누적 경험치를 지금 곡선으로 옮긴 값. xv 가 3 이상이면 이미 지금 곡선이다.
+   2 는 10씩 늘어나던 곡선, 그 아래는 40마다 1레벨이던 곡선. 레벨과 그 칸의 비율은 그대로다. */
+function xpCurve(ex,xv){ex=Math.max(0,Number(ex)||0);xv=Number(xv)||0;if(xv>=3)return ex;let L,r;
+ if(xv<2){L=1+Math.floor(ex/40);r=(ex-(L-1)*40)/40}else{L=lvOfV2(ex);const need=xpNeedV2(L);r=need>0?(ex-xpAtV2(L))/need:0}
+ if(!(r>0))r=0;return xpAt(L)+Math.floor(r*xpNeed(L))}
+// 캐릭터의 경험치를 지금 곡선으로 옮긴다. 레벨은 그대로 두고, 그 레벨 안에서 채운 비율도 그대로 옮긴다. 한 번만.
+function xpMigrate(){if(!C||Number(C.xv)>=3)return false;const ex=xpCurve(C.ex,C.xv),lv=lvOf(ex);if(C.ex===ex&&C.lv===lv&&Number(C.xv)===3)return false;C.ex=ex;C.lv=lv;C.xv=3;return true}
 
 /* 경험치 ex 와 절망도 dz 를 캐릭터에 반영한다. 양수는 오름, 음수는 내림.
    타락 중에는 절망도가 내려가지 않고, 경험치도 0 이 된다.

@@ -40,13 +40,12 @@ async function checkRaid(){if(!C||!DB||!UID)return;
 function recover(){if(!C.fall)return;C.edge=0;const wt=!!C.fall.w;C.fall=null;C.dz=RECOVER_DZ;C.scar=Math.max(Number(C.scar)||0,Date.now()+(wt?WITCH_SCAR:SCAR_MS));/* 이미 남아 있는 더 긴 후유증(예: 마인의 3시간)을 짧게 덮어쓰지 않는다 */titleState();C.stats.recovered=(C.stats.recovered||0)+1;if(wt)C.fallT=[];note("fall",wt?"마인의 왕관이 부서지고 원래 모습으로 돌아왔다.":"타락에서 벗어나 원래 모습으로 돌아왔다.");save();checkTitles();raidClear();regPlayer();
  if(!$("#v-raid").hidden||!$("#v-hub").hidden)hub();if(wt){alertBox("마인의 끝","수많은 마법소녀의 빛이 검은 왕관을 부쉈다. 마인의 저주가 걷히고, "+C.n+"은(는) 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n마인이었던 흔적으로 "+(WITCH_SCAR/3600000)+"시간 동안 얻는 경험치가 절반이 된다.\n타락 횟수 기록은 초기화되었다. 다시는 혼자 무너지지 않기를.");return}alertBox("귀환","친구들의 마법이 닿았다. 타락에서 벗어나 원래 모습으로 돌아왔다.\n절망도는 "+RECOVER_DZ+"이(가) 되었다.\n\n다만 타락의 후유증으로 "+(Math.ceil((C.scar-Date.now())/600000)/6>1?"약 "+(Math.round((C.scar-Date.now())/360000)/10)+"시간":"1시간")+" 동안 얻는 경험치가 절반이 된다.")}
 /* 마을에서는 타락한 사람의 이름만 본다. 명단은 raid 칸 하나라서, 사람마다 체력·공격 기록을 따로 읽지 않는다.
-   마을을 벗어나면 그 읽기를 닫는다. 레이드에 들어간 뒤에만 그 한 사람의 체력과 공격 기록을 POLL_MS 마다 읽는다.
-   명단은 연결로 받지 않는다. 이미 타락한 사람이 첫 응답에 빠지면 알림도 같이 없기 때문이다.
-   POLL_HUB(20초)마다 지금 있는 칸을 읽고, 탭이 안 보이면 쉬었다가 다시 보이면 이어서 읽는다.
-   칸을 orderBy로 찾으면서 바뀜 확인(ETag)을 같이 붙이면 서버가 400을 낸다. 그래서 그 칸 전체를 그대로 읽는다.
+   마을에 들어올 때 그 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나거나 탭이 안 보이면 연결을 닫는다.
+   연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다. 그 조건과 바뀜 확인을 같이 쓰면 서버가 400을 낸다.
+   레이드에 들어간 뒤에만 그 한 사람의 체력과 공격 기록을 POLL_MS 마다 읽는다.
    칸이 있으면 공격 합계를 기다리기 전에 목록과 알림을 만든다. 체력이 0인 칸은 그 레이드에 들어간 쪽에서 지운다. */
-let unRaid=null,raidDocs=[],raidReady=false;
-function raidWatchStop(){if(unRaid){try{unRaid()}catch(e){}unRaid=null}}
+let unRaid=null,raidDocs=[],raidReady=false,raidGen=0;
+function raidWatchStop(){raidGen++;if(unRaid){try{unRaid()}catch(e){}unRaid=null}}
 function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&r.u&&r.u!==UID&&(C.fr[r.u]||r.w));
  rs.forEach(r=>{const key=r.u+"_"+r.rid;if(!(C.rsn&&C.rsn[key])){C.rsn=keepIds(C.rsn,key);if(r.w){const t="🜏 절망의 마인 강림! "+r.n+"이(가) "+((VL[r.v]||{}).n||"어느 마을")+"에서 마인이 되었다. 누구든 맞설 수 있다.";note("raid",t,r.u);toast(t);ding()}else note("raid",r.n+"님이 타락했다. 맞서서 되돌려 주자.",r.u)}});
  WCH=rs.filter(r=>r.w).map(r=>({u:r.u,n:r.n,v:r.v,rid:r.rid,hp:Math.max(0,(Number(r.mx)||0)-(Number(r.sd)||0)),mx:r.mx}));if(C.fall&&C.fall.w&&!WCH.some(w=>w.u===UID))WCH.push({u:UID,n:C.n,v:C.v,rid:C.fall.rid,hp:C.fall.mx,mx:C.fall.mx});
@@ -57,7 +56,9 @@ function applyRaids(){if(!C)return;C.fr=C.fr||{};const rs=raidDocs.filter(r=>r&&
  rs.forEach(r=>{const b=document.createElement("button");b.type="button";b.className="chip raid-chip";b.style.textAlign="left";
   if(r.w)b.classList.add("witch-chip");b.textContent=(r.w?"🜏 절망의 마인 ":"타락한 ")+cn(r.u,r.n);b.onclick=()=>openRaid(r.u);l.appendChild(b)})}
 function drawRaids(){if(!DB||!C||$("#v-hub").hidden)return;if(unRaid){applyRaids();return}
- unRaid=DB.doc("raid").onSnapshot(sn=>{raidDocs=raidKids(sn.exists?sn.data():null).filter(r=>r.u);raidReady=true;applyRaids()},()=>{},POLL_HUB)}
+ const gen=++raidGen,take=sn=>{if(gen!==raidGen||$("#v-hub").hidden)return;raidDocs=raidKids(sn.exists?sn.data():null).filter(r=>r.u);raidReady=true;applyRaids()};
+ DB.doc("raid").get().then(take).catch(()=>{});
+ unRaid=DB.doc("raid").live().onSnapshot(take,()=>{},POLL_HUB)}
 const raidHitKey=list=>(list||[]).map(v=>[v&&v.u,v&&v.d,v&&v.c].join(":")).join("|");
 function raidLogFail(){if(rdLast)return;const box=$("#rdlg");if(box)box.innerHTML="<p class='hint' style='margin:0'>공격 기록을 불러오지 못했다.</p>"}
 function pullRaidHits(u,r){const n=++rdReq;return DB.doc("raidhit/"+u+"/"+r.rid).get().then(s=>{const hits=raidKids(s.exists?s.data():null);if(n===rdReq&&rdU===u&&rdR===r)drawRaid(hits);if(rdU!==u||rdR!==r)return null;return hits})}
@@ -90,12 +91,12 @@ $("#rdgo").onclick=async()=>{const u=rdU,r=rdR,own=u===UID,m=$("#rdm"),b=$("#rdg
  if(own){if(!C.fall||SELF_CD-(Date.now()-(C.fall.st||0))>0)return;const d=Math.max(1,Math.round((pw()+R(10))/2));C.fall.sd=(C.fall.sd||0)+d;C.fall.st=Date.now();save();putRaid();
   m.style.color="var(--mu)";m.textContent="스스로의 그림자에 맞섰다. 피해 "+d+".";drawRaid(rdLast||[]);return}
  if(!((C.fr&&C.fr[u])||r.w)||C.fall||C.dz>=90||HIT_CD-(Date.now()-(C.rc[u]||0))>0)return;b.disabled=true;
- try{const ref=DB.doc("raidhit/"+u+"/"+r.rid+"/"+UID),old=await ref.get(),o=(old.exists&&old.data())||{},lt=armedSk("light"),d=Math.round((pw()+R(10))*(lt?3:1)*(C.a.includes("불")?1.2:1));
-  await ref.set({u:UID,n:nmOf(),d:(Number(o.d)||0)+d,c:(Number(o.c)||0)+1,ts:Date.now()});if(lt)useSk("light");C.rc[u]=Date.now();const hg=r.w?WITCH_HIT:8,hz=r.w?WITCH_DZ:RAID_DZ;C.gd=(C.gd||0)+hg;titleState();C.stats.raidHits=(C.stats.raidHits||0)+1;if(r.w){C.wj=C.wj||{};C.wj[u+"_"+r.rid]=C.wj[u+"_"+r.rid]||Date.now()}gain(0,hz);
+ try{const ref=DB.doc("raidhit/"+u+"/"+r.rid+"/"+UID),old=await ref.get(),o=(old.exists&&old.data())||{},lt=armedSk("light"),d=Math.round((pw()+R(10))*(lt?3:1)*(C.a.includes("불")?1.2:1)*(1+petEff("raid")));
+  await ref.set({u:UID,n:nmOf(),d:(Number(o.d)||0)+d,c:(Number(o.c)||0)+1,ts:Date.now()});if(lt)useSk("light");C.rc[u]=Date.now();const hg=r.w?WITCH_HIT:8,hz=r.w?WITCH_DZ:RAID_DZ;C.gd=(C.gd||0)+hg;titleState();C.stats.raidHits=(C.stats.raidHits||0)+1;if(r.w){C.wj=C.wj||{};C.wj[u+"_"+r.rid]=C.wj[u+"_"+r.rid]||Date.now()}let crown=false;if(r.w&&typeof MAT_CROWN_P!=="undefined"&&Math.random()<MAT_CROWN_P){C.inv=C.inv||{};C.inv.m_crown=(C.inv.m_crown||0)+1;crown=true;note("raid","절망의 마인에게서 검은 왕관의 조각을 주웠다.",u)}gain(0,hz);
   const hits=await pullRaidHits(u,r);if(rdU!==u||rdR!==r)return;const hp=r.mx-(Number(r.sd)||0)-sumHits(hits||[]);let t=(lt?"구원의 빛! ":"")+(r.w?"절망의 마인 ":"타락한 ")+r.n+"에게 "+d+"의 피해를 주었다. (골드 +"+hg+", "+(r.w?"마인의":"그림자의")+" 절망이 스며들어 절망도 +"+hz+")";
   if(hp<=0&&r.w){giveRw(WITCH_LAST);C.stats.raidKills=(C.stats.raidKills||0)+1;C.stats.witchKills=(C.stats.witchKills||0)+1;guardAdd(50);note("raid","절망의 마인 "+r.n+"에게 마지막 일격을 넣었다!",u);t="마지막 일격! 절망의 마인 "+r.n+"의 왕관이 부서졌다. (골드 +"+(hg+WITCH_LAST.g)+", 마력석 +"+WITCH_LAST.m+") 토벌 보상은 잠시 뒤 따로 받는다."}
   else if(hp<=0){C.gd+=40;C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;C.stats.raidKills=(C.stats.raidKills||0)+1;guardAdd(20);note("raid","타락한 "+r.n+"에게 마지막 일격을 넣어 되돌렸다.",u);t="마지막 일격! "+r.n+"을(를) 쓰러뜨렸다. 곧 원래 모습으로 돌아온다. (골드 +48, 마력석 +1)"}
-  save();checkTitles();m.style.color="var(--mu)";m.textContent=t}
+  if(crown)t+=" ♚ 검은 왕관의 조각을 주웠다!";save();checkTitles();m.style.color="var(--mu)";m.textContent=t}
  catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 데이터베이스 규칙에서 raid와 raidhit 경로가 열려 있는지 확인해야 한다."}
  b.disabled=false;rdBtn()};
 $("#rdb").onclick=()=>hub();

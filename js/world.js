@@ -1,4 +1,6 @@
-/* 세계관. 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
+/* 세계관. 개요 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
+   개요 칸은 html/world/overview.html, 이벤트는 html/world/event.html, Q&A는 html/world/qa.html.
+   탭은 html/home/main.html, 전환은 js/main.js 의 show 와 navGroup.
    서버에 묻지 않는다. 로그인하지 않아도 된다. */
 function worldLines(text){const p=elT("p","world-p");String(text).split("\n").forEach((line,i)=>{if(i)p.appendChild(document.createElement("br"));p.appendChild(document.createTextNode(line))});return p}
 function worldFold(title,tone,nodes){const d=elT("details","world-fold"+(tone?" "+tone:""));const s=document.createElement("summary");
@@ -31,3 +33,30 @@ const village = (name, text) => {
    worldLines("이름 없는 세계의 절망과 괴로움 등 부정적인 감정을 기반으로 돌아가는 세계. 최근 새로운 마왕이 즉위했으며, 현재 전쟁의 원인은 그 마왕. 허나 마왕의 정체는 베일에 싸여있다. 상상하기도 싫은 권악징선과 약육강식만이 존재하는 세계. 아이들은 거대한 꽃이 가득 만발한 ‘시작의 꽃밭’에서 자라난다. 이 중 1만 년에 한번 태어나는 특별한 아이가 마왕이 된다. 마수, 하급 마인, 상급 마인, 마왕 순의 계급 체재가 있다."),
    worldLines("특별한 목적을 가지고 아이를 꽃밭에서 데려오면 부모가 될 수 있다. 허나 대부분의 마인의 ‘특별한 목적’은 가족 구성이라기보단 비윤리적인 이유가 대부분이다."),
    worldLines("타르타로스에는 불문율이 있다. 이는 ‘어린 마인을 건드리지 않는다’는 내용으로, 이런 불문율이 생긴 데에는 두 가지 이유가 있다. 첫째로는 종족 유지. 두번째로는 어린아이로 변신하여 허점을 노리는 마인이 많았기 때문. 따라서 마인들은 14살까지는 보호받다가, 14살이 되는 순간 약육강식의 세계에 던져진다.")]))}
+
+/* 세계관 > 이벤트. 이야기는 이 탭에서 열지 않는다.
+   잠금 플래그는 data/story/lock.js 의 STORY_LOCK 과 storyFlag.
+   storyFlag 가 true 인 이야기만 장기 의뢰의 단서 조각 칸에서 '스토리 보기'로 연다. */
+/**
+ * 세계관 > 이벤트 탭에 무엇을 그릴지는 js/world.js의 worldEvent에서 정합니다. 이 함수는 잠금 플래그를 보지 않고, 항상 "이 기억은 아직 잠겨 있다"는 안내만 붙입니다.
+이야기가 열리는 조건은 data/story/lock.js의 STORY_LOCK과 storyFlag입니다. 그 결과가 참일 때 버튼을 만드는 곳은 js/event-boss/piece.js의 clpStories이고, 버튼은 장기 의뢰의 단서 조각 칸에만 생깁니다.
+이벤트가 끝난 뒤 세계관 탭에서 스토리를 계속 열려면 lock.js의 개수·날짜만 풀어서는 되지 않습니다. worldEvent가 그 플래그를 읽어 이야기 버튼을 그리도록 js/world.js를 바꿔야 합니다.
+ */
+function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.ready)return;root.dataset.ready="1";
+ root.appendChild(elT("p","world-lead","이 기억은 아직 잠겨 있다."));
+ root.appendChild(elT("p","hint","장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."))}
+
+  
+/* Q&A. 글은 data/world/qa.json.
+   한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
+   답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
+const WORLD_QA_URL="data/world/qa.json?v=1";
+function worldQaItem(it){const q=String(it&&it.q||"").trim();if(!q)return null;const box=elT("div","qa-item"),qp=elT("p","qa-q");
+ qp.append(elT("b","qa-tag","Q"),document.createTextNode(q));const ap=elT("div","qa-a");ap.append(elT("b","qa-tag","A"),worldLines(it.a||""));box.append(qp,ap);return box}
+function worldQaDraw(root,list){(Array.isArray(list)?list:[]).forEach(sec=>{if(!sec||!sec.title)return;const nodes=(Array.isArray(sec.qa)?sec.qa:[]).map(worldQaItem).filter(Boolean);
+  root.appendChild(worldFold(String(sec.title),sec.tone||"",nodes.length?nodes:[elT("p","hint","아직 적힌 질문이 없다.")]))})}
+let wqaBusy=false;
+function worldQa(){show("wqa");const root=$("#v-wqa");if(!root||root.dataset.ready||wqaBusy)return;wqaBusy=true;
+ fetch(WORLD_QA_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(list=>{
+  if(!root||root.dataset.ready)return;const err=root.querySelector(".qa-err");if(err)err.remove();worldQaDraw(root,list);root.dataset.ready="1"}).catch(()=>{
+  wqaBusy=false;if(root&&!root.querySelector(".qa-err"))root.appendChild(elT("p","hint qa-err","Q&A를 불러오지 못했다. 새로고침해 보자."))})}

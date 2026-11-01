@@ -32,7 +32,7 @@ h2.fold-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fold-btn{flex:0 0 auto!important;min-width:0!important;padding:4px 11px!important;font-family:inherit!important;font-size:.76rem!important;border-radius:999px!important}
 
 /* 5. 입력칸: 검색칸·숫자칸·고르기칸도 같은 모양으로 */
-input[type=text],input[type=password],input[type=search],input[type=number],textarea,select{transition:border-color .15s,box-shadow .15s}
+input[type=text],input[type=password],input[type=email],input[type=search],input[type=number],textarea,select{transition:border-color .15s,box-shadow .15s}
 input[type=search],input[type=number]{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px}
 #shopqn{width:64px;padding:8px}
 select{font:inherit;color:var(--ink);background:var(--pn2);border:1px solid var(--ln);border-radius:10px;padding:10px 12px}
@@ -62,6 +62,7 @@ input::placeholder,textarea::placeholder{color:var(--mu);opacity:.7}
 
 /* 9. 마력 각인: 이름과 설명이 엉켜 줄바꿈되던 것을 위아래로 정리 */
 #bgr>div>.chip:first-child{display:block!important;padding:10px 12px}
+#bgr>div>.chip.rn-row:first-child{display:flex!important}
 #bgr>div>.chip:first-child b{display:block;margin-bottom:2px}
 #bgr>div>.chip:last-child{align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:.85rem;white-space:nowrap}
 
@@ -151,6 +152,10 @@ body:has(#v-chat:not([hidden])) main{max-width:780px}
 #gl,#vcl,#dl,#alg{height:clamp(320px,calc(100dvh - 380px),680px);min-height:0;max-height:none!important;padding:16px 14px 10px;border:1px solid var(--ln)!important;border-left:1px solid var(--ln)!important;border-radius:16px 16px 0 0;
  background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px}
 #dl,#alg{height:clamp(300px,calc(100dvh - 440px),620px)}
+@media (max-width:600px){
+ #gl,#vcl{height:clamp(380px,calc(100dvh - 300px),680px)}
+ #dl,#alg{height:clamp(360px,calc(100dvh - 360px),620px)}
+}
 #cin{margin-top:0!important;padding:10px;gap:8px;border:1px solid var(--ln);border-top:0;border-radius:0 0 16px 16px;background:var(--pn3)}
 #cin input{border-radius:999px;padding:11px 16px;background:var(--pn2)}
 #cin .btn{border-radius:999px;padding:11px 20px}
@@ -246,7 +251,7 @@ html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 1
 html[data-theme="light"] .rst-card h2{color:#a8283f!important}
 
 /* 세계관: 화면을 열 때 그린 큰 제목. 제목을 누르면 본문이 펼쳐진다. */
-#v-world{max-width:740px;margin:0 auto}
+#v-world,#v-wev,#v-wqa{max-width:740px;margin:0 auto}
 .world-page{text-align:center;letter-spacing:.32em;font-size:1.85rem;color:#f6edd4;text-shadow:0 0 22px #e6c56a55,0 2px 0 #000}
 .world-page::before,.world-page::after{content:"";display:block;height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,#e6c56a,#fff6d2,#e6c56a,transparent)}
 .world-page::before{width:46%;margin-bottom:12px}.world-page::after{width:28%;margin-top:12px}
@@ -271,6 +276,14 @@ html[data-theme="light"] .rst-card h2{color:#a8283f!important}
 .world-fold.sub{margin-top:10px;border-radius:12px;background:#00000033;box-shadow:none}
 .world-fold.sub>summary{padding:12px 14px}
 .world-fold.sub .world-name{font-size:1.05rem;letter-spacing:.08em}
+.qa-item{margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid #b89b5e44}
+.qa-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.qa-q,.qa-a{display:flex;gap:8px;align-items:flex-start}
+.qa-q{margin:0 0 6px;font-weight:700;line-height:1.6}
+.qa-a .world-p{flex:1;margin:0}
+.qa-tag{flex:none;font-family:"Gowun Batang",serif;color:#e6c56a;letter-spacing:.08em}
+html[data-theme="light"] .qa-item{border-bottom-color:#c4a15a66}
+html[data-theme="light"] .qa-tag{color:#7a5f22}
 
 html[data-theme="light"] .world-page{color:#6e5316;text-shadow:none}
 html[data-theme="light"] .world-lead{color:#7a5f22}
@@ -282,3 +295,262 @@ html[data-theme="light"] .world-fold.despair{border-color:#c46a7a;background:lin
 html[data-theme="light"] .world-fold.despair .world-name{color:#7d1a2e}
 html[data-theme="light"] .world-mark{color:#7a5f22;border-color:#c4a15a}
 @media (max-width:440px){.world-page{font-size:1.45rem;letter-spacing:.18em}.world-name{font-size:1.15rem;letter-spacing:.06em}}
+
+/* 공방 제작 (마을 › 제작) */
+.cf-mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;margin:6px 0 4px}
+.cf-mat{display:flex;align-items:center;gap:8px;text-align:left;padding:10px 12px;min-width:0}
+.cf-mat b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-ic{font-size:1.15rem;width:1.4em;text-align:center;flex:0 0 auto}
+.cf-n{font-variant-numeric:tabular-nums;font-weight:700;color:#d8c79a}
+.cf-need{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
+.cf-need span{font-size:.78rem;padding:1px 7px;border-radius:999px;border:1px solid #ffffff22;white-space:nowrap}
+.cf-need span.ok{color:#9fd8a8;border-color:#9fd8a855}
+.cf-need span.no{color:#ff8da0;border-color:#ff8da055}
+.cf-r.lock{opacity:.55}
+html[data-theme="light"] .cf-n{color:#7a5f22}
+html[data-theme="light"] .cf-need span{border-color:var(--ln)}
+html[data-theme="light"] .cf-need span.ok{color:#2e7d3a;border-color:#2e7d3a66}
+html[data-theme="light"] .cf-need span.no{color:#b8304a;border-color:#b8304a66}
+/* 속성의 프리즘 (가방) */
+.prism-box{margin:-2px 0 8px}
+.prism-box .row{margin:4px 0 10px;flex-wrap:wrap}
+.prism-box .hint{margin:4px 0 0}
+/* 관계란 (프로필 창) */
+.rel-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.rel-row{display:flex;gap:8px;align-items:stretch}
+.rel-go{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--ln);background:#ffffff08;color:inherit;font:inherit;cursor:pointer}
+.rel-go:hover{border-color:#b89b5e}
+.rel-av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:2px solid #b89b5e;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;background:#ffffff0a}
+.rel-av img{width:100%;height:100%;object-fit:cover}
+.rel-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rel-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.rel-r{font-size:.8rem;padding:1px 8px;border-radius:999px;border:1px solid #b89b5e88;color:#d8c79a}
+.rel-d{color:var(--mu);overflow-wrap:anywhere}
+.rel-del{flex:0 0 auto;min-width:0;padding:0 12px}
+.rel-box{margin:6px 0 4px}
+.rel-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rel-btns .btn{width:auto;flex:1}
+html[data-theme="light"] .rel-go{background:#fffcf6}
+html[data-theme="light"] .rel-r{color:#7a5f22;border-color:#9a7a3688}
+html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
+
+/* 장기 의뢰의 이벤트 보스. 카드 틀은 보스 레이드와 같고, 색만 구분한다. */
+.boss-card.e{--c:#1d4e5c}
+.boss-card.e .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
+
+/* 단서 탐색. 칸은 장기 토벌(.dq)과 같고, 색은 이벤트 보스와 같다. */
+#clue{margin-top:8px}
+#clue .dq{border-color:#1d4e5c;background:linear-gradient(180deg,#102228,#0c181c)}
+#clue .dq .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
+#clue .dq.clue-on{border-color:#3ec0b0}
+html[data-theme="light"] #clue .dq{background:linear-gradient(180deg,#e7f4f6,#f7f1e6);border-color:#5a9aa6}
+html[data-theme="light"] #clue .dq.clue-on{border-color:#1f7a86}
+
+/* 기간 한정 사역마 · 서리 여왕의 알 */
+.pet-r4{color:#9fd8ff;text-shadow:0 0 10px rgba(140,200,255,.55)}
+.pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
+html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
+html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
+#pet-dex{margin-top:28px}
+#pet-dex .wgrid{margin:0 0 8px}
+.pet-dex-it{cursor:default}
+.pet-dex-it .pet-ic{font-size:1.7rem;line-height:1}
+.pet-dex-it.lock{border-style:dashed;opacity:.78}
+#dex-list .pet-dex-it.lock{opacity:.78}
+#dex-list .pet-dex-it.lock>small:last-child{display:block}
+#dex-list .pet-dex-it.lim.lock{opacity:1}
+.pet-dex-it .pet-dex-fx{color:#d8c79a}
+.pet-dex-lim-h{color:#9fd8ff;border-bottom-color:#8cc8ff55}
+.pet-dex-it.lim{border-color:#8cc8ff88;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.2),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #8cc8ff33}
+.pet-dex-it.lim .dex-tag{color:#9fd8ff!important}
+.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(140,200,255,.08) 0 8px,transparent 8px 16px),#14121f}
+html[data-theme="light"] .pet-dex-lim-h{color:#1f6fa8;border-bottom-color:#5a9fd4}
+html[data-theme="light"] .pet-dex-it.lim{border-color:#5a9fd4;background:linear-gradient(180deg,#eef5fb,#f6f0e5);box-shadow:none}
+html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(90,159,212,.16) 0 8px,transparent 8px 16px),#f4f8fc}
+html[data-theme="light"] .pet-dex-it .pet-dex-fx{color:#6b5216}
+
+/* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) */
+.clp-card{--c:#3a5f8f;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.14),transparent 70%),var(--card,#14121f)!important;border-color:#6fa8dc88!important}
+.clp-bar{position:relative;height:14px;margin:10px 0 6px;overflow:visible}
+.clp-bar i{background:linear-gradient(90deg,#3a6fa8,#9fd8ff)!important}
+.clp-tick{position:absolute;top:-3px;width:2px;height:20px;margin-left:-1px;background:#ffffff55}
+.clp-tick.on{background:#9fd8ff;box-shadow:0 0 6px #9fd8ff}
+.clp-num{font-weight:700;color:#9fd8ff;margin:4px 0}
+.clp-ms{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.clp-ms .dq.clp-ready{border-color:#9fd8ff;box-shadow:inset 3px 0 0 #9fd8ff}
+html[data-theme="light"] .clp-card{background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important;border-color:#5a9fd4!important}
+html[data-theme="light"] .clp-num{color:#1f6fa8}
+html[data-theme="light"] .clp-tick{background:#00000033}
+html[data-theme="light"] .clp-tick.on{background:#1f6fa8;box-shadow:none}
+html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:inset 3px 0 0 #1f6fa8}
+
+/* ── 장기 의뢰 화면 다듬기 (html/act/ord.html) ──
+   넓은 화면: 두 칸(왼쪽 단서 조각·단서 탐색, 오른쪽 이벤트 보스). 좁은 화면: 위의 탭으로 한 칸씩. */
+.ord-hero{position:relative;margin:4px 0 14px;padding:18px 20px;border-radius:16px;border:1px solid #6fa8dc55;overflow:hidden;
+ background:radial-gradient(120% 140% at 100% 0,rgba(140,200,255,.18),transparent 55%),radial-gradient(90% 120% at 0 100%,rgba(62,192,176,.12),transparent 60%),linear-gradient(180deg,#141a2a,#100e1c)}
+.ord-hero::after{content:"❄";position:absolute;right:16px;top:6px;font-size:64px;opacity:.08;pointer-events:none}
+.ord-kicker{margin:0;font-size:.78rem;letter-spacing:.12em;color:#9fd8ff}
+.ord-title{margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:#e8f4ff}
+.ord-lead{margin:0;color:var(--mu);font-size:.92rem;line-height:1.6}
+.ord-tabs{display:flex;gap:6px;margin:0 0 12px;padding:6px;border-radius:14px;background:#0e0c18e6;backdrop-filter:blur(6px);border:1px solid var(--ln)}
+.ord-tabs button{flex:1;position:relative;padding:10px 6px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--mu);font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
+.ord-tabs button[aria-selected=true]{color:#e8f4ff;border-color:#6fa8dc88;background:linear-gradient(180deg,#1d2a40,#141c2c)}
+.ord-dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:#ff6b81;box-shadow:0 0 6px #ff6b81}
+.ord-grid{display:grid;gap:14px}
+.ord-pane{min-width:0}
+#v-ord[data-tab=clp] .ord-pane:not([data-p=clp]),#v-ord[data-tab=boss] .ord-pane:not([data-p=boss]),#v-ord[data-tab=clue] .ord-pane:not([data-p=clue]){display:none}
+@media (min-width:900px){
+ .ord-tabs{display:none}
+ .ord-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"clp boss" "clue clue";align-items:start}
+ #v-ord .ord-pane{display:block!important}
+ .ord-pane[data-p=clp]{grid-area:clp}.ord-pane[data-p=boss]{grid-area:boss}.ord-pane[data-p=clue]{grid-area:clue}
+ .clue-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:520px){.ord-hero{padding:14px 16px}.ord-title{font-size:1.25rem}.ord-lead{font-size:.86rem}}
+.ord-pane>.card,.ord-pane .card{margin:0}
+.ord-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px}
+.ord-head h3{margin:0;font-size:1.05rem;color:#d8c79a}
+.ord-help{position:relative}
+.ord-help summary{cursor:pointer;list-style:none;font-size:.82rem;color:var(--mu);padding:4px 10px;border:1px solid var(--ln);border-radius:999px}
+.ord-help summary::-webkit-details-marker{display:none}
+.ord-help[open] summary{color:#9fd8ff;border-color:#6fa8dc88}
+.ord-help p{position:absolute;right:0;top:calc(100% + 6px);width:min(320px,80vw);z-index:6;margin:0;padding:12px 14px;border-radius:12px;font-size:.85rem;line-height:1.6;color:var(--ink);background:#151324;border:1px solid #6fa8dc66;box-shadow:0 10px 30px #0008}
+
+/* 단서 조각 카드 */
+.clp-card{padding:16px 18px!important}
+.clp-hd{display:flex;align-items:center;gap:12px}
+.clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:radial-gradient(circle,#2a4a70,#141c2c);border:1px solid #6fa8dc66}
+.clp-ic-img{display:block;width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges}
+.clp-ht h2{margin:2px 0 0!important;border:0!important;padding:0!important;font-size:1.2rem}
+.clp-ht .boss-tag{margin:0}
+.clp-ds{margin:10px 0 12px;color:var(--mu);font-size:.86rem;line-height:1.55}
+.clp-big{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.clp-big b{font-size:1.9rem;line-height:1;color:#cfe9ff;font-variant-numeric:tabular-nums}
+.clp-big span{color:var(--mu);font-size:.95rem}
+.clp-big em{margin-left:auto;font-style:normal;font-weight:700;color:#9fd8ff}
+.clp-card .clp-bar{height:12px;margin:10px 0 14px}
+.clp-card .clp-ms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.clp-m{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;border:1px solid var(--ln);background:#ffffff06;min-width:0}
+.clp-m b{font-size:.95rem}
+.clp-mn{color:#9fd8ff;font-weight:700;font-size:.78rem}
+.clp-mr{color:var(--mu);font-size:.78rem;line-height:1.45;flex:1}
+.clp-m .chip{margin-top:6px;padding:6px 10px!important;min-width:0;min-height:0!important;height:auto!important;font-size:.85rem;line-height:1.3}
+.clp-lock{margin-top:6px;font-size:.78rem;color:var(--mu);opacity:.8}
+.clp-m.ready{border-color:#9fd8ff;box-shadow:inset 0 0 0 1px #9fd8ff55,0 0 14px #9fd8ff22}
+.clp-m.got{opacity:.6}
+.clp-ft{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--ln)}
+.clp-me{margin:0;font-weight:700}
+.clp-top,.clp-where{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.clp-top>small,.clp-where>small{color:var(--mu);font-size:.78rem;margin-right:2px}
+.clp-chip{font-size:.8rem;padding:3px 10px;border-radius:999px;border:1px solid var(--ln);background:#ffffff08;white-space:nowrap}
+.clp-chip.me{border-color:#d8c79a;color:#f3d27a}
+.clp-chip b{font-weight:600}
+.clp-stories{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.clp-story{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid #6fa8dc88;background:#ffffff06}
+.clp-story-name{font-weight:700;min-width:0}
+.clp-story .chip{flex:0 0 auto;margin:0}
+html[data-theme="light"] .clp-story{background:#fffcf6;border-color:#5a9fd4}
+
+/* 단서 탐색 카드 격자 */
+.clue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.clue-card{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;border:1px solid #1d4e5c;background:linear-gradient(180deg,#102228,#0c181c)}
+.clue-card.hard{border-color:#5a2a3a}
+.clue-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.clue-top b{font-size:1rem}
+.clue-hr{flex:0 0 auto;font-size:.78rem;font-weight:700;padding:2px 10px;border-radius:999px;color:#bff3ea;background:#1a4a55;border:1px solid #3ec0b066}
+.clue-ds{margin:0;color:var(--mu);font-size:.82rem;line-height:1.5;flex:1}
+.clue-chips{display:flex;flex-wrap:wrap;gap:5px}
+.clue-chip{font-size:.76rem;padding:2px 8px;border-radius:999px;border:1px solid #ffffff1f;background:#ffffff08;white-space:nowrap}
+.clue-chip.good{color:#9fe0a0;border-color:#9fe0a055}.clue-chip.bad{color:#ff8da0;border-color:#ff8da055}
+.clue-chip.dz{color:#c9a3ff}.clue-chip.clp{color:#9fd8ff;border-color:#9fd8ff55}
+.clue-go{margin:2px 0 0!important;padding:9px!important}
+#clue>.dq{margin-bottom:8px}
+
+/* 이벤트 보스 카드: 문단 사이를 줄인다 */
+#ebl .boss-card{margin:0;padding:16px 18px}
+#ebl .boss-card>p{margin:6px 0}
+#ebl .boss-card h2{margin:2px 0 4px}
+#ebl .boss-info{font-size:.8rem;line-height:1.5}
+
+html[data-theme="light"] .ord-hero{background:linear-gradient(135deg,#eaf3fb,#f6f0e5);border-color:#5a9fd466}
+html[data-theme="light"] .ord-title{color:#1f3b5a}
+html[data-theme="light"] .ord-kicker{color:#1f6fa8}
+html[data-theme="light"] .ord-tabs{background:#fffcf6ee}
+html[data-theme="light"] .ord-tabs button[aria-selected=true]{color:#1f3b5a;background:#eaf3fb;border-color:#5a9fd4}
+html[data-theme="light"] .ord-help p{background:#fffcf6;border-color:#5a9fd4}
+html[data-theme="light"] .clp-ic{background:#eaf3fb;border-color:#5a9fd4}
+html[data-theme="light"] .clp-big b{color:#1f3b5a}
+html[data-theme="light"] .clp-big em,html[data-theme="light"] .clp-mn{color:#1f6fa8}
+html[data-theme="light"] .clp-m{background:#fffcf6}
+html[data-theme="light"] .clp-m.ready{border-color:#1f6fa8;box-shadow:inset 0 0 0 1px #1f6fa833}
+html[data-theme="light"] .clp-chip{background:#fffcf6}
+html[data-theme="light"] .clp-chip.me{border-color:#9a7a36;color:#7a5f22}
+html[data-theme="light"] .clue-card{background:linear-gradient(180deg,#e7f4f6,#f7f1e6);border-color:#5a9aa6}
+html[data-theme="light"] .clue-card.hard{border-color:#c98a9a}
+html[data-theme="light"] .clue-hr{color:#0f5f6a;background:#d3eef0;border-color:#5a9aa6}
+html[data-theme="light"] .clue-chip{background:#fffcf6;border-color:var(--ln)}
+html[data-theme="light"] .clue-chip.good{color:#2e7d3a}html[data-theme="light"] .clue-chip.bad{color:#b8304a}
+html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .clue-chip.clp{color:#1f6fa8}
+
+/* 아이템 도트 그림 (assets/items, js/common/base.js 의 itIc) */
+.it-ic{image-rendering:pixelated;image-rendering:crisp-edges;flex:0 0 auto;filter:drop-shadow(0 2px 3px #0006)}
+.it-ic.lg{display:block;width:56px;height:56px;margin:0 auto 6px}
+.it-ic.sm{width:24px;height:24px;vertical-align:-6px;margin-right:6px}
+.it-row{display:flex!important;align-items:center;justify-content:flex-start!important;gap:12px}
+.it-row>div{flex:1;text-align:left}
+.it-row>.it-ic{width:40px;height:40px}
+.dex-it.lock .it-ic{filter:brightness(0) opacity(.35)}
+.chip.sq .it-ic.lg{margin-top:2px}
+html[data-theme="light"] .it-ic{filter:drop-shadow(0 1px 2px #0003)}
+html[data-theme="light"] .dex-it.lock .it-ic{filter:brightness(0) opacity(.2)}
+
+/* 재료 도트: 공방 재료 칸과 필요한 재료 칩 */
+.it-ic.xs{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
+.cf-mat .it-ic.sm{width:28px;height:28px;margin:0;vertical-align:middle}
+
+/* 기억의 파편 버튼. 목록은 js/world.js, 창은 js/story/vn.js */
+.world-shard{display:flex;width:100%;margin-top:12px;padding:16px 18px;text-align:left;font:inherit;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.15rem;letter-spacing:.12em;color:#f6edd4;cursor:pointer;border:1px solid #b89b5e88;border-radius:18px;background:linear-gradient(180deg,#221b38,#120f20 70%)}
+.world-shard:hover{border-color:#e6c56a}
+html[data-theme="light"] .world-shard{color:#5c4510;border-color:#c4a15a;background:linear-gradient(180deg,#fffaf0,#f6efe2)}
+
+/* 비주얼 노벨 floating view. js/story/vn.js 가 body 끝에 붙인다. */
+body.vn-open{overflow:hidden}
+.vn-float{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;background:#0c0a14;color:var(--ink)}
+.vn-stage{position:relative;flex:1 1 auto;min-height:28vh;display:flex;align-items:flex-end;padding:24px 6vw 12px}
+.vn-stand{width:min(46vw,320px);margin-left:auto}
+.vn-stand[data-side="left"]{margin-left:0;margin-right:auto}
+.vn-stand[hidden]{display:none}
+.vn-fig{width:100%}
+.vn-fig img{display:block;width:100%;max-height:62vh;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 24px #000a)}
+.vn-sil{height:min(58vh,520px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:18px;border-radius:160px 160px 28px 28px;background:
+ radial-gradient(circle at 50% 22%,#d8c79a 0 42px,transparent 44px),
+ linear-gradient(#2a2340,#2a2340) center 78% / 68% 58% no-repeat,
+ linear-gradient(180deg,#3a3158,#161222)}
+.vn-sil-name{font-family:"Gowun Batang",serif;letter-spacing:.2em;color:#f6edd4}
+.vn-x{position:absolute;top:12px;right:12px;padding:8px 14px;font:inherit;color:#f6edd4;background:#120f20cc;border:1px solid #b89b5e88;border-radius:999px;cursor:pointer}
+.vn-box{flex:0 1 auto;max-height:58vh;overflow:auto;margin:0 auto max(18px,env(safe-area-inset-bottom));width:min(820px,calc(100% - 24px));padding:16px 18px 14px;border:1px solid #b89b5eaa;border-radius:18px;background:linear-gradient(180deg,#1c1730f2,#100e1cf2);box-shadow:0 12px 32px #000a}
+.vn-name{margin:0 0 6px;font-family:"Gowun Batang",serif;letter-spacing:.14em;color:#e6c56a}
+.vn-name[hidden]{display:none}
+.vn-text{margin:0;min-height:4.8em;line-height:1.75;font-family:"Gowun Batang",serif;font-size:1.12rem}
+.vn-choices{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.vn-choices[hidden]{display:none}
+.vn-choice{width:100%;padding:12px 14px;text-align:left;font:inherit;color:#f6edd4;cursor:pointer;border:1px solid #b89b5e88;border-radius:12px;background:#120f20}
+.vn-choice:hover,.vn-choice:focus-visible{border-color:#e6c56a}
+.vn-row{display:flex;justify-content:flex-end;margin-top:8px}
+.vn-next{padding:8px 16px;font:inherit;color:#1a1408;font-weight:700;cursor:pointer;border:0;border-radius:999px;background:#e6c56a}
+.vn-next[hidden]{display:none}
+html[data-theme="light"] .vn-float{background:#f6efe2;color:#2c2416}
+html[data-theme="light"] .vn-box{background:linear-gradient(180deg,#fffaf0,#f6efe2);border-color:#c4a15a}
+html[data-theme="light"] .vn-name{color:#7a5f22}
+html[data-theme="light"] .vn-choice{color:#2c2416;background:#fffaf0;border-color:#c4a15a}
+html[data-theme="light"] .vn-x{color:#5c4510;background:#fffaf0ee;border-color:#c4a15a}
+html[data-theme="light"] .vn-sil{background:
+ radial-gradient(circle at 50% 22%,#c4a15a 0 42px,transparent 44px),
+ linear-gradient(#efe6d4,#efe6d4) center 78% / 68% 58% no-repeat,
+ linear-gradient(180deg,#f3ead8,#e7dcc4)}
+html[data-theme="light"] .vn-sil-name{color:#5c4510}
+@media (max-width:640px){.vn-text{font-size:1rem;min-height:6em}.vn-sil{height:min(42vh,360px)}.world-shard{letter-spacing:.06em}}
+@media (prefers-reduced-motion:reduce){.vn-fig img{filter:none}}
+
+/* 마력 각인 도트(js/main.js 의 drawRunes). 아직 새기지 않은 각인은 흐리게 */
+.rn-row.rn-off>.it-ic{filter:grayscale(.85) opacity(.45)}
+.rn-ic{font-size:26px;width:40px;text-align:center;flex:0 0 auto}

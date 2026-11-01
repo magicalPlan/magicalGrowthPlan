@@ -14,14 +14,14 @@
         </script>
         
         <link rel="preload" href="fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
-        <link rel="stylesheet" href="css/style.css?v=dmfloat">
+        <link rel="stylesheet" href="css/style.css?v=1.0.0.34">
         <link rel="stylesheet" href="css/theme-light.css">
         <!-- UI 다듬기: 이 한 줄을 지우면 예전 모습으로 돌아간다 -->
-        <link rel="stylesheet" href="css/polish.css?v=world">
+        <link rel="stylesheet" href="css/polish.css?v=1.0.0.43">
     </head>
 
     <body>
-        <script src="js/common/include.js?v=1.0.0.7"></script>    <!-- 화면 HTML을 붙인다. 화면을 고친 배포에서는 include.js 의 APP_VER 과 이 주소의 버전을 같이 올린다. -->
+        <script src="js/common/include.js?v=1.0.0.35"></script>    <!-- 화면 HTML을 붙인다. 화면을 고친 배포에서는 include.js 의 APP_VER 과 이 주소의 버전을 같이 올린다. -->
 
         <script>includeHtml("html/home/main.html")</script>  <!-- 홈 화면 -->
 
@@ -29,61 +29,74 @@
         <!-- 기타, 나누기 위한 분리 -->
         <script src="models/event.js"></script>
         <script src="models/title.js"></script>
-        <script src="models/pet.js"></script>
+        <script src="models/pet.js?v=1.0.0.21"></script>
         <script src="data/events/common.js"></script>
         <script src="data/events/village.js"></script>
         <script src="data/events/solo.js"></script>
         <script src="data/titles/growth.js"></script>
-        <script src="data/titles/gear.js"></script>
+        <script src="data/titles/gear.js?v=1.0.0.15"></script>
         <script src="data/titles/social.js"></script>
         <script src="data/titles/ordeal.js"></script>
         <script src="data/titles/town.js"></script>
         <script src="data/titles/secret.js"></script>
-        <script src="data/titles/record.js"></script>
+        <script src="data/titles/record.js?v=1.0.0.25"></script>
         <script src="data/titles/list.js"></script>
-        <script src="data/pets.js"></script>
-        <script src="data/game.js"></script>
-        <script src="js/common/base.js"></script>
+        <script src="data/pets.js?v=1.0.0.32"></script>
+        <script src="data/game.js?v=1.0.0.45"></script>
+        <script src="data/craft.js?v=1.0.0.32"></script>    <!-- 공방 재료와 제작법. js/create/craft.js -->
+        <script src="data/event-boss/boss.js?v=1.0.0.21"></script>    <!-- 장기 의뢰 이벤트 보스. js/event-boss/boss.js -->
+        <script src="data/clue/hunt.js?v=1.0.0.23"></script>    <!-- 단서 탐색 시간과 보상. js/event-boss/clue.js -->
+        <script src="data/clue/script.js?v=1.0.0.23"></script>    <!-- 단서 탐색 조사 문장. js/event-boss/clue.js -->
+        <script src="data/clue/piece.js?v=1.0.0.31"></script>    <!-- 단서 조각 서버 공동 이벤트. js/event-boss/piece.js -->
+        <script src="js/common/base.js?v=1.0.0.29"></script>
         <script src="js/common/time.js"></script>
         <script src="js/common/rand.js"></script>
-        <script src="js/common/formula.js"></script>
+        <script src="js/common/formula.js?v=1.0.0.35"></script>
         <script src="js/db/local.js"></script>
-        <script src="js/db/remote.js"></script>
-        <script src="js/db/players.js"></script>
-        <script src="js/main.js"></script>
+        <script src="js/db/remote.js?v=1.0.0.20"></script>
+        <script src="js/db/players.js?v=1.0.0.40"></script>
+        <script src="js/main.js?v=1.0.0.44"></script>
         <script src="js/trial.js"></script>
-        <script src="js/village.js"></script>
+        <script src="js/village.js?v=1.0.0.35"></script>
         <script src="js/weapon.js"></script>
-        <script src="js/corruption.js"></script>
-        <script src="js/room.js"></script>
-        <script src="js/notice.js"></script>
+        <script src="js/corruption.js?v=1.0.0.29"></script>
+        <script src="js/room.js?v=1.0.0.25"></script>
+        <script src="js/notice.js?v=1.0.0.38"></script>
         <script src="js/board.js"></script>
-        <script src="js/duel.js"></script>
+        <script src="js/duel.js"></script>    <!-- 실전 하위 대련. html/duel/arena.html -->
+        <script src="js/act/ord.js?v=1.0.0.26"></script>    <!-- 실전 하위 장기 의뢰. html/act/ord.html -->
         <script src="js/friends/friend.js"></script>
-        <script src="js/dex.js"></script>
-        <script src="js/boss.js"></script>
-        <script src="js/march.js"></script>
+        <script src="js/friends/relation.js?v=1.0.0.19"></script>    <!-- 관계란. 프로필 창의 관계 맺기 -->
+        <script src="js/dex.js?v=1.0.0.30"></script>
+        <script src="js/boss.js?v=1.0.0.22"></script>
+        <script src="js/event-boss/boss.js?v=1.0.0.31"></script>    <!-- 장기 의뢰 이벤트 보스. html/act/ord.html -->
+        <script src="js/event-boss/clue.js?v=1.0.0.26"></script>    <!-- 장기 의뢰 단서 탐색. data/clue/ -->
+        <script src="js/event-boss/piece.js?v=1.0.0.41"></script>    <!-- 장기 의뢰 단서 조각. data/clue/piece.js -->
+        <script src="js/march.js?v=1.0.0.23"></script>
         <script src="js/db/store.js"></script>
         <script src="js/db/account.js"></script>
         <script src="js/db/chat.js"></script>
         <script src="js/db/village.js"></script>
-        <script src="js/chat.js"></script>
+        <script src="js/chat.js?v=1.0.0.20"></script>
         <script src="js/friends/resonance.js"></script>
-        <script src="js/roster.js"></script>
+        <script src="js/roster.js?v=1.0.0.40"></script>
         <script src="js/town/portal.js"></script>
         <script src="js/town/guard.js"></script>
-        <script src="js/town/disaster.js"></script>
-        <script src="js/town/facility.js"></script>
-        <script src="js/town/wave.js"></script>
-        <script src="js/shop.js"></script>
+        <script src="js/town/disaster.js?v=1.0.0.20"></script>
+        <script src="js/town/facility.js?v=1.0.0.39"></script>
+        <script src="js/town/wave.js?v=1.0.0.38"></script>
+        <script src="js/shop.js?v=1.0.0.31"></script>
         <script src="js/alarm/toast.js"></script>
-        <script src="js/alarm/inbox.js"></script>
-        <script src="js/create.js"></script>    
-        <script src="js/pet/effect.js"></script>
-        <script src="js/pet/egg.js"></script>
-        <script src="js/pet/care.js"></script>
+        <script src="js/alarm/inbox.js?v=1.0.0.20"></script>
+        <script src="js/create.js?v=1.0.0.36"></script>    <!-- 캐릭터 제작. html/create/create.html -->
+        <script src="js/create/craft.js?v=1.0.0.33"></script>    <!-- 마을 하위 제작 탭. html/create/craft.html -->
+        <script src="js/pet/effect.js?v=1.0.0.21"></script>
+        <script src="js/pet/egg.js?v=1.0.0.32"></script>
+        <script src="js/pet/care.js?v=1.0.0.32"></script>
         <script src="js/quest/daily.js"></script>
-        <script src="js/setting/setting.js"></script>
-        <script src="js/world.js"></script>
+        <script src="js/setting/setting.js?v=1.0.0.34"></script>
+        <script src="data/story/lock.js?v=1.0.0.43"></script>    <!-- 이야기 잠금 플래그. js/event-boss/piece.js, js/world.js -->
+        <script src="js/story/vn.js?v=1.0.0.42"></script>    <!-- 공용 비주얼 노벨. data/story/shards.json -->
+        <script src="js/world.js?v=1.0.0.43"></script>    <!-- 세계관 개요·이벤트·Q&A. html/world/ -->
     </body>
 </html>

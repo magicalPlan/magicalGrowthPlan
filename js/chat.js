@@ -157,7 +157,7 @@ function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterA
  else if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav();
   unC=apiWatchVillage(C.v,ms=>{paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}
  else if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{dmMenu(false);peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="\u0001";
-  dmApply();if(enterDm)dmList()}
+  dmApply();if(enterDm){dmList();checkDM()}}
  sync()}
 /* 1:1 목록: 탭을 열 때 우편함(이름, 받은 시각)만 한 번 받는다. 본문은 그 상대를 열 때 한 번 받는다.
    C.dml = 상대별 마지막 시각. peerDocs = [id, {n, ts}]. */
@@ -219,22 +219,24 @@ $("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;unC&&unC();unC=null;peer=null;
 $("#cin").onsubmit=e=>{e.preventDefault();send()};
 
 /* 1:1 새 메시지 알림: dmn/{나}의 이름·시각·미리보기만 본다. 본문은 그 대화를 열 때 받는다.
-   C.dms = 보낸 사람별로 마지막으로 확인한 시각, C.dmu = 아직 안 읽은 사람, C.dmn = 보낸 사람 이름. */
+   C.dms = 보낸 사람별로 마지막으로 확인한 시각, C.dmu = 아직 안 읽은 사람, C.dmn = 보낸 사람 이름.
+   마을, 1:1, 알림에 들어올 때 그 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다.
+   연결이 거절되면 30초마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다. */
 const goDM=(u,n)=>{const name=n||(C&&C.dmn&&C.dmn[u])||(C&&C.fr&&C.fr[u])||"상대";if($("#v-chat").hidden||ct!=="d"){ct="d";chat()}openDM(u,name)};
-let dmBusy=false;
-/* 1:1 알림은 dmn/{나}만 30초마다 본다. 이름·시각·미리보기가 거기 있다. 대화 목록을 열 때는 예전 우편함도 한 번 본다. */
 function dmBell(to,x){apiDmBell(to,x)}
-async function checkDM(){if(!AUTH.uid||!C||!DB||dmBusy)return;dmBusy=true;try{const got={};
+function dmApplyBell(data){if(!AUTH.uid||!C)return;const got={};
  const take=(f,v)=>{if(!v||typeof v!=="object"||typeof v.ts!=="number")return;if(!got[f]||v.ts>got[f].ts)got[f]=v};
- try{const s=await apiDmnList();s.docs.forEach(d=>take(d.id,d.data()))}catch(e){}
- if(!C)return;const first=!C.dms;C.dms=C.dms||{};C.dmu=C.dmu||{};C.dmn=C.dmn||{};let ch=false;
+ if(data&&typeof data==="object")Object.keys(data).forEach(f=>take(f,data[f]));
+ const first=!C.dms;C.dms=C.dms||{};C.dmu=C.dmu||{};C.dmn=C.dmn||{};let ch=false;
  for(const f of Object.keys(got)){const v=got[f];if(v.left){if((Number(C.dmBye&&C.dmBye[f])||0)<v.ts&&(C.dms[f]||0)<v.ts)dmLeftNotice(f,v.ts);continue}if(v.ts<=(C.dms[f]||0))continue;if(C.dmGone&&Number(C.dmGone[f])&&v.ts<=Number(C.dmGone[f]))continue;C.dms[f]=v.ts;ch=true;const n=String(v.n||"누군가").slice(0,20);C.dmn[f]=n;dmTouch(f,v.ts);
-  if(first)continue;// 이 기능이 처음 켜질 때는 예전 메시지로 알림을 쏟아 내지 않는다.
-  if(!$("#v-chat").hidden&&ct==="d"&&peer===f){dmLoad(f,1);continue}// 그 대화를 보고 있으면 본문만 한 번 다시 받는다.
+  if(first)continue;
+  if(!$("#v-chat").hidden&&ct==="d"&&peer===f){dmLoad(f,1);continue}
   C.dmu[f]=1;const x=String(v.x||"").slice(0,40);note("dm",n+"님에게서 1:1 메시지가 왔다"+(x?": "+x:"."),f);toast("✉ "+n+(x?": "+x:"님에게서 1:1 메시지가 왔다"),()=>goDM(f,n));ding()}
  if(ch){save();updNav();if(!$("#v-chat").hidden&&ct==="d")document.querySelectorAll("#pl2 .chip").forEach(c=>{if(c.dataset.id&&C.dmu[c.dataset.id]&&!/^● /.test(c.textContent))c.textContent="● "+c.textContent})}}
- catch(e){}finally{dmBusy=false}}
-setInterval(()=>{if(!document.hidden)checkDM()},30000);
+let unDm=null,dmGen=0;
+function dmWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unDm)return;const gen=++dmGen,take=sn=>{if(gen!==dmGen||!C)return;dmApplyBell(sn.exists?sn.data():null)};
+ unDm=DB.doc("dmn/"+UID).live().onSnapshot(take,()=>{},30000)}
+async function checkDM(){if(!AUTH.uid||!C||!DB||LOCAL)return;dmWatch();try{const s=await DB.doc("dmn/"+UID).get();dmApplyBell(s.exists?s.data():null)}catch(e){}}
 setInterval(()=>{if(!document.hidden&&C&&DB&&!$("#v-chat").hidden&&ct==="d"&&peer&&$("#dt")&&!$("#dt").hidden)dmLeftPeek(peer)},8000);
 $("#ct").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t&&DB)setT(t)};
 // 마을 채팅에 새 메시지가 오면(내가 보지 않는 동안) 탭에 ● 표시를 한다. 30초마다 가장 최근 메시지 한 개만 확인한다.
