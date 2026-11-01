@@ -243,7 +243,7 @@
    {k:"sk",nm:"마법",half:{m:2},full:{m:5},items:()=>Object.keys(SK).map(a=>({id:SK[a].id,nm:SK[a].nm,ds:SK[a].d,tag:a+" 속성",hint:a+" 속성을 얻어 한 번 쓰면 기록된다."}))}];
 
 
-   /* 알림함: C.nt에 최근 50개까지 저장한다. [k: 종류, t: 내용, u: 관련된 사람, ts: 시각, r: 읽음] */
+   /* 알림함: C.nt에 최근 60개까지 저장한다. 종류마다 최근 30개다. [k: 종류, t: 내용, u: 관련된 사람, ts: 시각, r: 읽음] */
    const NTI={res:["♡",""],gift:["❀",""],fr:["☍",""],title:["✦",""],warn:["!","bad"],fall:["✕","bad"],boss:["⚔",""],march:["⚑",""],raid:["☾","bad"],quest:["✓",""],dex:["❖",""],dm:["✉",""],notice:["📢",""],portal:["☄","bad"],guard:["♜",""],fac:["🏛",""],board:["📝",""],disaster:["⚠","bad"],wave:["⚔","bad"],duel:["⚔",""]};
    /* 알림 종류별 보기: [키, 이름, 포함되는 알림 종류]. 목록에 없는 종류는 '기타'로 모인다. */
    const NT_CAT=[["all","전체",null],["social","교류",["res","gift","fr","dm","board","duel"]],["battle","전투",["boss","march","raid","portal","wave","disaster","fall","warn"]],

@@ -1,14 +1,18 @@
 /* 알림함. main.js 다음에 불러야 한다. 알림을 쌓고, 종류별로 보고, 누르면 관련 화면으로 간다.
    한 번에 10개만 보여주고, 더 보기로 이전 10개를 이어서 본다.
    출정·마을·친구·공지는 note 를, 하단 메뉴는 inbox 를 그대로 부른다. */
-function note(k,t,u){if(!C)return;C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k,t:String(t).slice(0,160),u:u||"",ts:Date.now(),r:false});if(C.nt.length>80)C.nt.length=80;save();if(!$("#v-inbox").hidden)inbox(true)}
+function note(k,t,u){if(!C)return;C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k,t:String(t).slice(0,160),u:u||"",ts:Date.now(),r:false});ntTrim();save();if(!$("#v-inbox").hidden)inbox(true)}
 function ntGo(n){const u=n.u;if(n.k==="notice"){keep("mgr_ntc_x","");drawNotice();hub();return}if(n.k==="dm"&&u)goDM(u);else if(n.k==="fr")friends();else if(n.k==="res")friends();else if(n.k==="gift"&&u)openProfile(u);else if(n.k==="title")titles();else if(n.k==="boss")bossView();
  else if(n.k==="raid"&&u)openRaid(u);else if(n.k==="fall"&&C.fall)openRaid(UID);else if(n.k==="dex")dex();else if(n.k==="portal")portalView();else if(n.k==="guard")guardView();else if(n.k==="fac")facView();else if(n.k==="disaster")hub();else if(n.k==="wave")waveView();else if(n.k==="board")board(n.u||null);else if(n.k==="quest"||n.k==="warn"||n.k==="fall")hub()}
 let ntCat="all",ntNew=new Set(),ntShown=10;
-const NT_PAGE=10;
+const NT_PAGE=10,NT_MAX=60,NT_CAT_MAX=30;
 const ntCatOf=k=>{const c=NT_CAT.find(x=>x[2]&&x[2].includes(k));return c?c[0]:"etc"};
+/* 최신이 앞에 있다. 종류마다 30개, 전체를 60개만 남긴다. 잘린 알림은 저장할 때 서버 목록에서도 빠진다. */
+function ntTrim(){if(!C)return false;const prev=Array.isArray(C.nt)?C.nt:[],count={},list=[];
+ for(const n of prev){if(!n||typeof n!=="object")continue;const c=ntCatOf(n.k);if((count[c]||0)>=NT_CAT_MAX)continue;if(list.length>=NT_MAX)break;count[c]=(count[c]||0)+1;list.push(n)}
+ if(list.length===prev.length&&list.every((n,i)=>n===prev[i]))return false;C.nt=list;return true}
 const ntIn=(n,cat)=>cat==="all"||ntCatOf(n.k)===cat;
-function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(fresh&&typeof checkDM==="function")checkDM();if(!keep||fresh)ntShown=NT_PAGE;C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
+function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(fresh&&typeof checkDM==="function")checkDM();if(!keep||fresh)ntShown=NT_PAGE;if(ntTrim())save();C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
  // 화면을 처음 열 때 안 읽은 알림을 기억해 두고(종류를 바꿔도 '새 알림' 표시가 남게), 바로 읽음으로 바꾼다.
  if(!keep)ntNew=new Set(C.nt.filter(n=>!n.r).map(n=>n.ts+"|"+n.t));
  const cb=$("#ntcat");cb.innerHTML="";NT_CAT.forEach(([k,nm])=>{const all=C.nt.filter(n=>ntIn(n,k)),nw=all.filter(n=>ntNew.has(n.ts+"|"+n.t)).length;if(k==="etc"&&!all.length)return;
