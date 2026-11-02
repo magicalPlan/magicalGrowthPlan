@@ -500,6 +500,20 @@ html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .c
 .it-row>div{flex:1;text-align:left}
 .it-row>.it-ic{width:40px;height:40px}
 .dex-it.lock .it-ic{filter:brightness(0) opacity(.35)}
+
+/* 도감 아이템 아래 재료. 얻었는지와 관계없이 획득 방법을 펼친다. */
+#dex-mat{margin-top:6px}
+#dex-mat .dex-rule{border:0;border-top:1px solid var(--ln);margin:18px 0 14px}
+#dex-mat>h2{margin:0 0 4px}
+#dex-mat>.hint{margin:0 0 12px}
+.mat-card{margin:0 0 10px;padding:12px 14px}
+.mat-hd{display:flex;align-items:center;gap:12px;text-align:left}
+.mat-hd .it-ic.lg{width:40px;height:40px;margin:0}
+.mat-hd b{display:block;font-size:1.05rem}
+.mat-hd .hint{margin:0}
+.mat-src{margin:8px 0 0;padding-left:1.15em}
+.mat-src li{margin:2px 0;line-height:1.55}
+
 .chip.sq .it-ic.lg{margin-top:2px}
 html[data-theme="light"] .it-ic{filter:drop-shadow(0 1px 2px #0003)}
 html[data-theme="light"] .dex-it.lock .it-ic{filter:brightness(0) opacity(.2)}

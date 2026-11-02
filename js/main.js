@@ -537,7 +537,7 @@ $("#nav").onclick=e=>{
   if(g==="act"){if(!here)ord();else updNav();return}
   if(g==="world"){if(!here)worldView();else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
-  if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")(recTab==="ttl"?titles():dex());else updNav();return}
+  if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")openRec();else updNav();return}
   if(g==="chat"){if(curView!=="chat"){ct="g";chat()}else updNav();return}
   return}
  if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;ct=t;chat();return}
@@ -550,7 +550,7 @@ $("#nav").onclick=e=>{
  if(v==="ord")ord();
  if(v==="bag")bag();
  if(v==="craft")craft();
- if(v==="titles")(recTab==="ttl"?titles():dex());
+ if(v==="titles")openRec();
  if(v==="inbox")inbox();
  if(v==="roster")roster();
  if(v==="world"&&typeof worldView==="function")worldView();
