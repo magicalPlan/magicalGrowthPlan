@@ -1,4 +1,5 @@
-/* 공통 출정 이벤트. 형태는 models/event.js. */
+/* 공통 출정 이벤트. 형태는 models/event.js.
+   문장과 효과를 고친 뒤 함수를 배포해야 출정 계산에 반영된다. functions/sim/tables.js 는 그 배포가 이 파일을 복사해 만들므로 직접 고치지 않는다. */
 const EV=[
  {id:"camp",t:"야영: 파티가 불을 피우고 숨을 돌렸다.",dz:-10},
  {id:"merchant",t:"수상한 상인: 비싼 약을 나눠 마셨다.",dz:-6},

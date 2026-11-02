@@ -31,7 +31,7 @@ function drawSetting(){
  const lt=document.documentElement.dataset.theme==="light",on=!!AUTH.uid;
  $("#set-thm").textContent=lt?"지금은 화이트 모드다.":"지금은 블랙 모드다.";
  $("#set-theme").textContent=lt?"☾ 블랙 모드":"☀ 화이트 모드";
- $("#set-note").textContent=on?"로그인한 계정이다. 로그아웃하면 이 브라우저의 로그인만 풀린다.":"혼자 하기에서는 기록이 이 브라우저에만 남는다.";
+ $("#set-note").textContent=on?"로그인한 계정이다. 로그아웃하면 이 브라우저의 로그인만 풀린다.":"로그인해야 기록이 계정에 남는다.";
  $("#set-out").hidden=!on;
  $("#set-mail").hidden=!on;
  $("#set-em").hidden=!on;

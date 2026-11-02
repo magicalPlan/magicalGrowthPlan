@@ -1,5 +1,6 @@
-/* 출정 이벤트 공통 모델.
-   공통 목록(data/events/common.js), 마을 목록(data/events/village.js), 고독 목록(data/events/solo.js)이 같은 형태를 쓴다.
+/* 출정 이벤트 공통 모델. 이 파일은 형태 설명이고, 실제 목록은 아래 세 파일이다.
+   공통 사건 data/events/common.js, 마을 사건 data/events/village.js, 고독 사건 data/events/solo.js.
+   그 목록을 고친 뒤 firebase deploy --only functions 를 해야 서버 계산에 들어간다.
    t 안의 {v}는 마을 이름, {f}는 친구 이름으로 바뀐다. */
 const EVENT={
  id:"고유 아이디",

@@ -281,7 +281,6 @@ function lmode(mail){if(!signup)lmailMode=!!mail;const a=$("#lmode-id"),b=$("#lm
 $("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};$("#lmail").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};
 $("#lmode-id").onclick=()=>lmode(false);$("#lmode-em").onclick=()=>lmode(true);
 $("#lsw").onclick=()=>{signup=!signup;$("#lcd").hidden=true;$("#lcode").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent="";lmode(lmailMode)};
-$("#lloc").onclick=()=>{DB=local();LOCAL=true;UID="나";FBU="";mode(0);boot()};
 function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}
@@ -290,7 +289,7 @@ let FBU="";
  if(lget("mgr_proj")!==FB_URL){["mgr_fb","mgr_key","mgr_rt","mgr"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});C=null;keep("mgr_proj",FB_URL)}
  let url=lget("mgr_fb")||FB_URL;
  if(url){FBU=url;await startAuth();return}
- DB=local();LOCAL=true;UID="나";mode(0);boot()})();
+ showLogin();const lm=$("#lm");if(lm)lm.textContent="서버 주소가 없어 입장할 수 없다."})();
 let curView="";
 /* 같은 화면을 다시 그리는 동안 내용이 잠깐 비면(목록을 지우고 다시 채울 때) 휴대폰 브라우저가 화면을 위로 끌어올린다.
    잠깐 동안 화면 높이를 지금 높이로 붙잡아 두고, 위치가 바뀌었으면 원래대로 돌려놓는다. */
