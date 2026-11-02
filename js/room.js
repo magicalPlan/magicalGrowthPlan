@@ -115,15 +115,15 @@ async function advanceRoom(){if(!room||!code||!DB)return;if(room.st==="done"){if
  if(room.st!=="run")return;const v=roomView(room);if(!(room.seq||[]).length)askCalc("start");else if(v.mode==="resolve")askCalc("r"+(room.seq||[]).length);else if(v.mode==="finish")askCalc("f"+(room.seq||[]).length)}
 function drawChoice(r){const v=roomView(r),cv=$("#chv");if(v.mode!=="choice"||!v.ch||!EVM[v.ch.id]){cv.hidden=true;return}
  const ch=v.ch,x=EVM[ch.id];cv.hidden=false;cv.innerHTML="";cv.appendChild(elT("p","choice-q",vtx(x.q,ch.v)));const row=elT("div","row");
- const ops=(ch.ops&&ch.ops.length)?ch.ops:x.o.map((_,i)=>i);ops.forEach(i=>{const o=x.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed",myV&&myV.k===ch.k&&myV.i===i?"true":"false");
-  b.onclick=async()=>{myV={k:ch.k,i};drawChoice(r);try{await vref(code,UID).set({k:ch.k,i,ts:Date.now()})}catch(e){}};row.appendChild(b)});
+ const ops=(ch.ops&&ch.ops.length)?ch.ops:x.o.map((_,i)=>i);ops.forEach(i=>{const o=x.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(ch.h===i?" ✦":""));b.type="button";b.disabled=!!(myV&&myV.k===ch.k);b.setAttribute("aria-pressed",myV&&myV.k===ch.k&&myV.i===i?"true":"false");
+  b.onclick=async()=>{if(myV&&myV.k===ch.k)return;const pick=i;myV={k:ch.k,i:pick};drawChoice(r);try{const saved=await vref(code,UID).transact(c=>{if(c&&c.k===ch.k&&typeof c.i==="number")return;return {k:ch.k,i:pick,ts:Date.now()}});if(saved&&saved.k===ch.k&&typeof saved.i==="number")myV={k:ch.k,i:saved.i}}catch(e){if(myV&&myV.k===ch.k&&myV.i===pick)myV=null}drawChoice(r)};row.appendChild(b)});
  cv.appendChild(row);if(ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint choice-t",""))}
 let choiceK="";
 function paintRun(){if(!room||$("#v-room").hidden||room.st==="lobby")return;const v=roomView(room),g=$("#lg"),seq=room.seq||[],fin=room.st==="done"||v.mode==="finish",mark=v.shown+"|"+seq.length+"|"+(fin?1:0);
  if(g.dataset.m!==mark){g.dataset.m=mark;g.hidden=false;g.innerHTML=seq.slice(0,v.shown).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";if(fin&&C.last!==room.code+seq.length)g.innerHTML+=settle(room)}
  $("#rs").textContent=v.mode==="choice"?"선택의 순간":v.mode==="resolve"?"표를 세는 중":fin?"출정 종료":"출정 중";
  if(v.mode==="choice"&&v.ch&&EVM[v.ch.id]){const k=room.code+"_"+v.ch.k;if(choiceK!==k){choiceK=k;drawChoice(room)}}else if(choiceK){choiceK="";$("#chv").hidden=true}
- const t=document.querySelector("#chv .choice-t");if(t&&v.mode==="choice"&&v.ch){const left=Math.max(0,Math.ceil((v.until-Date.now())/1000));t.textContent=(myV&&myV.k===v.ch.k?"선택했다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
+ const t=document.querySelector("#chv .choice-t");if(t&&v.mode==="choice"&&v.ch){const left=Math.max(0,Math.ceil((v.until-Date.now())/1000));t.textContent=(myV&&myV.k===v.ch.k?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  if(room.st==="done"||v.mode==="resolve"||v.mode==="finish"||typeof room.phaseAt!=="number")advanceRoom()}
 function cdTick(){paintRun()}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)paintRun()});

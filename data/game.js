@@ -26,7 +26,7 @@
    // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
-      정기 출정 자리는 목록이 열려 있는 동안 collection().live() 로 연결을 연다. 처음 한 번 받고, 그 뒤엔 바뀐 자리만 받는다. 목록을 접거나 마을을 벗어나면 연결을 끊는다.
+      정기 출정 자리는 목록이 열려 있는 동안 출정마다 rooms/xn 이름 기록을 live() 로 연다. 그 출정에 참가·탈퇴가 있을 때만 그 기록이 온다. 목록을 접거나 마을을 벗어나면 연결을 끊는다.
       타락 명단은 마을에 들어올 때 raid 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나면 닫는다. 사람마다 체력을 따로 읽지 않는다.
       체력과 공격 기록은 그 레이드에 들어간 뒤에만, 그 한 건을 POLL_MS 마다 읽는다.
       POLL_HUB 를 POLL_FAST 와 같은 값으로 두면 그 간격으로 묻는 읽기에도 연결이 열린다. */

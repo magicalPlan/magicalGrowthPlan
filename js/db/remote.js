@@ -22,14 +22,14 @@ const poll=(get,emit,err,ms)=>{let on=true,last="",t=null,first=true,base=ms||PO
 /* 실시간 채팅: 채팅·1:1·대련 화면은 서버와 연결을 열어 두고(EventSource), 바뀐 부분만 바로 받는다.
    몇 초마다 전체 목록을 다시 받는 것보다 빠르고 데이터도 훨씬 덜 쓴다. 탭이 안 보이면 연결을 닫고, 다시 보이면 연다.
    연결이 안 되는 환경(동시 접속 한도 초과 등)이면 주기적으로 묻는 방식으로 돌아간다. 그때도 같으면 본문을 받지 않는다. */
-const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fallback();
+const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function"){if(typeof fallback==="function")return fallback();err&&err({code:"unavailable"});return()=>{}};
  let on=true,es=null,tree=null,fails=0,ok=false,stopPoll=null,last="",retryT=null;
  const put=(path,data,merge)=>{const ks=String(path||"/").split("/").filter(Boolean);
   if(!ks.length){if(merge){tree=tree&&typeof tree==="object"?tree:{};Object.keys(data||{}).forEach(k=>{if(data[k]==null)delete tree[k];else tree[k]=data[k]})}else tree=data;return}
   tree=tree&&typeof tree==="object"?tree:{};let o=tree;ks.slice(0,-1).forEach(k=>{if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]});const lk=ks[ks.length-1];
   if(merge){o[lk]=o[lk]&&typeof o[lk]==="object"?o[lk]:{};Object.keys(data||{}).forEach(k=>{if(data[k]==null)delete o[lk][k];else o[lk][k]=data[k]})}else if(data==null)delete o[lk];else o[lk]=data};
  const out=()=>{const k=JSON.stringify(tree);if(k!==last){last=k;emit(tree==null?null:JSON.parse(k))}};
- const toPoll=()=>{close();if(on&&!stopPoll)stopPoll=fallback()};
+ const toPoll=()=>{close();if(!on||stopPoll)return;if(typeof fallback!=="function"){stopPoll=true;err&&err({code:"unavailable"});return}stopPoll=fallback()};
  const close=()=>{if(es){try{es.close()}catch(e){}es=null}};
  const open=()=>{if(!on||es||stopPoll||document.hidden)return;let u;try{u=mk()}catch(e){return toPoll()}es=new EventSource(u);
   const h=(ev,mg)=>{try{const j=JSON.parse(ev.data);if(!j)return;put(j.path,j.data,mg);ok=true;fails=0;out()}catch(e){}};
@@ -39,7 +39,7 @@ const live=(mk,emit,err,fallback)=>{if(typeof EventSource!=="function")return fa
   es.onerror=()=>{if(!es||es.readyState!==2)return;close();fails++;if(!ok||fails>=3){toPoll();return}retryT=setTimeout(open,3000)}};
  const vis=()=>{if(!on)return;if(document.hidden){if(!stopPoll)close()}else open()};
  document.addEventListener("visibilitychange",vis);open();
- return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(stopPoll)stopPoll()}};
+ return()=>{on=false;clearTimeout(retryT);document.removeEventListener("visibilitychange",vis);close();if(typeof stopPoll==="function")stopPoll()}};
 const D=(p,lv)=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id,await J(()=>U(p))),
  set:async(d,ms)=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PUT",body},ms)}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
  patch:async d=>{const body=JSON.stringify(d);let r;try{r=await fx(()=>U(p),{method:"PATCH",body})}catch(e){acctFail(p,body,e);throw new Error(acctWhy(e))}if(!r.ok){await acctHttp(p,body,r);throw new Error(r.status)}},
@@ -47,7 +47,7 @@ const D=(p,lv)=>{const id=p.split("/").pop();return{id,path:p,get:async()=>sn(id
  delete:async ms=>{const r=await fx(()=>U(p),{method:"DELETE"},ms);if(!r.ok)throw new Error(r.status)},
  transact:async fn=>{for(let i=0;i<4;i++){const r=await fx(()=>U(p),{headers:{"X-Firebase-ETag":"true"}});if(!r.ok)throw new Error(r.status);const tag=r.headers.get("ETag");let cur=null;try{cur=await r.json()}catch(e){cur=null}if(cur===undefined)cur=null;const next=fn(cur);if(next===undefined)return cur;const w=await fx(()=>U(p),{method:"PUT",headers:tag?{"if-match":tag}:{},body:JSON.stringify(next)});if(w.status===412)continue;if(!w.ok)throw new Error(w.status);return next}throw new Error("412")},
  live:()=>D(p,1),
- onSnapshot:(f,e,ms)=>{const pl=()=>poll(bag=>J(()=>U(p),bag),j=>f(sn(id,j)),e,ms);return ms===POLL_FAST||lv?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
+ onSnapshot:(f,e,ms)=>{const pl=()=>poll(bag=>J(()=>U(p),bag),j=>f(sn(id,j)),e,ms);if(lv&&ms===0)return live(()=>U(p),j=>f(sn(id,j)),e,null);return ms===POLL_FAST||lv?live(()=>U(p),j=>f(sn(id,j)),e,pl):pl()}}};
 const qq=o=>{const q=[];if(o.w)q.push('orderBy="'+o.w[0]+'"','equalTo='+JSON.stringify(o.w[1]));else if(o.ob){q.push('orderBy="'+o.ob+'"');if(o.fr!=null)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)));if(o.en!=null)q.push("endAt="+encodeURIComponent(JSON.stringify(o.en)))}else{q.push('orderBy="$key"');if(o.pre){const start=o.af&&o.af>o.pre?o.af:o.pre,end=o.en!=null&&String(o.en)<o.pre+"\uf8ff"?o.en:o.pre+"\uf8ff";q.push("startAt="+encodeURIComponent(JSON.stringify(start)),"endAt="+encodeURIComponent(JSON.stringify(end)))}else if(o.fr)q.push("startAt="+encodeURIComponent(JSON.stringify(o.fr)))}if(o.f)q.push("limitToFirst="+o.f);else if(o.l)q.push("limitToLast="+o.l);return q.join("&")};
 const Q=(c,o)=>({where:(a,op,v)=>Q(c,{...o,w:[a,v]}),orderBy:()=>Q(c,o),by:f=>Q(c,{...o,ob:f}),limit:n=>Q(c,{...o,l:n}),first:n=>Q(c,{...o,f:n}),from:k=>Q(c,{...o,fr:k}),prefix:p=>Q(c,{...o,pre:p}),after:k=>Q(c,{...o,af:k}),end:k=>Q(c,{...o,en:k}),live:()=>Q(c,{...o,lv:1}),doc:id=>D(c+"/"+id),
  /* 한 번만 읽기. 주기 조회의 ETag 확인으로 들어가지 않는다. */
