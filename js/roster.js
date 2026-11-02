@@ -2,9 +2,12 @@
    메뉴의 등록자 탭은 roster 를 그대로 부른다. 카드를 누르면 프로필이 열린다.
    기본은 전투력 높은 순이다. 순서를 바꾸면 그 기준의 상위 20명부터 다시 받는다.
    아래로 내리면 같은 기준으로 다음 20명을 받는다. 주기적으로 다시 받지 않는다.
-   이름을 입력하면 apiRosterFind 가 사진 없는 명부에서 그 글자가 들어간 사람을 찾는다. 불러온 20명 안에서만 거르지 않는다. */
-const RS_PAGE=20;
-let RS=[],rsHits=[],rsQ="",rsS="pw",rsEdge=null,rsDone=false,rsBusy=false,rsGen=0,rsFindGen=0,rsFindBusy=false,rsFindErr=false,rsFindT=null,rsShown=RS_PAGE;
+   이름을 입력하면 apiRosterFind 가 사진 없는 명부에서 그 글자가 들어간 사람을 찾는다. 불러온 20명 안에서만 거르지 않는다.
+   정렬별 목록은 약 45초 동안 메모리에 두어, 탭을 다시 열 때 바로 보여 준다. */
+const RS_PAGE=20,RS_TTL=45000;
+let RS=[],rsHits=[],rsQ="",rsS="pw",rsEdge=null,rsDone=false,rsBusy=false,rsGen=0,rsFindGen=0,rsFindBusy=false,rsFindErr=false,rsFindT=null,rsShown=RS_PAGE,rsBag={};
+function rsSnapSave(){if(rsQ.trim()||!RS.length)return;rsBag[rsS]={at:Date.now(),list:RS.slice(),edge:rsEdge?{v:rsEdge.v,n:rsEdge.n}:null,done:!!rsDone,shown:rsShown}}
+function rsSnapUse(){const c=rsBag[rsS];if(!c||!c.list||!c.list.length||Date.now()-c.at>RS_TTL)return false;RS=c.list.slice();rsEdge=c.edge?{v:c.edge.v,n:c.edge.n}:null;rsDone=!!c.done;rsShown=c.shown||RS_PAGE;rsBusy=false;return true}
 function rsField(){return rsS==="lv"?"lv":"pw"}
 function rsList(){const f=rsField(),L=(rsQ.trim()?rsHits:RS).slice();
  L.sort((a,b)=>(Number(b[f])||0)-(Number(a[f])||0)||(a.u<b.u?-1:1));return L}
@@ -16,7 +19,7 @@ function rsBound(){const f=rsField();let v=null,n=0;RS.forEach(p=>{const x=Numbe
 async function rsLoad(){if(rsBusy||rsDone||!DB)return 0;const gen=rsGen,field=rsField(),edge=rsEdge,take=edge?RS_PAGE+edge.n:RS_PAGE;rsBusy=true;
  try{let q=DB.collection("players").by(field).limit(take);if(edge)q=q.end(edge.v);const sn=await once(q);if(gen!==rsGen)return 0;const raw=sn.docs||[],seen={};RS.forEach(p=>seen[p.u]=1);let added=0;
   raw.forEach(d=>{if(seen[d.id])return;const v=d.data()||{};if(!v.n||v[field]==null)return;seen[d.id]=1;RS.push(Object.assign({u:d.id},v));added++});
-  if(raw.length<take||!added)rsDone=true;else rsEdge=rsBound();return added}
+  if(raw.length<take||!added)rsDone=true;else rsEdge=rsBound();if(added>0||rsDone)rsSnapSave();return added}
  catch(e){if(gen===rsGen)rsDone=true;return -1}finally{rsBusy=false}}
 function rsDraw(){const box=$("#rsl");if(!box)return;const q=rsQ.trim(),L=rsList(),show=L.slice(0,rsShown),ord=rsS==="lv"?"레벨":"전투력";
  $("#rsh").textContent=q?(rsFindBusy?"이름을 찾는 중...":"이름에 '"+q+"'이(가) 들어간 마법사 "+L.length+"명"+(L.length?" · 지금 접속 중 "+L.filter(isOn).length+"명":"")+(L.length>show.length?" · 아래로 내리면 다음 "+RS_PAGE+"명":"")):ord+" 높은 순 · 불러온 마법사 "+RS.length+"명 · 지금 접속 중 "+RS.filter(isOn).length+"명"+(rsDone?"":" · 아래로 내리면 다음 "+RS_PAGE+"명");
@@ -36,8 +39,9 @@ function rsFill(){if($("#v-roster").hidden||rsBusy||!rsAtEnd())return;if(rsQ.tri
 async function roster(){show("roster");const box=$("#rsl");$("#rsq").value=rsQ;$("#rss").value=rsS;
  if(!XON()){RS=[];rsDone=true;box.innerHTML="<p class='hint'>서버에 연결되어야 등록자 목록을 볼 수 있다.</p>";$("#rsh").textContent="";return}
  if(rsQ.trim()){rsFind();return}
+ if(rsSnapUse()){rsDraw();rsFill();return}
  rsGen++;RS=[];rsEdge=null;rsDone=false;rsBusy=false;rsShown=RS_PAGE;box.innerHTML="<p class='hint'>목록을 불러오는 중...</p>";$("#rsh").textContent="";
- const n=await rsLoad();if($("#v-roster").hidden)return;if(n<0&&!RS.length){box.innerHTML="<p class='hint'>목록을 불러오지 못했다. 다시 열어 보자.</p>";return}rsDraw();rsFill()}
+ const n=await rsLoad();if($("#v-roster").hidden)return;if(n<0&&!RS.length){box.innerHTML="<p class='hint'>목록을 불러오지 못했다. 다시 열어 보자.</p>";return}rsSnapSave();rsDraw();rsFill()}
 $("#rsq").oninput=e=>{rsQ=e.target.value;if(!$("#v-roster").hidden&&XON())rsFind()};
 $("#rss").onchange=e=>{const v=e.target.value;if(v!=="pw"&&v!=="lv")return;rsS=v;if($("#v-roster").hidden||!XON())return;try{window.scrollTo(0,0)}catch(err){}if(rsQ.trim()){rsShown=RS_PAGE;rsDraw();return}roster()};
 addEventListener("scroll",()=>{if(rsAtEnd())rsMore()},{passive:true});

@@ -57,7 +57,7 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
    글은 STORY_URL 을 이 브라우저에서 한 번만 읽는다. 합계는 이미 받아 둔 CLPN 을 쓰고, 여기서 서버에 다시 묻지 않는다. */
 let storyBook=null,storyBookP=null,clpStoryGen=0;
 function storyLoad(){if(typeof STORY_URL==="undefined")return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
- storyBookP=fetch(STORY_URL,{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
+ storyBookP=fetch(STORY_URL).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
 function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyFlag!=="function")return;
  const open=STORY_LOCK.filter(lock=>storyFlag(lock,CLPN,Date.now()));if(!open.length)return;
  const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);
