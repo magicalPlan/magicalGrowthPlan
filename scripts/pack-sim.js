@@ -24,7 +24,7 @@ const XPL=["외곽","폐허","숲길","지하수로","옛 성채","묘지","포�
 const ABYSS_PL=["심연의 입구","심연 · 잊힌 제단","심연 · 무저갱","심연 · 검은 왕좌","심연 · 끝없는 회랑"];
 const XDF=[null,{n:"위험도 ★",df:.85,rw:.8},{n:"위험도 ★★",df:1,rw:1},{n:"위험도 ★★★",df:1.2,rw:1.4},{n:"위험도 ★★★★ 심연",df:1.45,rw:2,dz:1.5}];
 const VLN={A:"A마을",B:"B마을",C:"C마을",D:"D마을"};
-const BJ_SOFT=30,BJ_HARD=96,BJ_LOW=70,BT_BASE=300,BT_STEP=60,BT_K=60;
+const BJ_SOFT=40,BJ_HARD=96,BJ_LOW=80,BT_BASE=300,BT_STEP=60,BT_K=60;
 module.exports={EV,VEV,SOLO_EV,BJ,EARTH_P,SCY_CRIT,SOLO_DF,SOLO_DZ,SOLO_EVP,CHOICE_MS,XSTEP,XS,XN,XCLOSE,XMAX,XPL,ABYSS_PL,XDF,VLN,BJ_SOFT,BJ_HARD,BJ_LOW,BT_BASE,BT_STEP,BT_K};
 `;
 fs.mkdirSync(path.join(root, "functions", "sim"), {recursive: true});

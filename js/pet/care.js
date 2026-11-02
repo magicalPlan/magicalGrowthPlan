@@ -29,9 +29,9 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix
  box.appendChild(ec);
 
  // 기간 한정: 서리 드래곤의 알. 이벤트 기간이거나 가지고 있을 때만 보인다. 상점에서는 살 수 없다.
- if(petEvOn()||(C.eggsEv||0)>0){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),end=new Date(PET_EV.to-1);vc.append(elT("span","pet-ic",PET_EV.ic),vb);
+ if(petEvOn()||(C.eggsEv||0)>0){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),end=new Date(PET_EV.to-1),limN=Object.values(PETS).filter(x=>x[3]===4).length||1;vc.append(elT("span","pet-ic",PET_EV.ic),vb);
   vb.append(elT("b","pet-r4",PET_EV.nm+" "+(C.eggsEv||0)+"개 · 기간 한정"),elT("small","",PET_EV.ds),
-   elT("small","","11월 1일 ~ 11월 14일에만 출정·장기 토벌 성공 때 사역마의 알처럼 줍는다(상점에서는 팔지 않는다). 전설 "+Math.round(PET_EV.leg*100)+"% · 기간 한정 사역마 "+Math.round(PET_EV.lim*100)+"% · 나머지는 일반·희귀. 기간이 끝나면 품지 않은 알은 녹아 평범한 사역마의 알이 된다."+(petEvOn()?" (남은 기간 "+cdTxt(PET_EV.to-now)+")":"")),
+   elT("small","","11월 1일 ~ 11월 14일에만 출정·장기 토벌 성공 때 사역마의 알처럼 줍는다(상점에서는 팔지 않는다). 전설 "+Math.round(PET_EV.leg*100)+"% · 기간 한정 "+limN+"마리 각 "+Math.round((PET_EV.lim||0)/limN*100)+"% · 희귀 "+Math.round((PET_EV.rare||0)*100)+"% · 일반이 나머지. 기간이 끝나면 품지 않은 알은 녹아 평범한 사역마의 알이 된다."+(petEvOn()?" (남은 기간 "+cdTxt(PET_EV.to-now)+")":"")),
    elT("small","","기간 한정 사역마의 이름과 성능은 깨어난 뒤에 도감에 적힌다."));
   const a=elT("div","pet-act"),b=elT("button","chip",PET_EV.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
  if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}

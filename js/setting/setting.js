@@ -50,9 +50,9 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  const rate={};PET_RATE.forEach(([k,p])=>{rate[k]=p});
  const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다."));
  egg.appendChild(oddsRows([[PET_RARE[1],rate[1]],[PET_RARE[2],rate[2]],[PET_RARE[3],rate[3]]]));
- const rest=1-(PET_EV.leg||0)-(PET_EV.lim||0),base=(rate[1]||0)+(rate[2]||0)||1,ev=elT("div","set-odd-box");
- ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","전설과 기간 한정이 먼저 정해진다. 나머지는 일반과 희귀가 사역마의 알과 같은 비율로 나뉜다."));
- ev.appendChild(oddsRows([[PET_RARE[3],PET_EV.leg],[PET_RARE[4],PET_EV.lim],[PET_RARE[1],rest*(rate[1]||0)/base],[PET_RARE[2],rest*(rate[2]||0)/base]]));
+ const leg=PET_EV.leg||0,lim=PET_EV.lim||0,rare=PET_EV.rare||0,common=Math.max(0,1-leg-lim-rare),limN=Object.values(PETS).filter(x=>x[3]===4).length||1,ev=elT("div","set-odd-box");
+ ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","기간 한정은 "+limN+"마리가 같은 확률(각 "+oddsTxt(lim/limN)+")이다. 그다음은 희귀, 나머지는 일반이다."));
+ ev.appendChild(oddsRows([[PET_RARE[3],leg],[PET_RARE[4],lim],[PET_RARE[2],rare],[PET_RARE[1],common]]));
  box.append(egg,ev)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();

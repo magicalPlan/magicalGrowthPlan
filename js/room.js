@@ -49,8 +49,8 @@ const vtx=(t,v)=>String(t).replace(/\{v\}/g,VL[v]?VL[v].n:"마을");
 const fxTxt=x=>{const a=[];if(x.ex)a.push("경험치 +"+x.ex);if(x.gd)a.push("골드 "+(x.gd>0?"+":"")+x.gd);if(x.mm)a.push("마력석 +"+x.mm);if(x.gi)a.push("작은 꽃다발 +"+x.gi);if(x.pw)a.push("이번 출정 전투력 +"+x.pw);if(x.bt)a.push(x.bt>0?"전투 +"+x.bt:"전투 "+x.bt);if(x.tc)a.push("다음 재계약 시험 판정 +"+x.tc);if(x.rb)a.push("다음 공명 효과 증가");if(x.wa)a.push("오늘 하루 무기 +1");if(x.dh)a.push("절망도 70 이상인 사람만 절망도 "+(x.dh>0?"+":"")+x.dh);if(x.dz>0)a.push("절망도 +"+x.dz);if(x.dz<0)a.push("절망도 "+x.dz);return a.length?" ("+a.join(", ")+")":""};
 // 권장 전투력 = (BT_BASE + BT_STEP × 몇 번째 전투) × 위험도. 기준치 = 50 + BT_K × (파티 전투력 ÷ 권장 전투력 − 1), 15~85 사이.
 let BT_BASE=300,BT_STEP=60,BT_K=60;
-// 실패 여유는 T+BJ_SOFT. 그 위는 대실패인데, BJ_LOW 아래로는 내려가지 않아 대실패가 30%를 넘지 않는다. BJ_HARD 이상은 항상 대실패(5%).
-const BJ_SOFT=30,BJ_HARD=96,BJ_LOW=70;
+// 실패 여유는 T+BJ_SOFT. 그 위는 대실패인데, BJ_LOW 아래로는 내려가지 않아 대실패가 20%를 넘지 않는다. BJ_HARD 이상은 항상 대실패(5%).
+const BJ_SOFT=40,BJ_HARD=96,BJ_LOW=80;
 const battleT=(P,i,df)=>Math.max(15,Math.min(85,Math.round(50+BT_K*(P/((BT_BASE+BT_STEP*i)*df)-1))));
 const battleJ=(n,T,cd)=>n>=BJ_HARD?0:n<=Math.max(1,Math.floor(T/(cd||5)))?3:n<=T?2:n<=Math.min(BJ_HARD-1,Math.max(BJ_LOW,T+BJ_SOFT))?1:0;
 function simStep(r){const ps=Object.values(r.pl),has=t=>ps.some(p=>p.t===t),S=r.sim,fight=()=>(S.avg+S.ab)*3*(.75+Math.random()*.6);
