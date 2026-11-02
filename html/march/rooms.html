@@ -1,5 +1,9 @@
 <div id="v-rooms" hidden>
-<h2>매지컬 마치</h2><p class="hint">파티원은 최대 7명이고 혼자서도 출발할 수 있다. 전투 3~5번을 치르면 토벌이 완료된다. 인원이 적으면 보상이 줄어든다.</p>
-<h2>정기 출정</h2><p class="hint">5분마다 출정 15개가 자동으로 열린다. 참가해 두면 출발 시각에 자동으로 출발하고, 출발 2분 전에 마감된다. 위험도가 높을수록 마수가 강하지만 보상도 크다.</p><div class="hist" id="rl"></div>
-<p class="msg" id="rm"></p><button class="btn g" id="rb" type="button">돌아가기</button>
+<h2 class="fold-h">정기 출정<button class="chip fold-btn" id="xtog" type="button" aria-expanded="true" aria-controls="xbox">접기 ▲</button></h2>
+<div id="xbox">
+<p class="hint">5분마다 출정 15개가 열린다. 참가해 두면 출발 시각에 자동으로 떠나고, 출발 2분 전에 참가가 마감된다. 목록이 펼쳐져 있을 때 참가 자리를 5개씩 연다. 정렬은 기본·높은 등급·낮은 등급이다.</p>
+<div class="hist" id="rl"></div>
+</div>
+<p class="msg" id="rm"></p>
+<button class="btn g" id="rb" type="button">마을로 돌아가기</button>
 </div>

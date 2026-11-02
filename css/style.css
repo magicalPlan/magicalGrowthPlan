@@ -250,12 +250,12 @@ textarea::placeholder{color:#6f6785}
 .hc-next{margin:4px 0 0;color:var(--mu);font-size:.72rem;text-align:right}
 .hc-next:empty{display:none}
 
-/* 마을 화면 가로 배치: 넓은 화면에서는 프로필 · 의뢰 · 포탈과 경쟁 · 정기 출정을 네 칸으로 나란히 놓는다.
+/* 마을 화면 가로 배치: 넓은 화면에서는 프로필 · 의뢰 · 포탈과 경쟁을 나란히 놓는다.
    칸마다 화면 높이에 맞춰 안에서만 스크롤되므로 페이지 전체를 내리지 않아도 한눈에 보인다. 좁은 화면(휴대폰 세로)에서는 위아래로 쌓인다. */
 .hcols{display:grid;gap:18px}
-@media (min-width:860px){main.hubw{max-width:1180px}#v-hub>.two{grid-template-columns:300px 1fr}.hcols{grid-template-columns:1fr 1fr}.hcol-x{grid-column:1/-1}}
+@media (min-width:860px){main.hubw{max-width:1180px}#v-hub>.two{grid-template-columns:300px 1fr}.hcols{grid-template-columns:1fr 1fr}}
 @media (min-width:1080px){main.hubw{max-width:min(1640px,calc(100vw - 32px))}
- #v-hub>.two{grid-template-columns:clamp(260px,22vw,310px) 1fr;gap:16px}.hcols{grid-template-columns:1fr 1fr 1.15fr;align-items:start;gap:16px}.hcol-x{grid-column:auto}
+ #v-hub>.two{grid-template-columns:clamp(260px,22vw,310px) 1fr;gap:16px}.hcols{grid-template-columns:1fr 1fr;align-items:start;gap:16px}
  .hcol,#v-hub>.two>div:first-child{max-height:calc(100vh - 250px);min-height:240px;overflow:auto;padding-right:4px;scrollbar-width:thin}}
 .hcol h2:first-child{margin-top:0}
 
