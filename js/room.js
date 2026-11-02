@@ -81,16 +81,16 @@ const vref=(c,u)=>DB.doc("rooms/"+c+"v_"+u);
 let busyT=false,myV=null,cdT=null,holdT=null,holdN=0;
 function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.pl)humansOf(r).forEach(u=>vref(c,u).delete().catch(()=>{}))}
 // 방장이 창을 닫아 남은 방, 오래된 투표 기록을 정리한다. rooms 전체를 받지 않는다.
-// 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방과 오래된 정기 출정 자리만 지운다.
+// 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방만 지운다. 정기 출정은 xRetire 가 오래된 슬롯만 지운다.
 let lastSweep=0;
 // 끝난 방(done)은 결과 시각으로부터 10분이 지나면 지운다. 진행이 멈춘 방(run)도 마지막 기록으로부터 10분이 지나면 지운다. 기다리는 방(lobby)은 1시간이 지나야 지운다.
 function roomStale(v,now){if(!v||typeof v!=="object")return false;const ts=Number(v.ts)||0,doneAt=Number(v.doneAt)||0,age=now-(ts||now),doneAge=now-(doneAt||ts||now);
  if(v.st==null)return !v.ts||age>300000;if(v.st==="done")return doneAge>=X_AFTER||age>120000;if(v.st==="run")return age>=X_AFTER;return !v.ts||age>3600000}
-async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;return {at:now,u:UID}});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
+async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;const next={at:now,u:UID};if(c&&c.k!=null)next.k=c.k;return next});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
 async function sweepRooms(){if(!DB||!UID||Date.now()-lastSweep<600000)return;if(!(await sweepClaim()))return;lastSweep=Date.now();let keys=[];try{keys=Object.keys((await DB.doc("rooms").peek())||{})}catch(e){lastSweep=0;try{await DB.doc("tally/roomsweep").set({at:0,u:""})}catch(e2){}return}
  const now=Date.now(),party=keys.filter(id=>id!==code&&/^[A-Z0-9]{4}(v_.+)?$/.test(id));
  for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(v&&roomStale(v,now))DB.doc("rooms/"+id).delete().catch(()=>{})}))}
- if(typeof xSweep==="function")xSweep(keys)}
+ if(typeof xRetire==="function")xRetire()}
 /* 지금까지 공개할 문장 수. phaseAt 부터 한 줄에 XSTEP. 이미 지난 문장은 화면을 켜는 즉시 따라잡는다. */
 function shownCount(r){const seq=r.seq||[];if(!r||r.st==="lobby")return 0;if(r.st==="done")return seq.length;if(typeof r.phaseAt!=="number")return Math.min(seq.length,r.step||0);
  const from=r.segFrom||0;return Math.min(seq.length,Math.max(from,from+Math.floor(Math.max(0,Date.now()-r.phaseAt)/XSTEP)))}
