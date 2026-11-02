@@ -1,5 +1,6 @@
 /* 마을 시설과 희망의 등대. main.js 다음에 불러야 한다. 기부, 단계, 이용.
-   시설 합계와 단계는 vfac/{마을} 만 읽는다. 등대 합계와 재해 진압 합계는 tally 한 칸이다.
+   시설의 마을 경험치(sum)와 완공 단계(lv)는 vfac/{마을}/{키} 만 읽는다. 등대 합계와 재해 진압 합계는 tally 한 칸이다.
+   사람별 기여도는 vfactop 과 캐릭터의 C.fc 에 있다. 그 값이 vfac 의 by 보다 크면 facCommit 이 차이만 서버 합계에 넣는다.
    마을이나 시설 화면에서는 등대 합계에 연결해 두고, 그 칸이 바뀌면 화면만 고친다. 화면을 벗어나면 연결을 닫는다.
    score 전체는 그 합계가 아직 없을 때 한 클라이언트만 한 번 옮겨 적는다. 상위 5명은 시설 탭에서만 받는다. */
 const facUsed=k=>!!(C.fu&&C.fu.d===today()&&C.fu.u&&C.fu.u[k]);
@@ -24,10 +25,40 @@ function pubScore(){if(!C||!XON())return Promise.resolve();const body=scoreBody(
 /* 알림은 마을 단계(vfac)를 반영한 뒤에만. 기여가 다음 단계를 넘긴 때만 올리고, 기억한 단계는 내리지 않는다. */
 function facNotice(){if(!C)return;const before=C.facl||{};C.facl=C.facl||{};let ch=false;
  FAC.forEach(([k,nm])=>{const known=facSrv[C.v+"/"+k],lv=facLvOf(known!=null?known:facPts(C.v,k)),prev=before[k];if(prev!=null&&lv>prev){note("fac",VL[C.v].n+"의 "+nm+"이(가) "+lv+"단계가 되었다!");toast("🏛 "+nm+" "+lv+"단계 완성!")}if(prev==null||lv>prev){C.facl[k]=lv;ch=true}});if(ch)save()}
-/* facSrv 는 서버가 확인해 준 합계, facFly 는 아직 그 합계에 안 들어간 내 기부. 화면은 둘을 더하고, 그보다 낮은 기록으로는 내리지 않는다. */
+/* facSrv 는 서버가 확인해 준 합계, facFly 는 아직 그 합계에 안 들어간 내 기부. 화면은 둘을 더하고, 그보다 낮은 기록으로는 내리지 않는다.
+   by 가 있으면 빠져 있는 양은 내 기여도(C.fc)에서 by 를 뺀 값이다. 그 값을 화면 합계에만 더해 두고, 서버에 넣은 뒤에는 0이 된다. */
 let facSrv={},facFly={};
-function vfacApply(v,data){if(!v||!VL[v]||!data)return;Object.keys(FAC_KEY).forEach(k=>{const rec=data[k];if(!rec||typeof rec.sum!=="number")return;const id=v+"/"+k,sv=Math.max(0,Math.min(1e8,Number(rec.sum)||0)),prev=facSrv[id]||0,pend=facFly[id]||0;if(sv>prev)facSrv[id]=sv;
- const n=(pend&&sv>=prev+pend)?sv:(facSrv[id]||0)+pend,f=((FACD[v]=FACD[v]||{})[k]=FACD[v][k]||{sum:0,top:[]});f.sum=n})}
+function facGap(v,k,rec){if(!rec||!rec.by||typeof rec.by!=="object"||!C||C.v!==v||!UID)return null;const mine=Number((C.fc||{})[k])||0,ack=Number(rec.by[UID])||0;return Math.max(0,mine-ack)}
+function vfacApply(v,data){if(!v||!VL[v]||!data)return;Object.keys(FAC_KEY).forEach(k=>{const rec=data[k];if(!rec||typeof rec.sum!=="number")return;const id=v+"/"+k,sv=Math.max(0,Math.min(1e8,Number(rec.sum)||0)),prev=facSrv[id]||0,gap=facGap(v,k,rec);if(sv>prev)facSrv[id]=sv;
+ let pend=facFly[id]||0;if(gap!=null){pend=gap;facFly[id]=gap}
+ const n=gap!=null?(facSrv[id]||0)+pend:(pend&&sv>=prev+pend)?sv:(facSrv[id]||0)+pend,f=((FACD[v]=FACD[v]||{})[k]=FACD[v][k]||{sum:0,top:[]});f.sum=n})}
+/* 마을 칸을 기여도 목록과 맞춘다.
+   합계만 있고 by 가 없는 옛 기록은 기여도 합이 더 크면 거기까지 올리고, 이미 더 크면 그대로 둔다. 합계는 낮아지지 않는다.
+   칸 자체가 없으면 기여도 목록으로 합계와 완공 단계를 만든다. 목록이 비어 있으면 칸을 만들지 않는다.
+   이미 by 가 있는 칸은 다시 읽지 않는다. 여러 사람이 동시에 맞춰도 차이를 더하는 방식이 아니라 큰 값으로 맞추므로 점수가 두 배가 되지 않는다. */
+let vfacReady={};
+function vfacBroken(rec){return !!(rec&&typeof rec.sum==="number"&&(!(rec.by&&typeof rec.by==="object")||typeof rec.lv!=="number"))}
+async function vfacEnsure(v){if(!DB||!VL[v]||typeof apiVfacRead!=="function"||typeof apiVfacAlign!=="function")return false;if(vfacReady[v])return true;
+ const skip={};
+ for(let i=0;i<3;i++){let data={};try{const s=await apiVfacRead(v);data=s&&s.exists?s.data()||{}:{}}catch(e){return false}
+  const keys=Object.keys(FAC_KEY),broken=keys.filter(k=>vfacBroken(data[k])),missing=keys.filter(k=>{const rec=data[k];return !skip[k]&&(!rec||typeof rec.sum!=="number")});
+  if(!broken.length&&!missing.length){vfacReady[v]=1;return true}
+  try{await Promise.all(broken.concat(missing).map(async k=>{const tops=typeof apiVfacAll==="function"?await apiVfacAll(v,k):{};
+   if(missing.indexOf(k)>=0&&!Object.keys(tops).some(u=>{const raw=tops[u];return Number(raw&&typeof raw==="object"?raw.pt:raw)>0})){skip[k]=1;return}await apiVfacAlign(v,k,tops)}))}catch(e){}}
+ let left=true;try{const s=await apiVfacRead(v),data=s&&s.exists?s.data()||{}:{};left=Object.keys(FAC_KEY).some(k=>{const rec=data[k];if(vfacBroken(rec))return true;return (!rec||typeof rec.sum!=="number")&&!skip[k]})}catch(e){return false}
+ if(left)return false;vfacReady[v]=1;return true}
+/* 내 기여도를 서버의 기여도 란과 마을 합계에 넣는다. 마을 합계에는 아직 반영되지 않은 차이만 더하고, 완공 단계도 같이 적는다.
+   요청이 실패하면 화면의 빠진 점수는 남겨 둔다. 다음에 마을을 열면 C.fc 와 by 를 다시 비교해 넣는다. */
+let facSend={};
+function facSettle(k,rec){if(!C||!rec||typeof rec.sum!=="number")return;const id=C.v+"/"+k,sv=Math.max(0,Math.min(1e8,Number(rec.sum)||0));if(sv>(facSrv[id]||0))facSrv[id]=sv;const gap=facGap(C.v,k,rec);if(gap!=null)facFly[id]=gap;
+ const cur=((FACD[C.v]=FACD[C.v]||{})[k]=FACD[C.v][k]||{sum:0,top:[]}),n=(facSrv[id]||0)+(facFly[id]||0);if(cur.sum!==n)cur.sum=n;
+ if(typeof $==="function"){if(!$("#v-fac").hidden&&typeof facView==="function")facView(true);if(!$("#v-hub").hidden&&typeof hubFac==="function")hubFac()}}
+async function facCommitNow(k){const mine=Number((C.fc||{})[k])||0;if(!mine||!DB||!UID)return;
+ try{await apiVfacMine(C.v,k,mine,typeof nmOf==="function"?nmOf():C.n)}catch(e){}
+ if(!await vfacEnsure(C.v))return;let res=null;try{res=await apiVfacApply(C.v,k,Number((C.fc||{})[k])||0)}catch(e){return}
+ if(!res||res.mode==="wait"||!res.rec||typeof res.rec.sum!=="number")return;facSettle(k,res.rec)}
+function facCommit(k){if(!C||!VL[C.v]||!FAC_KEY[k])return Promise.resolve();const id=C.v+"/"+k,prev=facSend[id]||Promise.resolve(),run=prev.catch(()=>{}).then(()=>facCommitNow(k)),tracked=run.catch(()=>{});facSend[id]=tracked;return run.finally(()=>{if(facSend[id]===tracked)delete facSend[id]})}
+async function facPushMine(){if(!C||!DB||!UID)return;for(const k of Object.keys(FAC_KEY)){if(Number((C.fc||{})[k])>0){try{await facCommit(k)}catch(e){}}}}
 function facSeedSum(v,k){const raw=(((FACD[v]||{})[k]||{}).sum)||0;return Math.max(0,raw-(facFly[v+"/"+k]||0))}
 async function vfacSync(v,scoreOk){if(!v||!VL[v]||!XON()||typeof apiVfacRead!=="function")return;let data=null;try{const s=await apiVfacRead(v);data=s&&s.exists?s.data()||{}:{}}catch(e){return}
  vfacApply(v,data);if(!scoreOk)return;const miss=Object.keys(FAC_KEY).filter(k=>!(data[k]&&typeof data[k].sum==="number")&&facSeedSum(v,k)>0);
@@ -62,7 +93,7 @@ async function tallyLoad(){let wf=null;try{const s=await DB.doc("tally/wf").get(
  const d=wfPack(wf);if(d)wfApply(d);
  const x=typeof disInfo==="function"?disInfo(disSlot(Date.now())):null;if(!x)return;
  try{const s=await DB.doc("tally/dr/"+x.id).get(),p=s.exists?s.data():null;if(p&&p.pts)DRP[x.id]=Math.max(DRP[x.id]||0,Number(p.pts)||0)}catch(e){}}
-async function loadFac(){if(!C||!XON())return;if(facBusy){facAgain=true;return}facBusy=true;try{do{facAgain=false;await pubScore();await vfacSync(C.v,false);await tallyLoad();facNotice();facAt=Date.now()}while(facAgain)}finally{facBusy=false}}
+async function loadFac(){if(!C||!XON())return;if(facBusy){facAgain=true;return}facBusy=true;try{do{facAgain=false;await pubScore();await vfacEnsure(C.v);await vfacSync(C.v,false);await facPushMine();await tallyLoad();facNotice();facAt=Date.now()}while(facAgain)}finally{facBusy=false}}
 function hubFac(){const box=$("#hfa");if(!box||!C)return;box.innerHTML="";if(!XON()){box.appendChild(elT("p","hint","서버에 연결되어야 마을 시설을 지을 수 있다."));return}box.appendChild(wfTile());
  const stopped=facQuake(),g=elT("div","fac-grid");FAC.forEach(([k,nm])=>{const pts=facPts(C.v,k),lv=facLvOf(pts),nx=FAC_LV[lv],pv=lv?FAC_LV[lv-1]:0,can=lv&&!facUsed(k)&&FAC_USE[k]&&!stopped,w=elT("button","fac-tile"+(can?" ready":""));w.type="button";
   const bar=elT("div","bar"),f=elT("i");f.style.width=(nx?Math.min(100,(pts-pv)/(nx-pv)*100):100)+"%";bar.appendChild(f);w.append(elT("b","",nm),elT("small","",lv+"단계"+(stopped&&lv?" · 지진으로 멈춤":can?" · 이용 가능":"")),bar);w.onclick=()=>facView();g.appendChild(w)});box.appendChild(g);
@@ -83,9 +114,7 @@ function facView(keep){if(!keep){show("fac");if(typeof disPullNow==="function")d
 function facGive(k,g,st){const pts=g+st*FAC_STONE,m=$("#fm2");if(g&&(C.gd||0)<g)return;if(st&&((C.inv||{}).mana||0)<st)return;
  C.gd-=g;if(st)C.inv.mana-=st;C.fc=C.fc||{};C.fc[k]=(Number(C.fc[k])||0)+pts;titleState();C.stats.facGive=(C.stats.facGive||0)+pts;guardAdd(Math.floor(pts/10));save();checkTitles();
  const id=C.v+"/"+k,f=((FACD[C.v]=FACD[C.v]||{})[k]=FACD[C.v][k]||{sum:0,top:[]});const b0=facLvOf(f.sum),had=facFly[id]||0;facFly[id]=had+pts;const base=facSrv[id]!=null?facSrv[id]:Math.max(0,(f.sum||0)-had);f.sum=base+facFly[id];const me0=f.top.find(t=>t.u===UID);if(me0)me0.pt+=pts;else f.top.push({u:UID,n:C.n,pt:pts});
- const nm=FAC.find(x=>x[0]===k)[1],a0=facLvOf(f.sum);if(m){m.style.color="var(--mu)";m.textContent=nm+"에 "+pts+"점을 기여했다."+(a0>b0?" "+nm+"이(가) "+a0+"단계가 되었다!":"")}if(a0>b0){C.facl=C.facl||{};C.facl[k]=a0;note("fac",VL[C.v].n+"의 "+nm+"이(가) "+a0+"단계가 되었다!");toast("🏛 "+nm+" "+a0+"단계 완성!");save()}pubScore();const mine=Number((C.fc||{})[k])||0,seed=facSrv[id]!=null?facSrv[id]:Math.max(0,f.sum-facFly[id]);
- const done=left=>{facFly[id]=Math.max(0,(facFly[id]||0)-pts);if(!(left&&typeof left.sum==="number"))return;facSrv[id]=Math.max(facSrv[id]||0,left.sum);const cur=((FACD[C.v]=FACD[C.v]||{})[k]=FACD[C.v][k]||{sum:0,top:[]}),n=facSrv[id]+(facFly[id]||0);if(cur.sum===n)return;cur.sum=n;if(!$("#v-fac").hidden)facView(true);if(!$("#v-hub").hidden)hubFac()};
- apiVfacMine(C.v,k,mine,typeof nmOf==="function"?nmOf():C.n).catch(()=>{});apiVfacBump(C.v,k,pts,seed).then(done).catch(()=>done());facView(true);if(!$("#v-hub").hidden)hubFac()}
+ const nm=FAC.find(x=>x[0]===k)[1],a0=facLvOf(f.sum);if(m){m.style.color="var(--mu)";m.textContent=nm+"에 "+pts+"점을 기여했다."+(a0>b0?" "+nm+"이(가) "+a0+"단계가 되었다!":"")}if(a0>b0){C.facl=C.facl||{};C.facl[k]=a0;note("fac",VL[C.v].n+"의 "+nm+"이(가) "+a0+"단계가 되었다!");toast("🏛 "+nm+" "+a0+"단계 완성!");save()}pubScore();facCommit(k).catch(()=>{});facView(true);if(!$("#v-hub").hidden)hubFac()}
 var WFD={sum:0,v:{},top:[]};
 function wfLvOf(d){let l=0;for(const T of WF_LV){if(d.sum<T||!Object.keys(VL).every(k=>(d.v[k]||0)>=T*WF_SHARE))break;l++}return l}
 const wfLv=()=>wfLvOf(WFD);
