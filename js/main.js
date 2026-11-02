@@ -296,11 +296,11 @@ let curView="";
 let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.scrollY;if(!m||y<1)return;m.style.minHeight=m.offsetHeight+"px";clearTimeout(keepT);
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
-/* 상단 메뉴: 채팅·마을·게시판·실전·기록·세계관은 누르면 하위 항목이 나오고, 나머지는 바로 그 화면으로 간다. */
-const navGroup=id=>({chat:"chat",hub:"town",rooms:"town",room:"town",xm:"town",shop:"town",bag:"town",craft:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"world",wev:"world",wqa:"world"})[id]||"";
-function navSync(id,moved){const g=navGroup(id),townX=id==="rooms"||id==="room"||id==="xm";
+/* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다. */
+const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",craft:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
+function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
- document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&townX))?"true":"false"));
+ document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX))?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
@@ -533,8 +533,8 @@ $("#nav").onclick=e=>{
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
   if(g==="town"){if(!here)hub();else updNav();return}
-  if(g==="act"){if(!here)ord();else updNav();return}
-  if(g==="world"){if(!here)worldView();else updNav();return}
+  if(g==="act"){if(!here&&typeof openRooms==="function")openRooms();else if(!here)ord();else updNav();return}
+  if(g==="setting"){if(!here){show("setting");drawSetting()}else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")openRec();else updNav();return}
   if(g==="chat"){if(curView!=="chat"){ct="g";chat()}else updNav();return}
