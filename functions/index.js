@@ -23,12 +23,20 @@ async function withLock(db, key, fn) {
   try { await fn(); } finally { await ref.set(null); }
 }
 
+async function scheduleXDrop(db, s, i, at) {
+  await db.ref("live/xdrop/" + s + "_" + i).transaction(c => {
+    if (typeof c === "number" && Number.isFinite(c)) return;
+    return at;
+  });
+}
+
 async function dropOne(db, s, i) {
   const updates = {};
   updates["xm" + s + "_e" + i] = null;
   updates["xn" + s + "_e" + i] = null; // 예전 이름 목록. 새 참가는 xn 을 쓰지 않지만 남은 칸은 지운다.
   updates["xr" + s + "_" + i] = null;
   await db.ref("live/x/" + s + "_" + i).set(null);
+  await db.ref("live/xdrop/" + s + "_" + i).set(null);
   const pref = "xvx" + s + "_" + i + "_c";
   const votes = await db.ref("rooms").orderByKey().startAt(pref).endAt(pref + "\uf8ff").get();
   if (votes.exists()) votes.forEach(ch => { updates[ch.key] = null; });
@@ -85,6 +93,7 @@ async function stepOneExpedition(db, s, i, now) {
   const cur = (await ref.get()).val();
   if (cur && cur.empty) {
     await db.ref("live/x/" + s + "_" + i).set(xDue(null, now));
+    await scheduleXDrop(db, s, i, now + X_DROP);
     return;
   }
   if (!cur || !cur.r) {
@@ -95,6 +104,7 @@ async function stepOneExpedition(db, s, i, now) {
     if (!ids.length) {
       await ref.set({empty: 1, all});
       await db.ref("live/x/" + s + "_" + i).set(xDue(null, now));
+      await scheduleXDrop(db, s, i, now + X_DROP);
       return;
     }
     const pl = {};
@@ -104,6 +114,7 @@ async function stepOneExpedition(db, s, i, now) {
     doc.calc = 0;
     await ref.set(plain(doc));
     await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
+    if (doc.done) await scheduleXDrop(db, s, i, now + X_DROP);
     return;
   }
   if (!cur.wait || now < cur.wait.Wd + 3000) {
@@ -118,6 +129,7 @@ async function stepOneExpedition(db, s, i, now) {
   doc.calc = 0;
   await ref.set(plain(doc));
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
+  if (doc.done) await scheduleXDrop(db, s, i, now + X_DROP);
 }
 
 async function runLiveMarch(db, now) {
@@ -159,7 +171,6 @@ exports.expireMarch = onSchedule({
 }, async () => {
   const db = getDatabase();
   const now = Date.now();
-  const cur = Math.floor(now / XS);
   const hardCap = Math.floor((now - X_HARD) / XS) - 1;
   const cursor = db.ref("tally/marchgc");
   const prevSnap = await cursor.get();
@@ -172,13 +183,15 @@ exports.expireMarch = onSchedule({
     }
     await cursor.set(hardTo);
   }
-  const liveFrom = Math.max(hardTo + 1, cur - 6);
-  for (let s = liveFrom; s <= cur - 1; s++) {
-    if ((s + 1) * XS > now) continue;
-    const rows = await Promise.all(Array.from({length: XN}, (_, i) => db.ref("rooms/xm" + s + "_e" + i + "/done").get().then(sn => ({i, done: sn.val()}))));
-    for (const row of rows) {
-      if (typeof row.done === "number" && now >= row.done + X_DROP) await dropOne(db, s, row.i);
-    }
+  const dropMap = (await db.ref("live/xdrop").get()).val() || {};
+  for (const [k, at] of Object.entries(dropMap)) {
+    const t = Number(at);
+    if (!Number.isFinite(t) || now < t) continue;
+    const p = String(k).indexOf("_");
+    if (p < 0) continue;
+    const s = Number(String(k).slice(0, p)), i = Number(String(k).slice(p + 1));
+    if (!Number.isFinite(s) || !Number.isFinite(i)) continue;
+    await dropOne(db, s, i);
   }
   await runExpeditions(db, now);
   await runLiveMarch(db, now);

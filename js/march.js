@@ -134,7 +134,7 @@ function xExpired(j){if(!j)return false;const s=Number(j.s),i=Number(j.i),T0=Num
  if(XR&&XR.id===j.id&&XR.fin)return true;return Date.now()>=T0+X_RUN_MAX}
 function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Number(j.i),id=j.id,T0=Number(j.T0);if(xPend&&xPend.id===id)xPend=null;C.mj=null;if(C.ms===id)delete C.ms;if(XR&&XR.id===id)XR=null;if(why){note("march",why);xSay(why,1)}save();drawXAll();
  if(XON()&&Number.isFinite(s)&&Number.isFinite(i)&&!(Number.isFinite(T0)&&Date.now()>=T0))DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{})}
-function xMarkDone(s,i){if(!XON()||!Number.isFinite(Number(s))||!Number.isFinite(Number(i)))return;DB.doc(xSeat(s,i)+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return Date.now()}).catch(()=>{})}
+function xMarkDone(s,i){if(!XON()||!Number.isFinite(Number(s))||!Number.isFinite(Number(i)))return;const now=Date.now();DB.doc(xSeat(s,i)+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return now}).catch(()=>{});DB.doc("live/xdrop/"+s+"_"+i).transact(c=>{if(typeof c==="number"&&c>0)return;return now+X_DROP}).catch(()=>{})}
 /* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 방에서 풀려난다. */
 function xQuitOpen(x){if(!C||!C.mj||!x||C.mj.id!==x.id)return false;const now=Date.now(),end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;return now>=Number(x.T0)+X_STUCK}
 function xQuit(){const j=C&&C.mj;if(!j)return;if(!confirm("이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;C.ms=j.id;xAbandon("출정에서 직접 나왔다.");if(!$("#v-xm").hidden)openRooms()}
