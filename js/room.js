@@ -9,7 +9,7 @@ const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.col
 // 매지컬 마치 화면 열기(마을 화면의 정기 출정 목록에서 바로 참가할 수 있어 버튼은 없앴다)
 const openRooms=()=>{if(C.fall)return($("#hm").style.color="var(--bad)",$("#hm").textContent="타락한 동안에는 출정할 수 없다.");if(C.dz>=90)return($("#hm").style.color="var(--bad)",$("#hm").textContent="절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");show("rooms");watchList()};
 $("#rb").onclick=()=>{unL&&unL();unL=null;hub()};
-function watchList(){rmsg("");if(LOCAL)rmsg("혼자 하기에서는 정기 출정이 열리지 않는다. 서버에 연결해 로그인하면 출정할 수 있다.");if(!DB){rmsg("이 화면에서는 방 기능을 쓸 수 없다. 공유 기능이 켜진 상태로 열어야 한다.");return}
+function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 방 기능을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");return}
  watchX();drawXAll()}
 async function mk(pub){if(!DB)return rmsg("방 기능을 쓸 수 없다.");const c=Math.random().toString(36).slice(2,6).toUpperCase();
  const r={code:c,pub,host:UID,st:"lobby",pl:{[UID]:me()},rd:{[UID]:true},seq:[],step:0,ok:true,ev:0,total:3+R(3),ts:Date.now()};
@@ -32,7 +32,7 @@ $("#rx").onclick=async()=>{if(room&&DB&&room.st==="lobby"){try{if(room.host===UI
  else if(room&&DB&&room.st==="done"&&room.host===UID){const c=code,r=room;setTimeout(()=>delRoom(c,r),10000)}leave()};
 $("#rd").onclick=async()=>{if(!room||room.st!=="lobby")return;room.rd[UID]=!room.rd[UID];room.ts=Date.now();room.pl[UID]=me();try{await rref(code).set(room)}catch(e){}};
 $("#bt").onclick=async()=>{const n=pw();["동료 하나","동료 둘"].forEach((x,i)=>{if(Object.keys(room.pl).length<3){const k="bot"+i;room.pl[k]={n:x,a:"-",g:C.g,t:"-",p:Math.max(10,n-2+i*2),v:C.v};room.rd[k]=true}});try{await rref(code).set(room)}catch(e){}};
-$("#st").onclick=async()=>{if(!room||room.host!==UID)return;startSim(room);room.st="run";room.step=0;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.ts=Date.now();
+$("#st").onclick=async()=>{if(!room||room.host!==UID)return;room.st="run";room.step=0;room.seq=[];room.pend=null;room.fin=false;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.calc=1;room.ts=Date.now();
  try{await rref(code).set(room)}catch(e){$("#rrm").textContent="출발하지 못했다."}};
 // 출발 준비: 아이템·마법·특성 효과를 정리하고 전투를 시작한다. 정기 출정이 쓴다.
 function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?8:0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
@@ -81,16 +81,15 @@ const vref=(c,u)=>DB.doc("rooms/"+c+"v_"+u);
 let busyT=false,myV=null,cdT=null,holdT=null,holdN=0;
 function delRoom(c,r){if(!DB||!c)return;rref(c).delete().catch(()=>{});if(r&&r.pl)humansOf(r).forEach(u=>vref(c,u).delete().catch(()=>{}))}
 // 방장이 창을 닫아 남은 방, 오래된 투표 기록을 정리한다. rooms 전체를 받지 않는다.
-// 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방만 지운다. 정기 출정은 xRetire 가 오래된 슬롯만 지운다.
+// 10분에 한 번, 자물쇠를 얻은 클라이언트만 키 목록을 보고 파티 방만 지운다. 정기 출정 방은 서버 함수 expireMarch 가 지운다.
 let lastSweep=0;
 // 끝난 방(done)은 결과 시각으로부터 10분이 지나면 지운다. 진행이 멈춘 방(run)도 마지막 기록으로부터 10분이 지나면 지운다. 기다리는 방(lobby)은 1시간이 지나야 지운다.
 function roomStale(v,now){if(!v||typeof v!=="object")return false;const ts=Number(v.ts)||0,doneAt=Number(v.doneAt)||0,age=now-(ts||now),doneAge=now-(doneAt||ts||now);
  if(v.st==null)return !v.ts||age>300000;if(v.st==="done")return doneAge>=X_AFTER||age>120000;if(v.st==="run")return age>=X_AFTER;return !v.ts||age>3600000}
-async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;const next={at:now,u:UID};if(c&&c.k!=null)next.k=c.k;return next});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
+async function sweepClaim(){const now=Date.now();try{const res=await DB.doc("tally/roomsweep").transact(c=>{if(c&&now-(Number(c.at)||0)<540000)return;return {at:now,u:UID}});return !!(res&&res.u===UID&&Number(res.at)===now)}catch(e){return false}}
 async function sweepRooms(){if(!DB||!UID||Date.now()-lastSweep<600000)return;if(!(await sweepClaim()))return;lastSweep=Date.now();let keys=[];try{keys=Object.keys((await DB.doc("rooms").peek())||{})}catch(e){lastSweep=0;try{await DB.doc("tally/roomsweep").set({at:0,u:""})}catch(e2){}return}
  const now=Date.now(),party=keys.filter(id=>id!==code&&/^[A-Z0-9]{4}(v_.+)?$/.test(id));
- for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(v&&roomStale(v,now))DB.doc("rooms/"+id).delete().catch(()=>{})}))}
- if(typeof xRetire==="function")xRetire()}
+ for(let i=0;i<party.length;i+=6){await Promise.all(party.slice(i,i+6).map(async id=>{let v=null;try{v=(await DB.doc("rooms/"+id).get()).data()}catch(e){return}if(v&&roomStale(v,now))DB.doc("rooms/"+id).delete().catch(()=>{})}))}}
 /* 지금까지 공개할 문장 수. phaseAt 부터 한 줄에 XSTEP. 이미 지난 문장은 화면을 켜는 즉시 따라잡는다. */
 function shownCount(r){const seq=r.seq||[];if(!r||r.st==="lobby")return 0;if(r.st==="done")return seq.length;if(typeof r.phaseAt!=="number")return Math.min(seq.length,r.step||0);
  const from=r.segFrom||0;return Math.min(seq.length,Math.max(from,from+Math.floor(Math.max(0,Date.now()-r.phaseAt)/XSTEP)))}
@@ -110,13 +109,10 @@ async function readVotes(c,r,ch){const picks=[];for(const u of humansOf(r)){cons
 function takeRoom(c,next){if(code!==c||!next||typeof next!=="object"||Array.isArray(next))return false;const prev=room;room=next;room.seq=room.seq||[];room.rd=room.rd||{};
  return !prev||prev.st!==room.st||(prev.seq||[]).length!==room.seq.length||prev.phaseAt!==room.phaseAt||(prev.segFrom||0)!==(room.segFrom||0)}
 let roomBye=false;
-/* 문장 공개는 쓰지 않는다. 선택 마감·종료·예전 방의 출발 시각 기록만, 방에 있는 사람이면 누구든 한 번 쓴다.
-   쓰는 쪽이 연결을 닫아 둔 상태여도 방 내용을 바로 갱신해서, 같은 마감을 반복해서 쓰지 않는다. */
-async function advanceRoom(){if(busyT||!room||!code||!DB)return;if(room.st==="done"){if(!roomBye&&Date.now()-(Number(room.doneAt)||0)>ROOM_KEEP){roomBye=true;delRoom(code,room)}return}
- if(room.st!=="run")return;const c=code;busyT=true;let moved=false;try{if(typeof room.phaseAt!=="number"){const step=room.step||0;moved=takeRoom(c,await rref(c).transact(cur=>{if(!cur||cur.st!=="run"||typeof cur.phaseAt==="number")return;cur.phaseAt=Date.now()-step*XSTEP;cur.segFrom=0;cur.ts=Date.now();return cur}));return}
-  const v=roomView(room);if(v.mode!=="resolve"&&v.mode!=="finish")return;let picks=[],k=(room.seq||[]).length;
-  if(v.mode==="resolve"&&v.ch){picks=await readVotes(c,room,v.ch);if(code!==c)return}
-  if(code!==c)return;moved=takeRoom(c,await rref(c).transact(cur=>{if(!cur||cur.st!=="run"||typeof cur.phaseAt!=="number")return;const now=roomView(cur);if(now.mode!=="resolve"&&now.mode!=="finish")return;return catchUp(cur,picks,k)}))}catch(e){}finally{busyT=false}if(moved&&code===c)paintRun()}
+/* 전투 계산은 서버가 한다. 화면은 기록된 문장을 시각에 맞춰 보여주고, 같은 마감은 파티에서 한 명만 한 번 계산을 부탁한다. */
+function askCalc(mark){if(!code||!DB||!room)return;const key=code+"|"+mark;if(askCalc.key===key)return;const ids=Object.keys(room.pl||{}).filter(k=>!String(k).startsWith("bot")).sort();const lead=room.pl&&room.pl[room.host]?room.host:ids[0];if(lead&&lead!==UID)return;askCalc.key=key;DB.doc("rooms/"+code+"/calc").set(1).catch(()=>{askCalc.key=""})}
+async function advanceRoom(){if(!room||!code||!DB)return;if(room.st==="done"){if(!roomBye&&Date.now()-(Number(room.doneAt)||0)>ROOM_KEEP){roomBye=true;delRoom(code,room)}return}
+ if(room.st!=="run")return;const v=roomView(room);if(!(room.seq||[]).length)askCalc("start");else if(v.mode==="resolve")askCalc("r"+(room.seq||[]).length);else if(v.mode==="finish")askCalc("f"+(room.seq||[]).length)}
 function drawChoice(r){const v=roomView(r),cv=$("#chv");if(v.mode!=="choice"||!v.ch||!EVM[v.ch.id]){cv.hidden=true;return}
  const ch=v.ch,x=EVM[ch.id];cv.hidden=false;cv.innerHTML="";cv.appendChild(elT("p","choice-q",vtx(x.q,ch.v)));const row=elT("div","row");
  const ops=(ch.ops&&ch.ops.length)?ch.ops:x.o.map((_,i)=>i);ops.forEach(i=>{const o=x.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed",myV&&myV.k===ch.k&&myV.i===i?"true":"false");
