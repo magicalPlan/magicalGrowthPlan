@@ -2,9 +2,11 @@
    메뉴와 알림함은 board 를 그대로 부른다.
    게시판을 열면 글 목록만 한 번 받는다. 새 글의 목록 칸(bp_)에는 제목, 짧은 미리보기, 작성자, 댓글 수만 있다.
    본문(bb_)과 그 글의 댓글(bc_글_)은 글을 눌렀을 때 한 번 받는다. 사진도 그때 받는다.
-   목록이나 글을 보고 있는 동안에는 연결을 붙들어 두지 않고, 몇 초마다 다시 받지도 않는다. 새 글은 '새 글 확인'이나 게시판을 다시 열 때 한 번 더 받는다.
+   목록이나 글을 보고 있는 동안에는 연결을 붙들어 두지 않고, 몇 초마다 다시 받지도 않는다. 새 글은 '새 글 확인'으로 받는다.
+   목록은 약 45초 동안 메모리에 두어, 탭을 다시 열면 바로 보여 준다.
    예전 글은 댓글과 같은 b_ 키에 섞여 있어, 목록에서 글을 고를 때 그 기록이 응답에 딸려 온다. 화면에는 넣지 않고, 그 글을 열 때 다시 받지 않도록 들고만 있는다. */
-let BD=[],bdOpen=null,bdLast=0,bdReply=null,bdBusy=false;
+const BD_TTL=45000;
+let BD=[],bdOpen=null,bdLast=0,bdReply=null,bdBusy=false,bdAt=0;
 // 작성 중인 글과 댓글을 보관한다. 화면이 새로 그려지거나 다른 탭에 다녀와도, 새로고침해도 이어서 쓸 수 있다(올리면 지워진다).
 let bdDraft={};try{bdDraft=JSON.parse(localStorage.getItem("mgr_bd_draft")||"{}")||{}}catch(e){}
 const bdSave=()=>{try{localStorage.setItem("mgr_bd_draft",JSON.stringify(bdDraft))}catch(e){}};
@@ -57,12 +59,12 @@ async function bdRead(id){const gen=++bdReadGen,p=BD.find(m=>m.id===id);if(!p)re
   if(!p._th&&!p._seen&&String(id).indexOf("bp_")!==0)await bdLegacyThread(id,gen);if(gen!==bdReadGen||bdOpen!==id)return;p._th=1}
  catch(e){const m=$("#bdm");if(m&&bdOpen===id){m.style.color="var(--bad)";m.textContent="글과 댓글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}
  if(gen===bdReadGen&&bdOpen===id&&!$("#v-board").hidden)drawBoard()}
-async function bdOpenLoad(){const gen=bdLoadGen;try{await bdFill(BD_PAGE)}catch(e){const m=$("#bdm");if(m&&gen===bdLoadGen){m.style.color="var(--bad)";m.textContent="글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}finally{if(gen===bdLoadGen)bdReady=true}
+async function bdOpenLoad(){const gen=bdLoadGen;try{await bdFill(BD_PAGE)}catch(e){const m=$("#bdm");if(m&&gen===bdLoadGen){m.style.color="var(--bad)";m.textContent="글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}finally{if(gen===bdLoadGen){bdReady=true;bdAt=Date.now()}}
  if(gen!==bdLoadGen||$("#v-board").hidden)return;
  if(bdOpen&&!BD.some(m=>m.id===bdOpen)){try{const d=await DB.doc("chat/"+bdOpen).get();const v=d.data();if(v){const m=Object.assign({id:bdOpen},v);if(!m.pv&&m.x)m.pv=bdPrev(m.x);bdTake([bdWrap(m)],true)}}catch(e){}}
  drawBoard();if(bdOpen)bdRead(bdOpen)}
 async function bdMore(){if(bdBusy||bdEnd||!bdReady||!DB||!XON()||$("#v-board").hidden)return;const target=bdPosts().length+BD_PAGE;bdBusy=true;if(!bdTyping())drawBoard();
- try{await bdFill(target)}catch(e){const m=$("#bdm");if(m){m.style.color="var(--bad)";m.textContent="이전 글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}finally{bdBusy=false}
+ try{await bdFill(target);bdAt=Date.now()}catch(e){const m=$("#bdm");if(m){m.style.color="var(--bad)";m.textContent="이전 글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}finally{bdBusy=false}
  if(!$("#v-board").hidden&&!bdTyping())drawBoard()}
 // 지워진 것: 글쓴이 본인이나 운영자가 남긴 지움 표시가 있는 글·댓글
 // 고정: 운영자가 남긴 고정·해제 표시 중 가장 최근 것을 따른다. 고정된 글은 고정한 시각 순으로 맨 위에 온다.
@@ -77,8 +79,10 @@ function bdNotify(list){if(!C)return;const first=C.bdSeen==null,seen=C.bdSeen||0
  (list||[]).filter(m=>m&&m.bt==="c"&&m.u!==UID&&m.ts>seen&&!dead[m.id]).forEach(m=>{mx=Math.max(mx,m.ts);const post=by[m.p],par=m.r?by[m.r]:null;if(!post||dead[m.p])return;
   if(!first&&((par&&par.u===UID)||(!par&&post.u===UID))){n++;note("board",String(m.n||"누군가")+"님이 "+(par?"내 댓글에 답글을":"내 글 「"+String(post.ti||"").slice(0,20)+"」에 댓글을")+" 달았다: "+String(m.x||"").slice(0,40),m.p)}});
  if(first||mx>seen){C.bdSeen=Math.max(mx,first?Date.now():0);save()}if(n){toast("📝 게시판에 새 댓글 "+n+"개");ding()}}
-function bdReload(){if(!XON()||bdBusy)return;bdLoadGen++;BD=[];bdResetPage();bdStop();const m=$("#bdm");if(m)m.textContent="";drawBoard();bdOpenLoad()}
-function board(post){const fresh=$("#v-board").hidden;show("board");if(post!==undefined)bdOpen=post;$("#bdm").textContent="";if(fresh){BD=[];bdResetPage();bdStop();drawBoard();if(XON())bdOpenLoad()}else{drawBoard();if(bdOpen)bdRead(bdOpen)}}
+function bdReload(){if(!XON()||bdBusy)return;bdLoadGen++;BD=[];bdResetPage();bdStop();bdAt=0;const m=$("#bdm");if(m)m.textContent="";drawBoard();bdOpenLoad()}
+function board(post){const fresh=$("#v-board").hidden;show("board");if(post!==undefined)bdOpen=post;$("#bdm").textContent="";
+ if(fresh){const keep=bdReady&&BD.length&&Date.now()-bdAt<BD_TTL;if(keep){drawBoard();if(bdOpen)bdRead(bdOpen);return}BD=[];bdResetPage();bdStop();bdAt=0;drawBoard();if(XON())bdOpenLoad()}
+ else{drawBoard();if(bdOpen)bdRead(bdOpen)}}
 const bdName=m=>{const s=elT("span","bd-who");const b=elT("b","",cn(m.u,m.n));if(m.u!==UID){b.style.cursor="pointer";b.onclick=e=>{e.stopPropagation();openProfile(m.u)}}s.appendChild(b);if(m.tn)s.appendChild(elT("span","ttl-chip",String(m.tn).slice(0,20)));s.appendChild(elT("small",""," · "+bdAgo(m.ts)));return s};let bdImg=null;const BDIC={};
 function bdShrink(file,cb){if(!file||!/^image\//.test(file.type))return cb(null,"사진 파일만 올릴 수 있다.");const u=URL.createObjectURL(file),im=new Image();
  im.onload=()=>{URL.revokeObjectURL(u);let w=im.width,h=im.height;const k=Math.min(1,BDI_MAX/Math.max(w,h));w=Math.max(1,Math.round(w*k));h=Math.max(1,Math.round(h*k));
@@ -88,7 +92,7 @@ function bdShrink(file,cb){if(!file||!/^image\//.test(file.type))return cb(null,
 async function bdImgLoad(id){if(BDIC[id]!==undefined)return BDIC[id];try{const v=(await DB.doc("chat/bimg_"+id).get()).data();BDIC[id]=v&&typeof v.im==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(v.im)?v.im:null}catch(e){return null}return BDIC[id]}
 async function bdWrite(doc,okMsg,fixedId){const m=$("#bdm");if(Date.now()-bdLast<BD_GAP){m.style.color="var(--bad)";m.textContent="너무 빨리 쓰고 있다. 잠시 뒤에 다시 쓰자.";return false}
  const id=fixedId||bdId(),d=Object.assign({u:UID,n:nmOf(),ts:Date.now()},tiName(C.ti)?{tn:tiName(C.ti)}:{},doc);
- try{await DB.doc("chat/"+id).set(d);bdLast=Date.now();bdSeen[id]=1;BD.push(Object.assign({id},d));if(okMsg){m.style.color="var(--mu)";m.textContent=okMsg}return id}
+ try{await DB.doc("chat/"+id).set(d);bdLast=Date.now();bdSeen[id]=1;BD.push(Object.assign({id},d));bdAt=Date.now();if(okMsg){m.style.color="var(--mu)";m.textContent=okMsg}return id}
  catch(e){m.style.color="var(--bad)";m.textContent="올리지 못했다. 캐릭터가 서버에 저장돼 있는지(위쪽 경고)와 인터넷 연결을 확인해야 한다.";return false}}
 function bdBump(pid,dlt){const p=BD.find(m=>m.id===pid);if(!p)return;const dead=bdDead(),loaded=BD.filter(m=>m.bt==="c"&&m.p===pid&&!dead[m.id]).length;
  p.cc=Math.max(0,loaded,(Number(p.cc)||0)+dlt);DB.doc("chat/"+pid).patch({cc:p.cc}).catch(()=>{})}
