@@ -26,7 +26,7 @@ async function withLock(db, key, fn) {
 async function dropOne(db, s, i) {
   const updates = {};
   updates["xm" + s + "_e" + i] = null;
-  updates["xn" + s + "_e" + i] = null;
+  updates["xn" + s + "_e" + i] = null; // 예전 이름 목록. 새 참가는 xn 을 쓰지 않지만 남은 칸은 지운다.
   updates["xr" + s + "_" + i] = null;
   await db.ref("live/x/" + s + "_" + i).set(null);
   const pref = "xvx" + s + "_" + i + "_c";
