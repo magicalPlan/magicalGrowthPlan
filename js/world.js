@@ -1,4 +1,4 @@
-/* 세계관. 개요 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
+/* 세계관(설정 하위 개요·이벤트·Q&A). 개요 글은 이 파일에만 있다. 화면을 처음 열 때 그리고, 그 뒤에는 다시 그리지 않는다.
    개요 칸은 html/world/overview.html, 이벤트는 html/world/event.html, Q&A는 html/world/qa.html.
    탭은 html/home/main.html, 전환은 js/main.js 의 show 와 navGroup.
    서버에 묻지 않는다. 로그인하지 않아도 된다. */

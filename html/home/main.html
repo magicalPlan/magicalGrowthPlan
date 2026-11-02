@@ -6,43 +6,43 @@
 <nav class="tabs" id="nav" hidden aria-label="화면 전환">
     <div class="nav-bar">
         <button type="button" data-g="town" aria-pressed="true" aria-expanded="false">마을</button>
+        <button type="button" data-g="act" aria-pressed="false" aria-expanded="false">실전</button>
         <button type="button" data-g="chat" aria-pressed="false" aria-expanded="false">채팅</button>
         <button type="button" data-g="board" aria-pressed="false" aria-expanded="false">게시판</button>
-        <button type="button" data-g="act" aria-pressed="false" aria-expanded="false">실전</button>
         <button type="button" data-v="friends" aria-pressed="false">친구</button>
         <button type="button" data-g="record" aria-pressed="false" aria-expanded="false">기록</button>
-        <button type="button" data-g="world" aria-pressed="false" aria-expanded="false">세계관</button>
-        <button type="button" data-v="setting" aria-pressed="false">설정</button>
+        <button type="button" data-g="setting" aria-pressed="false" aria-expanded="false">설정</button>
+    </div>
+    <div class="nav-sub" data-for="town" hidden>
+        <button type="button" data-v="hub" aria-pressed="false">마을</button>
+        <button type="button" data-v="shop" aria-pressed="false">상점</button>
+        <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
+        <button type="button" data-v="craft" aria-pressed="false">제작</button>
+    </div>
+    <div class="nav-sub" data-for="act" hidden>
+        <button type="button" data-v="rooms" aria-pressed="false">정기 출정</button>
+        <button type="button" data-v="ord" aria-pressed="false">장기 의뢰</button>
+        <button type="button" data-v="arena" aria-pressed="false">대련</button>
     </div>
     <div class="nav-sub" data-for="chat" hidden>
         <button type="button" data-ct="g" aria-pressed="false">단체 채팅</button>
         <button type="button" data-ct="v" aria-pressed="false">마을 채팅</button>
         <button type="button" data-ct="d" aria-pressed="false">1:1 채팅</button>
     </div>
-    <div class="nav-sub" data-for="town" hidden>
-        <button type="button" data-v="hub" aria-pressed="false">마을</button>
-        <button type="button" data-v="rooms" aria-pressed="false">정기 출정</button>
-        <button type="button" data-v="shop" aria-pressed="false">상점</button>
-        <button type="button" data-v="bag" aria-pressed="false">마법·가방</button>
-        <button type="button" data-v="craft" aria-pressed="false">제작</button>
-    </div>
-    <div class="nav-sub" data-for="act" hidden>
-        <button type="button" data-v="ord" aria-pressed="false">장기 의뢰</button>
-        <button type="button" data-v="arena" aria-pressed="false">대련</button>
-    </div>
     <div class="nav-sub" data-for="board" hidden>
         <button type="button" data-v="ntc" aria-pressed="false">공지</button>
         <button type="button" data-v="board" aria-pressed="false">게시판</button>
-    </div>
-    <div class="nav-sub" data-for="world" hidden>
-        <button type="button" data-v="world" aria-pressed="false">개요</button>
-        <button type="button" data-v="wev" aria-pressed="false">이벤트</button>
-        <button type="button" data-v="wqa" aria-pressed="false">Q&A</button>
     </div>
     <div class="nav-sub" data-for="record" hidden>
         <button type="button" data-v="inbox" aria-pressed="false">알림</button>
         <button type="button" data-v="titles" aria-pressed="false">기록</button>
         <button type="button" data-v="roster" aria-pressed="false">등록자</button>
+    </div>
+    <div class="nav-sub" data-for="setting" hidden>
+        <button type="button" data-v="world" aria-pressed="false">개요</button>
+        <button type="button" data-v="wev" aria-pressed="false">이벤트</button>
+        <button type="button" data-v="wqa" aria-pressed="false">Q&A</button>
+        <button type="button" data-v="setting" aria-pressed="false">설정</button>
     </div>
 </nav>
 
