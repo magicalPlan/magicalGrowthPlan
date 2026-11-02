@@ -19,9 +19,9 @@ function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
 const petEvOn=()=>{const t=Date.now();return t>=PET_EV.from&&t<PET_EV.to};
 // 기간이 끝났는데 품지 않은 서리 드래곤의 알이 남아 있으면 평범한 사역마의 알로 바꾼다.
 function petEvMelt(){if(!C||!(C.eggsEv>0)||Date.now()<PET_EV.to)return false;const n=C.eggsEv;C.eggs=(C.eggs||0)+n;C.eggsEv=0;note("quest","이벤트가 끝나 "+PET_EV.nm+" "+n+"개가 녹아 평범한 사역마의 알이 되었다.");save();return true}
-// 서리 드래곤의 알 부화: 전설 3%, 기간 한정 3%, 나머지는 일반·희귀를 평소 비율로.
+// 서리 드래곤의 알 부화: 전설 PET_EV.leg, 기간 한정 PET_EV.lim(같은 희귀도 안에서 균등), 희귀 PET_EV.rare, 나머지는 일반.
 function petRollEv(){const r=Math.random(),pick=rar=>{const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]};
- if(r<PET_EV.leg)return pick(3);if(r<PET_EV.leg+PET_EV.lim)return pick(4);const a=PET_RATE.find(x=>x[0]===1)[1],b=PET_RATE.find(x=>x[0]===2)[1];return pick(Math.random()<a/(a+b)?1:2)}
+ if(r<PET_EV.leg)return pick(3);if(r<PET_EV.leg+PET_EV.lim)return pick(4);if(r<PET_EV.leg+PET_EV.lim+(PET_EV.rare||0))return pick(2);return pick(1)}
 function petIncubateEv(){petEvMelt();eggFix();if(!(C.eggsEv>0)||C.egg)return;if((C.pets||[]).length>=petCap()){petMsg("사역마는 "+petCap()+"마리까지 데리고 있을 수 있다. 한 마리를 보내 주거나, 공방의 '사역마 조련 허가증'으로 상한을 늘려야 새로 품을 수 있다.",1);return}
  const t0=Date.now();C.eggsEv-=1;C.egg={t0,t1:t0+PET_HATCH,ev:1};save();bag(PET_EV.nm+"을(를) 품기 시작했다. 차가운 알이 조금씩 따뜻해진다. 1시간 뒤에 깨어난다.")}
 function petRoll(){let r=Math.random(),rar=1;for(const [k,p] of PET_RATE){if(r<p){rar=k;break}r-=p}const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]}

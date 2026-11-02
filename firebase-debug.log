@@ -1,0 +1,136 @@
+[debug] [2026-11-02T13:00:13.710Z] ----------------------------------------------------------------------
+[debug] [2026-11-02T13:00:13.713Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\srnb1\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-11-02T13:00:13.713Z] CLI Version:   15.34.2
+[debug] [2026-11-02T13:00:13.713Z] Platform:      win32
+[debug] [2026-11-02T13:00:13.713Z] Node Version:  v24.14.1
+[debug] [2026-11-02T13:00:13.713Z] Detected Agent: unknown
+[debug] [2026-11-02T13:00:13.713Z] Time:          Mon Nov 02 2026 22:00:13 GMT+0900 (한국 표준시)
+[debug] [2026-11-02T13:00:13.714Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-02T13:00:16.058Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-02T13:00:16.059Z] > authorizing via signed-in user (hanihani0421@gmail.com)
+[debug] [2026-11-02T13:00:16.059Z] [iam] checking project magical-growth for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-11-02T13:00:16.072Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:16.072Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:16.073Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions [none]
+[debug] [2026-11-02T13:00:16.073Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:16.073Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-11-02T13:00:16.341Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions 200
+[debug] [2026-11-02T13:00:16.341Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-11-02T13:00:16.341Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:16.341Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:16.341Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/magical-growth/serviceAccounts/magical-growth@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-11-02T13:00:16.342Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/magical-growth/serviceAccounts/magical-growth@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-11-02T13:00:17.663Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/magical-growth/serviceAccounts/magical-growth@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-11-02T13:00:17.663Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/magical-growth/serviceAccounts/magical-growth@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'magical-growth'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: node scripts/pack-sim.js
+[info] +  functions: Finished running predeploy script. 
+[debug] [2026-11-02T13:00:17.818Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:17.818Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:17.818Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2026-11-02T13:00:17.818Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudresourcemanager.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:19.307Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudresourcemanager.googleapis.com 200
+[debug] [2026-11-02T13:00:19.308Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2026-11-02T13:00:19.313Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.313Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.313Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth [none]
+[debug] [2026-11-02T13:00:19.518Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth 200
+[debug] [2026-11-02T13:00:19.518Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth {"projectNumber":"648834330160","projectId":"magical-growth","lifecycleState":"ACTIVE","name":"magical-growth","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-10-13T05:07:09.982Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2026-11-02T13:00:19.521Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.521Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.522Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.522Z] Checked if tokens are valid: true, expires at: 1793628005045
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2026-11-02T13:00:19.523Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.524Z] Checked if tokens are valid: true, expires at: 1793628005045
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-11-02T13:00:19.525Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.525Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:19.525Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudfunctions.googleapis.com [none]
+[debug] [2026-11-02T13:00:19.525Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudfunctions.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:19.525Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/runtimeconfig.googleapis.com [none]
+[debug] [2026-11-02T13:00:19.525Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/runtimeconfig.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:19.527Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudbuild.googleapis.com [none]
+[debug] [2026-11-02T13:00:19.527Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudbuild.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:19.528Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/artifactregistry.googleapis.com [none]
+[debug] [2026-11-02T13:00:19.528Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/artifactregistry.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:20.860Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudfunctions.googleapis.com 200
+[debug] [2026-11-02T13:00:20.860Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudfunctions.googleapis.com [omitted]
+[info] +  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2026-11-02T13:00:20.945Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudbuild.googleapis.com 200
+[debug] [2026-11-02T13:00:20.945Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/cloudbuild.googleapis.com [omitted]
+[info] +  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2026-11-02T13:00:20.958Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/runtimeconfig.googleapis.com 200
+[debug] [2026-11-02T13:00:20.958Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2026-11-02T13:00:20.980Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/artifactregistry.googleapis.com 200
+[debug] [2026-11-02T13:00:20.981Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/artifactregistry.googleapis.com [omitted]
+[info] +  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2026-11-02T13:00:20.986Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:20.986Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:20.986Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/magical-growth/adminSdkConfig [none]
+[debug] [2026-11-02T13:00:21.527Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/magical-growth/adminSdkConfig 200
+[debug] [2026-11-02T13:00:21.527Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/magical-growth/adminSdkConfig {"projectId":"magical-growth","databaseURL":"https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app","storageBucket":"magical-growth.firebasestorage.app"}
+[debug] [2026-11-02T13:00:21.528Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:21.528Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:21.528Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/magical-growth/configs [none]
+[debug] [2026-11-02T13:00:22.039Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/magical-growth/configs 200
+[debug] [2026-11-02T13:00:22.039Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/magical-growth/configs {}
+[debug] [2026-11-02T13:00:22.041Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-11-02T13:00:23.353Z] > [functions] package.json contents: {
+  "name": "magical-growth-functions",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.4.0"
+  }
+}
+[debug] [2026-11-02T13:00:23.353Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2026-11-02T13:00:23.355Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-11-02T13:00:23.362Z] Found firebase-functions binary at 'D:\DEV\magicalGrowth\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8467
+
+[debug] [2026-11-02T13:00:23.813Z] Got response from /__/functions.yaml {"endpoints":{"expireMarch":{"availableMemoryMb":256,"timeoutSeconds":120,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","region":["asia-southeast1"],"labels":{},"scheduleTrigger":{"schedule":"every 1 minutes","retryConfig":{},"timeZone":"Asia/Seoul"},"entryPoint":"expireMarch"},"roomCalc":{"availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","region":["asia-southeast1"],"labels":{},"eventTrigger":{"eventType":"google.firebase.database.ref.v1.written","eventFilters":{"instance":"magical-growth-default-rtdb"},"eventFilterPathPatterns":{"ref":"rooms/{roomId}/calc"},"retry":false},"entryPoint":"roomCalc"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+[debug] [2026-11-02T13:00:26.840Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:26.840Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:26.840Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/magical-growth/locations/-/functions [none]
+[debug] [2026-11-02T13:00:27.858Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/magical-growth/locations/-/functions 200
+[debug] [2026-11-02T13:00:27.859Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/magical-growth/locations/-/functions {}
+[debug] [2026-11-02T13:00:27.859Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:27.859Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:27.859Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/magical-growth/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-11-02T13:00:29.278Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/magical-growth/locations/-/functions 200
+[debug] [2026-11-02T13:00:29.278Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/magical-growth/locations/-/functions {"functions":[{"name":"projects/magical-growth/locations/asia-southeast1/functions/roomCalc","buildConfig":{"build":"projects/648834330160/locations/asia-southeast1/builds/0d27165d-0b6d-45f2-80c1-acd3a7c9f0db","runtime":"nodejs22","entryPoint":"roomCalc","source":{"storageSource":{"bucket":"gcf-v2-sources-648834330160-asia-southeast1","object":"roomCalc/function-source.zip","generation":"1793607114588631"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/magical-growth/locations/asia-southeast1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-648834330160-asia-southeast1","object":"roomCalc/function-source.zip","generation":"1793607114588631"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/magical-growth/serviceAccounts/648834330160-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/magical-growth/locations/asia-southeast1/services/roomcalc","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"magical-growth\",\"databaseURL\":\"https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app\",\"storageBucket\":\"magical-growth.firebasestorage.app\"}","GCLOUD_PROJECT":"magical-growth","EVENTARC_CLOUD_EVENT_SOURCE":"projects/magical-growth/locations/asia-southeast1/services/roomCalc","FUNCTION_REGION":"asia-southeast1","FUNCTION_SIGNATURE_TYPE":"cloudevent","FUNCTION_TARGET":"roomCalc","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://roomcalc-dlvo6ptfva-as.a.run.app","serviceAccountEmail":"648834330160-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"roomcalc-00002-ziw","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"eventTrigger":{"trigger":"projects/magical-growth/locations/asia-southeast1/triggers/roomcalc-369081","triggerRegion":"asia-southeast1","eventType":"google.firebase.database.ref.v1.written","eventFilters":[{"attribute":"ref","value":"rooms/{roomId}/calc","operator":"match-path-pattern"},{"attribute":"instance","value":"magical-growth-default-rtdb"}],"pubsubTopic":"projects/magical-growth/topics/eventarc-asia-southeast1-roomcalc-369081-262","serviceAccountEmail":"648834330160-compute@developer.gserviceaccount.com","retryPolicy":"RETRY_POLICY_DO_NOT_RETRY"},"state":"ACTIVE","updateTime":"2026-11-02T08:12:01.886218740Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"94181e51626af40a9b93ae1ba98ddef0c2c524fd"},"environment":"GEN_2","url":"https://asia-southeast1-magical-growth.cloudfunctions.net/roomCalc","satisfiesPzs":true,"createTime":"2026-11-02T08:00:41.977285078Z","satisfiesPzi":true},{"name":"projects/magical-growth/locations/asia-southeast1/functions/expireMarch","buildConfig":{"build":"projects/648834330160/locations/asia-southeast1/builds/0d27165d-0b6d-45f2-80c1-acd3a7c9f0db","runtime":"nodejs22","entryPoint":"expireMarch","source":{"storageSource":{"bucket":"gcf-v2-sources-648834330160-asia-southeast1","object":"expireMarch/function-source.zip","generation":"1793607073767746"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/magical-growth/locations/asia-southeast1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-648834330160-asia-southeast1","object":"expireMarch/function-source.zip","generation":"1793607073767746"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/magical-growth/serviceAccounts/648834330160-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/magical-growth/locations/asia-southeast1/services/expiremarch","timeoutSeconds":120,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"magical-growth\",\"databaseURL\":\"https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app\",\"storageBucket\":\"magical-growth.firebasestorage.app\"}","GCLOUD_PROJECT":"magical-growth","EVENTARC_CLOUD_EVENT_SOURCE":"projects/magical-growth/locations/asia-southeast1/services/expireMarch","FUNCTION_REGION":"asia-southeast1","FUNCTION_TARGET":"expireMarch","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://expiremarch-dlvo6ptfva-as.a.run.app","serviceAccountEmail":"648834330160-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"expiremarch-00003-nes","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2026-11-02T08:12:00.735730985Z","labels":{"deployment-tool":"cli-firebase","deployment-scheduled":"true","firebase-functions-hash":"94181e51626af40a9b93ae1ba98ddef0c2c524fd"},"environment":"GEN_2","url":"https://asia-southeast1-magical-growth.cloudfunctions.net/expireMarch","satisfiesPzs":true,"createTime":"2026-11-02T07:13:34.564228213Z","satisfiesPzi":true}]}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2026-11-02T13:00:29.282Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:29.282Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:29.282Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/firebaseextensions.googleapis.com [none]
+[debug] [2026-11-02T13:00:29.282Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/firebaseextensions.googleapis.com  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:30.735Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/firebaseextensions.googleapis.com 200
+[debug] [2026-11-02T13:00:30.735Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/magical-growth/services/firebaseextensions.googleapis.com [omitted]
+[info] +  extensions: required API firebaseextensions.googleapis.com is enabled 
+[debug] [2026-11-02T13:00:30.740Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-02T13:00:30.740Z] > authorizing via signed-in user (hanihani0421@gmail.com)
+[debug] [2026-11-02T13:00:30.740Z] [iam] checking project magical-growth for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2026-11-02T13:00:30.741Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:30.741Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:30.741Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions [none]
+[debug] [2026-11-02T13:00:30.741Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions  x-goog-user-project=magical-growth
+[debug] [2026-11-02T13:00:30.741Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-11-02T13:00:30.979Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions 200
+[debug] [2026-11-02T13:00:30.979Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/magical-growth:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-11-02T13:00:30.980Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:30.980Z] Checked if tokens are valid: true, expires at: 1793628005045
+[debug] [2026-11-02T13:00:30.980Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/magical-growth/instances pageSize=100&pageToken=
