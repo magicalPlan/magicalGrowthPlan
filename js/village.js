@@ -35,13 +35,9 @@ function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH
  /* 타락 명단과 포탈 인원을 먼저 읽는다. 그 답이 온 뒤에 출정·시설·재해·선물 연결을 연다. */
  const hubTop=Promise.all([Promise.resolve(typeof drawRaids==="function"?drawRaids():null),Promise.resolve(typeof pTick==="function"?pTick():null)].map(p=>Promise.resolve(p).catch(()=>{})));
  hubBoss();hubFac();hubDis();disAlert();hubLH();
- hubTop.then(()=>{if($("#v-hub").hidden)return;watchHub();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(typeof wfWatchStart==="function")wfWatchStart();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(typeof rrWatch==="function")rrWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
+ hubTop.then(()=>{if($("#v-hub").hidden)return;if(typeof xRejoin==="function")xRejoin();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(typeof wfWatchStart==="function")wfWatchStart();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(typeof rrWatch==="function")rrWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
 
-// 마을 화면의 정기 출정 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다.
-function xFold(open){const b=$("#xtog"),box=$("#xbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_xopen",open?"1":"0")}catch(e){}if(open&&typeof watchX==="function")watchX();if(open)drawXAll()}
-$("#xtog").onclick=()=>xFold($("#xbox").hidden);
 // 장기 토벌 칸 열고 닫기. 닫아도 제목 옆에 진행 상황(토벌 중·귀환)이 보인다. 이 기기에서 마지막 상태를 기억한다.
 function lhFold(open){const b=$("#lhtog"),box=$("#hlh");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_lhopen",open?"1":"0")}catch(e){}}
 $("#lhtog").onclick=()=>lhFold($("#hlh").hidden);
 (()=>{let v="1";try{v=localStorage.getItem("mgr_lhopen")||"1"}catch(e){}if(v==="0")lhFold(false)})();
-(()=>{let v="1";try{v=localStorage.getItem("mgr_xopen")||"1"}catch(e){}if(v==="0")xFold(false)})();

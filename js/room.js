@@ -6,11 +6,13 @@ let room=null,code=null,unR=null,unL=null,tick=null;
 const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:(Array.isArray(C.a)?C.a:C.a?[C.a]:[]).join(""),g:C.g,t:C.t,p:pw(),v:C.v,f:armed("flag")?1:0,m:armed("map")?1:0,w:C.wp,sk:["water","wind","dark"].filter(armedSk),dz:C.dz||0});
 const rref=c=>DB.doc("rooms/"+c);
 const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.color="var(--bad)";$("#hm").textContent=t}};
-// 매지컬 마치 화면 열기(마을 화면의 정기 출정 목록에서 바로 참가할 수 있어 버튼은 없앴다)
+// 매지컬 마치(정기 출정) 화면. 마을 메뉴에서만 들어온다. 목록 칸이 펼쳐져 있을 때만 참가 자리를 지켜본다.
 const openRooms=()=>{if(C.fall)return($("#hm").style.color="var(--bad)",$("#hm").textContent="타락한 동안에는 출정할 수 없다.");if(C.dz>=90)return($("#hm").style.color="var(--bad)",$("#hm").textContent="절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");show("rooms");watchList()};
-$("#rb").onclick=()=>{unL&&unL();unL=null;hub()};
-function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 방 기능을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");return}
- watchX();drawXAll()}
+$("#rb").onclick=()=>{unL&&unL();unL=null;if(typeof stopX==="function")stopX();hub()};
+function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 출정 목록을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");return}
+ if(typeof xListOpen==="function"&&!xListOpen()){if(typeof stopX==="function")stopX();return}
+ if(typeof xShowN==="number")xShowN=typeof X_PAGE==="number"?X_PAGE:5;if(typeof xWatchKey!=="undefined")xWatchKey="";
+ if(typeof watchX==="function")watchX();if(typeof drawXAll==="function")drawXAll()}
 async function mk(pub){if(!DB)return rmsg("방 기능을 쓸 수 없다.");const c=Math.random().toString(36).slice(2,6).toUpperCase();
  const r={code:c,pub,host:UID,st:"lobby",pl:{[UID]:me()},rd:{[UID]:true},seq:[],step:0,ok:true,ev:0,total:3+R(3),ts:Date.now()};
  try{await rref(c).set(r);enter(c)}catch(e){rmsg("방을 만들지 못했다.")}}
