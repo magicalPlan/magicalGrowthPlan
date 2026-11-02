@@ -4,7 +4,7 @@
    내 기록은 C.clp = {id, n: 찾은 개수, got: {단계 번호: 1}}.
    서버 합계는 tally/clue/{CLP.id} = {n: 합계, top: [{u, n: 이름, pt: 그 사람이 찾은 개수}]} 한 칸이다(희망의 등대 tally/wf 와 같은 방식).
    그 칸에 쓸 수 없으면 재해 진압 합계와 같은 tally/dr/{CLP.id} 에 대신 쓴다. 읽을 때는 두 칸 중 큰 값을 쓴다.
-   장기 의뢰 화면이 열려 있고 이벤트 중일 때만 두 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다. */
+   장기 의뢰의 이벤트 보스 합계를 읽은 뒤에만 두 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다. */
 let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0;
 const clpOn=()=>{const t=Date.now();return t>=CLP.from&&t<CLP.to};
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
@@ -87,5 +87,5 @@ function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.
  if(CLPTOP.length){const tp=elT("div","clp-top");tp.appendChild(elT("small",null,"많이 찾은 마법소녀"));CLPTOP.slice(0,5).forEach((t,i)=>tp.appendChild(elT("span","clp-chip"+(t.u===UID?" me":""),["🥇","🥈","🥉","4","5"][i]+" "+cn(t.u,t.n)+" "+(Number(t.pt)||0))));ft.appendChild(tp)}
  const wh=elT("div","clp-where");wh.appendChild(elT("small",null,"찾는 곳"));[["🔍 단서 탐색","시간당 약 2.5개"],["🗺 장기 토벌","시간당 "+Math.round(CLP.drop.lh*100)+"%"],["⚑ 출정","성공 "+Math.round(CLP.drop.x_ok*100)+"%"],["❄ 이벤트 보스","토벌 보상 "+CLP.drop.eb+"개"]].forEach(([a,b])=>{const sp=elT("span","clp-chip");sp.append(elT("b",null,a+" "),document.createTextNode(b));wh.appendChild(sp)});ft.appendChild(wh);
  c.appendChild(ft);clpStories(c);if(typeof ordMarks==="function")ordMarks();
- if(!before&&!after){if(!unClp)clpWatchStart();if(!clpAt)clpLoad()}
+ if(!before&&!after&&!noFetch){if(!unClp)clpWatchStart();if(!clpAt)clpLoad()}
  else{if(unClp)clpWatchStop();if(!noFetch&&Date.now()-clpAt>30000)clpLoad()}}
