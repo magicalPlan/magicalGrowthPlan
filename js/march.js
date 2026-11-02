@@ -17,29 +17,31 @@ const xParty=(x,m)=>Object.keys(m||{}).filter(u=>m[u]&&typeof m[u]==="object"&&j
 const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
 const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
 const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-Date.now())};
-let xSnap={},xS=-1,unX=null,XR=null,xAuto="",xPh="",xChK="",xMyV=null,xJob=0,xGone=null,xPend=null;
-/* 출정 목록이 열려 있는 동안, 이름 기록 xn 을 출정마다 하나씩 연결한다.
-   묶음 주소로 한 번만 연결하면 처음 목록 뒤에 참가·탈퇴가 오지 않는다.
-   연결이 거절되면 15개를 닫고, 이름 목록 묶음을 POLL_HUB(20초)마다 한 번만 묻는다. 목록을 접거나 마을을 벗어나면 끊는다.
-   참가·취소는 서버 응답을 기다리지 않고 화면부터 고친다. 서버가 거절하면 그때 되돌린다.
+let xSnap={},xS=-1,unX=null,XR=null,xAuto="",xPh="",xChK="",xMyV=null,xJob=0,xGone=null,xPend=null,xMine=null;
+/* 출정 목록이 열려 있는 동안 이름 기록 xn 묶음을 X_NAME_MS 마다 다시 읽는다.
+   묶음 연결은 처음 명단만 주고, 출정마다 연 연결도 방 화면까지 인원을 옮기지 못했다.
+   목록을 접거나 마을을 벗어나면 끊는다. 참가·취소는 서버 응답을 기다리지 않고 화면부터 고친다.
    xGone 은 방금 빠진 자리다. 서버 목록이 아직 나를 안고 있어도 화면에서는 뺀다. */
+const X_NAME_MS=5000;
 function xOverlay(x,raw){const m=Object.assign({},raw||{});
  if(xGone&&xGone.s===x.s&&xGone.i===x.i&&!(C&&C.mj&&C.mj.id===x.id))delete m[UID];
  if(C&&C.mj&&C.mj.id===x.id&&(!m[UID]||typeof m[UID]!=="object"))m[UID]=Object.assign({},me(),{jt:Math.min(Date.now(),x.close)});
  return m}
-function xWatchOn(){if(!XON())return false;const box=$("#xbox");if(!$("#v-hub").hidden&&box&&!box.hidden)return true;if(!$("#v-rooms").hidden)return true;return !$("#v-xm").hidden&&!!(C&&C.mj)&&Date.now()<C.mj.T0}
-function xWatchSlot(){return !$("#v-xm").hidden&&C&&C.mj&&Date.now()<C.mj.T0?C.mj.s:xLs()}
+function xWatchOn(){if(!XON())return false;const box=$("#xbox");if(!$("#v-hub").hidden&&box&&!box.hidden)return true;if(!$("#v-rooms").hidden)return true;if($("#v-xm").hidden||!(C&&C.mj))return false;return !(XR&&XR.id===C.mj.id&&XR.pl)}
+function xWatchSlot(){return !$("#v-xm").hidden&&C&&C.mj&&!(XR&&XR.id===C.mj.id&&XR.pl)?C.mj.s:xLs()}
 function xTake(s,docs){const o={};(docs||[]).forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});
- if(xGone){const seat=o["e"+xGone.i];if(!seat||!seat[UID]||Date.now()>xGone.till)xGone=null}if(!unX||xS===s){xS=s;xSnap=o}xBindFrom(s,o);drawXAll()}
-async function xPull(s){if(!XON())return;if(s==null)s=xLs();try{const sn=await DB.collection("rooms").prefix("xn"+s+"_").grab();xTake(s,sn.docs)}catch(e){}}
-function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;if(xS!==s)xSnap={};xS=s;if(!XON())return;
- const seat={};Object.keys(xSnap).forEach(k=>{seat[k]=xSnap[k]});let offs=[],pollStop=null,mode="live";
- const stop=()=>{mode="off";offs.forEach(fn=>{if(fn)fn()});offs=[];if(pollStop){pollStop();pollStop=null}};
- const toShared=()=>{if(mode!=="live")return;mode="poll";offs.forEach(fn=>{if(fn)fn()});offs=[];
-  pollStop=DB.collection("rooms").prefix("xn"+s+"_").onSnapshot(sn=>{if(xS!==s||mode!=="poll")return;xTake(s,sn.docs)},()=>{},POLL_HUB)};
- for(let i=0;i<XN;i++){const ii=i;offs.push(DB.doc(xList(s,ii)).live().onSnapshot(sn=>{if(xS!==s||mode!=="live")return;const data=sn.exists?sn.data():null;if(data&&typeof data==="object")seat["e"+ii]=data;else delete seat["e"+ii];
-  xTake(s,Object.keys(seat).map(k=>({id:"xn"+s+"_e"+k.slice(1),data:()=>seat[k]})))},toShared,0))}
- unX=stop}
+ if(xGone){const seat=o["e"+xGone.i];if(!seat||!seat[UID]||Date.now()>xGone.till)xGone=null}if(!unX||xS===s){xS=s;xSnap=o}xBindFrom(s,o);
+ const k=s+"|"+JSON.stringify(o);if(xTake.k===k)return;xTake.k=k;drawXAll();if(!$("#v-xm").hidden)xRender()}
+async function xGrab(s){try{return await DB.collection("rooms").prefix("xn"+s+"_").grab()}catch(e){const docs=[];
+ await Promise.all(Array.from({length:XN},(_,i)=>DB.doc(xList(s,i)).get().then(sn=>{if(sn.exists&&sn.data())docs.push({id:xList(s,i).split("/").pop(),data:()=>sn.data()})}).catch(()=>{})));return {docs}}}
+async function xPull(s){if(!XON())return;if(s==null)s=xLs();try{const sn=await xGrab(s);if(xS===s||!unX)xTake(s,sn.docs)}catch(e){}}
+function xRemember(id,m){const k=id+"|"+JSON.stringify(m||{});if(xRemember.k===k)return;xRemember.k=k;xMine={id,m:m||{}};drawXAll();if(!$("#v-xm").hidden)xRender()}
+async function xMinePull(){const j=C&&C.mj;if(!j||!XON()||(XR&&XR.id===j.id&&XR.pl)){xMine=null;xRemember.k="";return}
+ if(xS===j.s){xMine={id:j.id,m:xSnap["e"+j.i]||{}};return}
+ try{const sn=await DB.doc(xList(j.s,j.i)).get();if(!C||!C.mj||C.mj.id!==j.id)return;xRemember(j.id,sn.exists?sn.data()||{}:{})}catch(e){}}
+function watchX(s){if(s==null)s=xLs();if(unX&&xS===s)return;unX&&unX();unX=null;if(xS!==s){xSnap={};xTake.k=""}xS=s;if(!XON())return;
+ let on=true,wait=false;const pull=()=>{if(!on||xS!==s||wait)return;wait=true;xGrab(s).then(sn=>{wait=false;if(!on||xS!==s)return;xTake(s,sn.docs);if(C&&C.mj&&C.mj.s!==s)xMinePull()}).catch(()=>{wait=false})};
+ pull();const t=setInterval(pull,X_NAME_MS);unX=()=>{on=false;clearInterval(t)}}
 /* 서버 자리에 내가 있으면 창을 닫았다가 켜도 그 출정으로 다시 묶는다. 정원 7명 안에 든 사람만 묶는다. */
 function xBindFrom(s,o){if(!C||C.mj||!o||!UID)return false;const now=Date.now();
  for(let i=0;i<XN;i++){const x=xInfo(s,i);if(C.ms===x.id)continue;if(xGone&&xGone.s===s&&xGone.i===i&&now<xGone.till)continue;if(now>=x.T0+X_RUN_MAX)continue;
@@ -53,7 +55,17 @@ function xPublishList(){const j=C&&C.mj;if(!j||!XON()||xPublishList.id===j.id)re
 function xMsClear(){if(!C||!C.ms)return;const m=String(C.ms).match(/^x(\d+)_\d+$/);if(m&&Date.now()<(Number(m[1])+1)*XS+X_RUN_MAX)return;delete C.ms;save()}
 function xQuitMark(){const host=$("#xtog");if(!host||!host.parentNode)return;let q=$("#xquit");const box=$("#xbox"),open=!!(C&&C.mj&&xQuitOpen(xInfo(C.mj.s,C.mj.i)))&&box&&box.hidden;
  if(!open){if(q)q.remove();return}if(q)return;q=elT("button","chip","나가기");q.id="xquit";q.type="button";q.style.marginLeft="8px";q.onclick=xQuit;host.insertAdjacentElement("afterend",q)}
-function drawXAll(){["#hl","#rl"].forEach(q=>{const el=$(q);if(el&&!el.closest("[hidden]"))drawX(el)})}
+function xSig(){return (xTake.k||"")+"|"+(xRemember.k||"")+"|"+(xPh||"")}
+function drawXAll(){const sig=xSig();["#hl","#rl"].forEach(q=>{const el=$(q);if(!el||el.closest("[hidden]"))return;if(el.dataset.xs===sig&&el.childElementCount)return;el.dataset.xs=sig;drawX(el)})}
+/* 등급과 전투력만 담아 둔다. 인원 수와 이름은 이름 기록이 정한다. */
+function xCards(){}
+function xSeatMap(x){if(xS===x.s)return xSnap["e"+x.i]||{};if(xMine&&xMine.id===x.id&&xMine.m)return xMine.m;return null}
+function xFace(x){const names=xSeatMap(x),cards=xCards.id===x.id&&xCards.pl&&typeof xCards.pl==="object"?xCards.pl:null,src=names||cards||{},m={};
+ Object.keys(src).forEach(u=>{const row=src[u];if(!row||typeof row!=="object")return;const card=cards&&cards[u]&&typeof cards[u]==="object"?cards[u]:{},nm=names&&names[u]&&typeof names[u]==="object"?names[u]:{},p=Object.assign({},card,nm);
+  if(typeof nm.jt==="number")p.jt=nm.jt;else if(typeof card.jt==="number")p.jt=card.jt;m[u]=p});return xOverlay(x,m)}
+function xWho(ids,pl){const who=ids.map(u=>cn(u,(pl[u]||{}).n)).filter(Boolean).join(", ");return "파티 "+ids.length+"/"+XMAX+(who?" · "+who:"")}
+function xEnrich(x,ids){if(!x||!XON())return;const key=x.id+"|"+ids.slice().sort().join(",");if(xCards.k===key)return;if(xCards.at&&Date.now()-xCards.at<X_NAME_MS)return;xCards.k=key;xCards.id=x.id;xCards.at=Date.now();
+ DB.doc(xSeat(x.s,x.i)).get().then(sn=>{if(xCards.k!==key)return;xCards.pl=sn.data()||{};if(!$("#v-xm").hidden)xRender()}).catch(()=>{if(xCards.k===key)xCards.k=""})}
 function xSay(t,bad){[$("#hm"),$("#rm")].forEach(e=>{if(e){e.style.color=bad?"var(--bad)":"var(--mu)";e.textContent=t}})}
 /* 참가 자리 저장만 30초를 기다린다. 다른 요청은 20초다. 출발 마감이 2분이라 그보다 길게 기다리지 않는다. */
 const X_NET=30000;
@@ -65,28 +77,28 @@ function xJoinWhy(e,dropped){const lost=dropped?"이전 출정 자리는 지워�
 function drawX(el){el.innerHTML="";if(!C)return;
  if(!XON()){el.innerHTML="<p class='hint'>서버에 연결되어야 정기 출정에 참가할 수 있다.</p>";return}
  const now=Date.now(),ls=xLs(),mj=C.mj;el.appendChild(elT("p","x-cd",xCdTxt()));
- if(mj){const x=xInfo(mj.s,mj.i),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",now<x.T0?"출발 "+xHM(x.T0)+" · 출발 시각에 자동으로 출발한다.":"출정 중이다."));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
- for(let i=0;i<XN;i++){const x=xInfo(ls,i),m=xOverlay(x,(ls===xS?xSnap["e"+i]:null)||{}),ids=xParty(x,m),onSrv=ids.includes(UID)&&(!mj||mj.id===x.id),inI=!!(mj&&mj.id===x.id)||onSrv,full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
+ if(mj){const x=xInfo(mj.s,mj.i),m=xFace(x),ids=xParty(x,m),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",(now<x.T0?"출발 "+xHM(x.T0)+" · ":"")+xWho(ids,m)+(now<x.T0?" · 출발 시각에 자동으로 출발한다.":" · 출정 중이다.")));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
+ for(let i=0;i<XN;i++){const x=xInfo(ls,i),m=xFace(x),ids=xParty(x,m),onSrv=ids.includes(UID)&&(!mj||mj.id===x.id),inI=!!(mj&&mj.id===x.id)||onSrv,full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
   const ab=x.d===4,weak=ab&&pw()<ABYSS_MIN&&!inI,quit=inI&&xQuitOpen(x),late=now>=x.close,w=elT("div","xm"+(inI?" on":"")+(ab?" abyss":"")),cp=elT("div","xm-copy");
-  cp.append(elT("b","",(ab?"🜏 ":"")+x.nm),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · 파티 "+ids.length+"/"+XMAX+(ids.length?" · "+ids.map(u=>cn(u,m[u].n)).join(", "):"")));
+  cp.append(elT("b","",(ab?"🜏 ":"")+x.nm),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · "+xWho(ids,m)));
   const b=elT("button","chip",quit?"나가기":inI?(late?"마감":"참가 취소"):full?"정원 마감":lock?"참가 불가":weak?"전투력 부족":mj?"이쪽으로 변경":"참가");b.type="button";b.disabled=quit?false:inI?late:full||lock||weak;b.onclick=()=>{if(quit){xQuit();return}if(inI){if(late)return;if(!(C.mj&&C.mj.id===x.id))C.mj={id:x.id,s:x.s,i:x.i,T0:x.T0};xLeave()}else xJoin(ls,i)};w.append(cp,b);el.appendChild(w)}}
 async function xJoin(s,i){const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("장기 토벌을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}
  if(C.fall)return xSay("타락한 동안에는 출정할 수 없다.",1);if(C.dz>=90)return xSay("절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.",1);
  if(Date.now()>=x.close)return xSay("이 출정은 참가가 마감되었다.",1);if(x.d===4&&pw()<ABYSS_MIN)return xSay("심연에는 전투력 "+ABYSS_MIN+" 이상만 들어갈 수 있다. (지금 "+pw()+")",1);
  if(C.mj&&xExpired(C.mj))xRelease();
  const mj=C.mj;if(mj&&mj.id===x.id)return;if(mj&&mj.s!==s)return xSay("이미 참가한 출정이 있다. 그 출정이 끝난 뒤에 참가할 수 있다.",1);
- const party=xParty(x,(xS===s?xSnap["e"+i]:null)||{});
- if(party.includes(UID)){C.mj={id:x.id,s,i,T0:x.T0};if(C.ms===x.id)delete C.ms;save();drawXAll();xSay(x.nm+" 출정에 이미 참가해 있다. "+xHM(x.T0)+"에 출발한다.");return}
+ const party=xParty(x,xFace(x));
+ if(party.includes(UID)){C.mj={id:x.id,s,i,T0:x.T0};if(C.ms===x.id)delete C.ms;xPh="";save();drawXAll();xSay(x.nm+" 출정에 이미 참가해 있다. "+xHM(x.T0)+"에 출발한다.");return}
  if(party.length>=XMAX)return xSay("정원이 찼다.",1);
  const job=++xJob,me0=me(),body=Object.assign({},me0,{jt:{".sv":"timestamp"}});C.mj={id:x.id,s,i,T0:x.T0};if(C.ms===x.id)delete C.ms;xGone=mj?{s:mj.s,i:mj.i,till:Date.now()+X_NET}:null;
  xPend={s,i,id:x.id,body,prev:mj?{s:mj.s,i:mj.i}:null,prevGone:!mj};
- if(xS===s){if(mj&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];(xSnap["e"+i]=xSnap["e"+i]||{})[UID]=xRowNow(me0.n)}
+ if(xS===s){if(mj&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];(xSnap["e"+i]=xSnap["e"+i]||{})[UID]=xRowNow(me0.n);xTake.k=""}
  drawXAll();xSay(x.nm+" 출정에 참가했다. "+xHM(x.T0)+"에 자동으로 출발한다. 준비한 아이템과 마법은 참가한 순간을 기준으로 쓰인다.");
  let dropped=false;
  try{if(mj){await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET);DB.doc(xList(mj.s,mj.i)+"/"+UID).delete().catch(()=>{});dropped=true;if(xPend&&xPend.id===x.id)xPend.prevGone=true}
   await DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET);await DB.doc(xList(s,i)+"/"+UID).set(xRow(me0.n),X_NET);DB.doc(xSeat(s,i)+"/ts").set(Date.now()).catch(()=>{});
-  if(job!==xJob){if(!C.mj||C.mj.id!==x.id){DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});DB.doc(xList(s,i)+"/"+UID).delete().catch(()=>{})}return}if(C.mj&&C.mj.pend)delete C.mj.pend;if(xPend&&xPend.id===x.id)xPend=null;save()}
- catch(e){if(job!==xJob)return;if(xDown(e)&&C.mj&&C.mj.id===x.id){C.mj.pend=1;save();xSay(x.nm+" 참가는 이 기기에 남겨 두었다. 연결되면 서버에 올린다.");return}DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});DB.doc(xList(s,i)+"/"+UID).delete().catch(()=>{});xPend=null;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];save();drawXAll();xSay(xJoinWhy(e,dropped),1)}}
+  if(job!==xJob){if(!C.mj||C.mj.id!==x.id){DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});DB.doc(xList(s,i)+"/"+UID).delete().catch(()=>{})}return}if(C.mj&&C.mj.pend)delete C.mj.pend;if(xPend&&xPend.id===x.id)xPend=null;save();xPull(s)}
+ catch(e){if(job!==xJob)return;if(xDown(e)&&C.mj&&C.mj.id===x.id){C.mj.pend=1;save();xSay(x.nm+" 참가는 이 기기에 남겨 두었다. 연결되면 서버에 올린다.");return}DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});DB.doc(xList(s,i)+"/"+UID).delete().catch(()=>{});xPend=null;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];xTake.k="";save();drawXAll();xSay(xJoinWhy(e,dropped),1)}}
 /* 네트워크가 끊겨 참가 기록을 못 올렸어도 신청은 유지한다. 마감 전에 연결되면 같은 자리를 다시 쓴다. */
 function xHold(){if(xPend||!C||!C.mj||!C.mj.pend)return xPend;const j=C.mj;xPend={s:j.s,i:j.i,id:j.id,body:Object.assign({},me(),{jt:{".sv":"timestamp"}}),prev:null,prevGone:true};return xPend}
 async function xFlush(){const p=xHold();if(!p||!C||!C.mj||C.mj.id!==p.id||!XON()||xFlush.busy)return;const x=xInfo(p.s,p.i);if(Date.now()>=x.close)return;xFlush.busy=true;
@@ -94,8 +106,8 @@ async function xFlush(){const p=xHold();if(!p||!C||!C.mj||C.mj.id!==p.id||!XON()
   await DB.doc(xSeat(p.s,p.i)+"/"+UID).set(p.body,X_NET);if(!C.mj||C.mj.id!==p.id){DB.doc(xSeat(p.s,p.i)+"/"+UID).delete().catch(()=>{});DB.doc(xList(p.s,p.i)+"/"+UID).delete().catch(()=>{});return}
   await DB.doc(xList(p.s,p.i)+"/"+UID).set(xRow(p.body.n),X_NET);DB.doc(xSeat(p.s,p.i)+"/ts").set(Date.now()).catch(()=>{});if(C.mj.pend)delete C.mj.pend;if(xPend===p)xPend=null;save();xSay(x.nm+" 출정 참가를 서버에 남겼다. "+xHM(x.T0)+"에 출발한다.")}catch(e){}finally{xFlush.busy=false}}
 async function xLeave(){const mj=C.mj;if(!mj||Date.now()>=xInfo(mj.s,mj.i).close)return;const job=++xJob;if(xPend&&xPend.id===mj.id)xPend=null;C.mj=null;xGone={s:mj.s,i:mj.i,till:Date.now()+X_NET};
- if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)hub();
- try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET);await DB.doc(xList(mj.s,mj.i)+"/"+UID).delete(X_NET)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=xRowNow((C&&C.n)||"")}save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
+ if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];xTake.k="";save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)hub();
+ try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET);await DB.doc(xList(mj.s,mj.i)+"/"+UID).delete(X_NET);xPull(mj.s)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=xRowNow((C&&C.n)||"")}xTake.k="";save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
 // 처음부터 다시 계산한다. 같은 씨앗, 같은 파티, 같은 표라면 누구의 화면에서든 결과가 같다.
 function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[];let wait=null;
  Object.keys(X.pl).forEach(u=>r.pl[u]=X.pl[u]);
@@ -143,18 +155,21 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||Date.now()<j.T0){stopXr();return
  const doc=XR&&XR.id===x.id?XR.res:null;
  xGrant(x);if(XR&&XR.id===x.id&&XR.fin)return;
  if(doc&&doc.wait&&Date.now()>=doc.wait.Wd+3000&&xLead(doc.r&&doc.r.pl)===UID){const mark=x.id+"_"+doc.wait.c;if(xCalcAsk!==mark){xCalcAsk=mark;DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc").set(1).catch(()=>{xCalcAsk=""})}}}
-function xView(){show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;xRender()}
+function xView(){show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){hub();return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
- if(!(X&&X.pl))xCards(x);const raw=X&&X.pl?X.pl:(xCards.id===x.id&&xCards.pl?xCards.pl:(xS===x.s&&xSnap["e"+x.i])||{}),pl=X&&X.pl?raw:xOverlay(x,raw),ids=X&&X.pl?Object.keys(pl):xParty(x,pl),l=$("#xpl"),key=(X&&X.pl?"f":(xCards.id===x.id&&xCards.pl?"c":"l"))+"|"+ids.join(",");
- if(l.dataset.k!==key){l.dataset.k=key;l.innerHTML="";ids.forEach(u=>{const p=pl[u]||{},d=elT("div","chip",(p.tn?"「"+String(p.tn).slice(0,20)+"」 ":"")+cn(u,p.n)+(u===UID?" (나)":"")+" · "+(p.g||"-")+"등급 "+(p.a||"")+" · 전투력 "+(p.p||0));d.style.textAlign="left";if(u!==UID){d.style.cursor="pointer";d.onclick=()=>openProfile(u)}l.appendChild(d)})}
+ let pl,ids;
+ if(X&&X.pl){pl=X.pl;ids=Object.keys(pl)}
+ else{pl=xFace(x);ids=xParty(x,pl);xEnrich(x,ids)}
+ const l=$("#xpl"),key=(X&&X.pl?"f":"l")+"|"+ids.map(u=>{const p=pl[u]||{};return u+":"+(p.n||"")+"."+(p.g||"")+"."+(p.p||0)}).join(",");
+ if(l.dataset.k!==key){l.dataset.k=key;l.innerHTML="";ids.forEach(u=>{const p=pl[u]||{},stat=p.g||p.a||p.p?" · "+(p.g||"-")+"등급 "+(p.a||"")+" · 전투력 "+(p.p||0):"",d=elT("div","chip",(p.tn?"「"+String(p.tn).slice(0,20)+"」 ":"")+cn(u,p.n)+(u===UID?" (나)":"")+stat);d.style.textAlign="left";if(u!==UID){d.style.cursor="pointer";d.onclick=()=>openProfile(u)}l.appendChild(d)})}
  const g=$("#xlg"),cv=$("#xch");
- if(!X||!X.res){const why=X&&X.gone?(X.why||"이번 출정에는 참가하지 못했다."):"";$("#xs").textContent=why||(now<x.T0?"전투 "+x.total+"번 예정 · "+(now<x.close?"마감까지 "+xFmt(x.close-now)+" · ":"참가 마감 · ")+"출발까지 "+xFmt(x.T0-now):"출발 준비 중...");
+ if(!X||!X.res){const why=X&&X.gone?(X.why||"이번 출정에는 참가하지 못했다."):"",who=xWho(ids,pl);$("#xs").textContent=why||(now<x.T0?"전투 "+x.total+"번 예정 · "+who+" · "+(now<x.close?"마감까지 "+xFmt(x.close-now)+" · ":"참가 마감 · ")+"출발까지 "+xFmt(x.T0-now):"출발 준비 중... · "+who);
   const mark=why?"g":"1";if(g.dataset.w!==mark){g.dataset.w=mark;g.innerHTML="";g.appendChild(elT("p","",why||"출발을 기다리고 있다."))}cv.hidden=true;return}
  g.dataset.w="";const R0=X.res,r=R0.r,w=R0.wait,at=i=>Array.isArray(R0.lineAt)?R0.lineAt[i]:R0.lineAt(i);let n=0;while(n<r.seq.length&&at(n)<=now)n++;
  if(X.drawn!==n||X.fd!==!!X.fin){X.drawn=n;X.fd=!!X.fin;g.innerHTML=r.seq.slice(0,n).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";if(X.fin&&n>=r.seq.length)g.innerHTML+=X.fin}
- $("#xs").textContent=X.fin?"출정 종료":w&&n>=r.seq.length?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중";
+ $("#xs").textContent=(X.fin?"출정 종료":w&&n>=r.seq.length?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중")+" · "+xWho(ids,pl);
  if(w&&n>=r.seq.length&&now<w.Wd&&X.pl[UID]&&EVM[r.ch.id]){const k=x.id+"_"+w.c;
   if(xChK!==k){xChK=k;xMyV=null;cv.hidden=false;cv.innerHTML="";const xe=EVM[r.ch.id];cv.appendChild(elT("p","choice-q",vtx(xe.q,r.ch.v)));const row=elT("div","row");
    r.ch.ops.forEach(i=>{const o=xe.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(r.ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed","false");
@@ -162,13 +177,12 @@ function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR
    cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""))}
   const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;xChK=""}}
-function xCards(x){if(!x||!XON()||xCards.id===x.id)return;xCards.id=x.id;xCards.pl=null;DB.doc(xSeat(x.s,x.i)).get().then(sn=>{if(xCards.id!==x.id)return;xCards.pl=sn.data()||{};if(!$("#v-xm").hidden)xRender()}).catch(()=>{if(xCards.id===x.id)xCards.id=""})}
 $("#xb").onclick=()=>hub();
 $("#xq").onclick=()=>xQuit();
 setInterval(()=>{if(!C||!DB)return;const now=Date.now(),hubOn=!$("#v-hub").hidden,rmOn=!$("#v-rooms").hidden;xMsClear();xPublishList();
  if(C.mj&&xExpired(C.mj)){const fin=XR&&XR.id===C.mj.id&&XR.fin;xRelease(fin?"출정 결과가 정리되어 다시 참가할 수 있다.":"출정 시간이 지나 자리를 정리했다. 다시 참가할 수 있다.")}
  if((xPend||(C.mj&&C.mj.pend))&&(!xFlush.at||now-xFlush.at>=5000)){xFlush.at=now;xFlush()}
- if(xWatchOn()){watchX(xWatchSlot());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh){xPh=ph;drawXAll()}document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
+ if(xWatchOn()){watchX(xWatchSlot());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh)xPh=ph;drawXAll();document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
  else if(unX){unX();unX=null}
  if(C.mj&&now>=C.mj.T0&&xAuto!==C.mj.id&&(hubOn||rmOn)){xAuto=C.mj.id;xView()}
  xQuitMark();xTick();xRender()},1000);
