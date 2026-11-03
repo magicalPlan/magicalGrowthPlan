@@ -16,9 +16,10 @@ function apiDmThread(k){return once(apiCol("dm").where("k","==",k))}
 function apiDmBox(){return apiGet("rooms/xd"+UID)}
 function apiDmnList(){return once(apiCol("dmn/"+UID))}
 
-/* 1:1 목록. 상대 이름과 받은 시각만 있는 우편함이다. 메시지 본문은 들어 있지 않다. */
-async function apiDmIndex(){const rows={},take=(id,v)=>{if(!id||id==="ts"||!v||typeof v!=="object")return;const ts=Number(v.ts)||0;if(!ts)return;const cur=rows[id],n=String(v.n||"").replace(/👑/g,"").slice(0,20);if(!cur||ts>=cur.ts)rows[id]={n:n||(cur&&cur.n)||"",ts}};
- let ok=false;try{const s=await apiDmnList();(s.docs||[]).forEach(d=>take(d.id,d.data()));ok=true}catch(e){}
+/* 1:1 목록. 상대 이름과 받은 시각만 있는 우편함이다. 메시지 본문은 들어 있지 않다.
+   skipDmn: dmn/{나} 실시간 연결이 이미 있으면 같은 칸을 다시 GET 하지 않는다. rooms 우편함만 받는다. */
+async function apiDmIndex(skipDmn){const rows={},take=(id,v)=>{if(!id||id==="ts"||!v||typeof v!=="object")return;const ts=Number(v.ts)||0;if(!ts)return;const cur=rows[id],n=String(v.n||"").replace(/👑/g,"").slice(0,20);if(!cur||ts>=cur.ts)rows[id]={n:n||(cur&&cur.n)||"",ts}};
+ let ok=!!skipDmn;if(!skipDmn){try{const s=await apiDmnList();(s.docs||[]).forEach(d=>take(d.id,d.data()));ok=true}catch(e){}}
  try{const d=(await apiDmBox()).data()||{};Object.keys(d).forEach(id=>take(id,d[id]));ok=true}catch(e){}
  if(!ok)throw new Error("dm-index");return rows}
 function apiVillageLatest(v){return once(apiCol("chat").prefix("c_"+v+"_").limit(1))}
