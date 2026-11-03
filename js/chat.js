@@ -14,6 +14,13 @@ function drawAdm(){const l=$("#al");l.innerHTML="";const ks=Object.keys(admT).so
  $("#at2").hidden=!admK||!admT[admK];if(admK&&admT[admK]){$("#ah").textContent=admLabel(admK)+" (열람 전용)";paint($("#alg"),admT[admK].slice(),admK)}}
 /* 채팅: 단체 채팅은 모두가 보는 공용방이고, 1:1은 두 사람이 같은 대화 키를 쓴다 */
 let ct="g",peer=null,unC=null,unP=null,lastSend=0;
+/* 단체·마을 실시간 연결: 같은 방이면 다시 열지 않는다. 채팅을 잠깐 벗어나도 CHAT_HOLD_MS 동안은 끊지 않아서
+   다시 들어올 때 첫 스냅샷을 다시 받지 않는다. 그동안 서버는 열린 연결 하나만 유지한다(재연결·전체 재전송보다 적다). */
+const CHAT_HOLD_MS=8000,chatCache={};let chatLiveKey=null,chatHoldT=null;
+function chatLiveClear(){if(chatHoldT){clearTimeout(chatHoldT);chatHoldT=null}if(typeof unC==="function"){try{unC()}catch(e){}}unC=null;chatLiveKey=null;if(typeof unP==="function"){try{unP()}catch(e){}}unP=null}
+function chatLiveDefer(){if(!unC&&!unP)return;if(chatHoldT)clearTimeout(chatHoldT);chatHoldT=setTimeout(()=>{chatHoldT=null;chatLiveClear()},CHAT_HOLD_MS)}
+function chatLeave(){chatLiveDefer()}
+function chatPaintCached(el,key){if(!el||!key)return;const hit=el._ms&&el._ms.length?el._ms:chatCache[key];if(hit&&hit.length)paint(el,hit.slice(),key)}
 const cmsg=t=>{$("#cm2").style.color="var(--bad)";$("#cm2").textContent=t};
 function chat(){const fresh=$("#v-chat").hidden;show("chat");admUI();$("#cm2").textContent="";if(!DB){cmsg("채팅 기능을 쓸 수 없다.");return}setT(ct,fresh)}
 function sync(){$("#cin").hidden=ct==="a"||(ct==="d"&&!peer)}
@@ -139,29 +146,38 @@ function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);con
   if(m.u&&!me){b.tabIndex=0;b.setAttribute("role","button");b.classList.add("link");b.onclick=()=>openProfile(m.u);b.onkeydown=e=>{if(e.key==="Enter")openProfile(m.u)};av.onclick=()=>openProfile(m.u);av.classList.add("link")}
   head.appendChild(b);if(typeof m.t==="string"&&m.t)head.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));
   const row=elT("div","cm-row"),bub=elT("span","cm-x",String(m.x==null?"":m.x)),tm=elT("small","cm-t",d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"");
-  row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoad();keep()}
-/* 채팅 프로필 사진: 화면에 나온 사람의 players/{그 사람}/im 만 받는다. 등록자 전체를 받지 않는다.
-   한 번 받은 사진은 이 탭에서 기억하고, 대화가 다시 그려져도 그 사진을 붙인다. 사진이 없으면 이름 첫 글자를 그대로 둔다. */
-const AVC={},AVT={};
-let avBusy=false;
+  row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoadSoon();keep()}
+/* 채팅 프로필 사진: 화면에 나온 사람의 players/{uid}/im 만 받는다. 등록자 전체를 받지 않는다.
+   말풍선을 먼저 그린 뒤 idle/다음 프레임에 사진을 받는다. 받은 값은 메모리와 sessionStorage(짧은·용량 제한)에 두어
+   같은 탭에서 다시 열 때 프로필 사진 GET 을 줄인다. 큰 data URL 은 세션에 넣지 않는다. */
+const AVC={},AVT={},AV_SS="mgr_avc",AV_SS_MAX=40,AV_SS_BYTES=180000;
+let avBusy=false,avSched=null;
+(function avHydrate(){try{const j=JSON.parse(sessionStorage.getItem(AV_SS)||"{}");if(!j||typeof j!=="object")return;Object.keys(j).forEach(u=>{if(AVC[u]==null&&typeof j[u]==="string")AVC[u]=j[u]})}catch(e){}})();
+function avPersist(){try{const o={};let n=0,bytes=0;Object.keys(AVC).forEach(u=>{const v=AVC[u];if(typeof v!=="string")return;if(v.indexOf("data:")===0&&v.length>8000)return;if(n>=AV_SS_MAX||bytes+v.length>AV_SS_BYTES)return;o[u]=v;n++;bytes+=v.length});sessionStorage.setItem(AV_SS,JSON.stringify(o))}catch(e){}}
 function avPaint(av,im){if(!im||av.querySelector("img"))return;const i=document.createElement("img");i.src=im;i.alt="";i.loading="lazy";av.textContent="";av.appendChild(i);av.classList.add("has")}
 function avSet(av,u){if(!u)return true;if(AVC[u]==null)return false;avPaint(av,AVC[u]);return true}
 function avApply(){document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))}
+function avLoadSoon(){if(avSched!=null)return;const run=()=>{avSched=null;avLoad()};if(typeof requestIdleCallback==="function")avSched=requestIdleCallback(run,{timeout:400});else avSched=requestAnimationFrame(()=>{avSched=setTimeout(run,0)})}
 function avLoad(){if(!DB||avBusy)return;const now=Date.now(),ids=[];document.querySelectorAll(".cm-av[data-u]").forEach(a=>{const u=a.dataset.u;if(!u||AVC[u]!=null||(AVT[u]&&AVT[u]>now)||ids.indexOf(u)>=0)return;ids.push(u)});if(!ids.length)return;avBusy=true;
- Promise.all(ids.slice(0,8).map(async u=>{try{const d=(await DB.doc("players/"+u+"/im").get()).data();AVC[u]=typeof d==="string"&&/^(data:image\/|https:)/.test(d)?d:""}catch(e){AVT[u]=Date.now()+20000}})).then(()=>{avBusy=false;avApply();avLoad()},()=>{avBusy=false})}
-function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;unC&&unC();unC=null;unP&&unP();unP=null;if(t!=="a")admGen++
+ Promise.all(ids.slice(0,8).map(async u=>{try{const d=(await DB.doc("players/"+u+"/im").get()).data();AVC[u]=typeof d==="string"&&/^(data:image\/|https:)/.test(d)?d:""}catch(e){AVT[u]=Date.now()+20000}})).then(()=>{avBusy=false;avPersist();avApply();avLoad()},()=>{avBusy=false})}
+function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;if(chatHoldT){clearTimeout(chatHoldT);chatHoldT=null}if(t!=="a")admGen++
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";if(typeof navSync==="function")navSync("chat",false)
- if(t==="g")unC=apiWatchGlobal(ms=>paint($("#gl"),ms,"g"),()=>cmsg("채팅을 불러오지 못했다."));
- // 마을 채팅: 단체 채팅과 같은 저장 공간을 쓰되 이름이 "c_{마을}_"로 시작한다. 내 마을의 대화만 불러온다.
- else if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav();
-  unC=apiWatchVillage(C.v,ms=>{paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}
- else if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{dmMenu(false);peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="\u0001";
-  dmApply();if(enterDm){dmList();checkDM()}}
+ if(t==="g"||t==="v"){const key=t==="g"?"g":"v"+C.v,el=t==="g"?$("#gl"):$("#vcl");
+  if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav()}
+  if(chatLiveKey===key&&unC){/* 같은 방 연결·화면 유지. 다시 그리지 않는다. */}
+  else{chatPaintCached(el,key);if(unC){try{unC()}catch(e){}}unC=null;chatLiveKey=key;
+   if(t==="g")unC=apiWatchGlobal(ms=>{chatCache.g=ms;paint($("#gl"),ms,"g")},()=>cmsg("채팅을 불러오지 못했다."));
+   // 마을 채팅: 단체 채팅과 같은 저장 공간을 쓰되 이름이 "c_{마을}_"로 시작한다. 내 마을의 대화만 불러온다.
+   else unC=apiWatchVillage(C.v,ms=>{chatCache[key]=ms;paint($("#vcl"),ms,key);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}}
+ else{chatLiveDefer();
+  if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{dmMenu(false);peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="\u0001";
+  dmApply();if(enterDm){checkDM();dmList()}}}
  sync()}
-/* 1:1 목록: 탭을 열 때 우편함(이름, 받은 시각)만 한 번 받는다. 본문은 그 상대를 열 때 한 번 받는다.
+/* 1:1 목록: 로컬 C.dml 로 먼저 그리고, 네트워크는 DM_LIST_TTL 안에 있으면 생략한다.
+   dmn 실시간(unDm)이 켜져 있으면 목록 GET 에서 dmn 을 빼고 rooms 우편함만 받는다. 본문은 상대를 열 때 받는다.
    C.dml = 상대별 마지막 시각. peerDocs = [id, {n, ts}]. */
-let peerDocs=[],dmListGen=0,dmOpenGen=0;
+const DM_LIST_TTL=45000;let peerDocs=[],dmListGen=0,dmOpenGen=0,dmIndexAt=0,dmIndexRows=null;
 function dmTrim(){if(!C||!C.dml)return;const ks=Object.keys(C.dml);if(ks.length>80)ks.sort((a,b)=>C.dml[a]-C.dml[b]).slice(0,ks.length-80).forEach(k=>delete C.dml[k])}
 function dmApply(extra){if(!C)return;C.dml=C.dml||{};const rows={};let back=false;
  const held=(id,ts)=>{const g=Number(C.dmGone&&C.dmGone[id])||0,t=Number(ts)||0;if(!g||t>g){if(g&&t>g){delete C.dmGone[id];back=true}return false}return true};
@@ -172,7 +188,9 @@ function dmApply(extra){if(!C)return;C.dml=C.dml||{};const rows={};let back=fals
  dmTrim();peerDocs=Object.keys(rows).map(id=>[id,rows[id]]);
  if(back)save();
  if(!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick").hidden)drawPeers()}
-async function dmList(){const gen=++dmListGen;dmApply();if(!DB)return;try{const rows=await apiDmIndex();if(gen!==dmListGen||$("#v-chat").hidden||ct!=="d")return;dmApply(rows)}catch(e){if(gen===dmListGen)cmsg("대화 목록을 불러오지 못했다.")}}
+async function dmList(){const gen=++dmListGen;dmApply();if(!DB)return;
+ if(dmIndexRows&&Date.now()-dmIndexAt<DM_LIST_TTL){if(gen===dmListGen)dmApply(dmIndexRows);return}
+ try{const rows=await apiDmIndex(!!unDm);if(gen!==dmListGen||$("#v-chat").hidden||ct!=="d")return;dmIndexRows=rows;dmIndexAt=Date.now();dmApply(rows)}catch(e){if(gen===dmListGen)cmsg("대화 목록을 불러오지 못했다.")}}
 function dmTouch(id,t){if(!C||!id)return;if(C.dmGone&&Number(C.dmGone[id])&&t>Number(C.dmGone[id]))delete C.dmGone[id];C.dml=C.dml||{};if((C.dml[id]||0)>=t)return;C.dml[id]=t;dmTrim();const row=peerDocs.find(x=>x[0]===id);if(row)row[1].ts=Math.max(row[1].ts||0,t);else peerDocs.push([id,{n:(C.dmn&&C.dmn[id])||(C.fr&&C.fr[id])||"",ts:t}]);if(!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick").hidden)drawPeers()}
 function drawPeers(){const l=$("#pl2");if(!l||!C)return;const fr=C.fr||{};
  const ps=peerDocs.filter(x=>x[0]!==UID&&x[1]).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0)||String(a[1].n||"").localeCompare(String(b[1].n||""),"ko")).slice(0,60);
@@ -184,7 +202,7 @@ setInterval(()=>{if(C&&!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick")
 function dmPaint(ms,k){const el=$("#dl"),mine=(el._ms||[]).filter(m=>m&&m.u===UID&&!ms.some(s=>s&&s.u===m.u&&s.x===m.x&&Math.abs((Number(s.ts)||0)-(Number(m.ts)||0))<15000));paint(el,ms.concat(mine),k)}
 function dmLoad(id,quiet){if(!DB)return;const k=[UID,id].sort().join("_"),gen=++dmOpenGen;if(!quiet){const el=$("#dl");el._ms=[];el.dataset.th="";el.innerHTML="<div class='cm-empty'><p>대화를 불러오는 중...</p></div>"}
  return apiDmThread(k).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;dmPaint((sn.docs||[]).map(d=>d.data()).filter(Boolean),k)},e=>{if(!quiet&&gen===dmOpenGen)cmsg("대화를 불러오지 못했다. (오류 "+String(e&&e.message||e).replace(/\D/g,"").slice(0,3)+")")})}
-function openDM(id,n){peer=id;unC&&unC();unC=null;dmMenu(false);$("#cpick").hidden=true;if(C&&C.dmu&&C.dmu[id]){delete C.dmu[id];save()}const name=n||(C&&C.dmn&&C.dmn[id])||(C&&C.fr&&C.fr[id])||"상대";$("#dh").textContent=name+"와의 1:1 대화";$("#dt").hidden=false;dmLoad(id);sync()}
+function openDM(id,n){peer=id;chatLiveDefer();dmMenu(false);$("#cpick").hidden=true;if(C&&C.dmu&&C.dmu[id]){delete C.dmu[id];save()}const name=n||(C&&C.dmn&&C.dmn[id])||(C&&C.fr&&C.fr[id])||"상대";$("#dh").textContent=name+"와의 1:1 대화";$("#dt").hidden=false;dmLoad(id);sync()}
 /* 1:1 머리의 설정. PDF 저장은 예전과 같고, 나가기는 내 목록에서만 지운다. */
 function dmMenu(show){const m=$("#dmenu"),b=$("#dpng");if(!m||!b)return;m.hidden=show!==true;b.setAttribute("aria-expanded",m.hidden?"false":"true")}
 let dmAskOn=false;
@@ -210,16 +228,18 @@ const clockSync=()=>apiClockSync();
 // 엔터가 두 번 들어가면 같은 글이 한 번 더 서버로 갔다. 보낸 뒤 2초 안에는 다시 보내지 않고, 칸도 바로 비운다.
 const SEND_GAP=2000;
 function send(){const box=$("#ci"),x=box.value.trim();if(!x)return;if(Date.now()-lastSend<SEND_GAP){cmsg("잠시 뒤에 다시 보낼 수 있다.");return}if(ct==="d"&&!peer)return cmsg("대화 상대를 먼저 골라야 한다.");
- lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();const id=(ct==="v"?"c_"+C.v+"_":"")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
+ lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();
+ /* 단체 g_…, 마을 c_{마을}_…. 게시판(bp_/bx_/…)과 키 구간을 나눠 목록 쿼리가 섞이지 않게 한다. 1:1(dm)은 접두 없음. */
+ const id=(ct==="d"?"":ct==="v"?"c_"+C.v+"_":"g_")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
  apiPostMessage(ct==="d"?"dm":"chat",id,d).then(()=>{const fields={};if(to){const msg={u:UID,n:C.n,x,ts:Date.now()};if(d.t)msg.t=d.t;dmTouch(to,msg.ts);if(C.dml&&C.dml[to])fields["dml/"+to]=C.dml[to];apiDmBell(to,x);if(peer===to&&$("#dt")&&!$("#dt").hidden){const el=$("#dl");paint(el,(el._ms||[]).concat([msg]),[UID,to].sort().join("_"))}}titleState();fields["stats/chats"]=(C.stats.chats||0)+1;apiAccountWrite(fields).catch(()=>{})}).catch(e=>{if(!box.value.trim())box.value=x;const c=String(e&&e.message||e);cmsg(c==="401"||c==="403"?"메시지를 보내지 못했다. 서버 규칙에서 쓰기가 막혀 있다. (오류 "+c+")":"메시지를 보내지 못했다. 인터넷 연결을 확인하고 다시 보내 보자. (오류 "+c+")")})}
 // 목록으로 돌아가면 상대와 받은 시각만 다시 한 번 받는다. 본문은 받지 않는다.
-$("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;unC&&unC();unC=null;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
+$("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
 // 엔터와 보내기 버튼 모두 폼 제출로 처리한다. 휴대폰 한글 키보드에서도 엔터가 확실히 먹는다.
 $("#cin").onsubmit=e=>{e.preventDefault();send()};
 
 /* 1:1 새 메시지 알림: dmn/{나}의 이름·시각·미리보기만 본다. 본문은 그 대화를 열 때 받는다.
    C.dms = 보낸 사람별로 마지막으로 확인한 시각, C.dmu = 아직 안 읽은 사람, C.dmn = 보낸 사람 이름.
-   마을, 1:1, 알림에 들어올 때 그 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 퇴장 표시도 이 칸에 있으므로 따로 다시 읽지 않는다.
+   허브·1:1·알림에 들어올 때 실시간 연결만 연다. 첫 put 이 전체 칸을 주므로 같은 경로를 GET 으로 한 번 더 읽지 않는다.
    연결이 거절되면 30초마다 다시 묻되, 같으면 본문은 받지 않는다. 찾는 조건(orderBy)은 붙이지 않는다. */
 const goDM=(u,n)=>{const name=n||(C&&C.dmn&&C.dmn[u])||(C&&C.fr&&C.fr[u])||"상대";if($("#v-chat").hidden||ct!=="d"){ct="d";chat()}openDM(u,name)};
 function dmBell(to,x){apiDmBell(to,x)}
@@ -235,7 +255,7 @@ function dmApplyBell(data){if(!AUTH.uid||!C)return;const got={};
 let unDm=null,dmGen=0;
 function dmWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unDm)return;const gen=++dmGen,take=sn=>{if(gen!==dmGen||!C)return;dmApplyBell(sn.exists?sn.data():null)};
  unDm=DB.doc("dmn/"+UID).live().onSnapshot(take,()=>{},30000)}
-async function checkDM(){if(!AUTH.uid||!C||!DB||LOCAL)return;dmWatch();try{const s=await DB.doc("dmn/"+UID).get();dmApplyBell(s.exists?s.data():null)}catch(e){}}
+function checkDM(){if(!AUTH.uid||!C||!DB||LOCAL)return;dmWatch()}
 $("#ct").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t&&DB)setT(t)};
 // 마을 채팅에 새 메시지가 오면(내가 보지 않는 동안) 탭에 ● 표시를 한다. 30초마다 가장 최근 메시지 한 개만 확인한다.
 let vcNew=false;function vcMark(){const b=document.querySelector("#nav [data-ct=v]");if(b){b.textContent="마을 채팅"+(vcNew?" ●":"");const n=b.querySelector(".nav-n");if(n)n.remove()}}
