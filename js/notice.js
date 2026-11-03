@@ -1,10 +1,10 @@
 /* 공지. main.js 다음에 불러야 한다. 화면 위 공지 칸, 공지 탭, 운영자의 게시와 내리기.
-   공지와 시즌 표시는 공지 탭을 열 때 받는다. 목록은 약 2분 동안 메모리에 두어, 탭을 다시 열면 바로 보여 준다.
+   공지와 시즌 표시는 공지 탭을 열 때 받는다. 목록은 DAY_MS(하루) 동안 메모리에 두어, 탭을 다시 열면 바로 보여 준다.
    멸망 카운트는 접속할 때 한 번 받아, 진행 중이면 모든 화면 오른쪽 위에 보인다. */
 /* 공지: 운영자(admins 목록에 있는 계정)만 쓸 수 있고, 모든 플레이어의 화면 위쪽에 보인다. 서버 기록: notice/{번호}
    새 공지가 올라오면 한 번 알림(화면 위 알림·알림함)을 띄운다. 각자 ✕로 닫을 수 있고, 더 새 공지가 오면 다시 보인다. 최근 5개까지만 남긴다. */
 let NTC=[],ntcShown=10,ntcMark=0,ntcAt=0;// 운영자 한 명당 최근 30개까지 보관. 공지 탭은 한 번에 10개.
-const NTC_PAGE=10,NTC_TTL=120000;
+const NTC_PAGE=10,NTC_TTL=DAY_MS;
 // 공지 탭: 최근 공지부터 10개씩. 연 순간 읽은 것으로 표시하고, 더 보기로 연 뒤에도 이번 화면의 새 공지 표시는 남긴다.
 function ntcView(keep){if(!keep){show("ntc");ntcShown=NTC_PAGE;ntcMark=C?Number(C.ntcSeen)||0:0;if(!(ntcAt&&Date.now()-ntcAt<NTC_TTL))loadNotice()}try{drawRst()}catch(e){}const l=$("#ntcl");if(!l||!C)return;l.innerHTML="";const seen=ntcMark;
  if(ADM[UID]){const w=elT("p","hint","공지 쓰기와 내리기는 화면 위쪽 공지 칸의 '📢 공지 쓰기'에서 할 수 있다.");l.appendChild(w)}
