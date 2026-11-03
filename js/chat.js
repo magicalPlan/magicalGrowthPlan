@@ -147,9 +147,9 @@ function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);con
   head.appendChild(b);if(typeof m.t==="string"&&m.t)head.appendChild(elT("span","ttl-chip",m.t.slice(0,20)));
   const row=elT("div","cm-row"),bub=elT("span","cm-x",String(m.x==null?"":m.x)),tm=elT("small","cm-t",d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"");
   row.append(bub,tm);body.append(head,row);p.append(av,body);el.appendChild(p)});if(need)avLoadSoon();keep()}
-/* 채팅 프로필 사진: 화면에 나온 사람의 players/{그 사람}/im 만 받는다. 등록자 전체를 받지 않는다.
+/* 채팅 프로필 사진: 화면에 나온 사람의 players/{uid}/im 만 받는다. 등록자 전체를 받지 않는다.
    말풍선을 먼저 그린 뒤 idle/다음 프레임에 사진을 받는다. 받은 값은 메모리와 sessionStorage(짧은·용량 제한)에 두어
-   같은 탭에서 다시 열 때 players/*/im GET 을 줄인다. 큰 data URL 은 세션에 넣지 않는다. */
+   같은 탭에서 다시 열 때 프로필 사진 GET 을 줄인다. 큰 data URL 은 세션에 넣지 않는다. */
 const AVC={},AVT={},AV_SS="mgr_avc",AV_SS_MAX=40,AV_SS_BYTES=180000;
 let avBusy=false,avSched=null;
 (function avHydrate(){try{const j=JSON.parse(sessionStorage.getItem(AV_SS)||"{}");if(!j||typeof j!=="object")return;Object.keys(j).forEach(u=>{if(AVC[u]==null&&typeof j[u]==="string")AVC[u]=j[u]})}catch(e){}})();
