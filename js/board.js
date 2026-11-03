@@ -107,10 +107,10 @@ function drawBoard(){const box=$("#bdl");if(!box||!C)return;box.innerHTML="";if(
   if(ADM[UID]){const pb=elT("button","chip",pins[p.id]?"고정 해제":"📌 맨 위에 고정");pb.type="button";pb.style.cssText="margin:8px 6px 0 0;padding:6px 12px;font-size:.82rem";pb.onclick=async()=>{bdLast=0;if(await bdWrite({bt:pins[p.id]?"unpin":"pin",ref:p.id},pins[p.id]?"고정을 풀었다.":"글을 맨 위에 고정했다."))drawBoard()};c.appendChild(pb)}
   if(p.u===UID||ADM[UID]){const del=elT("button","chip","글 지우기");del.type="button";del.style.cssText="margin-top:8px;padding:6px 12px;font-size:.82rem";del.onclick=async()=>{if(!confirm("이 글을 지울까? 댓글도 함께 보이지 않게 된다."))return;bdLast=0;if(await bdWrite({bt:"d",ref:p.id},"글을 지웠다.")){bdOpen=null;drawBoard()}};c.appendChild(del)}
   box.appendChild(c);
-  // 답글에도 계속 답글을 달 수 있다. 들여쓰기는 4단계까지만 깊어지고, 그보다 깊으면 누구에게 단 답글인지 @이름으로 보여 준다.
+  // 답글에도 계속 답글을 달 수 있다. 들여쓰기는 한 단계만 두고(.bd-cmt.re), 그다음 답글은 같은 위치에 두며 @이름으로 대상을 보여 준다.
   if(!p._th){box.appendChild(elT("p","hint","댓글을 불러오는 중…"));return}
   const mine=cmts.filter(x=>x.p===p.id),byId={};mine.forEach(x=>byId[x.id]=x);const tops=mine.filter(x=>!x.r||!byId[x.r]).sort((a,b)=>a.ts-b.ts);box.appendChild(elT("h2","","댓글 "+mine.length));
-  const cmtEl=(m,lvl)=>{const w=elT("div","bd-cmt"+(lvl?" re":""));if(lvl)w.style.marginLeft=(Math.min(lvl,4)*20)+"px";const par=m.r&&byId[m.r];
+  const cmtEl=(m,lvl)=>{const w=elT("div","bd-cmt"+(lvl?" re":""));const par=m.r&&byId[m.r];
    const body=elT("p","bd-body","");if(lvl>=2&&par){body.appendChild(elT("span","bd-at","@"+cn(par.u,par.n)+" "))}else if(m.r&&!par){body.appendChild(elT("span","bd-at","(지워진 댓글에 단 답글) "))}body.appendChild(document.createTextNode(String(m.x||"")));const nm=bdName(m);if(m.ed)nm.appendChild(elT("small","bd-ed"," · 수정됨"));w.append(nm);
    if(bdEdit===m.id&&m.u===UID){const ef=elT("form","row bd-cf");ef.style.flexWrap="nowrap";const ei=elT("input");ei.type="text";ei.maxLength=BD_CMT;ei.value=String(m.x||"");ei.setAttribute("aria-label","댓글 수정");ei.style.flex="1";
     const es=elT("button","btn","저장");es.type="submit";es.style.cssText="width:auto;margin:0;padding:9px 14px";const ec=elT("button","btn g","취소");ec.type="button";ec.style.cssText="width:auto;margin:0;padding:9px 14px";ec.onclick=()=>{bdEdit=null;drawBoard()};ef.append(ei,es,ec);
