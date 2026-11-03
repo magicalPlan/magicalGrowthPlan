@@ -13,6 +13,8 @@ function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 출정 목록을
  if(typeof xListOpen==="function"&&!xListOpen()){if(typeof stopX==="function")stopX();return}
  if(typeof xShowN==="number")xShowN=typeof X_PAGE==="number"?X_PAGE:5;if(typeof xWatchKey!=="undefined")xWatchKey="";
  if(typeof watchX==="function")watchX();if(typeof drawXAll==="function")drawXAll()}
+/* 죽은 경로(화면에서 안 부름). html/march/rooms.html 에서 4글자 방 만들기·코드 입장 칸을 뺀 뒤로는
+   mk·join 을 누르는 버튼이 없다. enter 이하는 예전에 만든 방이 아직 있을 때만 이어질 수 있다. */
 async function mk(pub){if(!DB)return rmsg("방 기능을 쓸 수 없다.");const c=Math.random().toString(36).slice(2,6).toUpperCase();
  const r={code:c,pub,host:UID,st:"lobby",pl:{[UID]:me()},rd:{[UID]:true},seq:[],step:0,ok:true,ev:0,total:3+R(3),ts:Date.now()};
  try{await rref(c).set(r);enter(c)}catch(e){rmsg("방을 만들지 못했다.")}}
