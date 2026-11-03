@@ -16,12 +16,12 @@ const xParty=(x,m)=>Object.keys(m||{}).filter(u=>m[u]&&typeof m[u]==="object"&&j
 const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
 const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
 const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-Date.now())};
-let xSnap={},xS=-1,unX=null,xUns=[],XR=null,xAuto="",xPh="",xChK="",xMyV=null,xJob=0,xGone=null,xPend=null,xMine=null,xShowN=5,xSort="def",xWatchKey="";
+let xSnap={},xS=-1,unX=null,xLive={},xFail={},xPoll=null,xRetryT=null,XR=null,xAuto="",xPh="",xChK="",xMyV=null,xJob=0,xGone=null,xPend=null,xMine=null,xShowN=5,xSort="def",xWatchKey="";
 /* 목록 칸(#xbox)이 펼쳐져 보일 때만 참가 자리 xm 을 연결로 지킨다. 정렬된 앞쪽부터 5개씩, 최대 15개.
-   연결이 거절되면 같은 자리를 주기적으로 다시 읽되, 바뀌지 않으면 본문은 받지 않는다.
+   평소는 자리마다 live. 거절된 자리만 끊고, 그 자리들만 묶음 묻기로 받으며 X_LIVE_CD 뒤 그 자리만 live 를 다시 연다. 나머지는 그대로 둔다.
    접히거나 매지컬 마치를 벗어나면 끊는다. 참가·취소는 서버 응답을 기다리지 않고 화면부터 고친다.
    xGone 은 방금 빠진 자리다. 서버 목록이 아직 나를 안고 있어도 화면에서는 뺀다. */
-const X_PAGE=5;
+const X_PAGE=5,X_LIVE_CD=20000;
 function xOverlay(x,raw){const m=Object.assign({},raw||{});
  if(xGone&&xGone.s===x.s&&xGone.i===x.i&&!(C&&C.mj&&C.mj.id===x.id))delete m[UID];
  if(C&&C.mj&&C.mj.id===x.id&&(!m[UID]||typeof m[UID]!=="object"))m[UID]=Object.assign({},me(),{jt:Math.min(Date.now(),x.close)});
@@ -29,7 +29,7 @@ function xOverlay(x,raw){const m=Object.assign({},raw||{});
 function xListOpen(){const box=$("#xbox");return !!(!$("#v-rooms").hidden&&box&&!box.hidden)}
 function xWatchOn(){if(!XON())return false;if(xListOpen())return true;if($("#v-xm").hidden||!(C&&C.mj))return false;return !(XR&&XR.id===C.mj.id&&XR.pl)}
 function xWatchSlot(){return !$("#v-xm").hidden&&C&&C.mj&&!(XR&&XR.id===C.mj.id&&XR.pl)?C.mj.s:xLs()}
-function stopX(){xUns.forEach(u=>{try{u()}catch(e){}});xUns=[];unX=null;xWatchKey=""}
+function stopX(){Object.keys(xLive).forEach(i=>{try{xLive[i]()}catch(e){}});xLive={};xFail={};if(xPoll){try{xPoll()}catch(e){}xPoll=null}if(xRetryT){clearTimeout(xRetryT);xRetryT=null}unX=null;xWatchKey=""}
 function xOrdered(ls){const a=Array.from({length:XN},(_,i)=>i);
  if(xSort==="hi")a.sort((i,j)=>{const di=xInfo(ls,i).d,dj=xInfo(ls,j).d;return dj-di||i-j});
  else if(xSort==="lo")a.sort((i,j)=>{const di=xInfo(ls,i).d,dj=xInfo(ls,j).d;return di-dj||i-j});
@@ -57,8 +57,16 @@ async function xMinePull(){const j=C&&C.mj;if(!j||!XON()||(XR&&XR.id===j.id&&XR.
  try{const sn=await DB.doc(xSeat(j.s,j.i)).get();if(!C||!C.mj||C.mj.id!==j.id)return;xRemember(j.id,sn.exists?sn.data()||{}:{})}catch(e){}}
 function watchX(s){if(s==null)s=xLs();if(!XON())return;const ids=xWatchIds(s),key=s+"|"+ids.join(",")+"|"+xSort+"|"+xShowN;if(unX&&xWatchKey===key)return;
  const prev=xS;stopX();if(prev!==s){xSnap={};xTake.k=""}xS=s;xWatchKey=key;
- ids.forEach(i=>{const ii=i;const un=DB.doc(xSeat(s,ii)).live().onSnapshot(sn=>{if(xS!==s)return;xSeatPut(s,ii,sn.exists?sn.data()||{}:{});if(C&&C.mj&&C.mj.s!==s)xMinePull()},()=>{},POLL_HUB);xUns.push(un)});
- unX=()=>{stopX()}}
+ const stopFailPoll=()=>{if(xPoll){try{xPoll()}catch(e){}xPoll=null}};
+ const ensureFailPoll=()=>{if(xPoll||!Object.keys(xFail).length)return;
+  xPoll=DB.collection("rooms").prefix("xm"+s+"_").onSnapshot(sn=>{if(xS!==s||!Object.keys(xFail).length)return;
+   (sn.docs||[]).forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(!m||!xFail[m[1]])return;xSeatPut(s,Number(m[1]),d.data()||{})})},()=>{},POLL_HUB)};
+ const scheduleRetry=()=>{if(xRetryT)return;xRetryT=setTimeout(()=>{xRetryT=null;if(xS!==s||!xWatchOn())return;Object.keys(xFail).forEach(i=>armOne(Number(i)))},X_LIVE_CD)};
+ const onFail=ii=>{if(xS!==s)return;if(xLive[ii]){try{xLive[ii]()}catch(e){}}delete xLive[ii];xFail[ii]=1;ensureFailPoll();scheduleRetry()};
+ const armOne=ii=>{if(xLive[ii]){try{xLive[ii]()}catch(e){}}delete xFail[ii];if(!Object.keys(xFail).length)stopFailPoll();
+  xLive[ii]=DB.doc(xSeat(s,ii)).live().onSnapshot(sn=>{if(xS!==s||!xLive[ii])return;if(xFail[ii]){delete xFail[ii];if(!Object.keys(xFail).length)stopFailPoll()}
+   xSeatPut(s,ii,sn.exists?sn.data()||{}:{});if(C&&C.mj&&C.mj.s!==s)xMinePull()},()=>onFail(ii),0)};
+ ids.forEach(armOne);unX=()=>{stopX()}}
 /* 서버 자리에 내가 있으면 창을 닫았다가 켜도 그 출정으로 다시 묶는다. 정원 7명 안에 든 사람만 묶는다. */
 function xBindFrom(s,o){if(!C||C.mj||!o||!UID)return false;const now=Date.now();
  for(let i=0;i<XN;i++){const x=xInfo(s,i);if(C.ms===x.id)continue;if(xGone&&xGone.s===s&&xGone.i===i&&now<xGone.till)continue;if(now>=x.T0+X_RUN_MAX)continue;
