@@ -65,9 +65,9 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
  if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
  b.innerHTML="";const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;if(!show)return;
  const c=elT("div","doom-card"+(live&&st.left<=3?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off"));
- const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"));
- if(live)l.append(elT("p","doom-s",st.left<=0?"오늘, 세계가 끝난다.":st.endTx+" 멸망 · "+st.startTx+" 시작"));
- else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+")이 지났다."));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지 · 18:00시"));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작"));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
  c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.left):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
  b.appendChild(c);

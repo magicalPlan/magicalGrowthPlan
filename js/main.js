@@ -481,7 +481,7 @@ async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=t
   if(!$("#v-bag").hidden)drawRG();if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}catch(e){}}while(giftAgain)}finally{giftBusy=false}}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+petEff("gift")));
 function rgUse(idx){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
- const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
+ const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if(idx==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  const b0=C.dz;let sum=0,xs=0;list.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});C.rg=idx==="all"?[]:C.rg.filter((x,i)=>i!==idx);titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(xs,-sum);updNav();
  const who=[...new Set(list.map(x=>x.n))].join(", ");note("gift",who+"님의 선물을 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");bag((list.length>1?"선물 "+list.length+"개를 열었다. ":who+"님의 "+ITM.find(x=>x[0]===list[0].g)[1]+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":""))}
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=Array.isArray(C.rg)?C.rg:[];
