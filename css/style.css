@@ -295,6 +295,7 @@ textarea::placeholder{color:#6f6785}
 .bd-body{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}
 .bd-post h2{border:0;padding:0;margin:0 0 4px;font-size:1.3rem}
 .bd-cmt{border-top:1px solid var(--ln);padding:10px 0 8px}.bd-cmt .bd-body{margin-top:4px}
+/* 답글은 한 칸만 들여 쓴다. 답글의 답글도 같은 위치(.re)에 두고, 대상은 @이름으로 구분한다. */
 .bd-cmt.re{margin-left:22px;padding-left:12px;border-left:2px solid #b89b5e55;border-top:0}
 .bd-act{display:flex;gap:6px;margin-top:6px}.bd-act .chip{flex:0 0 auto;min-width:0;padding:4px 10px;font-size:.78rem}
 .bd-cf{margin-top:8px}

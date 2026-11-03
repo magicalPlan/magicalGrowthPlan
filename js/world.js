@@ -50,7 +50,7 @@ function worldEvent(){show("wev");const root=$("#v-wev");if(!root||root.dataset.
 /* Q&A. 글은 data/world/qa.json.
    한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
    답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */
-const WORLD_QA_URL="data/world/qa.json?v=1";
+const WORLD_QA_URL="data/world/qa.json?v=2";
 function worldQaItem(it){const q=String(it&&it.q||"").trim();if(!q)return null;const box=elT("div","qa-item"),qp=elT("p","qa-q");
  qp.append(elT("b","qa-tag","Q"),document.createTextNode(q));const ap=elT("div","qa-a");ap.append(elT("b","qa-tag","A"),worldLines(it.a||""));box.append(qp,ap);return box}
 function worldQaDraw(root,list){(Array.isArray(list)?list:[]).forEach(sec=>{if(!sec||!sec.title)return;const nodes=(Array.isArray(sec.qa)?sec.qa:[]).map(worldQaItem).filter(Boolean);
