@@ -228,7 +228,9 @@ const clockSync=()=>apiClockSync();
 // 엔터가 두 번 들어가면 같은 글이 한 번 더 서버로 갔다. 보낸 뒤 2초 안에는 다시 보내지 않고, 칸도 바로 비운다.
 const SEND_GAP=2000;
 function send(){const box=$("#ci"),x=box.value.trim();if(!x)return;if(Date.now()-lastSend<SEND_GAP){cmsg("잠시 뒤에 다시 보낼 수 있다.");return}if(ct==="d"&&!peer)return cmsg("대화 상대를 먼저 골라야 한다.");
- lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();const id=(ct==="v"?"c_"+C.v+"_":"")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
+ lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();
+ /* 단체 g_…, 마을 c_{마을}_…. 게시판(bp_/bx_/…)과 키 구간을 나눠 목록 쿼리가 섞이지 않게 한다. 1:1(dm)은 접두 없음. */
+ const id=(ct==="d"?"":ct==="v"?"c_"+C.v+"_":"g_")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
  apiPostMessage(ct==="d"?"dm":"chat",id,d).then(()=>{const fields={};if(to){const msg={u:UID,n:C.n,x,ts:Date.now()};if(d.t)msg.t=d.t;dmTouch(to,msg.ts);if(C.dml&&C.dml[to])fields["dml/"+to]=C.dml[to];apiDmBell(to,x);if(peer===to&&$("#dt")&&!$("#dt").hidden){const el=$("#dl");paint(el,(el._ms||[]).concat([msg]),[UID,to].sort().join("_"))}}titleState();fields["stats/chats"]=(C.stats.chats||0)+1;apiAccountWrite(fields).catch(()=>{})}).catch(e=>{if(!box.value.trim())box.value=x;const c=String(e&&e.message||e);cmsg(c==="401"||c==="403"?"메시지를 보내지 못했다. 서버 규칙에서 쓰기가 막혀 있다. (오류 "+c+")":"메시지를 보내지 못했다. 인터넷 연결을 확인하고 다시 보내 보자. (오류 "+c+")")})}
 // 목록으로 돌아가면 상대와 받은 시각만 다시 한 번 받는다. 본문은 받지 않는다.
 $("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
