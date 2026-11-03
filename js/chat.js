@@ -14,6 +14,13 @@ function drawAdm(){const l=$("#al");l.innerHTML="";const ks=Object.keys(admT).so
  $("#at2").hidden=!admK||!admT[admK];if(admK&&admT[admK]){$("#ah").textContent=admLabel(admK)+" (열람 전용)";paint($("#alg"),admT[admK].slice(),admK)}}
 /* 채팅: 단체 채팅은 모두가 보는 공용방이고, 1:1은 두 사람이 같은 대화 키를 쓴다 */
 let ct="g",peer=null,unC=null,unP=null,lastSend=0;
+/* 단체·마을 실시간 연결: 같은 방이면 다시 열지 않는다. 채팅을 잠깐 벗어나도 CHAT_HOLD_MS 동안은 끊지 않아서
+   다시 들어올 때 첫 스냅샷을 다시 받지 않는다. 그동안 서버는 열린 연결 하나만 유지한다(재연결·전체 재전송보다 적다). */
+const CHAT_HOLD_MS=8000,chatCache={};let chatLiveKey=null,chatHoldT=null;
+function chatLiveClear(){if(chatHoldT){clearTimeout(chatHoldT);chatHoldT=null}if(typeof unC==="function"){try{unC()}catch(e){}}unC=null;chatLiveKey=null;if(typeof unP==="function"){try{unP()}catch(e){}}unP=null}
+function chatLiveDefer(){if(!unC&&!unP)return;if(chatHoldT)clearTimeout(chatHoldT);chatHoldT=setTimeout(()=>{chatHoldT=null;chatLiveClear()},CHAT_HOLD_MS)}
+function chatLeave(){chatLiveDefer()}
+function chatPaintCached(el,key){if(!el||!key)return;const hit=el._ms&&el._ms.length?el._ms:chatCache[key];if(hit&&hit.length)paint(el,hit.slice(),key)}
 const cmsg=t=>{$("#cm2").style.color="var(--bad)";$("#cm2").textContent=t};
 function chat(){const fresh=$("#v-chat").hidden;show("chat");admUI();$("#cm2").textContent="";if(!DB){cmsg("채팅 기능을 쓸 수 없다.");return}setT(ct,fresh)}
 function sync(){$("#cin").hidden=ct==="a"||(ct==="d"&&!peer)}
@@ -149,15 +156,19 @@ function avSet(av,u){if(!u)return true;if(AVC[u]==null)return false;avPaint(av,A
 function avApply(){document.querySelectorAll(".cm-av[data-u]").forEach(a=>avSet(a,a.dataset.u))}
 function avLoad(){if(!DB||avBusy)return;const now=Date.now(),ids=[];document.querySelectorAll(".cm-av[data-u]").forEach(a=>{const u=a.dataset.u;if(!u||AVC[u]!=null||(AVT[u]&&AVT[u]>now)||ids.indexOf(u)>=0)return;ids.push(u)});if(!ids.length)return;avBusy=true;
  Promise.all(ids.slice(0,8).map(async u=>{try{const d=(await DB.doc("players/"+u+"/im").get()).data();AVC[u]=typeof d==="string"&&/^(data:image\/|https:)/.test(d)?d:""}catch(e){AVT[u]=Date.now()+20000}})).then(()=>{avBusy=false;avApply();avLoad()},()=>{avBusy=false})}
-function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;unC&&unC();unC=null;unP&&unP();unP=null;if(t!=="a")admGen++
+function setT(t,fresh){const enterDm=t==="d"&&(!!fresh||ct!=="d"||!!peer),enterAdm=t==="a"&&(!!fresh||ct!=="a");ct=t;if(chatHoldT){clearTimeout(chatHoldT);chatHoldT=null}if(t!=="a")admGen++
  document.querySelectorAll("#ct button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false"));
  $("#cg").hidden=t!=="g";$("#cvl").hidden=t!=="v";$("#cd").hidden=t!=="d";$("#ca").hidden=t!=="a";if(typeof navSync==="function")navSync("chat",false)
- if(t==="g")unC=apiWatchGlobal(ms=>paint($("#gl"),ms,"g"),()=>cmsg("채팅을 불러오지 못했다."));
- // 마을 채팅: 단체 채팅과 같은 저장 공간을 쓰되 이름이 "c_{마을}_"로 시작한다. 내 마을의 대화만 불러온다.
- else if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav();
-  unC=apiWatchVillage(C.v,ms=>{paint($("#vcl"),ms,"v"+C.v);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}
- else if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{dmMenu(false);peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="\u0001";
-  dmApply();if(enterDm){dmList();checkDM()}}
+ if(t==="g"||t==="v"){const key=t==="g"?"g":"v"+C.v,el=t==="g"?$("#gl"):$("#vcl");
+  if(t==="v"){vcNew=false;vcMark();$("#cvh").textContent=VL[C.v].n+" 주민끼리 나누는 채팅이다. 다른 마을 주민에게는 보이지 않는다.";C.vcSeen=srvNow();save();updNav()}
+  if(chatLiveKey===key&&unC){/* 같은 방 연결·화면 유지. 다시 그리지 않는다. */}
+  else{chatPaintCached(el,key);if(unC){try{unC()}catch(e){}}unC=null;chatLiveKey=key;
+   if(t==="g")unC=apiWatchGlobal(ms=>{chatCache.g=ms;paint($("#gl"),ms,"g")},()=>cmsg("채팅을 불러오지 못했다."));
+   // 마을 채팅: 단체 채팅과 같은 저장 공간을 쓰되 이름이 "c_{마을}_"로 시작한다. 내 마을의 대화만 불러온다.
+   else unC=apiWatchVillage(C.v,ms=>{chatCache[key]=ms;paint($("#vcl"),ms,key);C.vcSeen=srvNow()},()=>cmsg("마을 채팅을 불러오지 못했다."))}}
+ else{chatLiveDefer();
+  if(t==="a"){if(enterAdm)watchAdm();else drawAdm()}else{dmMenu(false);peer=null;dmOpenGen++;$("#dt").hidden=true;$("#cpick").hidden=false;$("#pl2").dataset.sig="\u0001";
+  dmApply();if(enterDm){dmList();checkDM()}}}
  sync()}
 /* 1:1 목록: 탭을 열 때 우편함(이름, 받은 시각)만 한 번 받는다. 본문은 그 상대를 열 때 한 번 받는다.
    C.dml = 상대별 마지막 시각. peerDocs = [id, {n, ts}]. */
@@ -184,7 +195,7 @@ setInterval(()=>{if(C&&!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick")
 function dmPaint(ms,k){const el=$("#dl"),mine=(el._ms||[]).filter(m=>m&&m.u===UID&&!ms.some(s=>s&&s.u===m.u&&s.x===m.x&&Math.abs((Number(s.ts)||0)-(Number(m.ts)||0))<15000));paint(el,ms.concat(mine),k)}
 function dmLoad(id,quiet){if(!DB)return;const k=[UID,id].sort().join("_"),gen=++dmOpenGen;if(!quiet){const el=$("#dl");el._ms=[];el.dataset.th="";el.innerHTML="<div class='cm-empty'><p>대화를 불러오는 중...</p></div>"}
  return apiDmThread(k).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;dmPaint((sn.docs||[]).map(d=>d.data()).filter(Boolean),k)},e=>{if(!quiet&&gen===dmOpenGen)cmsg("대화를 불러오지 못했다. (오류 "+String(e&&e.message||e).replace(/\D/g,"").slice(0,3)+")")})}
-function openDM(id,n){peer=id;unC&&unC();unC=null;dmMenu(false);$("#cpick").hidden=true;if(C&&C.dmu&&C.dmu[id]){delete C.dmu[id];save()}const name=n||(C&&C.dmn&&C.dmn[id])||(C&&C.fr&&C.fr[id])||"상대";$("#dh").textContent=name+"와의 1:1 대화";$("#dt").hidden=false;dmLoad(id);sync()}
+function openDM(id,n){peer=id;chatLiveDefer();dmMenu(false);$("#cpick").hidden=true;if(C&&C.dmu&&C.dmu[id]){delete C.dmu[id];save()}const name=n||(C&&C.dmn&&C.dmn[id])||(C&&C.fr&&C.fr[id])||"상대";$("#dh").textContent=name+"와의 1:1 대화";$("#dt").hidden=false;dmLoad(id);sync()}
 /* 1:1 머리의 설정. PDF 저장은 예전과 같고, 나가기는 내 목록에서만 지운다. */
 function dmMenu(show){const m=$("#dmenu"),b=$("#dpng");if(!m||!b)return;m.hidden=show!==true;b.setAttribute("aria-expanded",m.hidden?"false":"true")}
 let dmAskOn=false;
@@ -213,7 +224,7 @@ function send(){const box=$("#ci"),x=box.value.trim();if(!x)return;if(Date.now()
  lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();const id=(ct==="v"?"c_"+C.v+"_":"")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
  apiPostMessage(ct==="d"?"dm":"chat",id,d).then(()=>{const fields={};if(to){const msg={u:UID,n:C.n,x,ts:Date.now()};if(d.t)msg.t=d.t;dmTouch(to,msg.ts);if(C.dml&&C.dml[to])fields["dml/"+to]=C.dml[to];apiDmBell(to,x);if(peer===to&&$("#dt")&&!$("#dt").hidden){const el=$("#dl");paint(el,(el._ms||[]).concat([msg]),[UID,to].sort().join("_"))}}titleState();fields["stats/chats"]=(C.stats.chats||0)+1;apiAccountWrite(fields).catch(()=>{})}).catch(e=>{if(!box.value.trim())box.value=x;const c=String(e&&e.message||e);cmsg(c==="401"||c==="403"?"메시지를 보내지 못했다. 서버 규칙에서 쓰기가 막혀 있다. (오류 "+c+")":"메시지를 보내지 못했다. 인터넷 연결을 확인하고 다시 보내 보자. (오류 "+c+")")})}
 // 목록으로 돌아가면 상대와 받은 시각만 다시 한 번 받는다. 본문은 받지 않는다.
-$("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;unC&&unC();unC=null;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
+$("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
 // 엔터와 보내기 버튼 모두 폼 제출로 처리한다. 휴대폰 한글 키보드에서도 엔터가 확실히 먹는다.
 $("#cin").onsubmit=e=>{e.preventDefault();send()};
 
