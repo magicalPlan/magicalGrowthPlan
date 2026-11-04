@@ -50,14 +50,21 @@ function wvWatchStart(w){if(!w||!DB||typeof XON!=="function"||!XON())return;if(u
  unWv=DB.collection("wboss/"+id).live().onSnapshot(sn=>{if(gen!==wvGen)return;WVL=(sn.docs||[]).map(d=>d.data()).filter(v=>v&&v.u);wvListId=id;wvReady=true;if(typeof $==="function"&&!$("#v-wave").hidden)wvDraw()},()=>{},POLL_HUB)}
 async function loadWave(w,force){if(!w||!XON()||wvBusy)return;if(wvReady&&wvWatchId===w.id)return;if(!force&&Date.now()-wvT<5000)return;wvBusy=true;wvT=Date.now();try{const s=await once(DB.collection("wboss/"+w.id));if(wvWatchId===w.id&&wvReady)return;WVL=s.docs.map(d=>d.data()).filter(v=>v&&v.u);wvListId=w.id}catch(e){}finally{wvBusy=false}}
 const wvSum=()=>WVL.reduce((a,v)=>a+(Number(v.d)||0),0);
-async function wvAttack(){const {cur:w}=wvAt(Date.now()),m=$("#wvm"),now=Date.now();if(!w||now>=w.T1)return;
+/* 공격 잠금: 쿨 검사와 C.wva 기록 사이에 await loadWave 가 있어, 예전에는 연타가 둘 다 통과했다.
+   누르면 바로 wvAtkBusy·C.wva 를 올려 두 번째 입력을 막고, 실패 시에만 쿨을 되돌린다. */
+let wvAtkBusy=false;
+async function wvAttack(){const {cur:w}=wvAt(Date.now()),m=$("#wvm"),now=Date.now();if(!w||now>=w.T1||wvAtkBusy)return;
  if(C.fall||C.dz>=90){m.style.color="var(--bad)";m.textContent=C.fall?"타락한 동안에는 싸울 수 없다.":"절망도가 너무 높아 싸울 수 없다.";return}
- if(now-(C.wva||0)<WV_CD)return;if(!(wvListId===w.id&&wvReady))await loadWave(w,true);if(wvListId!==w.id){m.style.color="var(--bad)";m.textContent="전장 기록을 불러오지 못했다. 잠시 뒤에 다시 시도해 보자.";return}const st=wvState(wvSum());if(st.cleared>=WV_N){m.style.color="var(--mu)";m.textContent="모든 웨이브를 막아 냈다!";return}
- const mine=WVL.find(v=>v.u===UID)||{},d=Math.max(1,Math.round(pw()*(1.5+Math.random())*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
- const b0=Number(mine.b0)||wvBase(),t0=Number(mine.t0)||now;C.wva=now;try{await DB.doc("wboss/"+w.id+"/"+UID).set({u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p:pw(),c:(Number(mine.c)||0)+1,ts:now,t0,b0})}catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 잠시 뒤에 다시 시도해 보자.";C.wva=0;return}
- C.wvj=keepIds(C.wvj,w.id);C.gd=(C.gd||0)+WV_HIT;titleState();C.stats.waveHits=(C.stats.waveHits||0)+1;save();
- const i=WVL.findIndex(v=>v.u===UID);const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p:pw(),c:(Number(mine.c)||0)+1,ts:now,t0,b0};if(i>=0)WVL[i]=rec;else WVL.push(rec);
- const st2=wvState(wvSum());m.style.color="var(--mu)";m.textContent=st2.cur+"웨이브 「"+WV_NAMES[st2.cur-1]+"」에 "+d+"의 피해! (골드 +"+WV_HIT+")"+(st2.cleared>st.cleared?" "+st2.cleared+"웨이브를 막아 냈다!":"");wvDraw()}
+ if(now-(C.wva||0)<WV_CD)return;wvAtkBusy=true;const prevWa=C.wva||0;C.wva=now;wvDraw();
+ try{if(!(wvListId===w.id&&wvReady))await loadWave(w,true);if(wvListId!==w.id){m.style.color="var(--bad)";m.textContent="전장 기록을 불러오지 못했다. 잠시 뒤에 다시 시도해 보자.";C.wva=prevWa;return}
+  const st=wvState(wvSum());if(st.cleared>=WV_N){m.style.color="var(--mu)";m.textContent="모든 웨이브를 막아 냈다!";C.wva=prevWa;return}
+  const mine=WVL.find(v=>v.u===UID)||{},d=Math.max(1,Math.round(pw()*(1.5+Math.random())*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
+  const b0=Number(mine.b0)||wvBase(),t0=Number(mine.t0)||now;
+  try{await DB.doc("wboss/"+w.id+"/"+UID).set({u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p:pw(),c:(Number(mine.c)||0)+1,ts:now,t0,b0})}catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 잠시 뒤에 다시 시도해 보자.";C.wva=prevWa;return}
+  C.wvj=keepIds(C.wvj,w.id);C.gd=(C.gd||0)+WV_HIT;titleState();C.stats.waveHits=(C.stats.waveHits||0)+1;save();
+  const i=WVL.findIndex(v=>v.u===UID);const rec={u:UID,n:nmOf(),d:(Number(mine.d)||0)+d,p:pw(),c:(Number(mine.c)||0)+1,ts:now,t0,b0};if(i>=0)WVL[i]=rec;else WVL.push(rec);
+  const st2=wvState(wvSum());m.style.color="var(--mu)";m.textContent=st2.cur+"웨이브 「"+WV_NAMES[st2.cur-1]+"」에 "+d+"의 피해! (골드 +"+WV_HIT+")"+(st2.cleared>st.cleared?" "+st2.cleared+"웨이브를 막아 냈다!":"")}
+ finally{wvAtkBusy=false;wvDraw()}}
 // 끝난 웨이브의 보상: 참가자 모두 막아 낸 웨이브 수만큼, 피해 1위는 마력석 2개 추가.
 async function wvClaim(){if(!C||!XON())return;const {cur:w}=wvAt(Date.now());if(!w||Date.now()<w.T1||!(C.wvj&&C.wvj[w.id])||(C.wvc&&C.wvc[w.id]))return;
  if(!(wvListId===w.id&&wvReady))await loadWave(w,true);if(wvListId!==w.id)return;const list=WVL.slice(),st=wvState(list.reduce((a,v)=>a+(Number(v.d)||0),0)),top=list.slice().sort((a,b)=>(b.d||0)-(a.d||0))[0],mvp=!!top&&top.u===UID;if(C.wvc&&C.wvc[w.id])return;C.wvc=keepIds(C.wvc,w.id);
@@ -80,8 +87,8 @@ function wvDraw(){if($("#v-wave").hidden||!C)return;const box=$("#wvb");box.inne
  else{const st=wvState(list.reduce((a,v)=>a+(Number(v.d)||0),0)),c=elT("div","card boss-card w");c.append(elT("p","boss-tag","웨이브 "+st.cur+" / "+WV_N+" · 남은 시간 "+wvTxt(cur.T1-now)),elT("h2","",WV_NAMES[st.cur-1]));
   const bar=elT("div","bar"),f=elT("i");f.style.width=(st.mx?Math.max(0,st.hp)/st.mx*100:0)+"%";bar.appendChild(f);c.append(bar,elT("p","hint","HP "+Math.max(0,st.hp)+" / "+st.mx+" · 막아 낸 웨이브 "+st.cleared+" · 참가 "+list.length+"명"));
   const steps=elT("div","wv-steps");for(let i=1;i<=WV_N;i++)steps.appendChild(elT("span",i<=st.cleared?"on":i===st.cur?"cur":"",String(i)));c.appendChild(steps);
-  const left=WV_CD-(now-(C.wva||0)),b=elT("button","btn",st.cleared>=WV_N?"모든 웨이브를 막아 냈다!":C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left>0?"다시 공격까지 "+Math.ceil(left/1000)+"초":"공격한다 (예상 피해 "+Math.round(pw()*1.5)+"~"+Math.round(pw()*2.5)+")");
-  b.type="button";b.disabled=st.cleared>=WV_N||!!C.fall||C.dz>=90||left>0;b.onclick=wvAttack;c.appendChild(b);box.appendChild(c)}
+  const left=WV_CD-(now-(C.wva||0)),b=elT("button","btn",st.cleared>=WV_N?"모든 웨이브를 막아 냈다!":C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":wvAtkBusy?"공격하는 중...":left>0?"다시 공격까지 "+Math.ceil(left/1000)+"초":"공격한다 (예상 피해 "+Math.round(pw()*1.5)+"~"+Math.round(pw()*2.5)+")");
+  b.type="button";b.disabled=st.cleared>=WV_N||!!C.fall||C.dz>=90||left>0||wvAtkBusy;b.onclick=wvAttack;c.appendChild(b);box.appendChild(c)}
  const rank=list.slice().sort((a,b)=>(b.d||0)-(a.d||0));if(rank.length){const ol=elT("ol","boss-rank");rank.slice(0,10).forEach(v=>ol.appendChild(elT("li",v.u===UID?"me":"",cn(v.u,v.n)+" · 피해 "+(Number(v.d)||0)+" ("+(Number(v.c)||0)+"회)")));box.appendChild(ol)}
  box.appendChild(elT("p","boss-info","30초에 한 번 공격(골드 +"+WV_HIT+"). 1웨이브 HP는 가장 강한 마법소녀의 전투력 ×"+WV_K+"(웨이브마다 "+WV_GROW+"배). 끝나면 참가자 모두 막아 낸 웨이브 1개당 골드 "+WV_RW.g+"·경험치 "+WV_RW.ex+", "+WV_RW.mEvery+"웨이브마다 마력석 1개. 피해 1위는 마력석 "+WV_RW.mvp+"개 추가. 10웨이브를 모두 막으면 칭호 '파도를 가른 자'."))}
 setInterval(()=>{if(!C||!XON())return;wvAlert();const on=!$("#v-wave").hidden,{cur}=wvAt(Date.now()),live=cur&&Date.now()<cur.T1;if(on&&live)wvWatchStart(cur);wvClaim();if(!on||!live)wvWatchStop();if(on)wvDraw();else if(!$("#v-hub").hidden)hubWave()},1000);

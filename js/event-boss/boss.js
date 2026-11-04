@@ -50,7 +50,8 @@ function drawEboss(list){const box=$("#ebl");if(!box||!C)return;ebDay();const b=
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off||!DB;bt.onclick=()=>ebHit(bt,a);row.appendChild(bt)});c.appendChild(row);
  const wait=!!DB&&bossTopN==null&&!list.length;c.appendChild(elT("p","boss-info","체력: 오전·오후 보스 체력의 "+EBOSS.hpX+"배. 첫 공격 때 정해져 내일 0시까지 같다"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+ebHpEst().toLocaleString()+")")));
  c.appendChild(elT("p","boss-info","공격 1번: 골드 +"+EBOSS.hit+", 절망도 +"+EBOSS.dz+"(🛡 방어 태세면 0) · 토벌 보상: "+rwTxt(EBOSS.kill)+", "+ebDropTxt()))}
-async function ebHit(bt,act){act=BA[act]?act:"str";const b=ebOf(),m=$("#ebm");ebDay();if(ebHit.busy)return;if(C.fall||C.dz>=90||C.eb.n>=EBOSS.t)return;ebHit.busy=true;
+/* ebHit.busy: 읽기·쓰기 await 동안 버튼을 잠근다. drawEboss 가 다시 그려도 off 에 busy 가 들어가 연타를 막는다. */
+async function ebHit(bt,act){act=BA[act]?act:"str";const b=ebOf(),m=$("#ebm");ebDay();if(ebHit.busy)return;if(C.fall||C.dz>=90||C.eb.n>=EBOSS.t)return;ebHit.busy=true;if(bt)bt.disabled=true;
  const seed=bossOf("d").id,pt=bpAt(seed,Date.now()),ef=bpEff(pt,act),good=pt.best===act,id=b.id;
  const undo=back=>{C.eb.n=back.n;C.stats.ebHits=back.hits;C.stats.bossHits=back.boss;C.stats.ebRead=back.read;C.ebp=back.ebp;if(back.snap)bossSnap[id]=back.snap;else delete bossSnap[id];ebHit.busy=false;drawEboss(back.list)};
  try{let meta=bossSnap[id]&&Number(bossSnap[id].hp0)>0?bossSnap[id]:null,mine=(ebLast||[]).find(v=>v&&v.u===UID)||null,fetched=!meta;
