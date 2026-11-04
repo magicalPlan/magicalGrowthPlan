@@ -178,8 +178,13 @@ let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMissT=null,xrMode="",xrKey
 /* xr 빈 응답 대기는 X_FETCH_GIVEUP 과 같게 둔다. expireMarch 가 최대 ~1분 늦을 수 있고, T0 calc 킥·분 주기 스케줄이 그 안에 기록을 만든다. */
 const X_XR_CD=10000,X_XR_MISS=X_FETCH_GIVEUP;
 function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}if(xrMissT){clearTimeout(xrMissT);xrMissT=null}xrMode="";xrKey="";xrMissAt=0}
-function xLead(pl){return Object.keys(pl||{}).sort()[0]||""}
-function xAskCalc(x,mark){if(!x||!mark||xCalcAsk===mark)return;xCalcAsk=mark;DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc").set(1).catch(()=>{if(xCalcAsk===mark)xCalcAsk=""})}
+/* 투표 마감 후 결과 계산은 서버(roomCalc·expireMarch)가 한다. 클라는 calc=1 로만 깨운다.
+   리더만이 아니라 파티원 누구나, 마감(+3초) 뒤 10초마다 다시 요청한다(리더 오프라인·락 실패 대비). */
+function xAskCalc(x,mark,flip){if(!x||!mark||xCalcAsk===mark)return;const prev=xCalcAsk;xCalcAsk=mark;const ref=DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc");
+ const go=()=>ref.set(1).catch(()=>{if(xCalcAsk===mark)xCalcAsk=""});
+ if(flip&&prev)ref.set(0).then(go).catch(go);else go()}
+function xAskVoteCalc(x,doc){if(!doc||!doc.wait||!(doc.r&&doc.r.pl&&doc.r.pl[UID]))return;const Wd=Number(doc.wait.Wd);if(!Number.isFinite(Wd)||xNow()<Wd+3000)return;
+ const slot=Math.floor((xNow()-(Wd+3000))/10000),mark=x.id+"_w"+doc.wait.c+"_"+slot;xAskCalc(x,mark,slot>0)}
 function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
  const path="rooms/xr"+s+"_"+i;
  /* 출발 직후 서버가 xr 을 쓰기 전 live 가 빈 값을 줄 수 있다. X_FETCH_GIVEUP 동안 구독을 유지한다.
@@ -220,7 +225,7 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
   return}
  const doc=XR.res;
  xGrant(x);if(XR&&XR.id===x.id&&XR.fin)return;
- if(doc&&doc.wait&&xNow()>=doc.wait.Wd+3000&&xLead(doc.r&&doc.r.pl)===UID)xAskCalc(x,x.id+"_"+doc.wait.c)}
+ xAskVoteCalc(x,doc)}
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
