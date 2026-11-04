@@ -136,13 +136,13 @@ function xNormPicks(raw){if(raw==null)return[];const keys=Array.isArray(raw)?raw
   else if(v&&typeof v==="object")out[i]=Object.keys(v).map(Number).filter(Number.isFinite).sort((a,b)=>a-b).map(k=>Number(v[k])).filter(n=>Number.isFinite(n));
   else{const n=Number(v);if(Number.isFinite(n))out[i]=[n]}}return out}
 // 처음부터 다시 계산한다. 같은 씨앗, 같은 파티, 같은 표라면 누구의 화면에서든 결과가 같다.
-function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[],picks=xNormPicks(X.picks),wall=xNow();let wait=null;
+function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[],picks=xNormPicks(X.picks);let wait=null;
  let resolved=typeof X.pc==="number"&&Number.isFinite(X.pc)?Math.max(0,Math.floor(X.pc)):-1;if(resolved<0){resolved=0;for(let i=0;i<picks.length;i++)if(picks[i]!=null)resolved=i+1}
  Object.keys(X.pl).forEach(u=>r.pl[u]=X.pl[u]);
  seeded(hs32(x.id+"#sim"),()=>{startSim(r);let c=0;
   while(r.pend&&!r.fin){const xe=EVM[r.pend.id];if(!xe){r.pend=null;simStep(r);continue}
    const cx=evCtx(r),ops=xe.o.map((o,i)=>i).filter(i=>!xe.o[i].req||xe.o[i].req(cx)),h=(cx.tr("번뜩임")||cx.tr("예민함"))?xe.o.findIndex(o=>o.ok):-1;
-   const WsSim=x.T0+r.seq.length*XSTEP+c*CHOICE_MS,Wd=Math.max(WsSim+CHOICE_MS,wall+CHOICE_MS),Ws=Wd-CHOICE_MS;
+   const Ws=x.T0+r.seq.length*XSTEP+c*CHOICE_MS,Wd=Ws+CHOICE_MS;
    L.push(r.seq.length);r.ch={id:r.pend.id,v:r.pend.v,k:c,until:Wd,ops,h};
    if(c>=resolved){wait={c,Ws,Wd};break}resolveChoice(r,picks[c]||[]);c++}});
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
@@ -234,7 +234,8 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
  const doc=XR.res;
  xGrant(x);if(XR&&XR.id===x.id&&XR.fin)return;
  xAskVoteCalc(x,doc)}
-function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
+/* 마을·목록에서 돌아올 때 xChK/xMyV 를 비우지 않는다. 비우면 같은 wait 인데도 투표 UI 가 새로 열린 것처럼 보인다. */
+function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
@@ -249,14 +250,17 @@ function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!
  g.dataset.w="";const R0=X.res,r=R0.r,w=R0.wait,at=i=>Array.isArray(R0.lineAt)?R0.lineAt[i]:R0.lineAt(i);let n=0;while(n<r.seq.length&&at(n)<=now)n++;
  if(X.drawn!==n||X.fd!==!!X.fin){X.drawn=n;X.fd=!!X.fin;g.innerHTML=r.seq.slice(0,n).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";if(X.fin&&n>=r.seq.length)g.innerHTML+=X.fin}
  $("#xs").textContent=(X.fin?"출정 종료":w&&n>=r.seq.length?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중")+" · "+xWho(ids,pl);
- if(w&&n>=r.seq.length&&now<w.Wd&&X.pl[UID]&&r.ch&&EVM[r.ch.id]){const k=x.id+"_"+w.c;
-  if(xChK!==k){xChK=k;xMyV=null;cv.hidden=false;cv.innerHTML="";const xe=EVM[r.ch.id];cv.appendChild(elT("p","choice-q",vtx(xe.q,r.ch.v)));const row=elT("div","row");
+ if(w&&n>=r.seq.length&&now<w.Wd&&X.pl[UID]&&r.ch&&EVM[r.ch.id]){const k=x.id+"_"+w.c,mark=()=>{row.querySelectorAll(".chip").forEach((c,n)=>{const on=xMyV!=null&&r.ch.ops[n]===xMyV;c.disabled=xMyV!=null;c.setAttribute("aria-pressed",on?"true":"false")})};let row;
+  if(xChK!==k){xChK=k;xMyV=null;cv.hidden=false;cv.innerHTML="";const xe=EVM[r.ch.id];cv.appendChild(elT("p","choice-q",vtx(xe.q,r.ch.v)));row=elT("div","row");
    r.ch.ops.forEach(i=>{const o=xe.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(r.ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed","false");
-    b.onclick=async()=>{if(xNow()>=w.Wd||xMyV!=null)return;xMyV=i;row.querySelectorAll(".chip").forEach(c=>{c.disabled=true;c.setAttribute("aria-pressed",c===b?"true":"false")});try{const saved=await DB.doc(xVote(x.id,w.c)+"/"+UID).transact(c=>{if(c&&typeof c==="object"&&typeof c.i==="number")return;return {i,ts:{".sv":"timestamp"}}});const kept=saved&&typeof saved.i==="number"?saved.i:i;if(kept!==i){xMyV=kept;row.querySelectorAll(".chip").forEach((c,n)=>c.setAttribute("aria-pressed",r.ch.ops[n]===kept?"true":"false"))}}catch(e){if(xMyV===i)xMyV=null;row.querySelectorAll(".chip").forEach(c=>{c.disabled=false;c.setAttribute("aria-pressed","false")})}};row.appendChild(b)});
-   cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""))}
+    b.onclick=async()=>{if(xNow()>=w.Wd||xMyV!=null)return;xMyV=i;mark();try{/* 표는 xv 경로에 한 번만 고정. ts 는 클라 xNow(서버 보정) — 마감 후 표 판정에 쓴다. */
+     const saved=await DB.doc(xVote(x.id,w.c)+"/"+UID).transact(c=>{if(c&&typeof c==="object"&&typeof c.i==="number")return;return{i,ts:xNow()}});const kept=saved&&typeof saved.i==="number"?saved.i:i;xMyV=kept;mark()}catch(e){if(xMyV===i)xMyV=null;mark()}};row.appendChild(b)});
+   cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""));
+   /* 마을 갔다가 돌아오면 UI 만 다시 그릴 수 있으니, 이미 보낸 표를 읽어 선택 완료 상태로 맞춘다. */
+   DB.doc(xVote(x.id,w.c)+"/"+UID).get().then(sn=>{if(xChK!==k)return;const d=sn.exists?sn.data():null;if(d&&typeof d.i==="number"){xMyV=d.i;const r0=cv.querySelector(".row");if(r0){row=r0;mark()}}}).catch(()=>{})}
+  else row=cv.querySelector(".row");
   cv.hidden=false;const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
- else{cv.hidden=true;/* 집계 중(같은 c)에 xChK 를 비우면, 서버가 Wd 만 연장해도 투표 UI 가 다시 마운트되어 루프처럼 보인다. wait 가 사라질 때만 리셋. */
-  if(!w)xChK=""}}
+ else{cv.hidden=true;if(!w)xChK=""}}
 /* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub 로 보낸다.
    진행 중이면 xAuto 를 찍어 두어, 목록·마을에 있어도 같은 출정 화면으로 다시 끌어오지 않는다(보기 버튼으로만 복귀). */
 $("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}show("hub")};
