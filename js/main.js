@@ -160,8 +160,10 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;return false}
  const mine=JSON.parse(JSON.stringify(C));C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
- if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
- if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}
+ /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭의 더 큰 골드·경험으로 회귀를 되돌리지 않는다. */
+ if(!((Number(rem.rsv)||0)>(Number(mine.rsv)||0))){
+  if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
+  if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계)을 서버 옛값으로 되돌리지 않는다. */
  if((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object")){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));

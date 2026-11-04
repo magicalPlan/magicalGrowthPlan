@@ -12,7 +12,10 @@ let progBusy=false,progAgain=false;
 async function readProg(){if(!C||!AUTH.uid||LOCAL||!DB)return;if(progBusy){progAgain=true;return}progBusy=true;
  try{do{progAgain=false;if(savePending&&typeof saveCloud==="function"){try{await saveCloud(true)}catch(e){}}if(savePending)break;
   let p=null;try{const s=await DB.doc("accounts/"+UID+"/prog").get();p=s.exists?s.data():null}catch(e){break}if(savePending)break;
-  if(p&&p.ex!=null){xpMigrate();const mine=Math.max(0,Number(C.ex)||0),got=xpCurve(p.ex,p.xv==null||p.xv===""?2:p.xv),ex=Math.max(mine,got),lv=lvOf(ex),px=C.ex,plv=C.lv,pxv=Number(C.xv)||0;
+  if(p&&p.ex!=null){xpMigrate();let mine=Math.max(0,Number(C.ex)||0);const got=xpCurve(p.ex,p.xv==null||p.xv===""?2:p.xv);
+   /* 서버 prog 가 더 작으면 회귀로 내려간 것일 수 있다. 계정 동기화로 rsv·본문을 맞춘 뒤 다시 본다. */
+   if(got<mine&&typeof accSyncIfNewer==="function"){try{await accSyncIfNewer()}catch(e){}mine=Math.max(0,Number(C.ex)||0)}
+   const ex=Math.max(mine,got),lv=lvOf(ex),px=C.ex,plv=C.lv,pxv=Number(C.xv)||0;
    C.ex=ex;C.xv=3;C.lv=lv;
    if(ex!==got||(Number(p.lv)||0)!==lv||(Number(p.xv)||0)!==3||C.ex!==px||C.lv!==plv||pxv!==3){if(typeof accBase!=="undefined"&&accBase&&Number(accBase.ex)===ex&&Number(accBase.lv)===lv&&Number(accBase.xv)===3){accBase.ex=got;if((Number(p.lv)||0)!==lv)accBase.lv=Number(p.lv)||0}save()}}
   else{const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=3;
