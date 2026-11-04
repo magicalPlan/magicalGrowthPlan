@@ -1,10 +1,13 @@
 /* 정기 출정 방을 지우고, 매지컬 마치와 정기 출정의 전투 계산을 돌린다.
    사건 글은 data/events, 판정 숫자는 scripts/pack-sim.js, 특성 규칙은 functions/sim/engine.js.
-   배포: firebase deploy --only functions  (배포가 scripts/pack-sim.js 로 tables.js 를 다시 만든다.) */
+   배포: firebase deploy --only functions  (배포가 scripts/pack-sim.js 로 tables.js 를 다시 만든다.)
+   투표 집계: wait 최초 write 시 Wd=now+15s, live/x due + Cloud Task(xVoteDue). 분 스케줄은 백업. */
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onValueWritten} = require("firebase-functions/v2/database");
+const {onTaskDispatched} = require("firebase-functions/v2/tasks");
 const {initializeApp} = require("firebase-admin/app");
 const {getDatabase} = require("firebase-admin/database");
+const {getFunctions} = require("firebase-admin/functions");
 const sim = require("./sim/engine");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
@@ -93,6 +96,24 @@ async function scheduleXDrop(db, s, i, at) {
 }
 function xDropAt(doc, now) {
   return (doc && typeof doc.endAt === "number" ? doc.endAt : now) + X_DROP;
+}
+function xDue(doc, now) {
+  if (doc && doc.wait && typeof doc.wait.Wd === "number") return doc.wait.Wd + X_VOTE_GRACE;
+  return now + 40 * 60000;
+}
+/* live/x 에 due 를 쓰고, 가능하면 Cloud Task 로 Wd+grace 에 집계를 예약한다. Task 실패 시 분 스케줄이 백업. */
+async function armXDue(db, s, i, doc, now) {
+  const at = xDue(doc, now);
+  await db.ref("live/x/" + s + "_" + i).set(at);
+  if (!(doc && doc.wait && typeof doc.wait.Wd === "number")) return;
+  const delaySec = Math.max(1, Math.ceil((at - now) / 1000));
+  try {
+    const queue = getFunctions().taskQueue("xVoteDue");
+    await queue.enqueue({s, i, c: Number(doc.wait.c), Wd: doc.wait.Wd}, {
+      scheduleDelaySeconds: delaySec,
+      dispatchDeadlineSeconds: 60
+    });
+  } catch (e) { /* Blaze·Tasks 미준비면 live/x + expireMarch 만으로 진행 */ }
 }
 
 async function dropOne(db, s, i) {
@@ -199,7 +220,7 @@ async function stepOneExpedition(db, s, i, now) {
   const ref = db.ref("rooms/xr" + s + "_" + i);
   const cur = (await ref.get()).val();
   if (cur && cur.empty) {
-    await db.ref("live/x/" + s + "_" + i).set(xDue(null, now));
+    await db.ref("live/x/" + s + "_" + i).set(null);
     await scheduleXDrop(db, s, i, now + X_DROP);
     return;
   }
@@ -210,45 +231,77 @@ async function stepOneExpedition(db, s, i, now) {
     const ids = sim.partyIds(info, seat);
     if (!ids.length) {
       await ref.set({empty: 1, all});
-      await db.ref("live/x/" + s + "_" + i).set(xDue(null, now));
+      await db.ref("live/x/" + s + "_" + i).set(null);
       await scheduleXDrop(db, s, i, now + X_DROP);
       return;
     }
     const pl = {};
     ids.forEach(u => { pl[u] = seat[u]; });
-    const doc = sim.replayExpedition(info, pl, [], now, 0);
+    const doc = sim.replayExpedition(info, pl, [], now, 0, null);
     doc.all = all;
     doc.calc = 0;
     doc.pc = 0;
     doc.picks = picksForStore(doc.picks);
     await ref.set(plain(doc));
-    await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
+    await armXDue(db, s, i, doc, now);
     if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
     return;
   }
-  if (!cur.wait || now < cur.wait.Wd + X_VOTE_GRACE) {
-    await db.ref("live/x/" + s + "_" + i).set(xDue(cur, now));
-    /* 마감 전에 들어온 calc=1 은 여기서 소비만 되고 다시 안 울릴 수 있다. 0 으로 돌려 클라·스케줄이 재요청하게 한다. */
-    if (cur && cur.calc === 1) await ref.child("calc").set(0);
+  const pc0 = pickCount(cur.pc, cur.picks);
+  /* 집계는 pc === wait.c 일 때만. wait 없거나 커서가 어긋나면 재생으로 맞춘다. */
+  if (!cur.wait) {
+    if (cur.done) {
+      await db.ref("live/x/" + s + "_" + i).set(null);
+      await scheduleXDrop(db, s, i, xDropAt(cur, now));
+    } else {
+      const picks = normPicks(cur.picks);
+      const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc0, null);
+      doc.all = cur.all || {};
+      doc.calc = 0;
+      doc.pc = pc0;
+      doc.picks = picksForStore(picks);
+      await writeExpeditionPatch(ref, cur, doc);
+      await armXDue(db, s, i, doc, now);
+      if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+    }
+    if (cur.calc === 1) await ref.child("calc").set(0);
+    return;
+  }
+  const waitC = Number(cur.wait.c);
+  if (pc0 !== waitC) {
+    const picks = normPicks(cur.picks);
+    const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc0, null);
+    doc.all = cur.all || {};
+    doc.calc = 0;
+    doc.pc = pc0;
+    doc.picks = picksForStore(picks);
+    await writeExpeditionPatch(ref, cur, doc);
+    await armXDue(db, s, i, doc, now);
+    if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+    if (cur.calc === 1) await ref.child("calc").set(0);
+    return;
+  }
+  if (now < Number(cur.wait.Wd) + X_VOTE_GRACE) {
+    await armXDue(db, s, i, cur, now);
+    if (cur.calc === 1) await ref.child("calc").set(0);
     return;
   }
   const votes = await readXVotes(db, info.id, cur.wait, cur.r.pl || {});
   const picks = normPicks(cur.picks);
-  const c = Number(cur.wait.c);
-  picks[c] = votes;
-  const pc = c + 1;
-  const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc);
+  picks[waitC] = votes;
+  const pc = waitC + 1;
+  const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc, null);
   doc.all = cur.all || {};
   doc.calc = 0;
   doc.pc = pc;
   doc.picks = picksForStore(picks);
-  /* 같은 선택 번호의 wait 가 다시 계산되면 Wd 를 덮어쓰지 않는다(연장 금지). */
-  if (doc.wait && cur.wait && Number(doc.wait.c) === Number(cur.wait.c)) {
+  /* 새 wait(다음 c)만 실시계 Wd. 같은 c 가 재생에 또 나오면 버그이므로 기존 Wd 유지. */
+  if (doc.wait && Number(doc.wait.c) === waitC) {
     doc.wait = { c: cur.wait.c, Ws: cur.wait.Ws, Wd: cur.wait.Wd };
     if (doc.r && doc.r.ch) doc.r.ch.until = cur.wait.Wd;
   }
   await writeExpeditionPatch(ref, cur, doc);
-  await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
+  await armXDue(db, s, i, doc, now);
   if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
 }
 
@@ -264,19 +317,24 @@ async function runLiveMarch(db, now) {
   for (const id of codes) await withLock(db, "m" + id, () => stepOneMarch(db, id, now));
 }
 
-function xDue(doc, now) {
-  if (doc && doc.wait && typeof doc.wait.Wd === "number") return doc.wait.Wd + X_VOTE_GRACE;
-  return now + 40 * 60000;
-}
-
 async function runExpeditions(db, now) {
-  const cur = Math.floor(now / XS);
   const dueMap = (await db.ref("live/x").get()).val() || {};
+  /* due 가 지난 방만 집계(서버 강제). */
+  for (const [k, raw] of Object.entries(dueMap)) {
+    const due = Number(raw);
+    if (!Number.isFinite(due) || due > now) continue;
+    const p = String(k).indexOf("_");
+    if (p < 0) continue;
+    const s = Number(String(k).slice(0, p)), i = Number(String(k).slice(p + 1));
+    if (!Number.isFinite(s) || !Number.isFinite(i)) continue;
+    await withLock(db, "x" + s + "_" + i, () => stepOneExpedition(db, s, i, now));
+  }
+  /* 출발했는데 live/x 가 없는 방: xr 최초 생성. */
+  const cur = Math.floor(now / XS);
   for (let s = cur - 2; s <= cur - 1; s++) {
     if (s < 0 || (s + 1) * XS > now) continue;
     for (let i = 0; i < XN; i++) {
-      const due = Number(dueMap[s + "_" + i]);
-      if (Number.isFinite(due) && due > now) continue;
+      if (dueMap[s + "_" + i] != null) continue;
       await withLock(db, "x" + s + "_" + i, () => stepOneExpedition(db, s, i, now));
     }
   }
@@ -317,6 +375,21 @@ exports.expireMarch = onSchedule({
   await runLiveMarch(db, now);
 });
 
+/* 투표 마감 due 전용 Task. wait 기록 시 armXDue 가 예약한다. */
+exports.xVoteDue = onTaskDispatched({
+  region: "asia-southeast1",
+  timeoutSeconds: 60,
+  memory: "256MiB",
+  retryConfig: {maxAttempts: 5, minBackoffSeconds: 10},
+  rateLimits: {maxConcurrentDispatches: 40}
+}, async event => {
+  const s = Number(event.data && event.data.s), i = Number(event.data && event.data.i);
+  if (!Number.isFinite(s) || !Number.isFinite(i)) return;
+  const db = getDatabase();
+  await withLock(db, "x" + s + "_" + i, () => stepOneExpedition(db, s, i, Date.now()));
+});
+
+/* 클라 calc 는 보조(xr 최초 생성·비상). 투표 마감 집계의 본선은 xVoteDue + live/x 스케줄. */
 exports.roomCalc = onValueWritten({
   ref: "/rooms/{roomId}/calc",
   instance: "magical-growth-default-rtdb",

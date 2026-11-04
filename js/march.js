@@ -136,15 +136,16 @@ function xNormPicks(raw){if(raw==null)return[];const keys=Array.isArray(raw)?raw
   else if(v&&typeof v==="object")out[i]=Object.keys(v).map(Number).filter(Number.isFinite).sort((a,b)=>a-b).map(k=>Number(v[k])).filter(n=>Number.isFinite(n));
   else{const n=Number(v);if(Number.isFinite(n))out[i]=[n]}}return out}
 // 처음부터 다시 계산한다. 같은 씨앗, 같은 파티, 같은 표라면 누구의 화면에서든 결과가 같다.
-function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[],picks=xNormPicks(X.picks);let wait=null;
+function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[],picks=xNormPicks(X.picks),wall=xNow(),prev=X.res&&X.res.wait;let wait=null;
  let resolved=typeof X.pc==="number"&&Number.isFinite(X.pc)?Math.max(0,Math.floor(X.pc)):-1;if(resolved<0){resolved=0;for(let i=0;i<picks.length;i++)if(picks[i]!=null)resolved=i+1}
  Object.keys(X.pl).forEach(u=>r.pl[u]=X.pl[u]);
  seeded(hs32(x.id+"#sim"),()=>{startSim(r);let c=0;
   while(r.pend&&!r.fin){const xe=EVM[r.pend.id];if(!xe){r.pend=null;simStep(r);continue}
    const cx=evCtx(r),ops=xe.o.map((o,i)=>i).filter(i=>!xe.o[i].req||xe.o[i].req(cx)),h=(cx.tr("번뜩임")||cx.tr("예민함"))?xe.o.findIndex(o=>o.ok):-1;
-   const Ws=x.T0+r.seq.length*XSTEP+c*CHOICE_MS,Wd=Ws+CHOICE_MS;
-   L.push(r.seq.length);r.ch={id:r.pend.id,v:r.pend.v,k:c,until:Wd,ops,h};
-   if(c>=resolved){wait={c,Ws,Wd};break}resolveChoice(r,picks[c]||[]);c++}});
+   L.push(r.seq.length);
+   if(c>=resolved){let Ws,Wd;if(prev&&Number(prev.c)===c&&typeof prev.Wd==="number"){Ws=prev.Ws;Wd=prev.Wd}else{Wd=wall+CHOICE_MS;Ws=Wd-CHOICE_MS}
+    r.ch={id:r.pend.id,v:r.pend.v,k:c,until:Wd,ops,h};wait={c,Ws,Wd};break}
+   r.ch={id:r.pend.id,v:r.pend.v,k:c,until:wall,ops,h};resolveChoice(r,picks[c]||[]);c++}});
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
  return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(Math.max(0,r.seq.length-1))+800}}
 /* lock=true(기본): 의도 퇴장·확정 실패. C.ms·XR.gone 으로 같은 출정 재바인딩을 막는다.
@@ -185,14 +186,10 @@ let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMissT=null,xrMode="",xrKey
 /* xr 빈 응답 대기는 X_FETCH_GIVEUP 과 같게 둔다. expireMarch 가 최대 ~1분 늦을 수 있고, T0 calc 킥·분 주기 스케줄이 그 안에 기록을 만든다. */
 const X_XR_CD=10000,X_XR_MISS=X_FETCH_GIVEUP;
 function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}if(xrMissT){clearTimeout(xrMissT);xrMissT=null}xrMode="";xrKey="";xrMissAt=0}
-/* 투표 마감 후 결과 계산은 서버(roomCalc·expireMarch)가 한다. 클라는 calc=1 로만 깨운다.
-   파티원 누구나 X_VOTE_GRACE(표 마감+1초) 뒤부터 요청하고, X_VOTE_CALC_GAP 마다 0→1 로 다시 깨운다. */
+/* 투표 마감 집계는 서버(xVoteDue Task + live/x due + expireMarch). 클라는 xr 미생성 시에만 calc 로 보조 깨운다. */
 function xAskCalc(x,mark,flip){if(!x||!mark||xCalcAsk===mark)return;const prev=xCalcAsk;xCalcAsk=mark;const ref=DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc");
  const go=()=>ref.set(1).catch(()=>{if(xCalcAsk===mark)xCalcAsk=""});
  if(flip&&prev)ref.set(0).then(go).catch(go);else go()}
-function xAskVoteCalc(x,doc){if(!doc||!doc.wait||!(doc.r&&doc.r.pl&&doc.r.pl[UID]))return;const Wd=Number(doc.wait.Wd),grace=typeof X_VOTE_GRACE==="number"?X_VOTE_GRACE:1000,gap=typeof X_VOTE_CALC_GAP==="number"?X_VOTE_CALC_GAP:5000;
- if(!Number.isFinite(Wd)||xNow()<Wd+grace)return;
- const slot=Math.floor((xNow()-(Wd+grace))/gap),mark=x.id+"_w"+doc.wait.c+"_"+slot;xAskCalc(x,mark,slot>0)}
 function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
  const path="rooms/xr"+s+"_"+i;
  /* 출발 직후 서버가 xr 을 쓰기 전 live 가 빈 값을 줄 수 있다. X_FETCH_GIVEUP 동안 구독을 유지한다.
@@ -231,10 +228,8 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
    if(prev&&String(prev).indexOf("boot_"+x.id+"_")===0)ref.set(0).then(go).catch(go);else go()}
   if(late>X_FETCH_GIVEUP){stopXr();xAbandon(xWhyFetch(x,late),false);return}
   return}
- const doc=XR.res;
- xGrant(x);if(XR&&XR.id===x.id&&XR.fin)return;
- xAskVoteCalc(x,doc)}
-/* 마을·목록에서 돌아올 때 xChK/xMyV 를 비우지 않는다. 비우면 같은 wait 인데도 투표 UI 가 새로 열린 것처럼 보인다. */
+ xGrant(x)}
+/* 표시만. wait/Wd 는 서버 xr, 내 표는 xv. 마을 복귀 때 키·표를 비우지 않는다. */
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
@@ -248,17 +243,17 @@ function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!
  if(!X||!X.res){const why=X&&X.gone?(X.why||"이번 출정에는 참가하지 못했다."):"",who=xWho(ids,pl);$("#xs").textContent=why||(now<x.T0?"전투 "+x.total+"번 예정 · "+who+" · "+(now<x.close?"마감까지 "+xFmt(x.close-now)+" · ":"참가 마감 · ")+"출발까지 "+xFmt(x.T0-now):"출발 준비 중... · "+who);
   const mark=why?"g":"1";if(g.dataset.w!==mark){g.dataset.w=mark;g.innerHTML="";g.appendChild(elT("p","",why||"출발을 기다리고 있다."))}cv.hidden=true;return}
  g.dataset.w="";const R0=X.res,r=R0.r,w=R0.wait,at=i=>Array.isArray(R0.lineAt)?R0.lineAt[i]:R0.lineAt(i);let n=0;while(n<r.seq.length&&at(n)<=now)n++;
+ /* wait 가 열려 있으면 연출 lineAt 때문에 투표 UI 가 가려지지 않게 문장을 다 보여 준다. */
+ if(w)n=Math.max(n,r.seq.length);
  if(X.drawn!==n||X.fd!==!!X.fin){X.drawn=n;X.fd=!!X.fin;g.innerHTML=r.seq.slice(0,n).map(t=>"<p>"+t+"</p>").join("")||"<p>출발한다...</p>";if(X.fin&&n>=r.seq.length)g.innerHTML+=X.fin}
- $("#xs").textContent=(X.fin?"출정 종료":w&&n>=r.seq.length?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중")+" · "+xWho(ids,pl);
- if(w&&n>=r.seq.length&&now<w.Wd&&X.pl[UID]&&r.ch&&EVM[r.ch.id]){const k=x.id+"_"+w.c,mark=()=>{row.querySelectorAll(".chip").forEach((c,n)=>{const on=xMyV!=null&&r.ch.ops[n]===xMyV;c.disabled=xMyV!=null;c.setAttribute("aria-pressed",on?"true":"false")})};let row;
-  if(xChK!==k){xChK=k;xMyV=null;cv.hidden=false;cv.innerHTML="";const xe=EVM[r.ch.id];cv.appendChild(elT("p","choice-q",vtx(xe.q,r.ch.v)));row=elT("div","row");
+ $("#xs").textContent=(X.fin?"출정 종료":w?(now<w.Wd?"선택의 순간":"표를 세는 중"):"출정 중")+" · "+xWho(ids,pl);
+ /* 키 = 출정+c+Wd. Wd 가 안 바뀌면 재마운트 없음. 표는 xv 에서만 복구. */
+ if(w&&now<w.Wd&&X.pl[UID]&&r.ch&&EVM[r.ch.id]){const k=x.id+"_"+w.c+"_"+w.Wd,mark=()=>{const row=cv.querySelector(".row");if(!row)return;row.querySelectorAll(".chip").forEach((c,n)=>{const on=xMyV!=null&&r.ch.ops[n]===xMyV;c.disabled=xMyV!=null;c.setAttribute("aria-pressed",on?"true":"false")})};
+  if(xChK!==k){xChK=k;xMyV=null;cv.hidden=false;cv.innerHTML="";const xe=EVM[r.ch.id];cv.appendChild(elT("p","choice-q",vtx(xe.q,r.ch.v)));const row=elT("div","row");
    r.ch.ops.forEach(i=>{const o=xe.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(r.ch.h===i?" ✦":""));b.type="button";b.setAttribute("aria-pressed","false");
-    b.onclick=async()=>{if(xNow()>=w.Wd||xMyV!=null)return;xMyV=i;mark();try{/* 표는 xv 경로에 한 번만 고정. ts 는 클라 xNow(서버 보정) — 마감 후 표 판정에 쓴다. */
-     const saved=await DB.doc(xVote(x.id,w.c)+"/"+UID).transact(c=>{if(c&&typeof c==="object"&&typeof c.i==="number")return;return{i,ts:xNow()}});const kept=saved&&typeof saved.i==="number"?saved.i:i;xMyV=kept;mark()}catch(e){if(xMyV===i)xMyV=null;mark()}};row.appendChild(b)});
+    b.onclick=async()=>{if(xNow()>=w.Wd||xMyV!=null)return;xMyV=i;mark();try{const saved=await DB.doc(xVote(x.id,w.c)+"/"+UID).transact(c=>{if(c&&typeof c==="object"&&typeof c.i==="number")return;return{i,ts:xNow()}});xMyV=saved&&typeof saved.i==="number"?saved.i:i;mark()}catch(e){if(xMyV===i)xMyV=null;mark()}};row.appendChild(b)});
    cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""));
-   /* 마을 갔다가 돌아오면 UI 만 다시 그릴 수 있으니, 이미 보낸 표를 읽어 선택 완료 상태로 맞춘다. */
-   DB.doc(xVote(x.id,w.c)+"/"+UID).get().then(sn=>{if(xChK!==k)return;const d=sn.exists?sn.data():null;if(d&&typeof d.i==="number"){xMyV=d.i;const r0=cv.querySelector(".row");if(r0){row=r0;mark()}}}).catch(()=>{})}
-  else row=cv.querySelector(".row");
+   DB.doc(xVote(x.id,w.c)+"/"+UID).get().then(sn=>{if(xChK!==k)return;const d=sn.exists?sn.data():null;if(d&&typeof d.i==="number"){xMyV=d.i;mark()}}).catch(()=>{})}
   cv.hidden=false;const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;if(!w)xChK=""}}
 /* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub 로 보낸다.
