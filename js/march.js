@@ -153,14 +153,17 @@ function xQuit(){const j=C&&C.mj;const done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 자리를 서버에서 찾지 못했다. 참가가 저장되지 않았거나 출발 전에 지워져 출발하지 못했다.";if(jtOf(mine)>x.close)return x.nm+" 출정은 서버에 기록된 참가 시각이 마감("+xHM(x.close)+") 이후라 출발하지 못했다. 마감 전에 눌렀다면 기기 시각이 서버보다 느린지 확인해 보자.";return "마감 전에 먼저 참가한 "+XMAX+"명이 차서 "+x.nm+" 출정에 들어가지 못했다. 이번 출정은 정원 "+XMAX+"명이다."}
 /* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
    live 가 거절되면 POLL_FAST 간격으로 묻고, X_XR_CD 뒤 다시 live 를 연다(목록용 20초보다 짧게). */
-let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMode="",xrKey="";
-const X_XR_CD=10000;
-function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}xrMode="";xrKey=""}
+let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMissT=null,xrMode="",xrKey="",xrMissAt=0;
+const X_XR_CD=10000,X_XR_MISS=30000;
+function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}if(xrMissT){clearTimeout(xrMissT);xrMissT=null}xrMode="";xrKey="";xrMissAt=0}
 function xLead(pl){return Object.keys(pl||{}).sort()[0]||""}
 function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
  const path="rooms/xr"+s+"_"+i;
+ /* 출발 직후 서버가 xr 을 쓰기 전 live 가 빈 값을 줄 수 있다. 바로 포기하지 않고 X_XR_MISS 동안 구독을 유지한다.
+    live 가 null 을 한 번만 보내도 타이머로 포기 시각을 맞춘다. 그사이 문서가 오면 타이머를 끈다. */
  const onDoc=sn=>{if(!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;const x=xInfo(s,i);
-  if(!sn.exists){stopXr();xAbandon(x.nm+" 출정 기록이 정리되어 방에서 나왔다.");return}
+  if(!sn.exists){if(!xrMissAt){xrMissAt=Date.now();if(xrMissT)clearTimeout(xrMissT);xrMissT=setTimeout(()=>{xrMissT=null;if(xrKey!==key||!C||!C.mj||C.mj.s!==s||C.mj.i!==i||!xrMissAt)return;if(XR&&XR.id===C.mj.id&&XR.res&&XR.res.r){xrMissAt=0;return}const xx=xInfo(s,i);stopXr();xAbandon(xx.nm+" 출정 기록이 정리되어 방에서 나왔다.")},X_XR_MISS)}return}
+  xrMissAt=0;if(xrMissT){clearTimeout(xrMissT);xrMissT=null}
   const doc=sn.data();if(!doc)return;
   if(doc.empty){stopXr();xAbandon(x.nm+" 출정에 함께할 파티가 없어 출발하지 못했다.");return}
   if(!doc.r)return;

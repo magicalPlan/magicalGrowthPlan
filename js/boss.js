@@ -69,12 +69,15 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const
  const now=Date.now(),pt=bpAt(b.id,now),nx=bpAt(b.id,bpEnd(now)),pb=elT("div","bp-box");
  pb.append(elT("p","bp-now",pt.ic+" "+pt.nm),elT("p","bp-ds",pt.ds),elT("p","bp-next",hm(bpEnd(now))+"까지 · 다음: "+nx.ic+" "+nx.nm));c.appendChild(pb);
  clearTimeout(bpT[k]);bpT[k]=setTimeout(()=>{if(!$("#v-boss").hidden)drawBoss(k,b,bossLast[k]||list)},bpEnd(now)-now+800);
- const left=cfg.t-C.wb[k],off=!!C.fall||C.dz>=90||left<=0;
- c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?(k==="d"?"이번 보스 공격 횟수를 다 썼다":"오늘 공격 횟수를 다 썼다"):"대응을 골라 공격한다 · "+(k==="d"?"":"오늘 ")+left+"/"+cfg.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
+ const left=cfg.t-C.wb[k],off=!!C.fall||C.dz>=90||left<=0||!!hitBusy;
+ c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?(k==="d"?"이번 보스 공격 횟수를 다 썼다":"오늘 공격 횟수를 다 썼다"):hitBusy?"공격하는 중...":"대응을 골라 공격한다 · "+(k==="d"?"":"오늘 ")+left+"/"+cfg.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off;bt.onclick=()=>{row.querySelectorAll("button").forEach(z=>z.disabled=true);hitBoss(k,bt,a)};row.appendChild(bt)});c.appendChild(row);
  if(bScaled(k,b.id)||k==="d"){const wait=bossTopN==null&&!list.length,est=bScaled(k,b.id)?bossHpEst(k):dHpNow();c.appendChild(elT("p","boss-info","체력: 첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+est.toLocaleString()+")")))}
  c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
-async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOSS[k],m=$("#bsm");bossDay();if(C.fall||C.dz>=90||C.wb[k]>=cfg.t)return;bt.disabled=true;const pt=bpAt(b.id,Date.now()),ef=bpEff(pt,act),good=pt.best===act;
+/* 공격 중 hitBusy. await 동안 drawBoss 가 버튼을 다시 그려도 잠가 둔다. 연타 시 기록·meta 가 두 번 쓰이는 일을 막는다.
+   (쓰기 자체는 내 칸 set + meta 합계 두 통신이 정상이다. 문제는 공격 동작이 두 번 들어가는 쪽이다.) */
+let hitBusy=false;
+async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOSS[k],m=$("#bsm");bossDay();if(hitBusy||C.fall||C.dz>=90||C.wb[k]>=cfg.t)return;hitBusy=true;if(bt)bt.disabled=true;const pt=bpAt(b.id,Date.now()),ef=bpEff(pt,act),good=pt.best===act;
  try{if(bScaled(k,b.id)){await hitBossFast(k,b,cfg,m,pt,ef,good,act);return}
   await bossTopPw();const list=await bossList(b),mine=list.find(v=>v.u===UID)||{},p=Number(mine.p)||pw(),hp=bossDead(k,list,b.id)?0:bhp(k,mine.u?list:list.concat([{p}]),b.id)-sumHits(list);
   if(hp<=0){m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawBoss(k,b,list);return}
@@ -84,7 +87,8 @@ async function hitBoss(k,bt,act){act=BA[act]?act:"str";const b=bossOf(k),cfg=BOS
   const say=good?(act==="def"?" 반격을 막고 되받아쳤다!":act==="weak"?" 모인 마력을 꿰뚫었다! 약점 적중!":" 빈틈에 강타가 꽂혔다!"):act==="str"&&pt.id==="charge"?" 돌진에 반격당했다!":act==="weak"?" 약점을 찾지 못했다.":act==="def"?" 조심스럽게 싸웠다.":"";
   m.style.color="var(--mu)";m.textContent=BA[act].ic+" "+BA[act].nm+" → "+pt.ic+" "+pt.nm+":"+say+" "+b.def[0]+"에게 "+d+"의 피해"+(weak?" (약점 속성!)":"")+(fire?" (홍련의 일격!)":"")+". 골드 +"+cfg.hit+", 절망도 +"+dz+"."+(mt?" "+mt+".":"")+(hp-d<=0?" 보스를 쓰러뜨렸다! 처치 보상을 받자.":"");
   drawBoss(k,b,await bossList(b))}
- catch(e){m.style.color="var(--bad)";m.textContent=bossWhy(e);drawBoss(k,b,bossLast[k]||[])}}
+ catch(e){m.style.color="var(--bad)";m.textContent=bossWhy(e);drawBoss(k,b,bossLast[k]||[])}
+ finally{hitBusy=false;if(!$("#v-boss").hidden)drawBoss(k,b,bossLast[k]||[])}}
 async function hitBossFast(k,b,cfg,m,pt,ef,good,act){const id=b.id,read=await bossHitRead(id);let meta=read.meta,mine=read.mine;
  if(!meta){let list=null,failed=false;try{list=await bossList(b)}catch(e){failed=true;list=(bossLast[k]||[]).slice()}if(failed&&!list.length)throw new Error("timeout");if(!list.some(v=>Number(v&&v.hp0)>0))await bossTopPw();const hpSeed=bhp(k,list,id);if(!(hpSeed>0))throw new Error("timeout");bossMetaNote(id,list,hpSeed);meta=bossSnap[id];if(!mine)mine=list.find(v=>v&&v.u===UID)||null}
  const hp0=Number(meta&&meta.hp0)||0,sum=Number(meta&&meta.sum)||0;
