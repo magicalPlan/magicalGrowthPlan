@@ -148,16 +148,24 @@ function xQuitOpen(x){if(!C||!C.mj||!x||C.mj.id!==x.id)return false;const now=Da
 function xQuit(){const j=C&&C.mj;if(!j)return;if(!confirm("이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;C.ms=j.id;xAbandon("출정에서 직접 나왔다.");if(!$("#v-xm").hidden)openRooms()}
 /* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 자리를 서버에서 찾지 못했다. 참가가 저장되지 않았거나 출발 전에 지워져 출발하지 못했다.";if(jtOf(mine)>x.close)return x.nm+" 출정은 서버에 기록된 참가 시각이 마감("+xHM(x.close)+") 이후라 출발하지 못했다. 마감 전에 눌렀다면 기기 시각이 서버보다 느린지 확인해 보자.";return "마감 전에 먼저 참가한 "+XMAX+"명이 차서 "+x.nm+" 출정에 들어가지 못했다. 이번 출정은 정원 "+XMAX+"명이다."}
-/* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다. */
-let xCalcAsk="",unXr=null,xrKey="";
-function stopXr(){if(unXr)unXr();unXr=null;xrKey=""}
+/* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
+   live 가 거절되면 POLL_FAST 간격으로 묻고, X_XR_CD 뒤 다시 live 를 연다(목록용 20초보다 짧게). */
+let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMode="",xrKey="";
+const X_XR_CD=10000;
+function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}xrMode="";xrKey=""}
 function xLead(pl){return Object.keys(pl||{}).sort()[0]||""}
-function watchXr(s,i){const key=s+"_"+i;if(unXr&&xrKey===key)return;stopXr();xrKey=key;if(!XON())return;
- unXr=DB.doc("rooms/xr"+s+"_"+i).live().onSnapshot(sn=>{if(!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;const doc=sn.exists?sn.data():null;if(!doc)return;const x=xInfo(s,i);
+function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
+ const path="rooms/xr"+s+"_"+i;
+ const onDoc=sn=>{if(!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;const doc=sn.exists?sn.data():null;if(!doc)return;const x=xInfo(s,i);
   if(doc.empty){stopXr();xAbandon(x.nm+" 출정에 함께할 파티가 없어 출발하지 못했다.");return}
   if(!doc.r)return;
   if(!doc.r.pl||!doc.r.pl[UID]){const d={};Object.keys(doc.all||{}).forEach(u=>{d[u]={jt:doc.all[u]}});stopXr();xHold();const late=Date.now()-x.T0;if(xPend&&xPend.id===x.id&&late<=X_FETCH_GIVEUP)return;if(xPend&&xPend.id===x.id)xPend=null;xAbandon(xSeatMiss(x,d));return}
-  if(xPend&&xPend.id===x.id)xPend=null;xApplyDoc(x,doc);if(!$("#v-xm").hidden)xRender()},()=>{},POLL_HUB)}
+  if(xPend&&xPend.id===x.id)xPend=null;xApplyDoc(x,doc);if(!$("#v-xm").hidden)xRender()};
+ const armLive=()=>{if(unXr){try{unXr()}catch(e){}}unXr=null;xrMode="live";
+  unXr=DB.doc(path).live().onSnapshot(onDoc,()=>{if(xrKey!==key||xrMode!=="live")return;xrMode="poll";if(unXr){try{unXr()}catch(e){}}unXr=null;
+   if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=DB.doc(path).onSnapshot(onDoc,()=>{},POLL_FAST);
+   if(xrRetryT)clearTimeout(xrRetryT);xrRetryT=setTimeout(()=>{if(xrKey!==key||!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;armLive()},X_XR_CD)},0)};
+ armLive()}
 function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=doc.picks||[];XR.res=doc;const j=C&&C.mj;
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}

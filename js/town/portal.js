@@ -2,7 +2,9 @@
    마을 화면은 hubPortal 과 pTick 을, 알림은 portalView 를 그대로 부른다.
    참가 명단은 열린 포탈만 먼저 한 번씩 읽어 그린 뒤에 연결한다. 마을·포탈 화면이 열려 있는 동안만 연결하고, 사람이 늘거나 치유가 바뀔 때만 받는다.
    치유도 출동과 같이 내 칸(portal/{포탈}/h/{나})만 쓰고, 끝난 뒤 포탈 전체를 다시 받지 않는다. 연결이 옛 내용을 가져와도 내 치유 칸은 덮지 않는다.
-   시작 시각은 서버에도 남기고, 이 기기(C.ph)에도 두어 연결이 늦어도 1분 뒤 완료를 누를 수 있다. */
+   시작 시각은 서버에도 남기고, 이 기기(C.ph)에도 두어 연결이 늦어도 1분 뒤 완료를 누를 수 있다.
+   포탈 화면은 캐시(pData)로 먼저 그리고, 읽기·연결은 뒤에서 이어서 한다. 치유 시작의 C.ph 는 작은 칸에 바로 두고, 전체 save 는 쓰기 뒤·idle 에 미룬다.
+   캐시로 그리는 동안에는 카드에 갱신 중을 붙여, 숫자가 잠깐 옛것일 수 있음을 알린다. */
 const pDawn=t=>{const hr=Math.floor((t/3600000+9)%24);return hr<6};
 function pInfo(h){const id="p"+h,g=rng(hs32(id)),p=n=>Math.floor(g()*n),m=p(50),v="ABCD"[p(4)],r=p(1000),T0=h*PS+m*60000,rg=pDawn(T0)?P_DAWN:P_DAY,need=rg[0]+r%(rg[1]-rg[0]+1);
  return{id,h,v,need,nm:VL[v].n+" "+PNAMES[p(PNAMES.length)],T0,G:T0+PGATHER,E:T0+PGATHER+PHEAL}}
@@ -26,10 +28,15 @@ function pClaim(x,st){if(!C||!C.pj||!C.pj[x.id]||(C.pc&&C.pc[x.id])||pNow()<x.G)
  save();checkTitles()}
 function pBtn(){const b=$("#b-portal");if(!b||!C)return;const now=pNow(),list=pCur(),g=list.find(x=>now<x.G),hl=list.find(x=>{if(!pSeen[x.id])return false;const st=pState(x,pData[x.id]);return !st.gather&&st.left>0});b.textContent=g?"마수 포탈 (열림! "+xFmt(g.G-now)+")":hl?"마수 포탈 (치유 필요)":"마수 포탈"}
 function pNote(){if(!C||!XON())return;const now=pNow();pCur().forEach(x=>{if(now>=x.G||(C.pn&&C.pn[x.id]))return;C.pn=keepIds(C.pn,x.id);save();const t="☄ "+x.nm+"이(가) 열렸다! "+xHM(x.G)+"까지 "+x.need+"명이 모여야 한다.";note("portal",t);toast(t,portalView);ding()});pBtn()}
-let pWatch={},pWatchKey="",pWatchGen=0,pWarm={},pSeen={},pMiss={},pAct="";
+let pWatch={},pWatchKey="",pWatchGen=0,pWarm={},pSeen={},pMiss={},pAct="",pRefreshing=false,pPhHydrated=false;
+const P_PH_SS="mgr_pph";
+/* C.ph 만 sessionStorage 에 바로 둔다. 전체 save 보다 가볍고, 새로고침 직후에도 치유 타이머를 이어 갈 수 있다. */
+function pPhWrite(){try{if(!C)return;sessionStorage.setItem(P_PH_SS,JSON.stringify(C.ph&&typeof C.ph==="object"?C.ph:{}))}catch(e){}}
+function pPhEnsure(){if(pPhHydrated||!C)return;pPhHydrated=true;try{const j=JSON.parse(sessionStorage.getItem(P_PH_SS)||"{}");if(!j||typeof j!=="object")return;C.ph=C.ph||{};Object.keys(j).forEach(id=>{if(!C.ph[id]&&j[id]&&typeof j[id]==="object")C.ph[id]=j[id]})}catch(e){}}
 function pWatchStop(){pWatchGen++;Object.keys(pWatch).forEach(id=>{try{pWatch[id]()}catch(e){}delete pWatch[id]});pWatchKey="";pWarm={}}
-function pMine(id){const a=(pData[id]&&pData[id].h&&pData[id].h[UID])||{},b=(C&&C.ph&&C.ph[id])||{};const s=typeof a.s==="number"?a.s:(typeof b.s==="number"?b.s:null);
+function pMine(id){pPhEnsure();const a=(pData[id]&&pData[id].h&&pData[id].h[UID])||{},b=(C&&C.ph&&C.ph[id])||{};const s=typeof a.s==="number"?a.s:(typeof b.s==="number"?b.s:null);
  return{u:a.u||UID,n:a.n||(typeof nmOf==="function"?nmOf():(C&&C.n)||""),k:Number(a.k)||Number(b.k)||0,amt:Number(a.amt)||Number(b.amt)||0,per:Number(a.per)||Number(b.per)||(pHealer()?6:3),s:s}}
+function pStale(id){return!!(pWarm[id]||pRefreshing)}
 function pKeepMine(id,data){if(!UID||!pData[id])return data;data=data&&typeof data==="object"?data:{};
  if(pAct===id+"/j"&&pData[id].j&&pData[id].j[UID]){data=Object.assign({},data);data.j=Object.assign({},data.j||{},{[UID]:pData[id].j[UID]})}
  const loc=pData[id].h&&pData[id].h[UID],rem=data.h&&data.h[UID];
@@ -60,9 +67,9 @@ function hubPortal(){const box=$("#hpo");if(!box||!C)return;box.innerHTML="";if(
  if(!list.length){box.appendChild(elT("p","hint","지금 열린 포탈이 없다. 한 시간에 한 번, 예고 없이 열린다."));return}
  list.forEach(x=>{const seen=!!pSeen[x.id],st=pState(x,pData[x.id]),w=elT("div","dq"+(seen&&st.gather?" done":"")),cp=elT("div","dq-copy");let lab;
   if(!seen){cp.append(elT("b","","☄ "+x.nm),elT("small","","인원을 불러오는 중..."));lab="보기"}
-  else if(st.gather){const sp=elT("small","",x.need+"명 필요 · "+st.joined.length+"명 출동 · 마감까지 ");const t=elT("b","",xFmt(x.G-now));t.style.display="inline";t.dataset.pt=x.G;sp.appendChild(t);cp.append(elT("b","","☄ "+x.nm),sp);lab=st.joined.includes(UID)?"출동함":"출동"}
-  else if(st.win){cp.append(elT("b","",x.nm),elT("small","","토벌 성공 · "+st.joined.length+"명이 함께했다"));lab="보기"}
-  else{cp.append(elT("b","",x.nm),elT("small","",st.left>0?"부상자 "+st.left+"명 남음 · 치유가 필요하다":"부상자를 모두 치유했다"));lab=st.left>0?"치유":"보기"}
+  else if(st.gather){const sp=elT("small","",x.need+"명 필요 · "+st.joined.length+"명 출동 · 마감까지 ");const t=elT("b","",xFmt(x.G-now));t.style.display="inline";t.dataset.pt=x.G;sp.appendChild(t);cp.append(elT("b","","☄ "+x.nm),sp);if(pStale(x.id))cp.appendChild(elT("small","","갱신 중"));lab=st.joined.includes(UID)?"출동함":"출동"}
+  else if(st.win){cp.append(elT("b","",x.nm),elT("small","","토벌 성공 · "+st.joined.length+"명이 함께했다"));if(pStale(x.id))cp.appendChild(elT("small","","갱신 중"));lab="보기"}
+  else{cp.append(elT("b","",x.nm),elT("small","",st.left>0?"부상자 "+st.left+"명 남음 · 치유가 필요하다":"부상자를 모두 치유했다"));if(pStale(x.id))cp.appendChild(elT("small","","갱신 중"));lab=st.left>0?"치유":"보기"}
   const b=elT("button","chip",lab);b.type="button";b.onclick=portalView;w.append(cp,b);box.appendChild(w)})}
 /* 초마다 숫자만 고치면, 집결이 끝나도 출동 버튼이 남고 치유 1분이 지나도 완료 버튼이 안 켜진다.
    단계가 바뀔 때만 버튼을 다시 그린다. 포탈이 새로 열리면 그때 연결도 연다. */
@@ -72,7 +79,17 @@ setInterval(()=>{if(!C||document.hidden)return;const ph=pPhase(),ch=ph!==pPhaseW
  if(!$("#v-portal").hidden){if(ch)pRender();else pRender(true)}
  if(!$("#v-hub").hidden){if(ch)hubPortal();else{const now=pNow();document.querySelectorAll("#hpo [data-pt]").forEach(e=>e.textContent=xFmt(Number(e.dataset.pt)-now))}}
  pBtn()},1000);
-function portalView(){show("portal");$("#pm").textContent="";pTick().then(()=>pRender())}
+/* 진입: 이미 받은 pData·C.ph 로 바로 그린 뒤, pTick(읽기·연결)은 백그라운드에서 돌린다.
+   그동안 pRefreshing 으로 카드에 갱신 중을 붙여, 캐시 숫자가 잠깐 옛것일 수 있음을 알린다. */
+function portalView(){show("portal");$("#pm").textContent="";pPhEnsure();pRefreshing=true;pRender();
+ Promise.resolve(pTick()).then(()=>{pRefreshing=false;if(!$("#v-portal").hidden)pRender()}).catch(()=>{pRefreshing=false})}
+/* 치유 등에서 전체 save() 를 누르자마자 하면 저사양에서 메인 스레드가 잠깐 멈춘다.
+   시작은 pPhWrite(작은 칸)만 바로 하고, 계정 전체 save 는 쓰기 성공 뒤 idle 로 미룬다. 실패·롤백은 바로 save 한다. */
+let pSaveT=null;
+function pSaveCancel(){if(pSaveT==null)return;try{if(typeof cancelIdleCallback==="function")cancelIdleCallback(pSaveT)}catch(e){}try{clearTimeout(pSaveT)}catch(e){}pSaveT=null}
+function pSaveSoon(){if(pSaveT!=null)return;const run=()=>{pSaveT=null;try{if(typeof save==="function")save()}catch(e){};pPhWrite()};
+ if(typeof requestIdleCallback==="function")pSaveT=requestIdleCallback(run,{timeout:800});else pSaveT=setTimeout(run,0)}
+function pSaveNow(){pSaveCancel();try{if(typeof save==="function")save()}catch(e){}pPhWrite()}
 function pSay(t,bad){const m=$("#pm");m.style.color=bad?"var(--bad)":"var(--mu)";m.textContent=t}
 function pWhy(what,e){const c=String(e&&e.message||e);if(c==="403")return what+"하지 못했다. 서버 규칙에서 portal 경로가 막혀 있다.";if(c==="401")return what+"하지 못했다. 로그인이 만료되었다. 새로고침한 뒤 다시 로그인해 보자.";if(c==="timeout"||/abort/i.test(c))return what+"하지 못했다. 서버 응답이 20초 안에 오지 않았다. 잠시 뒤에 다시 눌러 보자.";if(c==="offline"||/failed to fetch|network|offline/i.test(c))return what+"하지 못했다. 네트워크에 연결되지 않았다.";return what+"하지 못했다. ("+c.replace(/\s+/g," ").slice(0,40)+")"}
 async function pJoin(x){if(pAct)return;if(AUTH.uid&&UID!==AUTH.uid)UID=AUTH.uid;if(!AUTH.uid||!XON())return pSay("서버에 로그인되어야 출동할 수 있다.",1);if(C.fall)return pSay("타락한 동안에는 포탈에 갈 수 없다.",1);if(C.dz>=90)return pSay("절망도가 너무 높아 싸울 수 없다.",1);if(pNow()>=x.G){pRender();return pSay("이미 집결 시간이 끝났다.",1)}
@@ -83,17 +100,18 @@ async function pJoin(x){if(pAct)return;if(AUTH.uid&&UID!==AUTH.uid)UID=AUTH.uid;
  catch(e){if(prev)d.j[UID]=prev;else delete d.j[UID];pSay(pWhy("출동",e),1)}
  finally{if(pAct===x.id+"/j")pAct="";pRender()}}
 /* 치유: 시작은 s 시각만 남기고, 완료는 치유한 인원만 올린다. 둘 다 내 칸만 쓴다. 포탈 전체를 다시 읽지 않는다(출동과 같음).
-   완료 때 더하는 인원은 남은 부상자 수를 넘지 않는다. */
+   완료 때 더하는 인원은 남은 부상자 수를 넘지 않는다.
+   시작: C.ph 는 pPhWrite 로 바로 두고, 전체 save 는 서버 성공 뒤 pSaveSoon. 실패 롤백은 pSaveNow. */
 async function pHeal(x,fin){if(pAct)return;if(AUTH.uid&&UID!==AUTH.uid)UID=AUTH.uid;if(!AUTH.uid||!XON())return pSay("서버에 로그인되어야 치유할 수 있다.",1);
  const d=pData[x.id]=pData[x.id]||{},mine=pMine(x.id),k=mine.k,amt=mine.amt,per=mine.per,st=pState(x,d),now=pNow();
  if(now>=x.E)return pSay("치유할 수 있는 시간이 끝났다.",1);if(st.left<=0)return pSay("다친 주민이 모두 치유되었다.");if(k>=PHEAL_MAX)return pSay("이 포탈에서는 이미 3번 치유했다.",1);
  if(fin&&(typeof mine.s!=="number"||now-mine.s<PHEAL_WAIT))return pSay("아직 치유 중이다. 남은 시간이 끝난 뒤에 완료를 누르자.",1);
- const prev=(d.h&&d.h[UID])||null;pAct=x.id+"/h";pRender();
-  try{if(!fin){const row={u:UID,n:nmOf(),k,amt,per,s:now};(d.h=d.h||{})[UID]=row;C.ph=C.ph||{};C.ph[x.id]={k,amt,per,s:now};Object.keys(C.ph).slice(0,-4).forEach(k=>delete C.ph[k]);save();
-  await DB.doc("portal/"+x.id+"/h/"+UID).set({u:UID,n:nmOf(),k,amt,per,s:{".sv":"timestamp"}});pSay("치유를 시작했다. 1분 뒤에 '치유 완료'를 누르자.")}
-  else{const add=Math.min(per,st.left),row={u:UID,n:nmOf(),k:k+1,amt:amt+add,per};(d.h=d.h||{})[UID]=row;if(C.ph)delete C.ph[x.id];
-   await DB.doc("portal/"+x.id+"/h/"+UID).set(row);C.gd=(C.gd||0)+15;titleState();C.stats.heals=(C.stats.heals||0)+1;gain(5,-3);guardAdd(10);save();checkTitles();pSay("주민 "+add+"명을 치유했다. 골드 15, 마을 점수 10. 마음이 조금 가벼워졌다.")}}
- catch(e){if(prev)(d.h=d.h||{})[UID]=prev;else if(d.h)delete d.h[UID];if(!fin&&C&&C.ph)delete C.ph[x.id];pSay(pWhy("치유",e),1)}
+ const prev=(d.h&&d.h[UID])||null,prevPh=C&&C.ph&&C.ph[x.id]?Object.assign({},C.ph[x.id]):null;pAct=x.id+"/h";pRender();
+ try{if(!fin){const row={u:UID,n:nmOf(),k,amt,per,s:now};(d.h=d.h||{})[UID]=row;C.ph=C.ph||{};C.ph[x.id]={k,amt,per,s:now};Object.keys(C.ph).slice(0,-4).forEach(k=>delete C.ph[k]);pPhWrite();
+  await DB.doc("portal/"+x.id+"/h/"+UID).set({u:UID,n:nmOf(),k,amt,per,s:{".sv":"timestamp"}});pSaveSoon();pSay("치유를 시작했다. 1분 뒤에 '치유 완료'를 누르자.")}
+  else{const add=Math.min(per,st.left),row={u:UID,n:nmOf(),k:k+1,amt:amt+add,per};(d.h=d.h||{})[UID]=row;if(C.ph)delete C.ph[x.id];pPhWrite();
+   await DB.doc("portal/"+x.id+"/h/"+UID).set(row);C.gd=(C.gd||0)+15;titleState();C.stats.heals=(C.stats.heals||0)+1;gain(5,-3);guardAdd(10);checkTitles();pSaveSoon();pSay("주민 "+add+"명을 치유했다. 골드 15, 마을 점수 10. 마음이 조금 가벼워졌다.")}}
+ catch(e){if(prev)(d.h=d.h||{})[UID]=prev;else if(d.h)delete d.h[UID];if(C){C.ph=C.ph||{};if(prevPh)C.ph[x.id]=prevPh;else delete C.ph[x.id]}pSaveNow();pSay(pWhy("치유",e),1)}
  finally{if(pAct===x.id+"/h")pAct="";pRender()}}
 function pRender(timeOnly){const box=$("#pl3");if(!box||!C)return;const now=pNow(),list=pCur().sort((a,b)=>b.T0-a.T0);
  if(timeOnly){box.querySelectorAll("[data-pt]").forEach(e=>{const t=Number(e.dataset.pt);e.textContent=xFmt(t-now)});return}
@@ -103,6 +121,7 @@ function pRender(timeOnly){const box=$("#pl3");if(!box||!C)return;const now=pNow
   const cd=(lab,t)=>{const p=elT("p","hint",lab+" ");const s=elT("b","",xFmt(t-now));s.dataset.pt=t;p.appendChild(s);return p};
   c.append(elT("p","boss-tag",VL[x.v].n+"에 열린 포탈"),elT("h2","",x.nm));
   if(!seen){c.appendChild(elT("p","hint","인원을 불러오는 중..."));box.appendChild(c);return}
+  if(pStale(x.id))c.appendChild(elT("p","hint","갱신 중 · 방금 본 내용일 수 있다"));
   if(st.gather){c.append(elT("p","","필요 인원 "+x.need+"명 · 모인 인원 "+st.joined.length+"명"),cd("집결 마감까지",x.G));
    const bar=elT("div","bar"),f=elT("i");f.style.width=Math.min(100,st.joined.length/x.need*100)+"%";bar.appendChild(f);c.appendChild(bar);
    if(st.joined.length)c.appendChild(elT("p","boss-info","출동: "+st.joined.map(u=>cn(u,st.j[u].n)).join(", ")));

@@ -86,6 +86,36 @@ async function readXVotes(db, id, wait, pl) {
   return picks;
 }
 
+/* 선택 이후에는 이미 받은 문장·시각은 그대로 두고, 새로 쌓인 seq/lineAt 칸과 바뀐 메타만 update 한다.
+   첫 기록·빈 출정은 set 으로 통째로 쓴다. */
+async function writeExpeditionPatch(ref, prev, doc) {
+  const next = plain(doc);
+  const prevSeq = (prev && prev.r && Array.isArray(prev.r.seq)) ? prev.r.seq.length : 0;
+  const prevAt = (prev && Array.isArray(prev.lineAt)) ? prev.lineAt.length : 0;
+  if (!prev || !prev.r || prevSeq === 0) {
+    await ref.set(next);
+    return;
+  }
+  const r = next.r || {};
+  const seq = Array.isArray(r.seq) ? r.seq : [];
+  const lineAt = Array.isArray(next.lineAt) ? next.lineAt : [];
+  const updates = {
+    wait: next.wait == null ? null : next.wait,
+    done: !!next.done,
+    endAt: next.endAt == null ? null : next.endAt,
+    picks: next.picks || [],
+    calc: 0,
+    all: next.all || prev.all || {}
+  };
+  Object.keys(r).forEach(k => {
+    if (k === "seq" || k === "pl") return; // 파티 자리는 첫 기록 이후 그대로 둔다.
+    updates["r/" + k] = r[k] == null ? null : r[k];
+  });
+  for (let j = prevSeq; j < seq.length; j++) updates["r/seq/" + j] = seq[j];
+  for (let j = prevAt; j < lineAt.length; j++) updates["lineAt/" + j] = lineAt[j];
+  await ref.update(updates);
+}
+
 async function stepOneExpedition(db, s, i, now) {
   const info = sim.expeditionInfo(s, i);
   if (now < info.T0) return;
@@ -127,7 +157,7 @@ async function stepOneExpedition(db, s, i, now) {
   const doc = sim.replayExpedition(info, cur.r.pl, picks);
   doc.all = cur.all || {};
   doc.calc = 0;
-  await ref.set(plain(doc));
+  await writeExpeditionPatch(ref, cur, doc);
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
   if (doc.done) await scheduleXDrop(db, s, i, now + X_DROP);
 }
