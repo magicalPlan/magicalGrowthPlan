@@ -92,13 +92,13 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    남기는 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필(사진·설정), 기록(칭호·도감·통계), 사역마(+품고 있는 알).
    시험으로 얻은 속성은 지운다. 속성은 만든 순서로 쌓이므로 맨 앞 하나만 남긴다.
    이미 받은 보상·이미 본 알림 표시도 남긴다(초기화 뒤 같은 보상을 다시 받거나 옛 알림이 다시 뜨지 않게).
-   등급은 가장 낮은 E로 되돌린다. 그 밖의 진행(레벨·경험치·골드·아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등)은 캐릭터를 처음 만든 상태로 돌린다.
-   장기 토벌(lh)·단서 탐색(clue) 진행은 남긴다. 시즌이 바뀌어도 타이머를 이어 보상을 받을 수 있게 한다.
+   등급은 가장 낮은 E로 되돌린다. 아이템·무기·각인·절망도·친구·선물·의뢰·시설 기여 등은 처음 상태로 돌린다.
+   레벨·경험치·골드와 장기 토벌(lh)·단서 탐색(clue) 진행은 남긴다.
    공용 데이터(채팅·1:1 본문과 방 목록 rooms/xd·게시판, 친구 소식·공명·선물, 마을 경쟁, 보스·웨이브·타락 레이드)는 운영자가 실행할 때 서버에서 지운다. 출정·대련 방(rooms의 xm·xv·xa·xb·xr)은 남긴다. */
 let RST=null;
-/* lh·clue: 장기 토벌·단서 탐색 진행. 회귀 때 지우면 보상 기회까지 사라져, 시즌이 바뀌어도 타이머·시드를 남긴다. */
+/* lh·clue: 장기 진행. lv·ex·xv·gd: 레벨·경험·골드(회귀로 날아가지 않게). */
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
- "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
+ "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue","lv","ex","xv","gd",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
 async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
@@ -128,12 +128,12 @@ function rstAttrs(list){const a=(Array.isArray(list)?list:[]).filter(x=>typeof A
 function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={};RST_KEEP.forEach(k=>{if(base[k]!==undefined)keep[k]=base[k]});
  keep.a=rstAttrs(keep.a);
  const next=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
- next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,100);
+ next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
  const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
 function rstApply(R,boot,one){C=rstShape(C,R.id);if(one){try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}try{clearPend()}catch(e){}}
- note("notice",one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·처음 속성·특성·사역마·장기 토벌/단서 탐색 진행과 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.":"🌑 새 시즌이 시작되었다. 이름·처음 속성·특성·사역마·장기 토벌/단서 탐색 진행과 프로필·기록은 그대로 남고, 시험으로 얻은 속성은 사라지며, 등급은 E로 돌아가 나머지는 처음부터 다시 시작한다.");
+ note("notice",one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·레벨·골드·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·레벨·골드·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.");
  save();try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}try{if(typeof raidClear==="function")raidClear()}catch(e){}
- const msg=(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 등급(E)·시험으로 얻은 속성·레벨·골드·아이템·무기·각인·절망도·친구 목록 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
+ const msg=(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 레벨·경험치·골드, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·친구 목록 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
  if(boot)setTimeout(()=>alertBox(one?"🌑 개인 회귀":"🌑 새 시즌",msg),900);else{alertBox(one?"🌑 개인 회귀":"🌑 새 시즌",msg);try{hub()}catch(e){}}}
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
@@ -157,7 +157,7 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화 표시를 저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (아무것도 바뀌지 않았다)"}btn.disabled=false}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
-  elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행은 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
+  elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 레벨·골드, 장기 토벌·단서 진행은 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
   elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
@@ -172,7 +172,7 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
  rc.append(rb,rm);box.appendChild(rc);
  const pc=elT("div","card rst-card rst-one");pc.style.marginTop="12px";pc.append(elT("h2","","👤 개인 회귀 (운영자 전용)"),
-  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 되돌린다. 이름·성별·마을·처음 고른 속성 하나·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행은 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 레벨·골드, 장기 토벌·단서 진행은 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
   elT("p","hint","접속 중이 아니어도 서버 기록을 바로 되돌린다. 접속 중이면 그 화면에도 바로 반영된다. 채팅·게시판·선물·마을·보스와 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
  const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc)}

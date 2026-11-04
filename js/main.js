@@ -141,8 +141,12 @@ function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
-function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
-/* 장기 토벌·단서: 한쪽이 정산(null)이면 null 우선. 둘 다 진행 중이면 더 늦은 t0. */
+function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];
+  /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다. */
+  if((last==="lh"||last==="clue")&&fields[path]==null&&o[last]&&typeof o[last]==="object")return;
+  if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
+/* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
+   재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
 function pickTrip(local,remote){if(local==null||local===undefined)return null;if(remote==null||remote===undefined)return null;return(Number(local.t0)||0)>=(Number(remote.t0)||0)?local:remote}
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행·더 큰 골드/경험을 합친다. */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
