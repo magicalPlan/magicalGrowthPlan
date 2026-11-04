@@ -164,12 +164,19 @@ function partyIds(info, seat) {
   const jtOf = v => typeof (v && v.jt) === "number" ? v.jt : 0;
   return Object.keys(seat || {}).filter(u => seat[u] && typeof seat[u] === "object" && jtOf(seat[u]) <= info.close).sort((a, b) => jtOf(seat[a]) - jtOf(seat[b]) || (a < b ? -1 : 1)).slice(0, XMAX);
 }
-function replayExpedition(info, pl, picks, now) {
+function replayExpedition(info, pl, picks, now, pc) {
   const r = { code: info.id, pl: {}, total: info.total, seq: [], evs: [], df: XDF[info.d].df, rw: XDF[info.d].rw, dzm: XDF[info.d].dz || 1, ab: info.d === 4 ? 1 : 0, zv: info.v };
   Object.keys(pl || {}).forEach(u => { r.pl[u] = pl[u]; });
   const L = [];
   let wait = null;
   const wall = typeof now === "number" && Number.isFinite(now) ? now : Date.now();
+  /* pc = 이미 집계·확정된 선택 수. picks 칸이 RTDB 에서 비어도 같은 c 로 다시 wait 하지 않는다. */
+  let resolved = typeof pc === "number" && Number.isFinite(pc) ? Math.max(0, Math.floor(pc)) : -1;
+  if (resolved < 0) {
+    resolved = 0;
+    const src = picks || [];
+    for (let i = 0; i < src.length; i++) if (src[i] != null) resolved = i + 1;
+  }
   seeded(hs32(info.id + "#sim"), () => {
     startSim(r);
     let c = 0;
@@ -183,16 +190,17 @@ function replayExpedition(info, pl, picks, now) {
       const Ws = Wd - CHOICE_MS;
       L.push(r.seq.length);
       r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Wd, ops, h };
-      if (picks[c] == null) { wait = { c, Ws, Wd }; break; }
-      const ballots = Array.isArray(picks[c]) ? picks[c] : (picks[c] == null ? null : [picks[c]].flatMap(x => typeof x === "number" ? [x] : []));
-      resolveChoice(r, ballots || []);
+      if (c >= resolved) { wait = { c, Ws, Wd }; break; }
+      const raw = picks && picks[c];
+      const ballots = Array.isArray(raw) ? raw : (raw == null ? [] : [raw].flatMap(x => typeof x === "number" ? [x] : []));
+      resolveChoice(r, ballots);
       c++;
     }
   });
   const lineAt = j => info.T0 + (j + 1) * XSTEP + CHOICE_MS * L.filter(l => l <= j).length;
   const lines = [];
   for (let j = 0; j < r.seq.length; j++) lines.push(lineAt(j));
-  return { r, wait, lineAt: lines, done: !!r.fin && !wait, endAt: lineAt(Math.max(0, r.seq.length - 1)) + 800, picks: picks || [] };
+  return { r, wait, lineAt: lines, done: !!r.fin && !wait, endAt: lineAt(Math.max(0, r.seq.length - 1)) + 800, picks: picks || [], pc: resolved };
 }
 
 function marchDue(room, now) {

@@ -13,13 +13,14 @@ const XS = 300000, XN = 15, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* 투표 마감 Wd 뒤 집계 여유. readXVotes 가 Wd+1000 초과 표를 버리므로 집계도 1초면 충분하다(옛 3초). */
 const X_VOTE_GRACE = 1000;
 const plain = v => JSON.parse(JSON.stringify(v));
-/* RTDB 는 중첩 배열 picks 를 객체로 돌려주는 경우가 많다.
-   Array.isArray 가 아니면 [] 로 시작해 이전 표를 잃고, 첫 선택 wait 가 다시 열려 투표가 두 번 뜨고 진행이 멈춘다. */
+/* RTDB 는 배열·빈 배열을 객체로 바꾸거나 키 자체를 지운다.
+   picks[c]==null 로 다시 wait 하면 같은 선택지가 now+15초로 재개되어 루프한다.
+   → 슬롯은 항상 비어 있지 않은 객체로 저장하고, 확정 개수 pc 로 재생한다. */
 function asPickList(v) {
   if (v == null) return null;
   if (Array.isArray(v)) return v.map(Number).filter(n => Number.isFinite(n));
   if (typeof v === "object") {
-    return Object.keys(v).map(Number).filter(Number.isFinite).sort((a, b) => a - b)
+    return Object.keys(v).filter(k => k !== "_" && Number.isFinite(Number(k))).map(Number).sort((a, b) => a - b)
       .map(k => Number(v[k])).filter(n => Number.isFinite(n));
   }
   const n = Number(v);
@@ -35,17 +36,37 @@ function normPicks(raw) {
   for (let i = 0; i <= max; i++) {
     if (raw[i] == null) continue;
     const list = asPickList(raw[i]);
-    if (list) out[i] = list;
+    /* 센티널 {_} 만 있어도 "이미 집계된 빈 표" 로 칸을 유지한다. */
+    out[i] = list || [];
   }
   return out;
 }
 function picksForStore(picks) {
   const o = {};
-  (Array.isArray(picks) ? picks : normPicks(picks)).forEach((v, i) => {
+  const src = Array.isArray(picks) ? picks : normPicks(picks);
+  src.forEach((v, i) => {
     if (v == null) return;
-    o[String(i)] = Array.isArray(v) ? v.map(Number).filter(n => Number.isFinite(n)) : asPickList(v) || [];
+    const list = Array.isArray(v) ? v.map(Number).filter(n => Number.isFinite(n)) : (asPickList(v) || []);
+    const slot = {_: 1};
+    list.forEach((n, j) => { slot[String(j)] = n; });
+    o[String(i)] = slot;
   });
   return o;
+}
+function pickCount(pc, picks) {
+  if (typeof pc === "number" && Number.isFinite(pc) && pc >= 0) return Math.floor(pc);
+  const src = Array.isArray(picks) ? picks : normPicks(picks);
+  let n = 0;
+  for (let i = 0; i < src.length; i++) if (src[i] != null) n = i + 1;
+  return n;
+}
+function seqLen(v) {
+  if (Array.isArray(v)) return v.length;
+  if (v && typeof v === "object") {
+    const ks = Object.keys(v).map(Number).filter(Number.isFinite);
+    return ks.length ? Math.max(...ks) + 1 : 0;
+  }
+  return 0;
 }
 
 async function withLock(db, key, fn) {
@@ -134,9 +155,11 @@ async function readXVotes(db, id, wait, pl) {
    첫 기록·빈 출정은 set 으로 통째로 쓴다. */
 async function writeExpeditionPatch(ref, prev, doc) {
   const next = plain(doc);
-  const prevSeq = (prev && prev.r && Array.isArray(prev.r.seq)) ? prev.r.seq.length : 0;
-  const prevAt = (prev && Array.isArray(prev.lineAt)) ? prev.lineAt.length : 0;
+  const prevSeq = seqLen(prev && prev.r && prev.r.seq);
+  const prevAt = seqLen(prev && prev.lineAt);
   if (!prev || !prev.r || prevSeq === 0) {
+    next.picks = picksForStore(next.picks);
+    next.pc = pickCount(next.pc, next.picks);
     await ref.set(next);
     return;
   }
@@ -148,6 +171,7 @@ async function writeExpeditionPatch(ref, prev, doc) {
     done: !!next.done,
     endAt: next.endAt == null ? null : next.endAt,
     picks: picksForStore(next.picks),
+    pc: pickCount(next.pc, next.picks),
     calc: 0,
     all: next.all || prev.all || {}
   };
@@ -155,8 +179,17 @@ async function writeExpeditionPatch(ref, prev, doc) {
     if (k === "seq" || k === "pl") return; // 파티 자리는 첫 기록 이후 그대로 둔다.
     updates["r/" + k] = r[k] == null ? null : r[k];
   });
-  for (let j = prevSeq; j < seq.length; j++) updates["r/seq/" + j] = seq[j];
-  for (let j = prevAt; j < lineAt.length; j++) updates["lineAt/" + j] = lineAt[j];
+  /* RTDB seq 가 객체여도 길이만 맞춰 이어 붙인다. */
+  const seqObj = Array.isArray(r.seq) ? r.seq : (r.seq || {});
+  for (let j = prevSeq; j < Math.max(seq.length, seqLen(seqObj)); j++) {
+    const line = Array.isArray(r.seq) ? r.seq[j] : seqObj[j];
+    if (line != null) updates["r/seq/" + j] = line;
+  }
+  const atObj = Array.isArray(next.lineAt) ? next.lineAt : (next.lineAt || {});
+  for (let j = prevAt; j < Math.max(lineAt.length, seqLen(atObj)); j++) {
+    const t = Array.isArray(next.lineAt) ? next.lineAt[j] : atObj[j];
+    if (t != null) updates["lineAt/" + j] = t;
+  }
   await ref.update(updates);
 }
 
@@ -183,9 +216,10 @@ async function stepOneExpedition(db, s, i, now) {
     }
     const pl = {};
     ids.forEach(u => { pl[u] = seat[u]; });
-    const doc = sim.replayExpedition(info, pl, [], now);
+    const doc = sim.replayExpedition(info, pl, [], now, 0);
     doc.all = all;
     doc.calc = 0;
+    doc.pc = 0;
     doc.picks = picksForStore(doc.picks);
     await ref.set(plain(doc));
     await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
@@ -200,10 +234,13 @@ async function stepOneExpedition(db, s, i, now) {
   }
   const votes = await readXVotes(db, info.id, cur.wait, cur.r.pl || {});
   const picks = normPicks(cur.picks);
-  picks[cur.wait.c] = votes;
-  const doc = sim.replayExpedition(info, cur.r.pl, picks, now);
+  const c = Number(cur.wait.c);
+  picks[c] = votes;
+  const pc = c + 1;
+  const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc);
   doc.all = cur.all || {};
   doc.calc = 0;
+  doc.pc = pc;
   doc.picks = picksForStore(picks);
   await writeExpeditionPatch(ref, cur, doc);
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
