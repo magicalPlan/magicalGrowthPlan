@@ -157,6 +157,7 @@ async function stepOneMarch(db, id, now) {
     await ref.set(plain(next));
   } else if (room.calc === 1) await ref.child("calc").set(0);
   const due = sim.marchDue(saved, now);
+  /* seq 가 아직 비어 있으면 due=now 로 분 스케줄이 다시 집는다(출발 직후 roomCalc 유실 대비). */
   await db.ref("live/m/" + id).set(!due || saved.st === "done" ? null : due);
 }
 

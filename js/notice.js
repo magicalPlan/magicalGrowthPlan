@@ -155,7 +155,7 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
   alertBox("🌑 시즌 초기화 완료","플레이어들은 다음 접속, 또는 공지 탭을 열 때 각자 초기화된다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
   msg.textContent=""}
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화 표시를 저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자. (아무것도 바뀌지 않았다)"}btn.disabled=false}
-function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
+function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
   elT("p","hint","모든 플레이어의 캐릭터를 처음 상태로 돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 레벨·골드, 장기 토벌·단서 진행은 남고, 시험으로 얻은 속성과 등급(E로)은 돌아간다."),
   elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
@@ -175,7 +175,8 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 레벨·골드, 장기 토벌·단서 진행은 남고, 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
   elT("p","hint","접속 중이 아니어도 서버 기록을 바로 되돌린다. 접속 중이면 그 화면에도 바로 반영된다. 채팅·게시판·선물·마을·보스와 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
- const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc)}
+ const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc);
+ drawAdmGrant(box)}
 async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(inp.value||"").trim();
  if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
  let name="";try{const s=await DB.doc("players/"+uid+"/n").get();if(s.exists&&typeof s.data()==="string")name=s.data().replace(/👑/g,"").trim().slice(0,20)}catch(e){}
@@ -197,3 +198,91 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
  btn.disabled=false}
 function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
  return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
+
+/* ── 전체·개인 보상 지급 (운영자 전용) ──
+   공지 탭 하단. 전체는 accounts 등록자 전원, 개인은 UID 한 명. 접속 여부와 상관없이 서버 기록에 바로 더한다.
+   골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다. */
+function admGrantNum(v,max){const n=Math.floor(Number(v)||0);if(!isFinite(n)||n<=0)return 0;return Math.min(max||999999,n)}
+function admGrantTxt(r){const a=[];if(r.g)a.push("골드 +"+r.g);if(r.ex)a.push("경험치 +"+r.ex);if(r.m)a.push("마력석 +"+r.m);if(r.eggs)a.push("사역마의 알 +"+r.eggs);
+ if(r.eggsEv)a.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" +"+r.eggsEv);
+ Object.entries(r.inv||{}).forEach(([id,n])=>{if(!(n>0))return;const it=typeof ITM!=="undefined"&&ITM.find(t=>t[0]===id);if(it){a.push(it[1]+" +"+n);return}
+  const mat=typeof MAT!=="undefined"&&MAT.find(t=>t[0]===id);a.push((mat?mat[1]:id)+" +"+n)});
+ return a.join(", ")||"없음"}
+function admGrantOnChar(ch,r){const prev=C;C=ch;try{
+  if(typeof xpMigrate==="function")xpMigrate();
+  if(r.ex){C.ex=(Number(C.ex)||0)+r.ex;C.lv=typeof lvOf==="function"?lvOf(C.ex):(C.lv||1);C.xv=3}
+  if(r.g){C.gd=(Number(C.gd)||0)+r.g;C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,Number(C.gd)||0)}
+  C.inv=C.inv||{};if(r.m)C.inv.mana=(Number(C.inv.mana)||0)+r.m;
+  if(r.eggs)C.eggs=(Number(C.eggs)||0)+(r.eggs|0);if(r.eggsEv)C.eggsEv=(Number(C.eggsEv)||0)+(r.eggsEv|0);
+  Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;C.inv[id]=(Number(C.inv[id])||0)+n});
+  const txt=admGrantTxt(r);C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k:"gift",t:("운영자 보상: "+txt).slice(0,160),u:"",ts:Date.now(),r:false});
+  try{if(typeof ntTrim==="function")ntTrim()}catch(e){}try{if(typeof eggFix==="function")eggFix()}catch(e){}
+ }finally{C=prev}return ch}
+async function admGrantIds(){let ids=[];
+ try{ids=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
+ if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
+ if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
+ return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
+async function admGrantSave(uid,r){if(uid===UID&&C){admGrantOnChar(C,r);try{if(typeof titleState==="function")titleState()}catch(e){}try{save();await saveCloud(true)}catch(e){throw e||new Error("save")}return "self"}
+ const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");
+ const ch=admGrantOnChar(JSON.parse(JSON.stringify(acc.c)),r);
+ await DB.doc("accounts/"+uid).patch({c:ch,prog:{lv:ch.lv||1,ex:ch.ex||0,xv:ch.xv||3},ts:Date.now(),sid:"admin-grant"});return "ok"}
+async function admGrantRun(btn,msg,getR){if(!ADM[UID]||!XON()||!DB)return;const r=getR();if(!r){msg.style.color="var(--bad)";msg.textContent="지급할 보상을 하나 이상 정해 줘.";return}
+ const preview=admGrantTxt(r);const t=prompt("등록된 모든 캐릭터에 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
+ if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="등록자를 모으는 중...";
+ let ids=[];try{ids=await admGrantIds()}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
+ if(!ids.length){msg.style.color="var(--bad)";msg.textContent="지급할 등록자가 없다.";btn.disabled=false;return}
+ let at=0,ok=0,empty=0,fail=0;const total=ids.length;
+ async function worker(){for(;;){const i=at++;if(i>=total)return;const uid=ids[i];if(i%6===0)msg.textContent="지급하는 중... "+i+" / "+total+" (성공 "+ok+", 실패 "+fail+")";
+  try{await admGrantSave(uid,r);ok++}catch(e){String(e&&e.message||e)==="empty"?empty++:fail++}}}
+ await Promise.all(Array.from({length:Math.min(6,total)},worker));
+ msg.style.color="var(--mu)";msg.textContent="지급했다. 대상 "+total+"명 · 성공 "+ok+"명"+(empty?" · 기록 없음 "+empty+"명":"")+(fail?" · 실패 "+fail+"명":"")+".";
+ alertBox("🎁 전체 보상 지급","보상: "+preview+"\n\n"+msg.textContent+(fail?"\n\n실패한 계정은 데이터베이스 규칙(운영자 계정 읽기·쓰기)을 확인해 보자.":"")+"\n\n접속 중인 사람은 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.");
+ btn.disabled=false}
+async function admGrantOne(btn,msg,getR,uidInp){if(!ADM[UID]||!XON()||!DB)return;const uid=String(uidInp&&uidInp.value||"").trim();
+ if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
+ const r=getR();if(!r){msg.style.color="var(--bad)";msg.textContent="지급할 보상을 하나 이상 정해 줘.";return}
+ let name="";try{const s=await DB.doc("players/"+uid+"/n").get();if(s.exists&&typeof s.data()==="string")name=s.data().replace(/👑/g,"").trim().slice(0,20)}catch(e){}
+ const who=name?name+" ("+uid+")":uid,preview=admGrantTxt(r);
+ const t=prompt(who+" 에게 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
+ if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="지급하는 중이다...";
+ try{await admGrantSave(uid,r);msg.style.color="var(--mu)";msg.textContent=who+" 에게 지급했다. "+preview;uidInp.value="";
+  alertBox("🎁 개인 보상 지급",who+" 에게 지급했다.\n\n보상: "+preview+"\n\n접속 중이면 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.")}
+ catch(e){const c=String(e&&e.message||e);msg.style.color="var(--bad)";msg.textContent=c==="401"||c==="403"?"이 계정의 기록을 운영자가 직접 바꾸지 못했다. 데이터베이스 규칙에서 운영자의 계정 읽기와 쓰기가 열려 있는지 확인해야 한다.":c==="empty"?"그 UID의 캐릭터 기록을 찾지 못했다.":"저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
+ btn.disabled=false}
+function admGrantRow(opts,aria){const row=elT("div","row");row.style.cssText="margin-top:6px;gap:6px;align-items:center";
+ const sel=elT("select");sel.style.cssText="flex:1;min-width:0";sel.setAttribute("aria-label",aria);const z=elT("option");z.value="";z.textContent="(선택 안 함)";sel.appendChild(z);
+ opts.forEach(([id,nm])=>{const o=elT("option");o.value=id;o.textContent=nm;sel.appendChild(o)});
+ const qty=elT("input");qty.type="number";qty.min="0";qty.max="9999";qty.step="1";qty.value="0";qty.placeholder="개수";qty.setAttribute("aria-label",aria+" 개수");qty.style.cssText="width:88px;flex:0 0 auto";
+ row.append(sel,qty);return{row,sel,qty}}
+function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
+ const mkNum=(label,aria)=>{const wrap=elT("label","");wrap.style.cssText="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.88rem;color:var(--mu)";
+  const sp=elT("span","",label);sp.style.cssText="flex:0 0 7.5em";const inp=elT("input");inp.type="number";inp.min="0";inp.max="999999";inp.step="1";inp.value="0";inp.setAttribute("aria-label",aria);inp.style.cssText="flex:1;min-width:0";
+  wrap.append(sp,inp);return{wrap,inp}};
+ const gIn=mkNum("골드","지급 골드"),exIn=mkNum("경험치","지급 경험치"),mIn=mkNum("마력석","지급 마력석"),egIn=mkNum("사역마 알","지급 사역마 알"),evIn=mkNum("이벤트 알","지급 "+evNm);
+ gc.append(gIn.wrap,exIn.wrap,mIn.wrap,egIn.wrap,evIn.wrap);
+ const itBox=elT("div");itBox.style.marginTop="10px";itBox.appendChild(elT("p","hint","가방 아이템"));const itRows=[];
+ const itOpts=(typeof ITM!=="undefined"?ITM:[]).filter(t=>t[0]!=="mana").map(t=>[t[0],t[1]]);
+ const addIt=()=>{const x=admGrantRow(itOpts,"가방 아이템");itRows.push(x);itBox.appendChild(x.row)};addIt();
+ const itAdd=elT("button","chip","아이템 칸 추가");itAdd.type="button";itAdd.style.cssText="margin-top:6px;padding:5px 12px;font-size:.8rem";itAdd.onclick=()=>addIt();itBox.appendChild(itAdd);gc.appendChild(itBox);
+ const matBox=elT("div");matBox.style.marginTop="10px";matBox.appendChild(elT("p","hint","재료·이벤트 아이템"));const matRows=[];
+ const matOpts=(typeof MAT!=="undefined"?MAT:[]).map(t=>[t[0],t[1]]);
+ const addMat=()=>{const x=admGrantRow(matOpts,"재료 아이템");matRows.push(x);matBox.appendChild(x.row)};if(matOpts.length){addMat();
+  const matAdd=elT("button","chip","재료 칸 추가");matAdd.type="button";matAdd.style.cssText="margin-top:6px;padding:5px 12px;font-size:.8rem";matAdd.onclick=()=>addMat();matBox.appendChild(matAdd);gc.appendChild(matBox)}
+ return()=>{const inv={};const take=(rows)=>{rows.forEach(({sel,qty})=>{const id=String(sel.value||"");const n=admGrantNum(qty.value,9999);if(!id||!n)return;inv[id]=(inv[id]||0)+n})};
+  take(itRows);take(matRows);const r={g:admGrantNum(gIn.inp.value),ex:admGrantNum(exIn.inp.value),m:admGrantNum(mIn.inp.value),eggs:admGrantNum(egIn.inp.value,9999),eggsEv:admGrantNum(evIn.inp.value,9999),inv};
+  if(!r.g&&!r.ex&&!r.m&&!r.eggs&&!r.eggsEv&&!Object.keys(inv).length)return null;return r}}
+function drawAdmGrant(box){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
+ const gc=elT("div","card rst-card adm-grant");gc.style.marginTop="12px";
+ gc.append(elT("h2","","🎁 전체 보상 지급 (운영자 전용)"),
+  elT("p","hint","accounts 에 캐릭터가 있는 모든 등록자에게 보상을 바로 더한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
+  elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다."));
+ const getAll=admGrantFields(gc);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);gc.append(gb,gm);box.appendChild(gc);
+ const pc=elT("div","card rst-card adm-grant");pc.style.marginTop="12px";
+ pc.append(elT("h2","","🎁 개인 보상 지급 (운영자 전용)"),
+  elT("p","hint","UID 한 명의 캐릭터에만 보상을 더한다. 접속 중이 아니어도 서버 기록에 바로 반영된다. 보상 종류는 전체 지급과 같다."),
+  elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤, 대상 UID를 넣고 지급한다."));
+ const urow=elT("div","row");urow.style.cssText="margin-top:8px;gap:6px";const uinp=elT("input");uinp.type="text";uinp.maxLength=128;uinp.placeholder="계정 UID";uinp.setAttribute("aria-label","보상 받을 계정 UID");uinp.autocomplete="off";uinp.spellcheck=false;uinp.style.flex="1";urow.appendChild(uinp);pc.appendChild(urow);
+ const getOne=admGrantFields(pc);const pb=elT("button","btn","이 사람에게 지급"),pm=elT("p","msg","");pb.type="button";pb.style.marginTop="12px";pb.onclick=()=>admGrantOne(pb,pm,getOne,uinp);pc.append(pb,pm);box.appendChild(pc)}

@@ -36,8 +36,11 @@ $("#rx").onclick=async()=>{if(room&&DB&&room.st==="lobby"){try{if(room.host===UI
  else if(room&&DB&&room.st==="done"&&room.host===UID){const c=code,r=room;setTimeout(()=>delRoom(c,r),10000)}leave()};
 $("#rd").onclick=async()=>{if(!room||room.st!=="lobby")return;room.rd[UID]=!room.rd[UID];room.ts=Date.now();room.pl[UID]=me();try{await rref(code).set(room)}catch(e){}};
 $("#bt").onclick=async()=>{const n=pw();["동료 하나","동료 둘"].forEach((x,i)=>{if(Object.keys(room.pl).length<3){const k="bot"+i;room.pl[k]={n:x,a:"-",g:C.g,t:"-",p:Math.max(10,n-2+i*2),v:C.v};room.rd[k]=true}});try{await rref(code).set(room)}catch(e){}};
-$("#st").onclick=async()=>{if(!room||room.host!==UID)return;room.st="run";room.step=0;room.seq=[];room.pend=null;room.fin=false;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.calc=1;room.ts=Date.now();
- try{await rref(code).set(room)}catch(e){$("#rrm").textContent="출발하지 못했다."}};
+/* 출발: 방 문서를 run 으로 올린 뒤 live/m due + calc 0→1 로 서버를 깨운다.
+   calc 를 방 set 에 1 로만 넣으면, 이미 1 이거나 트리거가 한 번 놓치면 seq 가 비어 영구 대기한다. */
+$("#st").onclick=async()=>{if(!room||room.host!==UID||!code)return;const c=code;
+ room.st="run";room.step=0;room.seq=[];room.pend=null;room.fin=false;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.calc=0;room.ts=Date.now();
+ try{await rref(c).set(room);await Promise.all([DB.doc("live/m/"+c).set(Date.now()),DB.doc("rooms/"+c+"/calc").set(0).then(()=>DB.doc("rooms/"+c+"/calc").set(1)).catch(()=>DB.doc("rooms/"+c+"/calc").set(1))]);askCalc.key=""}catch(e){$("#rrm").textContent="출발하지 못했다."}};
 // 출발 준비: 아이템·마법·특성 효과를 정리하고 전투를 시작한다. 정기 출정이 쓴다.
 function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?8:0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
  room.rt=room.rt||room.total;
@@ -113,10 +116,16 @@ async function readVotes(c,r,ch){const picks=[];for(const u of humansOf(r)){cons
 function takeRoom(c,next){if(code!==c||!next||typeof next!=="object"||Array.isArray(next))return false;const prev=room;room=next;room.seq=room.seq||[];room.rd=room.rd||{};
  return !prev||prev.st!==room.st||(prev.seq||[]).length!==room.seq.length||prev.phaseAt!==room.phaseAt||(prev.segFrom||0)!==(room.segFrom||0)}
 let roomBye=false;
-/* 전투 계산은 서버가 한다. 화면은 기록된 문장을 시각에 맞춰 보여주고, 같은 마감은 파티에서 한 명만 한 번 계산을 부탁한다. */
-function askCalc(mark){if(!code||!DB||!room)return;const key=code+"|"+mark;if(askCalc.key===key)return;const ids=Object.keys(room.pl||{}).filter(k=>!String(k).startsWith("bot")).sort();const lead=room.pl&&room.pl[room.host]?room.host:ids[0];if(lead&&lead!==UID)return;askCalc.key=key;DB.doc("rooms/"+code+"/calc").set(1).catch(()=>{askCalc.key=""})}
+/* 전투 계산은 서버가 한다. calc 는 항상 0→1 로 깨운다(같은 1 쓰기는 트리거가 안 온다).
+   seq 가 비어 있으면(출발 직후) 파티원 누구나, 그 외에는 방장(또는 선두)만 부탁한다. */
+function askCalc(mark){if(!code||!DB||!room)return;const key=code+"|"+mark;if(askCalc.key===key)return;
+ const ids=Object.keys(room.pl||{}).filter(k=>!String(k).startsWith("bot")).sort(),lead=room.pl&&room.pl[room.host]?room.host:ids[0],boot=!(room.seq||[]).length;
+ if(!boot&&lead&&lead!==UID)return;askCalc.key=key;const ref=DB.doc("rooms/"+code+"/calc");
+ const go=()=>ref.set(1).catch(()=>{if(askCalc.key===key)askCalc.key=""});
+ ref.set(0).then(go).catch(go);DB.doc("live/m/"+code).set(Date.now()).catch(()=>{})}
 async function advanceRoom(){if(!room||!code||!DB)return;if(room.st==="done"){if(!roomBye&&Date.now()-(Number(room.doneAt)||0)>ROOM_KEEP){roomBye=true;delRoom(code,room)}return}
- if(room.st!=="run")return;const v=roomView(room);if(!(room.seq||[]).length)askCalc("start");else if(v.mode==="resolve")askCalc("r"+(room.seq||[]).length);else if(v.mode==="finish")askCalc("f"+(room.seq||[]).length)}
+ if(room.st!=="run")return;const v=roomView(room),slot=Math.floor(Date.now()/5000);
+ if(!(room.seq||[]).length)askCalc("start_"+slot);else if(v.mode==="resolve")askCalc("r"+(room.seq||[]).length+"_"+slot);else if(v.mode==="finish")askCalc("f"+(room.seq||[]).length+"_"+slot)}
 function drawChoice(r){const v=roomView(r),cv=$("#chv");if(v.mode!=="choice"||!v.ch||!EVM[v.ch.id]){cv.hidden=true;return}
  const ch=v.ch,x=EVM[ch.id];cv.hidden=false;cv.innerHTML="";cv.appendChild(elT("p","choice-q",vtx(x.q,ch.v)));const row=elT("div","row");
  const ops=(ch.ops&&ch.ops.length)?ch.ops:x.o.map((_,i)=>i);ops.forEach(i=>{const o=x.o[i],b=elT("button","chip",o.l+(o.rl?" ("+o.rl+")":"")+(ch.h===i?" ✦":""));b.type="button";b.disabled=!!(myV&&myV.k===ch.k);b.setAttribute("aria-pressed",myV&&myV.k===ch.k&&myV.i===i?"true":"false");
@@ -128,7 +137,8 @@ function paintRun(){if(!room||$("#v-room").hidden||room.st==="lobby")return;cons
  $("#rs").textContent=v.mode==="choice"?"선택의 순간":v.mode==="resolve"?"표를 세는 중":fin?"출정 종료":"출정 중";
  if(v.mode==="choice"&&v.ch&&EVM[v.ch.id]){const k=room.code+"_"+v.ch.k;if(choiceK!==k){choiceK=k;drawChoice(room)}}else if(choiceK){choiceK="";$("#chv").hidden=true}
  const t=document.querySelector("#chv .choice-t");if(t&&v.mode==="choice"&&v.ch){const left=Math.max(0,Math.ceil((v.until-Date.now())/1000));t.textContent=(myV&&myV.k===v.ch.k?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
- if(room.st==="done"||v.mode==="resolve"||v.mode==="finish"||typeof room.phaseAt!=="number")advanceRoom()}
+ /* seq 비어 있는 출발 직후도 반드시 깨운다. 예전에는 phaseAt 만 있어 lines 로 남고 askCalc 가 영영 안 불렸다. */
+ if(room.st==="done"||v.mode==="resolve"||v.mode==="finish"||!(room.seq||[]).length||typeof room.phaseAt!=="number")advanceRoom()}
 function cdTick(){paintRun()}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)paintRun()});
 
