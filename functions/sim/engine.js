@@ -164,11 +164,14 @@ function partyIds(info, seat) {
   const jtOf = v => typeof (v && v.jt) === "number" ? v.jt : 0;
   return Object.keys(seat || {}).filter(u => seat[u] && typeof seat[u] === "object" && jtOf(seat[u]) <= info.close).sort((a, b) => jtOf(seat[a]) - jtOf(seat[b]) || (a < b ? -1 : 1)).slice(0, XMAX);
 }
-function replayExpedition(info, pl, picks, now, pc) {
+/* prevWait: 같은 c 의 기존 wait. 있으면 Ws/Wd 를 그대로 쓴다(연장·재오픈 금지).
+   새 wait 는 최초 write 시에만 Wd = now + CHOICE_MS (실시계 15초). */
+function replayExpedition(info, pl, picks, now, pc, prevWait) {
   const r = { code: info.id, pl: {}, total: info.total, seq: [], evs: [], df: XDF[info.d].df, rw: XDF[info.d].rw, dzm: XDF[info.d].dz || 1, ab: info.d === 4 ? 1 : 0, zv: info.v };
   Object.keys(pl || {}).forEach(u => { r.pl[u] = pl[u]; });
   const L = [];
   let wait = null;
+  const wall = typeof now === "number" && Number.isFinite(now) ? now : Date.now();
   /* pc = 이미 집계·확정된 선택 수. picks 칸이 RTDB 에서 비어도 같은 c 로 다시 wait 하지 않는다. */
   let resolved = typeof pc === "number" && Number.isFinite(pc) ? Math.max(0, Math.floor(pc)) : -1;
   if (resolved < 0) {
@@ -183,12 +186,20 @@ function replayExpedition(info, pl, picks, now, pc) {
       const xe = EVM[r.pend.id];
       if (!xe) { r.pend = null; simStep(r); continue; }
       const cx = evCtx(r), ops = xe.o.map((o, i) => i).filter(i => !xe.o[i].req || xe.o[i].req(cx)), h = (cx.tr("번뜩임") || cx.tr("예민함")) ? xe.o.findIndex(o => o.ok) : -1;
-      /* Wd 는 시뮬 타임라인 고정. now 로 연장하지 않는다(연장 시 투표 창이 다시 열린 것처럼 보임). */
-      const Ws = info.T0 + r.seq.length * XSTEP + c * CHOICE_MS;
-      const Wd = Ws + CHOICE_MS;
       L.push(r.seq.length);
-      r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Wd, ops, h };
-      if (c >= resolved) { wait = { c, Ws, Wd }; break; }
+      if (c >= resolved) {
+        let Ws, Wd;
+        if (prevWait && Number(prevWait.c) === c && typeof prevWait.Wd === "number") {
+          Ws = prevWait.Ws; Wd = prevWait.Wd;
+        } else {
+          Wd = wall + CHOICE_MS;
+          Ws = Wd - CHOICE_MS;
+        }
+        r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Wd, ops, h };
+        wait = { c, Ws, Wd };
+        break;
+      }
+      r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: wall, ops, h };
       const raw = picks && picks[c];
       const ballots = Array.isArray(raw) ? raw : (raw == null ? [] : [raw].flatMap(x => typeof x === "number" ? [x] : []));
       resolveChoice(r, ballots);
