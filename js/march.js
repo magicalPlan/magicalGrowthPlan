@@ -69,7 +69,7 @@ function watchX(s){if(s==null)s=xLs();if(!XON())return;const ids=xWatchIds(s),ke
  ids.forEach(armOne);unX=()=>{stopX()}}
 /* 서버 자리에 내가 있으면 창을 닫았다가 켜도 그 출정으로 다시 묶는다. 정원 7명 안에 든 사람만 묶는다. */
 function xBindFrom(s,o){if(!C||C.mj||!o||!UID)return false;const now=Date.now();
- for(let i=0;i<XN;i++){const x=xInfo(s,i);if(C.ms===x.id)continue;if(xGone&&xGone.s===s&&xGone.i===i&&now<xGone.till)continue;if(now>=x.T0+X_RUN_MAX)continue;
+ for(let i=0;i<XN;i++){const x=xInfo(s,i);if(C.ms===x.id)continue;if(XR&&XR.id===x.id&&(XR.fin||XR.gone))continue;if(xGone&&xGone.s===s&&xGone.i===i&&now<xGone.till)continue;if(now>=x.T0+X_RUN_MAX)continue;
   const ids=xParty(x,o["e"+i]||{});if(!ids.includes(UID))continue;C.mj={id:x.id,s,i,T0:x.T0};save();return true}return false}
 async function xRejoin(){if(!C||C.mj||!XON()||!UID)return;const now=Date.now(),base=xSlot(),skip=xS>=0?xS:xLs(),ss=[];
  for(let s=base-2;s<=base;s++){if(s<0||s===skip)continue;const T0=(s+1)*XS;if(now>=T0+X_RUN_MAX||T0-now>XS+XCLOSE)continue;ss.push(s)}
@@ -136,16 +136,19 @@ function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],d
    if(X.picks[c]==null){wait={c,Ws,Wd:Ws+CHOICE_MS};break}resolveChoice(r,X.picks[c]);c++}});
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
  return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(r.seq.length-1)+800}}
-function xAbandon(why){if(!C)return;const j=C.mj;if(j&&xPend&&xPend.id===j.id)xPend=null;C.mj=null;if(j)C.ms=j.id;if(XR){XR.gone=1;XR.why=why}save();note("march",why);drawXAll();xSay(why,1);if(j){xAuto=j.id;if(XON()&&Date.now()<Number(j.T0))DB.doc(xSeat(j.s,j.i)+"/"+UID).delete().catch(()=>{})}}
+function xAbandon(why){if(!C)return;const j=C.mj;if(j&&xPend&&xPend.id===j.id)xPend=null;C.mj=null;if(j)C.ms=j.id;if(XR){XR.gone=1;XR.why=why}stopXr();save();note("march",why);drawXAll();xSay(why,1);if(j){xAuto=j.id;if(XON()&&Date.now()<Number(j.T0))DB.doc(xSeat(j.s,j.i)+"/"+UID).delete().catch(()=>{})}}
 // 출발 시각이 지난 자리는 지우지 않는다. 창을 닫았다가 돌아온 사람이 같은 파티로 이어가야 한다.
+// 다만 보상·강제 정리 뒤에는 C.ms 로 같은 출정에 다시 묶이지 않게 한다.
 function xExpired(j){if(!j)return false;const s=Number(j.s),i=Number(j.i),T0=Number(j.T0);if(!Number.isFinite(s)||!Number.isFinite(i)||!Number.isFinite(T0))return true;
- if(XR&&XR.id===j.id&&XR.fin)return true;return Date.now()>=T0+X_RUN_MAX}
-function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Number(j.i),id=j.id,T0=Number(j.T0);if(xPend&&xPend.id===id)xPend=null;C.mj=null;if(C.ms===id)delete C.ms;if(XR&&XR.id===id)XR=null;if(why){note("march",why);xSay(why,1)}save();drawXAll();
+ if(XR&&XR.id===j.id&&(XR.fin||XR.gone))return true;return Date.now()>=T0+X_RUN_MAX}
+function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Number(j.i),id=j.id,T0=Number(j.T0);if(xPend&&xPend.id===id)xPend=null;C.mj=null;C.ms=id;if(XR&&XR.id===id)XR=null;stopXr();if(why){note("march",why);xSay(why,1)}save();drawXAll();
  if(XON()&&Number.isFinite(s)&&Number.isFinite(i)&&!(Number.isFinite(T0)&&Date.now()>=T0))DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{})}
 function xMarkDone(s,i){if(!XON()||!Number.isFinite(Number(s))||!Number.isFinite(Number(i)))return;const now=Date.now();DB.doc(xSeat(s,i)+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return now}).catch(()=>{});DB.doc("live/xdrop/"+s+"_"+i).transact(c=>{if(typeof c==="number"&&c>0)return;return now+X_DROP}).catch(()=>{})}
-/* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 방에서 풀려난다. */
-function xQuitOpen(x){if(!C||!C.mj||!x||C.mj.id!==x.id)return false;const now=Date.now(),end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;return now>=Number(x.T0)+X_STUCK}
-function xQuit(){const j=C&&C.mj;if(!j)return;if(!confirm("이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;C.ms=j.id;xAbandon("출정에서 직접 나왔다.");if(!$("#v-xm").hidden)openRooms()}
+/* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 방에서 풀려난다.
+   보상까지 받은 뒤에는 C.mj 가 없어도 결과 화면에서 나갈 수 있다. */
+function xQuitOpen(x){if(!C||!x)return false;const now=Date.now(),mine=C.mj&&C.mj.id===x.id,done=XR&&XR.id===x.id&&XR.fin;if(!mine&&!done)return false;const end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;if(done)return true;return now>=Number(x.T0)+X_STUCK}
+function xQuit(){const j=C&&C.mj;const done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;if(!confirm(done&&!j?"마을로 돌아갈까?":"이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;
+ if(j){C.ms=j.id;xAbandon("출정에서 직접 나왔다.")}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}if(!$("#v-xm").hidden)show("hub")}
 /* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 자리를 서버에서 찾지 못했다. 참가가 저장되지 않았거나 출발 전에 지워져 출발하지 못했다.";if(jtOf(mine)>x.close)return x.nm+" 출정은 서버에 기록된 참가 시각이 마감("+xHM(x.close)+") 이후라 출발하지 못했다. 마감 전에 눌렀다면 기기 시각이 서버보다 느린지 확인해 보자.";return "마감 전에 먼저 참가한 "+XMAX+"명이 차서 "+x.nm+" 출정에 들어가지 못했다. 이번 출정은 정원 "+XMAX+"명이다."}
 /* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
@@ -156,7 +159,9 @@ function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll
 function xLead(pl){return Object.keys(pl||{}).sort()[0]||""}
 function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
  const path="rooms/xr"+s+"_"+i;
- const onDoc=sn=>{if(!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;const doc=sn.exists?sn.data():null;if(!doc)return;const x=xInfo(s,i);
+ const onDoc=sn=>{if(!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;const x=xInfo(s,i);
+  if(!sn.exists){stopXr();xAbandon(x.nm+" 출정 기록이 정리되어 방에서 나왔다.");return}
+  const doc=sn.data();if(!doc)return;
   if(doc.empty){stopXr();xAbandon(x.nm+" 출정에 함께할 파티가 없어 출발하지 못했다.");return}
   if(!doc.r)return;
   if(!doc.r.pl||!doc.r.pl[UID]){const d={};Object.keys(doc.all||{}).forEach(u=>{d[u]={jt:doc.all[u]}});stopXr();xHold();const late=Date.now()-x.T0;if(xPend&&xPend.id===x.id&&late<=X_FETCH_GIVEUP)return;if(xPend&&xPend.id===x.id)xPend=null;xAbandon(xSeatMiss(x,d));return}
@@ -171,7 +176,8 @@ function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fi
  xGrant(x)}
 /* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다. */
 function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||Date.now()<Number(doc.endAt))return;
- let h="";try{h=settle(doc.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;if(C&&C.mj&&C.mj.id===x.id)C.mj=null;save();drawXAll();xMarkDone(ss,ii);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
+ let h="";try{h=settle(doc.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
+ if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
 function xTick(){const j=C&&C.mj;if(!j||!XON()||Date.now()<j.T0){stopXr();return}
  if(XR&&XR.id===j.id&&XR.fin){stopXr();return}
  const x=xInfo(j.s,j.i),late=Date.now()-x.T0;
@@ -181,8 +187,8 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||Date.now()<j.T0){stopXr();return
  const doc=XR&&XR.id===x.id?XR.res:null;
  xGrant(x);if(XR&&XR.id===x.id&&XR.fin)return;
  if(doc&&doc.wait&&Date.now()>=doc.wait.Wd+3000&&xLead(doc.r&&doc.r.pl)===UID){const mark=x.id+"_"+doc.wait.c;if(xCalcAsk!==mark){xCalcAsk=mark;DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc").set(1).catch(()=>{xCalcAsk=""})}}}
-function xView(){show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
-function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){openRooms();return}
+function xView(){if(C&&C.mj)xAuto=C.mj.id;show("xm");xChK="";$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
+function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
  let pl,ids;
@@ -203,7 +209,9 @@ function xRender(){if($("#v-xm").hidden)return;const now=Date.now(),mj=C.mj,X=XR
    cv.appendChild(row);if(r.ch.h>=0)cv.appendChild(elT("p","hint","✦ 파티의 직감(번뜩임·예민함)이 답을 속삭인다."));cv.appendChild(elT("p","hint x-ct",""))}
   const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;xChK=""}}
-$("#xb").onclick=()=>openRooms();
+/* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub 로 보낸다.
+   진행 중이면 xAuto 를 찍어 두어, 목록·마을에 있어도 같은 출정 화면으로 다시 끌어오지 않는다(보기 버튼으로만 복귀). */
+$("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}show("hub")};
 $("#xq").onclick=()=>xQuit();
 setInterval(()=>{if(!C||!DB)return;const now=Date.now(),rmOn=!$("#v-rooms").hidden;xMsClear();
  if(C.mj&&xExpired(C.mj)){const fin=XR&&XR.id===C.mj.id&&XR.fin;xRelease(fin?"출정 결과가 정리되어 다시 참가할 수 있다.":"출정 시간이 지나 자리를 정리했다. 다시 참가할 수 있다.")}
