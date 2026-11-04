@@ -179,12 +179,13 @@ let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMissT=null,xrMode="",xrKey
 const X_XR_CD=10000,X_XR_MISS=X_FETCH_GIVEUP;
 function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}if(xrMissT){clearTimeout(xrMissT);xrMissT=null}xrMode="";xrKey="";xrMissAt=0}
 /* 투표 마감 후 결과 계산은 서버(roomCalc·expireMarch)가 한다. 클라는 calc=1 로만 깨운다.
-   리더만이 아니라 파티원 누구나, 마감(+3초) 뒤 10초마다 다시 요청한다(리더 오프라인·락 실패 대비). */
+   파티원 누구나 X_VOTE_GRACE(표 마감+1초) 뒤부터 요청하고, X_VOTE_CALC_GAP 마다 0→1 로 다시 깨운다. */
 function xAskCalc(x,mark,flip){if(!x||!mark||xCalcAsk===mark)return;const prev=xCalcAsk;xCalcAsk=mark;const ref=DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc");
  const go=()=>ref.set(1).catch(()=>{if(xCalcAsk===mark)xCalcAsk=""});
  if(flip&&prev)ref.set(0).then(go).catch(go);else go()}
-function xAskVoteCalc(x,doc){if(!doc||!doc.wait||!(doc.r&&doc.r.pl&&doc.r.pl[UID]))return;const Wd=Number(doc.wait.Wd);if(!Number.isFinite(Wd)||xNow()<Wd+3000)return;
- const slot=Math.floor((xNow()-(Wd+3000))/10000),mark=x.id+"_w"+doc.wait.c+"_"+slot;xAskCalc(x,mark,slot>0)}
+function xAskVoteCalc(x,doc){if(!doc||!doc.wait||!(doc.r&&doc.r.pl&&doc.r.pl[UID]))return;const Wd=Number(doc.wait.Wd),grace=typeof X_VOTE_GRACE==="number"?X_VOTE_GRACE:1000,gap=typeof X_VOTE_CALC_GAP==="number"?X_VOTE_CALC_GAP:5000;
+ if(!Number.isFinite(Wd)||xNow()<Wd+grace)return;
+ const slot=Math.floor((xNow()-(Wd+grace))/gap),mark=x.id+"_w"+doc.wait.c+"_"+slot;xAskCalc(x,mark,slot>0)}
 function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;stopXr();xrKey=key;if(!XON())return;
  const path="rooms/xr"+s+"_"+i;
  /* 출발 직후 서버가 xr 을 쓰기 전 live 가 빈 값을 줄 수 있다. X_FETCH_GIVEUP 동안 구독을 유지한다.
