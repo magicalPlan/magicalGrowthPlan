@@ -10,7 +10,11 @@ try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
 const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
 /* 출발·정산처럼 덮어쓰기·유실이 아쉬운 변경은 600ms 대기 없이 바로 올린다. */
-const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
+const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}return Promise.resolve(true)};
+/* 서버 PATCH(또는 전체 set)가 끝날 때까지 기다린다. 성공 true, 실패·미로그인 로컬만이면 로컬은 true. */
+async function saveNowOk(){if(!AUTH.uid||!DB){await saveNow();return true}const r=await saveNow();return r===true}
+/* 잠깐 실패해도 몇 번 다시 올린다. 장기 토벌처럼 알림을 저장 성공 뒤에 두려면 이걸 쓴다. */
+async function saveNowRetry(n,gap){n=n||4;gap=gap||2500;for(let i=0;i<n;i++){if(await saveNowOk())return true;if(i<n-1)await new Promise(r=>setTimeout(r,gap*(i+1)))}return false}
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
 function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
  if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
@@ -130,8 +134,9 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
    PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다(완전 서버 시계 권위는 아님). */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
-let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null;
+let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[];
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
+function wakeSave(ok){const w=saveWait;saveWait=[];w.forEach(r=>{try{r(!!ok)}catch(e){}})}
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
 function diffFlat(a,b,path,out){if(a===b)return;const ao=a&&typeof a==="object",bo=b&&typeof b==="object";
  if(!ao||!bo||Array.isArray(a)||Array.isArray(b)){if(JSON.stringify(a)!==JSON.stringify(b))out[path]=b===undefined?null:b;return}
@@ -188,25 +193,26 @@ async function saveRescue(){if(saveFix)return false;saveFix=true;try{
  const kb=Math.round(JSON.stringify(savePayload(false)).length/1024);
  saveDiag=" [진단: 토큰 "+(tok?"정상":"갱신 실패")+" · 작은 저장 "+(small?"성공 → 저장 내용("+kb+"KB)이 규칙에 걸림":"실패 → 계정 쓰기 권한 자체가 막힘")+"]";return false}finally{saveFix=false}}
 function saveCloud(now){
- if(saveBusy){saveAgain=true;savePending=true;return Promise.resolve()}
- clearTimeout(sct);if(now)clearTimeout(saveRetryT);
- const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;return}
-  saveBusy=true;saveAgain=false;
-  try{await accSyncIfNewer()}catch(e){}
-  const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
-  const done=()=>{accBase=JSON.parse(stamp);accReady=true;
-   if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveBusy=false;return saveCloud(true)}
-   savePending=false;saveBusy=false;clearPend()};
-  const fail=async e=>{const c=String(e&&e.message||e);
-   if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
-   saveWarn(c);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveBusy=false;saveAgain=true;saveCloud(true)},15000)};
-  if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
-  /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
-  const body=accDiff(sent);if(!Object.keys(body).length){done();return}
-  body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-  try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(slim))}catch(e){}
-  return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
- if(now)return go();return new Promise(res=>{sct=setTimeout(()=>res(go()),600)})}
+ return new Promise(resolve=>{saveWait.push(resolve);
+  if(saveBusy){saveAgain=true;savePending=true;return}
+  clearTimeout(sct);if(now)clearTimeout(saveRetryT);
+  const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;wakeSave(false);return}
+   saveBusy=true;saveAgain=false;
+   try{await accSyncIfNewer()}catch(e){}
+   const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
+   const done=()=>{accBase=JSON.parse(stamp);accReady=true;
+    if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveAgain=false;return go()}
+    savePending=false;saveBusy=false;clearPend();wakeSave(true)};
+   const fail=async e=>{const c=String(e&&e.message||e);
+    if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
+    saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
+   if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
+   /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
+   const body=accDiff(sent);if(!Object.keys(body).length){done();return}
+   body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(slim))}catch(e){}
+   return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
+  if(now)go();else sct=setTimeout(()=>go(),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
@@ -366,31 +372,53 @@ document.addEventListener("click",e=>{const t=e.target;if(!(t instanceof HTMLIma
 $("#imgo").addEventListener("click",e=>{if(e.target.id!=="imgoi")imgClose()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")imgClose()});
 const lhOf=k=>LH.find(x=>x[0]===k),lhOn=()=>!!(C&&C.lh&&lhOf(C.lh.k));
-function lhStart(k){const L=lhOf(k);if(!L||lhOn())return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
+let lhBusy=false,lhNtBusy=false,lhDefer=null,accSoftBusy=false;
+function lhFlushDefer(){const d=lhDefer;if(!d)return;lhDefer=null;
+ if(d.kind==="start"){note("quest",d.nm+"을(를) 떠났다. "+d.hr+"시간 뒤에 돌아온다.");toast("🗺 "+d.nm+" 출발! "+d.hr+"시간 뒤에 돌아온다.")}
+ else if(d.kind==="claim"){note("quest",d.nm+": "+d.head+" ("+d.rw+")");checkTitles();alertBox("🗺 "+d.nm+" · "+d.tag,d.head+"\n\n"+(d.evs||[]).map(e=>"· "+e).join("\n")+"\n\n"+d.rw);if(typeof readProg==="function")readProg()}
+ else if(d.kind==="nt"){note("quest",d.nm+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+d.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
+ try{if(!$("#v-hub").hidden)hubLH()}catch(e){}}
+/* 탭이 다시 보이거나, 진행·미전송이 있을 때 ts 만 먼저 보고 필요하면 맞춘 뒤 저장을 다시 올린다. */
+async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy)return;accSoftBusy=true;
+ try{let changed=false;try{changed=!!(await accSyncIfNewer())}catch(e){}
+  let hasPend=false;try{hasPend=!!localStorage.getItem("mgr_pend_"+AUTH.uid)}catch(e){}
+  if(hasPend||savePending||lhDefer||lhOn()){const ok=await saveNowOk();if(ok&&lhDefer)lhFlushDefer()}
+  if(changed&&!$("#v-hub").hidden)hubLH()}finally{accSoftBusy=false}}
+async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");hubLH()}
-function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
+ /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다(클릭 경로에서 여러 번 기다리면 체감이 길어진다). */
+ const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();lhBusy=true;hubLH();toast("서버에 남기는 중...");
+ try{const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
+  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.")}
+ finally{lhBusy=false;hubLH()}}
+async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
  const g=rng(hs32("lh"+h.sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),bonus=1+.1*Math.max(0,L[2]-1)/1.67,mul=done?(ok?1:.5)*bonus:LH_EARLY;
  const gd=Math.round(L[4]*hrs*mul),ex=Math.round(L[5]*hrs*mul),dz=Math.round(L[6]*hrs+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
  C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
- const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
- note("quest",L[1]+": "+head+" ("+rw+")");saveNow();checkTitles();
- alertBox("🗺 "+L[1]+" · "+(done?(ok?"성공":"실패"):"철수"),head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);hubLH();if(typeof readProg==="function")readProg()}
+ const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz,tag=done?(ok?"성공":"실패"):"철수";
+ lhBusy=true;hubLH();toast("결과 저장 중...");
+ try{const saved=await saveNowOk();if(!saved){lhDefer={kind:"claim",nm:L[1],head,rw,evs,tag};toast("보상은 이 기기에 반영했다. 연결되면 서버에 맞추고 결과를 보여 준다.");accSoftSync();return}
+  lhDefer=null;note("quest",L[1]+": "+head+" ("+rw+")");checkTitles();
+  alertBox("🗺 "+L[1]+" · "+tag,head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);if(typeof readProg==="function")readProg()}
+ finally{lhBusy=false;hubLH()}}
 function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const now=Date.now(),sm=$("#lhsum");if(sm)sm.textContent=lhOn()?(now>=C.lh.t1?"· 귀환! 보상 받기":"· "+lhOf(C.lh.k)[1]+" "+cdTxt(C.lh.t1-now)+" 남음"):"";
  if(lhOn()){const h=C.lh,L=lhOf(h.k),done=now>=h.t1,w=elT("div","dq lh-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
   f.style.width=Math.min(100,(now-h.t0)/(h.t1-h.t0)*100)+"%";bar.appendChild(f);
-  cp.append(elT("b","","🗺 "+L[1]+(done?" · 귀환!":" · 토벌 중")),elT("small","",done?"토벌을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L[3])*100)+"%"),bar);
-  const b=elT("button","chip",done?"보상 받기":"철수");b.type="button";b.onclick=()=>lhClaim(!done);w.append(cp,b);box.appendChild(w);
-  if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."));return}
+  const wait=lhBusy||(lhDefer&&lhDefer.kind==="start");
+  cp.append(elT("b","","🗺 "+L[1]+(done?" · 귀환!":" · 토벌 중")),elT("small","",done?"토벌을 마치고 돌아왔다. 보상을 받자.":(wait?"서버에 남기는 중 · ":"")+"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L[3])*100)+"%"),bar);
+  const b=elT("button","chip",done?"보상 받기":"철수");b.type="button";b.disabled=!!lhBusy;b.onclick=()=>lhClaim(!done);w.append(cp,b);box.appendChild(w);
+  if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."+(lhDefer?" 아직 서버에 남기지 못한 변경이 있어, 연결되면 다시 맞춘다.":"")));return}
  if(typeof clueOn==="function"&&clueOn())box.appendChild(elT("p","hint","단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다."));
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]);
   cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+Math.round(L[4]*L[2]*(1+.1*(L[2]-1)/1.67))+", 경험치 약 "+Math.round(L[5]*L[2]*(1+.1*(L[2]-1)/1.67))+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]*L[2]));
-  const b=elT("button","chip","출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn());b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
-// 돌아올 시각이 되면 한 번 알린다.
-setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){h.nt=1;saveNow();const L=lhOf(h.k);note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if(!$("#v-hub").hidden)hubLH()},30000);
+  const b=elT("button","chip",lhBusy?"저장 중...":"출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn())||lhBusy;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
+// 돌아올 시각이 되면 한 번 알린다. 저장 실패 시 보류했다가 accSoftSync 가 이어 올린다.
+setInterval(async()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt&&!lhNtBusy){h.nt=1;lhNtBusy=true;try{const ok=await saveNowOk();const L=lhOf(h.k);if(!ok){lhDefer={kind:"nt",nm:L[1]};accSoftSync();return}lhDefer=null;note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}finally{lhNtBusy=false}}if(!$("#v-hub").hidden)hubLH()},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)accSoftSync()});
+setInterval(()=>{if(!document.hidden&&(lhOn()||lhDefer||savePending))accSoftSync()},60000);
 
 /* 프로필과 공명: 친구의 프로필에서 '공명하기'로 공명을 청하고, 친구가 받아들이면 둘 다 절망도가 내려간다. 같은 상대에게는 3시간에 한 번이다. */
 let pfU=null;
