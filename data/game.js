@@ -190,7 +190,8 @@
       선택지 투표는 rooms/xv{출정}_c{번호}/{나}에 기록하고, 마감 시각까지 들어온 표만 센다. */
    const XS=300000,XN=15,XCLOSE=120000,XSTEP=2200,XKEEP=24;
    /* 출정 진행은 출발 후 X_RUN_MAX 안에 끝난다.
-      결과가 끝나면 live/xdrop/{묶음}_{번호}에 지울 시각(지금+X_DROP)을 남긴다(브라우저 xMarkDone·서버 출정 종료 모두).
+      결과가 끝나면 live/xdrop/{묶음}_{번호}에 지울 시각(endAt+X_DROP, 빈 방은 now+X_DROP)을 남긴다(브라우저 xMarkDone·서버 출정 종료 모두).
+      이미 더 늦은 예약이 있으면 유지하고, 더 이른 예약만 endAt 기준으로 늦춘다.
       expireMarch 는 그 맵만 읽어 시각이 지난 자리(xm)·예전 xn·표(xv)·결과(xr)를 지운다. 자리 done 을 슬롯마다 묻지 않는다.
       참가는 xm 한 칸만 쓴다(이름 목록 xn·자리 ts 는 쓰지 않는다). 표는 xv 에 고른 값만 남긴다.
       xdrop 이 없으면 출발 후 X_HARD_LIMIT(20분)이 지난 슬롯을 그 함수가 지운다.
@@ -207,7 +208,8 @@
    const XMAX=7;
    // 내가 참가한 출정을 진행한다. 화면을 보고 있지 않아도 돌아가서 결과와 보상을 받는다.
    // 출정이 서버 문제 등으로 끝나지 못하면 캐릭터가 출정에 묶이지 않도록 정리한다(시간 제한, 직접 정리 버튼).
-   const X_FETCH_GIVEUP=5*60000,X_VOTE_GIVEUP=30000,X_HARD_LIMIT=20*60000;
+   // X_FETCH_GIVEUP: 출발 후 xr 미수신·빈 응답 대기 한도(클라 X_XR_MISS 와 동일). T0 에는 calc=1 로 roomCalc 를 깨우고, expireMarch(1분)는 백업이다.
+   const X_FETCH_GIVEUP=5*60000,X_HARD_LIMIT=20*60000;
 
 
    /* 상점 */

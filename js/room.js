@@ -7,7 +7,7 @@ const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:(Array.isArray(C.a)?C.a
 const rref=c=>DB.doc("rooms/"+c);
 const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.color="var(--bad)";$("#hm").textContent=t}};
 // 매지컬 마치(정기 출정) 화면. 마을 메뉴에서만 들어온다. 목록 칸이 펼쳐져 있을 때만 참가 자리를 지켜본다.
-const openRooms=()=>{if(C.fall)return($("#hm").style.color="var(--bad)",$("#hm").textContent="타락한 동안에는 출정할 수 없다.");if(C.dz>=90)return($("#hm").style.color="var(--bad)",$("#hm").textContent="절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");show("rooms");watchList()};
+const openRooms=()=>{if(C.fall)return($("#hm").style.color="var(--bad)",$("#hm").textContent="타락한 동안에는 출정할 수 없다.");if(C.dz>=90)return($("#hm").style.color="var(--bad)",$("#hm").textContent="절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");if(typeof clockSync==="function")clockSync();show("rooms");watchList()};
 $("#rb").onclick=()=>{unL&&unL();unL=null;if(typeof stopX==="function")stopX();hub()};
 function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 출정 목록을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");return}
  if(typeof xListOpen==="function"&&!xListOpen()){if(typeof stopX==="function")stopX();return}

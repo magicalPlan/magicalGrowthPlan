@@ -9,6 +9,8 @@ try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 바뀐 칸만 올린다. 캐릭터 전체를 이 브라우저에 다시 쓰지 않는다.
 // 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
 const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
+/* 출발·정산처럼 덮어쓰기·유실이 아쉬운 변경은 600ms 대기 없이 바로 올린다. */
+const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
 function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
  if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
@@ -124,9 +126,11 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    그래도 안 되면 작은 값 하나만 저장해 보고, 결과를 경고에 함께 적어 원인(토큰·규칙·내용)을 짐작할 수 있게 한다. */
 /* 저장은 계정 문서를 통째로 바꾸지 않는다. 마지막으로 서버에 반영된 캐릭터(accBase)와 지금 캐릭터를 견주어, 바뀐 칸만 PATCH 한다.
    레벨·경험치는 accounts/{계정}/prog 에도 같이 적어, 마을을 열 때와 출정에서 돌아올 때 읽는다. 본문과 prog 중 큰 경험치를 남긴다.
-   보내기 전에 막히면 바뀐 칸만 mgr_pend_{계정} 에 남긴다. 캐릭터 전체 백업은 쓰지 않는다. */
+   보내기 전에 막히면 바뀐 칸만 mgr_pend_{계정} 에 남긴다. 캐릭터 전체 백업은 쓰지 않는다.
+   전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
+   PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다(완전 서버 시계 권위는 아님). */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
-let accBase=null,accReady=false,savePending=false;
+let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null;
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
 function diffFlat(a,b,path,out){if(a===b)return;const ao=a&&typeof a==="object",bo=b&&typeof b==="object";
@@ -138,6 +142,22 @@ function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
 function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
+/* 장기 토벌·단서: 한쪽이 정산(null)이면 null 우선. 둘 다 진행 중이면 더 늦은 t0. */
+function pickTrip(local,remote){if(local==null||local===undefined)return null;if(remote==null||remote===undefined)return null;return(Number(local.t0)||0)>=(Number(remote.t0)||0)?local:remote}
+/* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행·더 큰 골드/경험을 합친다. */
+async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
+ let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
+ if(!(remoteTs>Number(accSeen)))return false;
+ const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;return false}
+ const mine=JSON.parse(JSON.stringify(C));C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
+ C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
+ if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
+ if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}
+ accSeen=Number(d.ts)||remoteTs;accMark(rem);accReady=true;
+ try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
+ try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
+ try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
+ return true}
 /* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 도감)은 양쪽을 합친다.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
 function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
@@ -163,15 +183,26 @@ async function saveRescue(){if(saveFix)return false;saveFix=true;try{
  let small=false;try{await DB.doc("accounts/"+AUTH.uid+"/ts").set(Date.now());small=true}catch(e){}
  const kb=Math.round(JSON.stringify(savePayload(false)).length/1024);
  saveDiag=" [진단: 토큰 "+(tok?"정상":"갱신 실패")+" · 작은 저장 "+(small?"성공 → 저장 내용("+kb+"KB)이 규칙에 걸림":"실패 → 계정 쓰기 권한 자체가 막힘")+"]";return false}finally{saveFix=false}}
-function saveCloud(now){clearTimeout(sct);const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;return}
- const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
- const done=()=>{accBase=JSON.parse(stamp);accReady=true;if(JSON.stringify(C)!==stamp){savePending=true;saveCloud()}else{savePending=false;clearPend()}};
- if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(async e=>{const c=String(e&&e.message||e);
-  if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}saveWarn(c);clearTimeout(sct);sct=setTimeout(go,15000)});
- const body=accDiff(sent);if(!Object.keys(body).length){done();return}body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
- try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(slim))}catch(e){}
- return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(async e=>{const c=String(e&&e.message||e);
-  if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}saveWarn(c);clearTimeout(sct);sct=setTimeout(go,15000)})};if(now)return go();return new Promise(res=>{sct=setTimeout(()=>res(go()),600)})}
+function saveCloud(now){
+ if(saveBusy){saveAgain=true;savePending=true;return Promise.resolve()}
+ clearTimeout(sct);if(now)clearTimeout(saveRetryT);
+ const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;return}
+  saveBusy=true;saveAgain=false;
+  try{await accSyncIfNewer()}catch(e){}
+  const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
+  const done=()=>{accBase=JSON.parse(stamp);accReady=true;
+   if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveBusy=false;return saveCloud(true)}
+   savePending=false;saveBusy=false;clearPend()};
+  const fail=async e=>{const c=String(e&&e.message||e);
+   if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
+   saveWarn(c);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveBusy=false;saveAgain=true;saveCloud(true)},15000)};
+  if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
+  /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
+  const body=accDiff(sent);if(!Object.keys(body).length){done();return}
+  body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
+  try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(slim))}catch(e){}
+  return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
+ if(now)return go();return new Promise(res=>{sct=setTimeout(()=>res(go()),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
@@ -333,7 +364,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")imgClose()});
 const lhOf=k=>LH.find(x=>x[0]===k),lhOn=()=>!!(C&&C.lh&&lhOf(C.lh.k));
 function lhStart(k){const L=lhOf(k);if(!L||lhOn())return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();save();note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");hubLH()}
+ const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");hubLH()}
 function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
  const g=rng(hs32("lh"+h.sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),bonus=1+.1*Math.max(0,L[2]-1)/1.67,mul=done?(ok?1:.5)*bonus:LH_EARLY;
@@ -342,7 +373,7 @@ function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L)return;const now=Date.
  C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
- note("quest",L[1]+": "+head+" ("+rw+")");save();checkTitles();
+ note("quest",L[1]+": "+head+" ("+rw+")");saveNow();checkTitles();
  alertBox("🗺 "+L[1]+" · "+(done?(ok?"성공":"실패"):"철수"),head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);hubLH();if(typeof readProg==="function")readProg()}
 function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const now=Date.now(),sm=$("#lhsum");if(sm)sm.textContent=lhOn()?(now>=C.lh.t1?"· 귀환! 보상 받기":"· "+lhOf(C.lh.k)[1]+" "+cdTxt(C.lh.t1-now)+" 남음"):"";
  if(lhOn()){const h=C.lh,L=lhOf(h.k),done=now>=h.t1,w=elT("div","dq lh-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
@@ -355,7 +386,7 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
   cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+Math.round(L[4]*L[2]*(1+.1*(L[2]-1)/1.67))+", 경험치 약 "+Math.round(L[5]*L[2]*(1+.1*(L[2]-1)/1.67))+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]*L[2]));
   const b=elT("button","chip","출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn());b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
 // 돌아올 시각이 되면 한 번 알린다.
-setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){h.nt=1;save();const L=lhOf(h.k);note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if(!$("#v-hub").hidden)hubLH()},30000);
+setInterval(()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt){h.nt=1;saveNow();const L=lhOf(h.k);note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if(!$("#v-hub").hidden)hubLH()},30000);
 
 /* 프로필과 공명: 친구의 프로필에서 '공명하기'로 공명을 청하고, 친구가 받아들이면 둘 다 절망도가 내려간다. 같은 상대에게는 3시간에 한 번이다. */
 let pfU=null;

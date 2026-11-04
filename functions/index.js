@@ -23,11 +23,19 @@ async function withLock(db, key, fn) {
   try { await fn(); } finally { await ref.set(null); }
 }
 
+/* 방 삭제는 endAt+X_DROP(또는 빈 방이면 now+X_DROP) 기준.
+   이미 더 늦은 예약이 있으면 유지하고, 더 이른 예약만 늦춘다(빠른 클라가 수명을 당기지 못하게). */
 async function scheduleXDrop(db, s, i, at) {
   await db.ref("live/xdrop/" + s + "_" + i).transaction(c => {
-    if (typeof c === "number" && Number.isFinite(c)) return;
+    if (typeof c === "number" && Number.isFinite(c)) {
+      if (c >= at) return;
+      return at;
+    }
     return at;
   });
+}
+function xDropAt(doc, now) {
+  return (doc && typeof doc.endAt === "number" ? doc.endAt : now) + X_DROP;
 }
 
 async function dropOne(db, s, i) {
@@ -144,7 +152,7 @@ async function stepOneExpedition(db, s, i, now) {
     doc.calc = 0;
     await ref.set(plain(doc));
     await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
-    if (doc.done) await scheduleXDrop(db, s, i, now + X_DROP);
+    if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
     return;
   }
   if (!cur.wait || now < cur.wait.Wd + 3000) {
@@ -159,7 +167,7 @@ async function stepOneExpedition(db, s, i, now) {
   doc.calc = 0;
   await writeExpeditionPatch(ref, cur, doc);
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
-  if (doc.done) await scheduleXDrop(db, s, i, now + X_DROP);
+  if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
 }
 
 async function runLiveMarch(db, now) {

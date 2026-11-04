@@ -24,7 +24,7 @@ function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toas
  if(typeof lhOn==="function"&&lhOn()){toast("장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다.");return}
  if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L.nm+"("+L.hr+"시간)을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw)*100)+"%"))return;
- const t0=Date.now();C.clue={k:id,t0,t1:t0+L.hr*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();save();
+ const t0=Date.now();C.clue={k:id,t0,t1:t0+L.hr*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();
  note("quest",L.nm+"을(를) 떠났다. "+L.hr+"시간 뒤에 돌아온다.");toast("🔍 "+L.nm+" 출발! "+L.hr+"시간 뒤에 돌아온다.");clueDraw()}
 function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.hr):1;
  for(let i=0;i<n&&log.length;i++){const e=log[Math.floor(g()*log.length)];if(!evs.includes(e))evs.push(e)}
@@ -41,6 +41,6 @@ function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;const now
  if(typeof clpGain==="function"){const cp=clpGain("clue",{ok,done,hr:hrs});if(cp)pick.evs.push(cp)}
  const head=!done?"중간에 돌아왔다.":ok?"탐색 성공!":"단서는 놓쳤지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  const lines=pick.evs.map(e=>"· "+e).concat(pick.found.map(x=>"· 추가 조사 — "+x[1]+"\n  "+x[2]));
- note("quest",L.nm+": "+head+" ("+rw+")");save();checkTitles();
+ note("quest",L.nm+": "+head+" ("+rw+")");saveNow();checkTitles();
  alertBox("🔍 "+L.nm+" · "+(done?(ok?"성공":"실패"):"귀환"),head+"\n\n"+lines.join("\n")+"\n\n"+rw);clueDraw()}
-setInterval(()=>{if(!C||!clueOn())return;const h=C.clue;if(Date.now()>=h.t1&&!h.nt){h.nt=1;save();const L=clueOf(h.k);note("quest",L.nm+"에서 돌아왔다! 장기 의뢰에서 보상을 받자.");toast("🔍 "+L.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if($("#v-ord")&&!$("#v-ord").hidden)clueDraw()},30000);
+setInterval(()=>{if(!C||!clueOn())return;const h=C.clue;if(Date.now()>=h.t1&&!h.nt){h.nt=1;saveNow();const L=clueOf(h.k);note("quest",L.nm+"에서 돌아왔다! 장기 의뢰에서 보상을 받자.");toast("🔍 "+L.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if($("#v-ord")&&!$("#v-ord").hidden)clueDraw()},30000);
