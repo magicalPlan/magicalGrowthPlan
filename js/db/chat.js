@@ -35,4 +35,4 @@ async function apiDmIndex(skipDmn){const rows={},take=(id,v)=>{if(!id||id==="ts"
  try{const d=(await apiDmBox()).data()||{};Object.keys(d).forEach(id=>take(id,d[id]));ok=true}catch(e){}
  if(!ok)throw new Error("dm-index");return rows}
 function apiVillageLatest(v){return once(apiCol("chat").prefix("c_"+v+"_").limit(1))}
-async function apiClockSync(){if(skewOk||!XON()||!UID)return;skewOk=true;try{const a=Date.now();await apiPut("wboss/clk/"+UID,{t:{".sv":"timestamp"}});const b=Date.now();const v=Number(((await apiGet("wboss/clk/"+UID)).data()||{}).t);if(v>0&&b-a<5000)SKEW=Math.round(v-(a+b)/2)}catch(e){skewOk=false}}
+async function apiClockSync(force){if((skewOk&&!force)||!XON()||!UID)return;skewOk=true;try{const a=Date.now();await apiPut("wboss/clk/"+UID,{t:{".sv":"timestamp"}});const b=Date.now();const v=Number(((await apiGet("wboss/clk/"+UID)).data()||{}).t);if(v>0&&b-a<5000)SKEW=Math.round(v-(a+b)/2)}catch(e){skewOk=false}}

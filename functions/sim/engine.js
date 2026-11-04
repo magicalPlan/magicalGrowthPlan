@@ -2,7 +2,7 @@
    사건 글은 data/events, 판정 숫자는 scripts/pack-sim.js, 특성으로 갈라지는 규칙(불굴·번뜩임·예민함·속성)은 이 파일이다. */
 "use strict";
 const T = require("./tables");
-const {EV, VEV, SOLO_EV, BJ, EARTH_P, SCY_CRIT, SOLO_DF, SOLO_DZ, SOLO_EVP, CHOICE_MS, XSTEP, XS, XN, XCLOSE, XMAX, XPL, ABYSS_PL, XDF, VLN} = T;
+const {EV, VEV, SOLO_EV, BJ, EARTH_P, SCY_CRIT, SOLO_DF, SOLO_DZ, SOLO_EVP, CHOICE_MS, XSTEP, XS, XN, XCLOSE, X_JOIN_GRACE, XMAX, XPL, ABYSS_PL, XDF, VLN} = T;
 const {BJ_SOFT, BJ_HARD, BJ_LOW, BT_BASE, BT_STEP, BT_K} = T;
 const EVM = {};
 EV.concat(SOLO_EV, ...Object.values(VEV)).forEach(x => { EVM[x.id] = x; });
@@ -162,7 +162,9 @@ function expeditionInfo(s, i) {
 }
 function partyIds(info, seat) {
   const jtOf = v => typeof (v && v.jt) === "number" ? v.jt : 0;
-  return Object.keys(seat || {}).filter(u => seat[u] && typeof seat[u] === "object" && jtOf(seat[u]) <= info.close).sort((a, b) => jtOf(seat[a]) - jtOf(seat[b]) || (a < b ? -1 : 1)).slice(0, XMAX);
+  const grace = typeof X_JOIN_GRACE === "number" ? X_JOIN_GRACE : 5000;
+  const until = info.close + grace;
+  return Object.keys(seat || {}).filter(u => seat[u] && typeof seat[u] === "object" && jtOf(seat[u]) <= until).sort((a, b) => jtOf(seat[a]) - jtOf(seat[b]) || (a < b ? -1 : 1)).slice(0, XMAX);
 }
 /* prevWait: 같은 c 의 기존 wait. 있으면 Ws/Wd 를 그대로 쓴다(연장·재오픈 금지).
    새 wait 는 최초 write 시에만 Wd = now + CHOICE_MS (실시계 15초). */

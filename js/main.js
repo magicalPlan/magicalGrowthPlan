@@ -162,6 +162,12 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
  if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
  if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}
+ /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계)을 서버 옛값으로 되돌리지 않는다. */
+ if((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object")){
+  if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
+  if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
+  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
+  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot}
  accSeen=Number(d.ts)||remoteTs;accMark(rem);accReady=true;
  try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
@@ -391,18 +397,22 @@ async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof
  try{const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
   lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.")}
  finally{lhBusy=false;hubLH()}}
+/* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
+function tripGot(map,sd){const k=String(sd||"");if(!k)return false;const o=C[map]=C[map]&&typeof C[map]==="object"?C[map]:{};if(o[k])return true;o[k]=1;const ks=Object.keys(o);if(ks.length>30)ks.slice(0,ks.length-30).forEach(x=>delete o[x]);return false}
 async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
+ if(tripGot("lhGot",h.sd)){C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
  const g=rng(hs32("lh"+h.sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),bonus=1+.1*Math.max(0,L[2]-1)/1.67,mul=done?(ok?1:.5)*bonus:LH_EARLY;
  const gd=Math.round(L[4]*hrs*mul),ex=Math.round(L[5]*hrs*mul),dz=Math.round(L[6]*hrs+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
  C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz,tag=done?(ok?"성공":"실패"):"철수";
- lhBusy=true;hubLH();toast("결과 저장 중...");
- try{const saved=await saveNowOk();if(!saved){lhDefer={kind:"claim",nm:L[1],head,rw,evs,tag};toast("보상은 이 기기에 반영했다. 연결되면 서버에 맞추고 결과를 보여 준다.");accSoftSync();return}
-  lhDefer=null;note("quest",L[1]+": "+head+" ("+rw+")");checkTitles();
-  alertBox("🗺 "+L[1]+" · "+tag,head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);if(typeof readProg==="function")readProg()}
+ /* 낙관적: 결과 팝업을 먼저 보여 주고, PATCH 는 뒤에서 여러 번 시도한다. 실패해도 로컬 보상은 되돌리지 않는다. */
+ note("quest",L[1]+": "+head+" ("+rw+")");checkTitles();hubLH();
+ alertBox("🗺 "+L[1]+" · "+tag,head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);if(typeof readProg==="function")readProg();
+ lhBusy=true;hubLH();
+ try{if(!await saveNowRetry(4,1500)){toast("보상은 반영했다. 서버 저장을 계속 시도한다.");accSoftSync()}}
  finally{lhBusy=false;hubLH()}}
 function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const now=Date.now(),sm=$("#lhsum");if(sm)sm.textContent=lhOn()?(now>=C.lh.t1?"· 귀환! 보상 받기":"· "+lhOf(C.lh.k)[1]+" "+cdTxt(C.lh.t1-now)+" 남음"):"";
  if(lhOn()){const h=C.lh,L=lhOf(h.k),done=now>=h.t1,w=elT("div","dq lh-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
