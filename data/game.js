@@ -20,6 +20,9 @@
    ③ 혼자일 때만 일어나는 이벤트(SOLO_EV)가 SOLO_EVP(55%) 확률로 일반 이벤트 대신 나온다. 숫자만 고치면 바뀐다. */
    const SOLO_DF=1.15,SOLO_DZ=1.2,SOLO_M=1,SOLO_RW={g:40,mp:.5},SOLO_EVP=.55;
    const CHOICE_MS=15000;
+   /* 투표 마감(Wd) 뒤 집계까지 여유. 서버가 Wd+1000 이후 표는 버리므로, 집계도 그 직후(X_VOTE_GRACE)에 돌린다.
+      클라는 같은 시각에 calc 를 깨우고, 안 되면 X_VOTE_CALC_GAP 마다 다시 요청한다. */
+   const X_VOTE_GRACE=1000,X_VOTE_CALC_GAP=5000;
 
    
    /* 앱 버전(APP_VER)은 js/common/include.js 에 있다. 화면 HTML 캐시와 설정 화면이 그 값을 쓴다. */

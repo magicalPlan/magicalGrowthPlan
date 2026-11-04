@@ -10,6 +10,8 @@ const sim = require("./sim/engine");
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
 const XS = 300000, XN = 15, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
+/* 투표 마감 Wd 뒤 집계 여유. readXVotes 가 Wd+1000 초과 표를 버리므로 집계도 1초면 충분하다(옛 3초). */
+const X_VOTE_GRACE = 1000;
 const plain = v => JSON.parse(JSON.stringify(v));
 
 async function withLock(db, key, fn) {
@@ -155,8 +157,10 @@ async function stepOneExpedition(db, s, i, now) {
     if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
     return;
   }
-  if (!cur.wait || now < cur.wait.Wd + 3000) {
+  if (!cur.wait || now < cur.wait.Wd + X_VOTE_GRACE) {
     await db.ref("live/x/" + s + "_" + i).set(xDue(cur, now));
+    /* 마감 전에 들어온 calc=1 은 여기서 소비만 되고 다시 안 울릴 수 있다. 0 으로 돌려 클라·스케줄이 재요청하게 한다. */
+    if (cur && cur.calc === 1) await ref.child("calc").set(0);
     return;
   }
   const votes = await readXVotes(db, info.id, cur.wait, cur.r.pl || {});
@@ -183,7 +187,7 @@ async function runLiveMarch(db, now) {
 }
 
 function xDue(doc, now) {
-  if (doc && doc.wait && typeof doc.wait.Wd === "number") return doc.wait.Wd + 3000;
+  if (doc && doc.wait && typeof doc.wait.Wd === "number") return doc.wait.Wd + X_VOTE_GRACE;
   return now + 40 * 60000;
 }
 
