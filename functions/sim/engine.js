@@ -164,11 +164,12 @@ function partyIds(info, seat) {
   const jtOf = v => typeof (v && v.jt) === "number" ? v.jt : 0;
   return Object.keys(seat || {}).filter(u => seat[u] && typeof seat[u] === "object" && jtOf(seat[u]) <= info.close).sort((a, b) => jtOf(seat[a]) - jtOf(seat[b]) || (a < b ? -1 : 1)).slice(0, XMAX);
 }
-function replayExpedition(info, pl, picks) {
+function replayExpedition(info, pl, picks, now) {
   const r = { code: info.id, pl: {}, total: info.total, seq: [], evs: [], df: XDF[info.d].df, rw: XDF[info.d].rw, dzm: XDF[info.d].dz || 1, ab: info.d === 4 ? 1 : 0, zv: info.v };
   Object.keys(pl || {}).forEach(u => { r.pl[u] = pl[u]; });
   const L = [];
   let wait = null;
+  const wall = typeof now === "number" && Number.isFinite(now) ? now : Date.now();
   seeded(hs32(info.id + "#sim"), () => {
     startSim(r);
     let c = 0;
@@ -176,11 +177,15 @@ function replayExpedition(info, pl, picks) {
       const xe = EVM[r.pend.id];
       if (!xe) { r.pend = null; simStep(r); continue; }
       const cx = evCtx(r), ops = xe.o.map((o, i) => i).filter(i => !xe.o[i].req || xe.o[i].req(cx)), h = (cx.tr("번뜩임") || cx.tr("예민함")) ? xe.o.findIndex(o => o.ok) : -1;
-      const Ws = info.T0 + r.seq.length * XSTEP + c * CHOICE_MS;
+      /* 시뮬 타임라인 Ws 가 이미 지난 뒤(앞 선택 지연)에도 투표 창이 열리도록, 마감은 max(시뮬, 지금+CHOICE_MS). */
+      const WsSim = info.T0 + r.seq.length * XSTEP + c * CHOICE_MS;
+      const Wd = Math.max(WsSim + CHOICE_MS, wall + CHOICE_MS);
+      const Ws = Wd - CHOICE_MS;
       L.push(r.seq.length);
-      r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Ws + CHOICE_MS, ops, h };
-      if (picks[c] == null) { wait = { c, Ws, Wd: Ws + CHOICE_MS }; break; }
-      resolveChoice(r, picks[c]);
+      r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Wd, ops, h };
+      if (picks[c] == null) { wait = { c, Ws, Wd }; break; }
+      const ballots = Array.isArray(picks[c]) ? picks[c] : (picks[c] == null ? null : [picks[c]].flatMap(x => typeof x === "number" ? [x] : []));
+      resolveChoice(r, ballots || []);
       c++;
     }
   });

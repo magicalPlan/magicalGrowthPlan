@@ -13,6 +13,40 @@ const XS = 300000, XN = 15, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* 투표 마감 Wd 뒤 집계 여유. readXVotes 가 Wd+1000 초과 표를 버리므로 집계도 1초면 충분하다(옛 3초). */
 const X_VOTE_GRACE = 1000;
 const plain = v => JSON.parse(JSON.stringify(v));
+/* RTDB 는 중첩 배열 picks 를 객체로 돌려주는 경우가 많다.
+   Array.isArray 가 아니면 [] 로 시작해 이전 표를 잃고, 첫 선택 wait 가 다시 열려 투표가 두 번 뜨고 진행이 멈춘다. */
+function asPickList(v) {
+  if (v == null) return null;
+  if (Array.isArray(v)) return v.map(Number).filter(n => Number.isFinite(n));
+  if (typeof v === "object") {
+    return Object.keys(v).map(Number).filter(Number.isFinite).sort((a, b) => a - b)
+      .map(k => Number(v[k])).filter(n => Number.isFinite(n));
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? [n] : [];
+}
+function normPicks(raw) {
+  if (raw == null) return [];
+  const keys = Array.isArray(raw)
+    ? raw.map((_, i) => i).filter(i => raw[i] != null)
+    : Object.keys(raw || {}).map(Number).filter(Number.isFinite);
+  const out = [];
+  const max = keys.length ? Math.max(...keys) : -1;
+  for (let i = 0; i <= max; i++) {
+    if (raw[i] == null) continue;
+    const list = asPickList(raw[i]);
+    if (list) out[i] = list;
+  }
+  return out;
+}
+function picksForStore(picks) {
+  const o = {};
+  (Array.isArray(picks) ? picks : normPicks(picks)).forEach((v, i) => {
+    if (v == null) return;
+    o[String(i)] = Array.isArray(v) ? v.map(Number).filter(n => Number.isFinite(n)) : asPickList(v) || [];
+  });
+  return o;
+}
 
 async function withLock(db, key, fn) {
   const ref = db.ref("tally/mlock/" + key);
@@ -113,7 +147,7 @@ async function writeExpeditionPatch(ref, prev, doc) {
     wait: next.wait == null ? null : next.wait,
     done: !!next.done,
     endAt: next.endAt == null ? null : next.endAt,
-    picks: next.picks || [],
+    picks: picksForStore(next.picks),
     calc: 0,
     all: next.all || prev.all || {}
   };
@@ -149,9 +183,10 @@ async function stepOneExpedition(db, s, i, now) {
     }
     const pl = {};
     ids.forEach(u => { pl[u] = seat[u]; });
-    const doc = sim.replayExpedition(info, pl, []);
+    const doc = sim.replayExpedition(info, pl, [], now);
     doc.all = all;
     doc.calc = 0;
+    doc.picks = picksForStore(doc.picks);
     await ref.set(plain(doc));
     await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
     if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
@@ -164,11 +199,12 @@ async function stepOneExpedition(db, s, i, now) {
     return;
   }
   const votes = await readXVotes(db, info.id, cur.wait, cur.r.pl || {});
-  const picks = Array.isArray(cur.picks) ? cur.picks.slice() : [];
+  const picks = normPicks(cur.picks);
   picks[cur.wait.c] = votes;
-  const doc = sim.replayExpedition(info, cur.r.pl, picks);
+  const doc = sim.replayExpedition(info, cur.r.pl, picks, now);
   doc.all = cur.all || {};
   doc.calc = 0;
+  doc.picks = picksForStore(picks);
   await writeExpeditionPatch(ref, cur, doc);
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
   if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));

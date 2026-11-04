@@ -130,16 +130,22 @@ async function xFlush(){const p=xHold();if(!p||!C||!C.mj||C.mj.id!==p.id||!XON()
 async function xLeave(){const mj=C.mj;if(!mj||xNow()>=xInfo(mj.s,mj.i).close)return;const job=++xJob;if(xPend&&xPend.id===mj.id)xPend=null;C.mj=null;xGone={s:mj.s,i:mj.i,till:Date.now()+X_NET};
  if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];xTake.k="";save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)openRooms();
  try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=Object.assign({},me(),{jt:xNow()})}xTake.k="";save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
+/* RTDB picks 가 배열이 아닌 객체로 오면 Array.isArray 검사가 깨져 표를 잃는다. 클라·서버 모두 같은 정규화를 쓴다. */
+function xNormPicks(raw){if(raw==null)return[];const keys=Array.isArray(raw)?raw.map((_,i)=>i).filter(i=>raw[i]!=null):Object.keys(raw||{}).map(Number).filter(Number.isFinite);const out=[],max=keys.length?Math.max(...keys):-1;
+ for(let i=0;i<=max;i++){if(raw[i]==null)continue;const v=raw[i];if(Array.isArray(v))out[i]=v.map(Number).filter(n=>Number.isFinite(n));
+  else if(v&&typeof v==="object")out[i]=Object.keys(v).map(Number).filter(Number.isFinite).sort((a,b)=>a-b).map(k=>Number(v[k])).filter(n=>Number.isFinite(n));
+  else{const n=Number(v);if(Number.isFinite(n))out[i]=[n]}}return out}
 // 처음부터 다시 계산한다. 같은 씨앗, 같은 파티, 같은 표라면 누구의 화면에서든 결과가 같다.
-function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[];let wait=null;
+function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],df:XDF[x.d].df,rw:XDF[x.d].rw,dzm:XDF[x.d].dz||1,ab:x.d===4?1:0,zv:x.v},L=[],picks=xNormPicks(X.picks),wall=xNow();let wait=null;
  Object.keys(X.pl).forEach(u=>r.pl[u]=X.pl[u]);
  seeded(hs32(x.id+"#sim"),()=>{startSim(r);let c=0;
   while(r.pend&&!r.fin){const xe=EVM[r.pend.id];if(!xe){r.pend=null;simStep(r);continue}
-   const cx=evCtx(r),ops=xe.o.map((o,i)=>i).filter(i=>!xe.o[i].req||xe.o[i].req(cx)),h=(cx.tr("번뜩임")||cx.tr("예민함"))?xe.o.findIndex(o=>o.ok):-1,Ws=x.T0+r.seq.length*XSTEP+c*CHOICE_MS;
-   L.push(r.seq.length);r.ch={id:r.pend.id,v:r.pend.v,k:c,until:Ws+CHOICE_MS,ops,h};
-   if(X.picks[c]==null){wait={c,Ws,Wd:Ws+CHOICE_MS};break}resolveChoice(r,X.picks[c]);c++}});
+   const cx=evCtx(r),ops=xe.o.map((o,i)=>i).filter(i=>!xe.o[i].req||xe.o[i].req(cx)),h=(cx.tr("번뜩임")||cx.tr("예민함"))?xe.o.findIndex(o=>o.ok):-1;
+   const WsSim=x.T0+r.seq.length*XSTEP+c*CHOICE_MS,Wd=Math.max(WsSim+CHOICE_MS,wall+CHOICE_MS),Ws=Wd-CHOICE_MS;
+   L.push(r.seq.length);r.ch={id:r.pend.id,v:r.pend.v,k:c,until:Wd,ops,h};
+   if(picks[c]==null){wait={c,Ws,Wd};break}resolveChoice(r,picks[c]);c++}});
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
- return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(r.seq.length-1)+800}}
+ return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(Math.max(0,r.seq.length-1))+800}}
 /* lock=true(기본): 의도 퇴장·확정 실패. C.ms·XR.gone 으로 같은 출정 재바인딩을 막는다.
    lock=false: 일시 실패(xr 미수신·한도 초과). C.ms 를 남기지 않고 XR 을 비워, 서버 자리가 있으면 다시 묶이게 한다. */
 function xAbandon(why,lock){if(!C)return;const hold=lock!==false,j=C.mj;if(j&&xPend&&xPend.id===j.id)xPend=null;C.mj=null;
@@ -203,7 +209,7 @@ function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;st
    if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=DB.doc(path).onSnapshot(onDoc,()=>{},POLL_FAST);
    if(xrRetryT)clearTimeout(xrRetryT);xrRetryT=setTimeout(()=>{if(xrKey!==key||!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;armLive()},X_XR_CD)},0)};
  armLive()}
-function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=doc.picks||[];XR.res=doc;const j=C&&C.mj;
+function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=xNormPicks(doc.picks);XR.res=doc;const j=C&&C.mj;
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}
 /* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다. */
