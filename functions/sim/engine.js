@@ -169,7 +169,6 @@ function replayExpedition(info, pl, picks, now, pc) {
   Object.keys(pl || {}).forEach(u => { r.pl[u] = pl[u]; });
   const L = [];
   let wait = null;
-  const wall = typeof now === "number" && Number.isFinite(now) ? now : Date.now();
   /* pc = 이미 집계·확정된 선택 수. picks 칸이 RTDB 에서 비어도 같은 c 로 다시 wait 하지 않는다. */
   let resolved = typeof pc === "number" && Number.isFinite(pc) ? Math.max(0, Math.floor(pc)) : -1;
   if (resolved < 0) {
@@ -184,10 +183,9 @@ function replayExpedition(info, pl, picks, now, pc) {
       const xe = EVM[r.pend.id];
       if (!xe) { r.pend = null; simStep(r); continue; }
       const cx = evCtx(r), ops = xe.o.map((o, i) => i).filter(i => !xe.o[i].req || xe.o[i].req(cx)), h = (cx.tr("번뜩임") || cx.tr("예민함")) ? xe.o.findIndex(o => o.ok) : -1;
-      /* 시뮬 타임라인 Ws 가 이미 지난 뒤(앞 선택 지연)에도 투표 창이 열리도록, 마감은 max(시뮬, 지금+CHOICE_MS). */
-      const WsSim = info.T0 + r.seq.length * XSTEP + c * CHOICE_MS;
-      const Wd = Math.max(WsSim + CHOICE_MS, wall + CHOICE_MS);
-      const Ws = Wd - CHOICE_MS;
+      /* Wd 는 시뮬 타임라인 고정. now 로 연장하지 않는다(연장 시 투표 창이 다시 열린 것처럼 보임). */
+      const Ws = info.T0 + r.seq.length * XSTEP + c * CHOICE_MS;
+      const Wd = Ws + CHOICE_MS;
       L.push(r.seq.length);
       r.ch = { id: r.pend.id, v: r.pend.v, k: c, until: Wd, ops, h };
       if (c >= resolved) { wait = { c, Ws, Wd }; break; }

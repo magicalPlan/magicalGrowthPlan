@@ -242,6 +242,11 @@ async function stepOneExpedition(db, s, i, now) {
   doc.calc = 0;
   doc.pc = pc;
   doc.picks = picksForStore(picks);
+  /* 같은 선택 번호의 wait 가 다시 계산되면 Wd 를 덮어쓰지 않는다(연장 금지). */
+  if (doc.wait && cur.wait && Number(doc.wait.c) === Number(cur.wait.c)) {
+    doc.wait = { c: cur.wait.c, Ws: cur.wait.Ws, Wd: cur.wait.Wd };
+    if (doc.r && doc.r.ch) doc.r.ch.until = cur.wait.Wd;
+  }
   await writeExpeditionPatch(ref, cur, doc);
   await db.ref("live/x/" + s + "_" + i).set(xDue(doc, now));
   if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
