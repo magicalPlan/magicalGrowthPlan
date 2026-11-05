@@ -13,6 +13,8 @@ const sim = require("./sim/engine");
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
 const XS = 300000, XN = 15, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
+/* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
+const X_EMPTY_RETRY = 60000;
 /* 투표 마감 Wd 뒤 집계 여유. readXVotes 가 Wd+1000 초과 표를 버리므로 집계도 1초면 충분하다(옛 3초). */
 const X_VOTE_GRACE = 1000;
 const plain = v => JSON.parse(JSON.stringify(v));
@@ -215,37 +217,59 @@ async function writeExpeditionPatch(ref, prev, doc) {
   await ref.update(updates);
 }
 
+/* empty 재집계 창 안이면 live/x 를 다시 깨워 자리 set 이 늦어도 파티를 살린다. 창이 끝나면 drop. */
+async function holdEmpty(db, ref, s, i, info, now, all) {
+  await ref.set({empty: 1, all: all || {}});
+  if (now < info.T0 + X_EMPTY_RETRY) {
+    const due = Math.min(now + 15000, info.T0 + X_EMPTY_RETRY);
+    await db.ref("live/x/" + s + "_" + i).set(due);
+    await scheduleXDrop(db, s, i, info.T0 + X_EMPTY_RETRY + X_DROP);
+    return;
+  }
+  await db.ref("live/x/" + s + "_" + i).set(null);
+  await scheduleXDrop(db, s, i, now + X_DROP);
+}
+/* xm 자리를 읽어 첫 xr 를 만든다. 인원이 있으면 true. empty 면 holdEmpty 후 false. */
+async function startExpeditionFromSeats(db, ref, info, s, i, now) {
+  const seat = (await db.ref("rooms/xm" + s + "_e" + i).get()).val() || {};
+  const all = {};
+  Object.keys(seat).forEach(u => { if (seat[u] && typeof seat[u] === "object" && typeof seat[u].jt === "number") all[u] = seat[u].jt; });
+  const ids = sim.partyIds(info, seat);
+  if (!ids.length) {
+    await holdEmpty(db, ref, s, i, info, now, all);
+    return false;
+  }
+  const pl = {};
+  ids.forEach(u => { pl[u] = seat[u]; });
+  const doc = sim.replayExpedition(info, pl, [], now, 0, null);
+  doc.all = all;
+  doc.calc = 0;
+  doc.pc = 0;
+  doc.picks = picksForStore(doc.picks);
+  /* empty 뒤에 살리면 예약한 빠른 xdrop 을 지운다. */
+  await db.ref("live/xdrop/" + s + "_" + i).set(null);
+  await ref.set(plain(doc));
+  await armXDue(db, s, i, doc, now);
+  if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+  return true;
+}
+
 async function stepOneExpedition(db, s, i, now) {
   const info = sim.expeditionInfo(s, i);
   if (now < info.T0) return;
   const ref = db.ref("rooms/xr" + s + "_" + i);
   const cur = (await ref.get()).val();
   if (cur && cur.empty) {
+    if (now < info.T0 + X_EMPTY_RETRY) {
+      await startExpeditionFromSeats(db, ref, info, s, i, now);
+      return;
+    }
     await db.ref("live/x/" + s + "_" + i).set(null);
     await scheduleXDrop(db, s, i, now + X_DROP);
     return;
   }
   if (!cur || !cur.r) {
-    const seat = (await db.ref("rooms/xm" + s + "_e" + i).get()).val() || {};
-    const all = {};
-    Object.keys(seat).forEach(u => { if (seat[u] && typeof seat[u] === "object" && typeof seat[u].jt === "number") all[u] = seat[u].jt; });
-    const ids = sim.partyIds(info, seat);
-    if (!ids.length) {
-      await ref.set({empty: 1, all});
-      await db.ref("live/x/" + s + "_" + i).set(null);
-      await scheduleXDrop(db, s, i, now + X_DROP);
-      return;
-    }
-    const pl = {};
-    ids.forEach(u => { pl[u] = seat[u]; });
-    const doc = sim.replayExpedition(info, pl, [], now, 0, null);
-    doc.all = all;
-    doc.calc = 0;
-    doc.pc = 0;
-    doc.picks = picksForStore(doc.picks);
-    await ref.set(plain(doc));
-    await armXDue(db, s, i, doc, now);
-    if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+    await startExpeditionFromSeats(db, ref, info, s, i, now);
     return;
   }
   const pc0 = pickCount(cur.pc, cur.picks);

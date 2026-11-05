@@ -89,7 +89,8 @@ function drawX(el){el.innerHTML="";if(!C)return;
  const now=xNow(),ls=xLs(),mj=C.mj,ord=xOrdered(ls),n=Math.min(XN,Math.max(X_PAGE,xShowN));
  el.appendChild(elT("p","x-cd",xCdTxt()));
  {const row=elT("div","row x-sort");[["def","기본"],["hi","높은 등급"],["lo","낮은 등급"]].forEach(([k,lab])=>{const b=elT("button","chip",lab);b.type="button";b.setAttribute("aria-pressed",xSort===k?"true":"false");b.onclick=()=>xSetSort(k);row.appendChild(b)});el.appendChild(row)}
- if(mj){const x=xInfo(mj.s,mj.i),m=xFace(x),ids=xParty(x,m),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",(now<x.T0?"출발 "+xHM(x.T0)+" · ":"")+xWho(ids,m)+(now<x.T0?" · 출발 시각에 자동으로 출발한다.":" · 출정 중이다.")));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
+ if(mj){const x=xInfo(mj.s,mj.i),m=xFace(x),ids=xParty(x,m),pend=!!(mj.pend||(xPend&&xPend.id===mj.id)),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");
+  cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",(now<x.T0?"출발 "+xHM(x.T0)+" · ":"")+xWho(ids,m)+(pend?" · 서버에 자리를 남기는 중":now<x.T0?" · 출발 시각에 자동으로 출발한다.":" · 출정 중이다.")));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
  for(let t=0;t<n;t++){const i=ord[t],x=xInfo(ls,i),m=xFace(x),ids=xParty(x,m),onSrv=ids.includes(UID)&&(!mj||mj.id===x.id),inI=!!(mj&&mj.id===x.id)||onSrv,full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
   const ab=x.d===4,weak=ab&&pw()<ABYSS_MIN&&!inI,quit=inI&&xQuitOpen(x),late=now>=x.close,w=elT("div","xm"+(inI?" on":"")+(ab?" abyss":"")),cp=elT("div","xm-copy");
   cp.append(elT("b","",(ab?"🜏 ":"")+x.nm),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · "+xWho(ids,m)));
@@ -110,20 +111,25 @@ async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo
  const job=++xJob,me0=me(),body=Object.assign({},me0,{jt:{".sv":"timestamp"}});C.mj={id:x.id,s,i,T0:x.T0,pend:1};if(C.ms===x.id)delete C.ms;xGone=mj?{s:mj.s,i:mj.i,till:Date.now()+X_NET}:null;
  xPend={s,i,id:x.id,body,prev:mj?{s:mj.s,i:mj.i}:null,prevGone:!mj};
  if(xS===s){if(mj&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];(xSnap["e"+i]=xSnap["e"+i]||{})[UID]=Object.assign({},me0,{jt:Math.min(xNow(),xCloseAt(x))});xTake.k=""}
- /* 낙관 mj·pend 를 바로 남겨, set 전에 새로고침해도 xFlush 가 이어서 올린다. */
- save();drawXAll();xSay(x.nm+" 출정에 참가했다. "+xHM(x.T0)+"에 자동으로 출발한다. 준비한 아이템과 마법은 참가한 순간을 기준으로 쓰인다.");
+ /* 낙관 mj·pend 를 바로 남겨, set 전에 새로고침해도 xFlush 가 이어서 올린다.
+    pend 는 다른 기기가 이어서 올릴 수 있게 saveNow 로 계정에 바로 남긴다. */
+ (typeof saveNow==="function"?saveNow:save)();drawXAll();xSay(x.nm+" 출정 자리를 서버에 남기는 중… "+xHM(x.T0)+"에 자동으로 출발한다. 준비한 아이템과 마법은 참가한 순간을 기준으로 쓰인다.");
  let dropped=false;
  try{if(mj){await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET);dropped=true;if(xPend&&xPend.id===x.id)xPend.prevGone=true}
   await xSeatWrite(s,i,body);
   if(job!==xJob){if(!C.mj||C.mj.id!==x.id)DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});return}
-  if(C.mj&&C.mj.pend)delete C.mj.pend;if(xPend&&xPend.id===x.id)xPend=null;save()}
- catch(e){if(job!==xJob)return;if(xDown(e)&&C.mj&&C.mj.id===x.id){C.mj.pend=1;save();xSay(x.nm+" 참가는 이 기기에 남겨 두었다. 연결되면 서버에 올린다.");return}DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});xPend=null;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];xTake.k="";save();drawXAll();xSay(xJoinWhy(e,dropped),1)}}
+  if(C.mj&&C.mj.pend)delete C.mj.pend;if(xPend&&xPend.id===x.id)xPend=null;save();xSay(x.nm+" 출정에 참가했다. "+xHM(x.T0)+"에 자동으로 출발한다.")}
+ catch(e){if(job!==xJob)return;if(xDown(e)&&C.mj&&C.mj.id===x.id){C.mj.pend=1;(typeof saveNow==="function"?saveNow:save)();xSay(x.nm+" 참가는 이 기기에 남겨 두었다. 연결되면 서버에 올린다.");return}DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});xPend=null;C.mj=dropped?null:mj;xGone=null;if(xS===s&&xSnap["e"+i])delete xSnap["e"+i][UID];xTake.k="";save();drawXAll();xSay(xJoinWhy(e,dropped),1)}}
 /* 네트워크가 끊겨 참가 기록을 못 올렸어도 신청은 유지한다. 마감(+유예) 전에 연결되면 같은 자리를 다시 쓴다. */
 function xHold(){if(xPend||!C||!C.mj||!C.mj.pend)return xPend;const j=C.mj;xPend={s:j.s,i:j.i,id:j.id,body:Object.assign({},me(),{jt:{".sv":"timestamp"}}),prev:null,prevGone:true};return xPend}
 async function xFlush(){const p=xHold();if(!p||!C||!C.mj||C.mj.id!==p.id||!XON()||xFlush.busy)return;const x=xInfo(p.s,p.i);if(xNow()>=xCloseAt(x))return;xFlush.busy=true;
  try{if(p.prev&&!p.prevGone){await DB.doc(xSeat(p.prev.s,p.prev.i)+"/"+UID).delete(X_NET);p.prevGone=true}if(xPend!==p||!C.mj||C.mj.id!==p.id)return;
   p.body=Object.assign({},me(),{jt:{".sv":"timestamp"}});await xSeatWrite(p.s,p.i,p.body);if(!C.mj||C.mj.id!==p.id){DB.doc(xSeat(p.s,p.i)+"/"+UID).delete().catch(()=>{});return}
   if(C.mj.pend)delete C.mj.pend;if(xPend===p)xPend=null;save();drawXAll();xSay(x.nm+" 출정 참가를 서버에 남겼다. "+xHM(x.T0)+"에 출발한다.")}catch(e){}finally{xFlush.busy=false}}
+/* 백그라운드·탭 전환 직후엔 interval 이 늦어지므로 gap 없이 한 번 올린다. */
+function xFlushNow(){if(!(xPend||(C&&C.mj&&C.mj.pend)))return;xFlush.at=0;xFlush()}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)xFlushNow()});
+document.addEventListener("pagehide",()=>xFlushNow());
 async function xLeave(){const mj=C.mj;if(!mj||xNow()>=xInfo(mj.s,mj.i).close)return;const job=++xJob;if(xPend&&xPend.id===mj.id)xPend=null;C.mj=null;xGone={s:mj.s,i:mj.i,till:Date.now()+X_NET};
  if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];xTake.k="";save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)openRooms();
  try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=Object.assign({},me(),{jt:xNow()})}xTake.k="";save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
@@ -156,6 +162,9 @@ function xWhyFetch(x,late){const waitM=Math.max(1,Math.round(X_FETCH_GIVEUP/6000
 function xWhyHard(x,late){const limM=Math.round(X_HARD_LIMIT/60000),lateM=Math.max(1,Math.round((late||0)/60000));
  return x.nm+" 출정이 출발 후 "+limM+"분 한도를 넘겨도 끝나지 않아 화면만 정리했다(원인: 진행 한도 초과, 경과 약 "+lateM+"분). 서버에 자리가 있으면 다시 묶일 수 있다."}
 function xWhyEmpty(x){return x.nm+" 출정은 출발 시각에 참가자가 한 명도 없어 전투를 시작하지 않았다(원인: 빈 파티)."}
+const xEmptyRetry=()=>typeof X_EMPTY_RETRY==="number"?X_EMPTY_RETRY:60000;
+/* empty 문서인데 all 에 내 자리 jt 만 있으면 유예 초과·정원 초과로 본다(진짜 빈 방과 구분). */
+function xWhyEmptyDoc(x,doc){const all=doc&&doc.all||{},jt=all[UID];if(jt==null)return xWhyEmpty(x);const d={};Object.keys(all).forEach(u=>{d[u]={jt:all[u]}});return xSeatMiss(x,d)}
 function xWhyQuit(x){return (x&&x.nm?x.nm+" ":"")+"출정에서 직접 나왔다(원인: 수동 퇴장). 이번 보상은 받지 않는다."}
 // 출발 시각이 지난 자리는 지우지 않는다. 창을 닫았다가 돌아온 사람이 같은 파티로 이어가야 한다.
 // 다만 보상·의도 퇴장·확정 실패 뒤에는 C.ms 로 같은 출정에 다시 묶이지 않게 한다.
@@ -174,7 +183,8 @@ function xQuitOpen(x){if(!C||!x)return false;const now=xNow(),mine=C.mj&&C.mj.id
 function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)xGrant(x)}
  const j=C&&C.mj,done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;
  if(!confirm(done&&!j?"마을로 돌아갈까?":"이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;
- if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}if(!$("#v-xm").hidden)show("hub")}
+ if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}
+ if(!$("#v-xm").hidden){if(typeof hub==="function")hub();else show("hub")}}
 /* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 서버 자리 기록 없음 — 참가 미저장·출발 전 삭제).";if(jtOf(mine)>xCloseAt(x))return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 참가 시각이 마감 유예("+xHM(xCloseAt(x))+") 이후 — 기기 시각이 서버보다 느릴 수 있음).";return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 마감 전 정원 "+XMAX+"명 초과)."}
 /* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
@@ -195,7 +205,9 @@ function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;st
   if(!sn.exists){if(!xrMissAt){xrMissAt=xNow();if(xrMissT)clearTimeout(xrMissT);xrMissT=setTimeout(()=>{xrMissT=null;if(xrKey!==key||!C||!C.mj||C.mj.s!==s||C.mj.i!==i||!xrMissAt)return;if(XR&&XR.id===C.mj.id&&XR.res&&XR.res.r){xrMissAt=0;return}const xx=xInfo(s,i),late=xNow()-xx.T0;stopXr();xAbandon(xWhyFetch(xx,late),false)},X_XR_MISS)}return}
   xrMissAt=0;if(xrMissT){clearTimeout(xrMissT);xrMissT=null}
   const doc=sn.data();if(!doc)return;
-  if(doc.empty){stopXr();xAbandon(xWhyEmpty(x),true);return}
+  if(doc.empty){/* 서버 X_EMPTY_RETRY 안이면 xm 재집계를 기다리며 포기하지 않는다. */
+   if(xNow()<x.T0+xEmptyRetry()){if(!$("#v-xm").hidden)xRender();return}
+   stopXr();xAbandon(xWhyEmptyDoc(x,doc),true);return}
   if(!doc.r)return;
   if(!doc.r.pl||!doc.r.pl[UID]){const d={};Object.keys(doc.all||{}).forEach(u=>{d[u]={jt:doc.all[u]}});stopXr();xHold();const late=xNow()-x.T0;if(xPend&&xPend.id===x.id&&late<=X_FETCH_GIVEUP)return;if(xPend&&xPend.id===x.id)xPend=null;xAbandon(xSeatMiss(x,d),true);return}
   if(xPend&&xPend.id===x.id)xPend=null;xApplyDoc(x,doc);if(!$("#v-xm").hidden)xRender()};
@@ -228,7 +240,7 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
  xGrant(x)}
 /* 표시만. wait/Wd 는 서버 xr, 내 표는 xv. 마을 복귀 때 키·표를 비우지 않는다. */
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
-function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
+function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){if(typeof hub==="function")hub();else show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
  let pl,ids;
@@ -253,9 +265,11 @@ function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!
    DB.doc(xVote(x.id,w.c)+"/"+UID).get().then(sn=>{if(xChK!==k)return;const d=sn.exists?sn.data():null;if(d&&typeof d.i==="number"){xMyV=d.i;mark()}}).catch(()=>{})}
   cv.hidden=false;const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;if(!w)xChK=""}}
-/* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub 로 보낸다.
+/* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub() 로 보낸다.
+   show("hub") 만 하면 마을 DOM 이 옛 절망도·전투력 그대로라, 보상 반영 뒤에도 안 오른 것처럼 보인다.
    진행 중이면 xAuto 를 찍어 두어, 목록·마을에 있어도 같은 출정 화면으로 다시 끌어오지 않는다(보기 버튼으로만 복귀). */
-$("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}show("hub")};
+$("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}
+ if(typeof hub==="function")hub();else show("hub")};
 $("#xq").onclick=()=>xQuit();
 setInterval(()=>{if(!C||!DB)return;const rmOn=!$("#v-rooms").hidden,need=!!(C.mj||xWatchOn()||rmOn);if(need)xClock();
  const now=xNow(),wall=Date.now();xMsClear();
