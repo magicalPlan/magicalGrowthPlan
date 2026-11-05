@@ -45,7 +45,7 @@
    const FB_KEY=(p=>{try{return atob(p.join("")).split("").reverse().join("")}catch(e){return ""}})(["Z0k2NDk4S0xGeD","U4ay1CLWJtQjFq","YnRQVG1pUEg3ZD","NEeVNheklB"] );
 
 
-   const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 가입은 8자 이상·영문·숫자가 필요하다.",CRYPTO_UNAVAILABLE:"이 브라우저에서는 비밀번호를 안전하게 실을 수 없다. 최신 브라우저로 다시 하자.",MISSING_PASSWORD:"비밀번호를 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다."};
+   const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 가입은 8자 이상·영문·숫자가 필요하다.",CRYPTO_UNAVAILABLE:"이 브라우저에서는 비밀번호를 안전하게 실을 수 없다. 최신 브라우저로 다시 하자.",MISSING_PASSWORD:"비밀번호를 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다.",REFRESH:"로그인이 만료되었다. 아이디와 비밀번호로 다시 로그인하자."};
    
 
    /* 최초의 구세주: Firebase 계정이 FOUNDER_CUTOFF(한국 시각) 전에 만들어졌으면 칭호를 준다.

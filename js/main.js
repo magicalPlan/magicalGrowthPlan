@@ -353,10 +353,10 @@ async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,pw2=
   if(em&&hinted){try{await mailSave(hinted,em);noted=em+" 으로도 로그인할 수 있다. 아이디 로그인은 그대로다."}catch(err){noted="계정은 만들어졌다. 이메일 연동은 설정에서 다시 하자."}}
   else if(useMail&&hinted&&AUTH.mail&&!mailDummy(AUTH.mail)){try{await mailSave(hinted,emLogin);noted="아이디 로그인을 되돌려 두었다. 이제 아이디와 이메일 둘 다 쓸 수 있다."}catch(err){noted="이메일로는 들어왔다. 아이디 로그인 기록은 남기지 못했다. 설정에서 이메일 연동을 다시 하자."}}
   if($("#lem-in"))$("#lem-in").value="";
-  await enterGame();if(noted)setTimeout(()=>alertBox("이메일 연동",noted),900)}catch(e){AUTH.uid=null;AUTH.tok=null;m.textContent=errMsg(e)}
+  await enterGame();if(noted)setTimeout(()=>alertBox("이메일 연동",noted),900)}catch(e){AUTH.uid=null;AUTH.tok=null;AUTH.rt="";try{localStorage.removeItem("mgr_rt")}catch(x){}m.textContent=errMsg(e)}
  $("#lgo").disabled=false}
 async function startAuth(){AUTH.key=lget("mgr_key")||FB_KEY;const rt=lget("mgr_rt");
- if(AUTH.key&&rt){AUTH.rt=rt;try{const j=await refresh();AUTH.uid=j.user_id;AUTH.name=lget("mgr_id");await enterGame();return}catch(e){AUTH.uid=null;AUTH.tok=null;showLogin();$("#lm").textContent=errMsg(e);return}}
+ if(AUTH.key&&rt){AUTH.rt=rt;try{const j=await refresh();AUTH.uid=j.user_id;AUTH.name=lget("mgr_id");await enterGame();return}catch(e){AUTH.uid=null;AUTH.tok=null;AUTH.rt="";try{localStorage.removeItem("mgr_rt")}catch(x){}showLogin();$("#lm").textContent=errMsg(e);return}}
  showLogin()}
 let lmailMode=false;
 function lmode(mail) {
