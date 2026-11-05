@@ -1,24 +1,103 @@
 /* 세계관(설정 하위 개요·이벤트·Q&A). 개요 글은 data/world/overview.json, Q&A는 data/world/qa.json.
    화면: html/world/*. 탭 전환은 js/main.js 의 show·navGroup. 서버에 묻지 않는다. */
-function worldLines(text){const p=elT("p","world-p");String(text).split("\n").forEach((line,i)=>{if(i)p.appendChild(document.createElement("br"));p.appendChild(document.createTextNode(line))});return p}
-function worldFold(title,tone,nodes){const d=elT("details","world-fold"+(tone?" "+tone:""));const s=document.createElement("summary");
- s.append(elT("span","world-name",title),elT("span","world-mark","펼치기"));d.appendChild(s);const body=elT("div","world-body");nodes.forEach(n=>body.appendChild(n));d.appendChild(body);
- d.addEventListener("toggle",()=>{const m=s.querySelector(".world-mark");if(m)m.textContent=d.open?"접기":"펼치기"});return d}
-function worldVillage(name,text){const box=elT("div","world-village-box");box.append(elT("h3","world-name",name),worldLines(text));return box}
+
+// P line, \n을 <br /> 로 대체하기 위한 helper 함수
+function worldLines (text) {
+   const p = elT("p", "world-p");
+   String(text).split("\n").forEach( (line,i) => {
+      if (i) p.appendChild(document.createElement("br"));
+      p.appendChild(document.createTextNode(line))}
+   );
+   return p
+}
+
+// world 탭 접고 펼치기 위한 함수
+function worldFold (title, tone, nodes) {
+   const d = elT("details", "world-fold" + (tone ? " " + tone : ""));
+   const s = document.createElement("summary");
+   s.append(elT("span", "world-name", title), elT("span", "world-mark", "펼치기"));
+   d.appendChild(s);
+   const body = elT("div", "world-body");
+   nodes.forEach( n => body.appendChild(n));
+   d.appendChild(body);
+   d.addEventListener("toggle", () => {
+      const m = s.querySelector(".world-mark");
+      if (m) m.textContent = d.open ? "접기" : "펼치기"
+   });
+   return d
+}
+
+// 화면용 DOM 헬퍼. Village 항목 그릴 때 설명을 div.world-village-box/h3.world-name + worldLines 형태로 반환
+function worldVillage(name, text) {
+   const box = elT("div", "world-village-box");
+   box.append(elT("h3", "world-name", name), worldLines(text));
+   return box
+}
+
 /* 개요 JSON. folds[]: { title, tone?, paras?:string[], villages?:{name,text}[] }. 글을 고치면 URL 의 v 를 올린다. */
 const WORLD_OV_URL="data/world/overview.json?v=1";
-let wovBusy=false,wovData=null,wovP=null;
-function worldOvLoad(){if(wovData)return Promise.resolve(wovData);if(wovP)return wovP;
- wovP=fetch(WORLD_OV_URL).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(d=>{wovData=d;wovP=null;return d}).catch(e=>{wovP=null;throw e});return wovP}
-function worldOvDraw(root,data){const d=data&&typeof data==="object"?data:{};
- root.append(elT("h2","world-page",String(d.title||"세계관")),elT("p","world-lead",String(d.lead||"")));
- (Array.isArray(d.folds)?d.folds:[]).forEach(sec=>{if(!sec||!sec.title)return;const nodes=[];
-  (Array.isArray(sec.paras)?sec.paras:[]).forEach(t=>{if(t!=null&&String(t).trim())nodes.push(worldLines(String(t)))});
-  (Array.isArray(sec.villages)?sec.villages:[]).forEach(v=>{if(v&&v.name)nodes.push(worldVillage(String(v.name),String(v.text||"")))});
-  root.appendChild(worldFold(String(sec.title),sec.tone||"",nodes.length?nodes:[elT("p","hint","아직 적힌 글이 없다.")]))})}
-function worldView(){show("world");const root=$("#v-world");if(!root||root.dataset.ready||wovBusy)return;wovBusy=true;
- worldOvLoad().then(data=>{if(!root||root.dataset.ready)return;root.replaceChildren();const err=root.querySelector(".wov-err");if(err)err.remove();worldOvDraw(root,data);root.dataset.ready="1";wovBusy=false}).catch(()=>{
-  wovBusy=false;if(root&&!root.dataset.ready&&!root.querySelector(".wov-err"))root.appendChild(elT("p","hint wov-err","세계관 개요를 불러오지 못했다. 새로고침해 보자."))})}
+
+let wovBusy = false, wovData = null, wovP = null;
+
+// 세계관 개요 JSON 캐싱. wovData가 있다면 반환, 받는 중이면 Promise(xovP)를 재사용. 성공 시 wovData에 넣고, 실패 시 wovP 반환
+// worldView()가 이걸로 받고 worldOvDraw로 그림. 정적 파일 fetch
+function worldOvLoad () {
+   if (wovData) return Promise.resolve(wovData);
+   if (wovP) return wovP;
+   wovP = fetch(WORLD_OV_URL).then(r => { 
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json()
+   }).then( d => {
+      wovData=d;
+      wovP=null;
+      return d
+   }).catch( e => {
+      wovP=null;
+      throw e
+   });
+   
+   return wovP
+}
+
+// worldView()가 worldOvLoad로 데이터를 받은 후 이 함수로 화면을 그린다.
+function worldOvDraw (root, data) {
+   const d = data && typeof data === "object" ? data : {};
+   
+   root.append(elT("h2", "world-page", String(d.title || "세계관")), elT("p","world-lead",String(d.lead || "")));
+
+   (Array.isArray(d.folds) ? d.folds : []).forEach(sec => {
+      if(!sec || !sec.title) return;
+      const nodes=[];
+      (Array.isArray (sec.paras) ? sec.paras : []).forEach(t => {
+         if (t != null && String(t).trim())nodes.push(worldLines(String(t)))
+         });
+      (Array.isArray(sec.villages) ? sec.villages : []).forEach(v => {
+         if( v && v.name) nodes.push( worldVillage(String(v.name), String(v.text||"")))
+         });
+      root.appendChild(worldFold(String(sec.title), sec.tone || "", nodes.length ? nodes : [
+         elT("p","hint","아직 적힌 글이 없다.")]))
+      }
+   )
+}
+
+function worldView () {
+   show("world");
+   const root = $("#v-world");
+   if(!root || root.dataset.ready || wovBusy) return;
+   wovBusy=true;
+   worldOvLoad().then(data => {
+      if (!root || root.dataset.ready) return;
+      root.replaceChildren();
+      const err = root.querySelector(".wov-err");
+      if (err) err.remove();
+      worldOvDraw(root,data);
+      root.dataset.ready = "1";
+      wovBusy=false
+   }).catch( () => {
+      wovBusy=false;
+      if (root && !root.dataset.ready && !root.querySelector(".wov-err"))root.appendChild(elT("p","hint wov-err","세계관 개요를 불러오지 못했다. 새로고침해 보자."))
+   })
+}
 
 /* 세계관 > 이벤트. 버튼은 data/story/lock.js 의 WORLD_STORY_OPEN(open:true) 만 본다.
    장기 의뢰 단서 조각(STORY_LOCK·CLPN·clpStories)과 별개다. open 은 lock.js 에서 손으로 켠다. */
@@ -34,7 +113,6 @@ function worldEvent(){show("wev");const root=$("#v-wev");if(!root)return;root.re
    b.onclick=()=>{if(typeof vnOpen==="function")vnOpen(story)};line.appendChild(b);slot.appendChild(line)});
   if(!slot.childNodes.length){root.replaceChildren(elT("p","world-lead","이 기억은 아직 잠겨 있다."),elT("p","hint","이야기 글을 찾지 못했다."));}}).catch(()=>{slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
 
-  
 /* Q&A. 글은 data/world/qa.json.
    한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
    답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */

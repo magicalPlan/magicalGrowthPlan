@@ -1,4 +1,4 @@
-
+﻿
 // 이벤트 조건 판단용: 파티의 속성, 특성, 인원, 절망도
 const evCtx=r=>{const ps=Object.values(r.pl||{});return{ps,n:ps.length,at:a=>ps.some(p=>String(p.a||"").includes(a)),tr:t=>ps.some(p=>p.t===t),hiDz:ps.some(p=>(Number(p.dz)||0)>=70)}};
 // 메아리 이벤트: 파티에 없는 내 친구 이름 하나
@@ -8,9 +8,9 @@ let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
 // 로그인 중이면 서버에 바뀐 칸만 올린다. 캐릭터 전체를 이 브라우저에 다시 쓰지 않는다.
 // 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
-const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
+const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)pendWrite(body)}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
 /* 출발·정산처럼 덮어쓰기·유실이 아쉬운 변경은 600ms 대기 없이 바로 올린다. */
-const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(body))}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}return Promise.resolve(true)};
+const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)pendWrite(body)}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}return Promise.resolve(true)};
 /* 서버 PATCH(또는 전체 set)가 끝날 때까지 기다린다. 성공 true, 실패·미로그인 로컬만이면 로컬은 true. */
 async function saveNowOk(){if(!AUTH.uid||!DB){await saveNow();return true}const r=await saveNow();return r===true}
 /* 잠깐 실패해도 몇 번 다시 올린다. 장기 토벌처럼 알림을 저장 성공 뒤에 두려면 이걸 쓴다. */
@@ -146,9 +146,13 @@ function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
+function pendWrite(slim){if(!AUTH.uid||!slim||!Object.keys(slim).length)return;try{localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(Object.assign({_t:Date.now()},slim)))}catch(e){}}
+function pendRead(){if(!AUTH.uid)return null;try{const raw=localStorage.getItem("mgr_pend_"+AUTH.uid);if(!raw)return null;const f=JSON.parse(raw);if(!f||typeof f!=="object")return null;const t=Number(f._t)||0;const fields={};Object.keys(f).forEach(k=>{if(k==="_t")return;if(k.indexOf("c/")===0||k.indexOf("prog/")===0)fields[k]=f[k]});
+  /* 예전 형식(_t 없음·경로 접두 없음)도 칸만 모은다. */if(!Object.keys(fields).length)Object.keys(f).forEach(k=>{if(k!=="_t")fields[k]=f[k]});return{t,fields}}catch(e){return null}}
 function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];
-  /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다. */
-  if((last==="lh"||last==="clue")&&fields[path]==null&&o[last]&&typeof o[last]==="object")return;
+  /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다.
+     반대로, 서버에 이미 정산(없음)인데 낡은 pend 가 옛 출정을 되살리는 것도 막는다. */
+  if(last==="lh"||last==="clue"){if(fields[path]==null&&o[last]&&typeof o[last]==="object")return;if(fields[path]&&typeof fields[path]==="object"&&!o[last])return}
   if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
 /* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
    재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
@@ -218,7 +222,7 @@ function saveCloud(now){
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
    const body=accDiff(sent);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(slim))}catch(e){}
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
   if(now)go();else sct=setTimeout(()=>go(),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
@@ -261,8 +265,16 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
  C=null;if(d&&d.c){C=d.c;accMark();accReady=true;
   // 개인 회귀가 이 브라우저보다 새로우면, 회귀 전에 남긴 바뀐 칸은 붙이지 않는다.
   try{if(typeof rstFresh==="function")await rstFresh()}catch(e){}
-  // 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다. 캐릭터 전체를 백업으로 갈아끼우지 않는다.
-  try{const raw=localStorage.getItem("mgr_pend_"+UID);if(raw){const f=JSON.parse(raw);if(f&&typeof f==="object"){applyPend(C,f);if(f["prog/ex"]!=null){C.ex=f["prog/ex"];if(f["prog/xv"]!=null)C.xv=f["prog/xv"]}if(typeof xpMigrate==="function")xpMigrate();saveCloud(true)}}}catch(e){}}
+  /* 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다.
+     서버 ts 가 pend 시각보다 더 새롭면(다른 기기·탭이 이미 저장) 낡은 pend 로 되돌리지 않는다.
+     붙인 뒤에도 골드·경험은 서버와 pend 중 큰 쪽을 남긴다. */
+  try{const pend=pendRead();if(pend&&pend.fields&&Object.keys(pend.fields).length){const srvTs=Number(accSeen)||0;
+   if(pend.t&&srvTs&&pend.t<srvTs)clearPend();
+   else{const before=JSON.parse(JSON.stringify(C));applyPend(C,pend.fields);
+    if(pend.fields["prog/ex"]!=null){C.ex=pend.fields["prog/ex"];if(pend.fields["prog/xv"]!=null)C.xv=pend.fields["prog/xv"]}
+    if((Number(before.gd)||0)>(Number(C.gd)||0))C.gd=before.gd;
+    if((Number(before.ex)||0)>(Number(C.ex)||0)){C.ex=before.ex;if(before.lv!=null)C.lv=before.lv;if(before.xv!=null)C.xv=before.xv}
+    if(typeof xpMigrate==="function")xpMigrate();saveCloud(true)}}}catch(e){}}
  else{let bk=null;try{bk=JSON.parse(localStorage.getItem("mgr_bk_"+UID))}catch(e){}
   // 서버에 캐릭터가 없는데 이 브라우저에 이 계정의 백업이 있으면 그걸로 되살리고 서버에 다시 올린다.
   if(bk&&bk.n){C=bk;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;saveCloud(true)}}
@@ -453,9 +465,9 @@ function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>
    사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
 let pubLast=null;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
-function pubCard(){const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- const q=typeof petCur==="function"?petCur():null;
- return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:typeof pw==="function"?pw():0,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:petLv(q)}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf||{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
+function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
+ const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
+ return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:power,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:typeof petLv==="function"?petLv(q):1}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&typeof DEV!=="undefined"&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf&&typeof C.pf==="object"?C.pf:{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
