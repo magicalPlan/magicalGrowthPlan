@@ -23,8 +23,9 @@ function apiDmBell(to,preview){const n=nmOf(),ts={".sv":"timestamp"};apiPut("roo
 function apiDmLeave(to){return apiPut("dmn/"+to+"/"+UID,{n:nmOf(),ts:{".sv":"timestamp"},left:1})}
 function apiDmDrop(id){return DB.doc("rooms/xd"+UID+"/"+id).delete()}
 
-/* 1:1 본문. 그 대화 키만 한 번 읽는다. 목록을 보는 동안에는 부르지 않는다. */
-function apiDmThread(k){return once(apiCol("dm").where("k","==",k))}
+/* 1:1 본문. 그 대화 키의 최근 n개만 읽는다(기본 30). 목록을 보는 동안에는 부르지 않는다.
+   예전 말을 더 볼 때는 n 을 키워 다시 받는다(limitToLast). */
+function apiDmThread(k,n){n=Math.max(1,Math.min(500,Number(n)||30));return once(apiCol("dm").where("k","==",k).limit(n))}
 function apiDmBox(){return apiGet("rooms/xd"+UID)}
 function apiDmnList(){return once(apiCol("dmn/"+UID))}
 

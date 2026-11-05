@@ -131,9 +131,9 @@ function pdfMake(lines,sub){const enc=new TextEncoder(),parts=[],offs=[];let len
  put("trailer\n<< /Size "+(n+1)+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF");
  return {blob:new Blob(parts,{type:"application/pdf"}),pages:pages.length,bytes:()=>{const out=new Uint8Array(len);let p=0;parts.forEach(b=>{out.set(b,p);p+=b.length});return out}}}
 function pinLog(el,y){const b=el.style.scrollBehavior;el.style.scrollBehavior="auto";el.scrollTop=y;el.style.scrollBehavior=b}
-function paint(el,ms,th){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);const same=el.dataset.th===th,nearB=el.scrollHeight-el.scrollTop-el.clientHeight<40,top=el.scrollTop,prevLast=Number(el.dataset.last||0);
- ms.sort((a,b)=>a.ts-b.ts);el._ms=ms;const last=ms.length?Number(ms[ms.length-1].ts)||0:0;el.dataset.th=th;el.dataset.last=last;
- const keep=()=>{if(!same||nearB){const end=()=>pinLog(el,el.scrollHeight);end();newBtn(el,false);requestAnimationFrame(end)}else{pinLog(el,top);if(last>prevLast)newBtn(el,true)}};
+function paint(el,ms,th,pinTop){th=th==null?"":String(th);ms=ms.filter(m=>m&&!m.bt);const same=el.dataset.th===th,nearB=el.scrollHeight-el.scrollTop-el.clientHeight<40,top=el.scrollTop,prevLast=Number(el.dataset.last||0),oldH=pinTop?el.scrollHeight:0,oldT=pinTop?el.scrollTop:0;
+ ms.sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));el._ms=ms;const last=ms.length?Number(ms[ms.length-1].ts)||0:0;el.dataset.th=th;el.dataset.last=last;
+ const keep=()=>{if(pinTop){pinLog(el,el.scrollHeight-oldH+oldT);newBtn(el,false);return}if(!same||nearB){const end=()=>pinLog(el,el.scrollHeight);end();newBtn(el,false);requestAnimationFrame(end)}else{pinLog(el,top);if(last>prevLast)newBtn(el,true)}};
  el.innerHTML="";if(!ms.length){el.innerHTML="<div class='cm-empty'><span>✦</span><p>아직 대화가 없다.</p><small>먼저 인사를 건네 보자.</small></div>";newBtn(el,false);return}
  /* 말풍선: 내 말은 오른쪽, 다른 사람 말은 왼쪽. 같은 사람이 3분 안에 이어 말하면 이름과 얼굴을 한 번만 보인다. 날짜가 바뀌면 구분선을 넣는다. */
  let pu=null,pt=0,pd="",need=false;
@@ -199,10 +199,19 @@ function drawPeers(){const l=$("#pl2");if(!l||!C)return;const fr=C.fr||{};
  ps.forEach(([id,p])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.style.textAlign="left";b.dataset.id=id;const when=p.ts?agoTxt(p.ts):"";b.textContent=(C.dmu&&C.dmu[id]?"● ":"")+(fr[id]?"☍ ":"")+cn(id,p.n||"상대")+(when?" · "+when:"");b.setAttribute("aria-pressed",peer===id?"true":"false");b.onclick=()=>openDM(id,p.n||"상대");b.style.flex="1";
   const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const pb=document.createElement("button");pb.type="button";pb.className="chip";pb.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";pb.textContent="프로필";pb.onclick=()=>openProfile(id);w.append(b,pb);l.appendChild(w)})}
 setInterval(()=>{if(C&&!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick").hidden)drawPeers()},60000);
-function dmPaint(ms,k){const el=$("#dl"),mine=(el._ms||[]).filter(m=>m&&m.u===UID&&!ms.some(s=>s&&s.u===m.u&&s.x===m.x&&Math.abs((Number(s.ts)||0)-(Number(m.ts)||0))<15000));paint(el,ms.concat(mine),k)}
-function dmLoad(id,quiet){if(!DB)return;const k=[UID,id].sort().join("_"),gen=++dmOpenGen;if(!quiet){const el=$("#dl");el._ms=[];el.dataset.th="";el.innerHTML="<div class='cm-empty'><p>대화를 불러오는 중...</p></div>"}
- return apiDmThread(k).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;dmPaint((sn.docs||[]).map(d=>d.data()).filter(Boolean),k)},e=>{if(!quiet&&gen===dmOpenGen)cmsg("대화를 불러오지 못했다. (오류 "+String(e&&e.message||e).replace(/\D/g,"").slice(0,3)+")")})}
+const DM_PAGE=30;let dmOlderBusy=false,dmOlderDone=false;
+function dmMsgs(sn){return(sn.docs||[]).map(d=>{const m=d.data();return m&&!m.bt?Object.assign({_id:d.id},m):null}).filter(Boolean).sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0)||String(a._id||"").localeCompare(String(b._id||"")))}
+function dmPaint(ms,k,pinTop){const el=$("#dl"),mine=(el._ms||[]).filter(m=>m&&m.u===UID&&!ms.some(s=>s&&s.u===m.u&&s.x===m.x&&Math.abs((Number(s.ts)||0)-(Number(m.ts)||0))<15000));paint(el,ms.concat(mine),k,pinTop)}
+function dmLoad(id,quiet){if(!DB)return;const k=[UID,id].sort().join("_"),el=$("#dl"),have=quiet&&el?(el._ms||[]).length:0,want=quiet?Math.max(DM_PAGE,have):DM_PAGE,gen=quiet?dmOpenGen:++dmOpenGen;
+ if(!quiet){dmOlderBusy=false;dmOlderDone=false;el._ms=[];el.dataset.th="";el.innerHTML="<div class='cm-empty'><p>대화를 불러오는 중...</p></div>"}
+ return apiDmThread(k,want).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;let ms=dmMsgs(sn);
+  if(quiet&&(el._ms||[]).length){const cut=ms.length?Number(ms[0].ts)||0:0;const older=(el._ms||[]).filter(m=>m&&(Number(m.ts)||0)<cut);ms=older.concat(ms)}
+  if(!quiet)dmOlderDone=ms.length<DM_PAGE;dmPaint(ms,k)},e=>{if(!quiet&&gen===dmOpenGen)cmsg("대화를 불러오지 못했다. (오류 "+String(e&&e.message||e).replace(/\D/g,"").slice(0,3)+")")})}
+function dmLoadOlder(){if(!DB||!peer||dmOlderBusy||dmOlderDone||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;const el=$("#dl"),have=(el._ms||[]).length;if(have<1)return;
+ const id=peer,k=[UID,id].sort().join("_"),gen=dmOpenGen;dmOlderBusy=true;
+ apiDmThread(k,have+DM_PAGE).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;const ms=dmMsgs(sn);if(ms.length<=have||ms.length<have+DM_PAGE)dmOlderDone=true;if(ms.length>have)dmPaint(ms,k,true)},()=>{}).finally(()=>{dmOlderBusy=false})}
 function openDM(id,n){peer=id;chatLiveDefer();dmMenu(false);$("#cpick").hidden=true;if(C&&C.dmu&&C.dmu[id]){delete C.dmu[id];save()}const name=n||(C&&C.dmn&&C.dmn[id])||(C&&C.fr&&C.fr[id])||"상대";$("#dh").textContent=name+"와의 1:1 대화";$("#dt").hidden=false;dmLoad(id);sync()}
+{const dl=$("#dl");if(dl)dl.addEventListener("scroll",()=>{if(dl.scrollTop<=48)dmLoadOlder()},{passive:true})}
 /* 1:1 머리의 설정. PDF 저장은 예전과 같고, 나가기는 내 목록에서만 지운다. */
 function dmMenu(show){const m=$("#dmenu"),b=$("#dpng");if(!m||!b)return;m.hidden=show!==true;b.setAttribute("aria-expanded",m.hidden?"false":"true")}
 let dmAskOn=false;
