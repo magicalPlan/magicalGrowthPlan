@@ -15,9 +15,11 @@ const need=()=>{const k=C.t==="계약의 가호"?1:0;return{lv:Math.max(1,6+4*gi
 let T=null;
 const trGoal=()=>31+gi()*22+T.f*4+(T.f+1===T.n?12:0);
 $("#b-trial").onclick=()=>{if(trLeft()>0)return;T={f:0,n:3+gi(),l:[],cd:0,started:false};show("trial");tr()};
+/* 시작·성공은 낙관적(로컬 즉시) + saveNow(즉시 PATCH). save() 600ms 지연은 나가기·새로고침에 약하다. */
 function trStart(){if(T.started)return;T.started=true;C.trT=Date.now();
  if(useItem("candle")){T.cd+=5;T.l.push("계약의 촛불에 불을 붙였다. 이번 시험의 판정에 +5가 더해진다.")}
- if(C.tcb){T.cd+=C.tcb;T.l.push("여왕의 표식이 빛난다. 이번 시험의 판정에 +"+C.tcb+"이(가) 더해진다.");C.tcb=0}{const ob=petEff("trial");if(ob){T.cd+=ob;T.l.push("지혜부엉이가 어깨 위에서 조용히 속삭인다. 판정 +"+ob+".")}}save()}
+ if(C.tcb){T.cd+=C.tcb;T.l.push("여왕의 표식이 빛난다. 이번 시험의 판정에 +"+C.tcb+"이(가) 더해진다.");C.tcb=0}{const ob=petEff("trial");if(ob){T.cd+=ob;T.l.push("지혜부엉이가 어깨 위에서 조용히 속삭인다. 판정 +"+ob+".")}}
+ if(typeof saveNow==="function")saveNow();else save()}
 $("#tb").onclick=()=>{if(T&&T.started&&!T.end&&!confirm("지금 나가면 이번 시험은 끝나고, "+trCdTxt()+" 뒤에야 다시 볼 수 있다. 나갈까?"))return;hub()};
 function tr(msg){const done=T.end;$("#tc").innerHTML="<h2>"+(T.f+1>T.n?"":(T.f+1===T.n?"마지막 층: 여왕님":(T.f+1)+"층"))+"</h2><dl class='kv'><dt>판정</dt><dd>"+(pw()+VL[C.v].tb+(C.a.includes("땅")?4:0)+(T.cd||0)+(C.t==="집중"?3:0)+facLv("library"))+" + 운(0~19)</dd>"+(T.f<T.n?"<dt>이번 층 목표</dt><dd>"+trGoal()+" 이상</dd>":"")+"<dt>실패 허용</dt><dd>"+Math.max(0,TRIAL_LIVES-(T.fails||0))+"번 남음</dd>"+((()=>{const a=[armed("seal")?"여왕의 인장":"",!T.started&&armed("candle")?"계약의 촛불":"",!T.started&&C.tcb?"여왕의 표식 +"+C.tcb:""].filter(Boolean);return a.length?"<dt>준비</dt><dd>"+a.join(", ")+"</dd>":""})())+"<dt>절망도</dt><dd>"+C.dz+"/100</dd></dl>";
  $("#tl").innerHTML=T.l.map(t=>"<p>"+t+"</p>").join("")||"<p>여왕님이 시련의 문을 열었다. 총 "+T.n+"층을 통과해야 한다.</p>"+(T.started?"":"<p class='hint'>아직 시험을 시작하지 않았다. '나아간다'를 누르는 순간 시작되고, 그때부터 "+trCdTxt()+" 뒤에 다시 볼 수 있다. 지금 돌아가면 아무것도 잃지 않는다.</p>");
@@ -31,5 +33,7 @@ $("#tg").onclick=()=>{if(T.end)return;trStart();const v=VL[C.v],last=T.f+1===T.n
  else if(T.f>=T.n){titleState();C.stats.trialWins=(C.stats.trialWins||0)+1;const old=C.g;C.g=GL[gi()+1];C.cl=0;let r;const miss=AT.filter(a=>!C.a.includes(a[0]));
   if(miss.length&&Math.random()<.15){const mx=miss[R(miss.length)],a=mx[0];C.a.push(a);r="새로운 속성 '"+a+"'을 손에 넣었다! ("+mx[2]+")"}else{C.b=(C.b||0)+5;r="능력이 개화했다. 전투력이 올랐다."}
   if(C.t==="각성자"){C.b=(C.b||0)+3;r+=" 한계를 넘어 각성했다. 전투력이 3 더 올랐다."}
-  save();checkTitles();T.l.push("재계약 성공! "+old+"등급에서 "+C.g+"등급이 되었다. "+r);T.end=1}
+  /* 등급·속성은 로컬에 바로 반영(낙관적). 서버는 saveNow 로 즉시 PATCH. 실패 시 백그라운드 재시도. UI·나가기는 기다리지 않는다. */
+  if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,2000)}catch(e){}}else save();
+  checkTitles();T.l.push("재계약 성공! "+old+"등급에서 "+C.g+"등급이 되었다. "+r);T.end=1}
  tr()};
