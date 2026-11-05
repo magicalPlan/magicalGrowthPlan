@@ -174,7 +174,8 @@ function xQuitOpen(x){if(!C||!x)return false;const now=xNow(),mine=C.mj&&C.mj.id
 function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)xGrant(x)}
  const j=C&&C.mj,done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;
  if(!confirm(done&&!j?"마을로 돌아갈까?":"이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;
- if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}if(!$("#v-xm").hidden)show("hub")}
+ if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}
+ if(!$("#v-xm").hidden){if(typeof hub==="function")hub();else show("hub")}}
 /* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 서버 자리 기록 없음 — 참가 미저장·출발 전 삭제).";if(jtOf(mine)>xCloseAt(x))return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 참가 시각이 마감 유예("+xHM(xCloseAt(x))+") 이후 — 기기 시각이 서버보다 느릴 수 있음).";return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 마감 전 정원 "+XMAX+"명 초과)."}
 /* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
@@ -228,7 +229,7 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
  xGrant(x)}
 /* 표시만. wait/Wd 는 서버 xr, 내 표는 xv. 마을 복귀 때 키·표를 비우지 않는다. */
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
-function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){show("hub");return}
+function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){if(typeof hub==="function")hub();else show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
  let pl,ids;
@@ -253,9 +254,11 @@ function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!
    DB.doc(xVote(x.id,w.c)+"/"+UID).get().then(sn=>{if(xChK!==k)return;const d=sn.exists?sn.data():null;if(d&&typeof d.i==="number"){xMyV=d.i;mark()}}).catch(()=>{})}
   cv.hidden=false;const t=cv.querySelector(".x-ct");if(t)t.textContent=(xMyV!=null?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+Math.max(0,Math.ceil((w.Wd-now)/1000))+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
  else{cv.hidden=true;if(!w)xChK=""}}
-/* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub 로 보낸다.
+/* 마을로: 출정 목록(openRooms)은 타락·절망도 막힘에 걸릴 수 있어 hub() 로 보낸다.
+   show("hub") 만 하면 마을 DOM 이 옛 절망도·전투력 그대로라, 보상 반영 뒤에도 안 오른 것처럼 보인다.
    진행 중이면 xAuto 를 찍어 두어, 목록·마을에 있어도 같은 출정 화면으로 다시 끌어오지 않는다(보기 버튼으로만 복귀). */
-$("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}show("hub")};
+$("#xb").onclick=()=>{if(C&&C.mj)xAuto=C.mj.id;if(XR&&(XR.fin||XR.gone)){if(C&&XR.id)C.ms=XR.id;XR=null;save();drawXAll()}
+ if(typeof hub==="function")hub();else show("hub")};
 $("#xq").onclick=()=>xQuit();
 setInterval(()=>{if(!C||!DB)return;const rmOn=!$("#v-rooms").hidden,need=!!(C.mj||xWatchOn()||rmOn);if(need)xClock();
  const now=xNow(),wall=Date.now();xMsClear();
