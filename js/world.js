@@ -39,7 +39,7 @@ const WORLD_OV_URL="data/world/overview.json?v=1";
 
 let wovBusy = false, wovData = null, wovP = null;
 
-// 세계관 개요 JSON 캐싱. wovData가 있다면 반환, 받는 중이면 Promise(xovP)를 재사용. 성공 시 wovData에 넣고, 실패 시 wovP 반환
+// 세계관 개요 JSON 캐싱. wovData가 있다면 반환, 받는 중이면 Promise(wovP)를 재사용. 성공 시 wovData에 넣고, 실패 시 wovP 반환
 // worldView()가 이걸로 받고 worldOvDraw로 그림. 정적 파일 fetch
 function worldOvLoad () {
    if (wovData) return Promise.resolve(wovData);

@@ -174,6 +174,8 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot}
+ /* 받은 선물함: 서버 쪽이 오래되면 방금 받은·연 선물이 사라지거나 다시 생긴다. gs·rg 를 합친다. */
+ try{giftBoxMerge(C,mine)}catch(e){}
  accSeen=Number(d.ts)||remoteTs;accMark(rem);accReady=true;
  try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
@@ -181,6 +183,23 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  return true}
 /* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 도감)은 양쪽을 합친다.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
+/* 받은 선물함 합치기. gs 는 칸마다 더 늦은 수신 시각. rg 는 한쪽에만 있고 다른 쪽 gs 에 이미 반영·목록에 없으면(열어 씀) 되살리지 않는다. */
+function giftBoxMerge(dst,src){if(!dst||!src)return dst;
+ dst.gs=dst.gs&&typeof dst.gs==="object"?dst.gs:{};src.gs=src.gs&&typeof src.gs==="object"?src.gs:{};
+ Object.keys(src.gs).forEach(k=>{dst.gs[k]=Math.max(Number(dst.gs[k])||0,Number(src.gs[k])||0)});
+ const stamp=x=>String(x&&x.u||"")+"#"+Number(x&&x.ts||0)+"#"+String(x&&x.g||"");
+ const opened=(gs,x)=>{if(!x)return false;const u=String(x.u||""),t=Number(x.ts)||0;if(!u||!t)return false;
+  if((Number(gs[u])||0)>=t)return true;for(let i=0;i<4;i++)if((Number(gs[u+"_"+i])||0)>=t)return true;return false};
+ const has=(list,x)=>(Array.isArray(list)?list:[]).some(y=>stamp(y)===stamp(x));
+ const map=new Map(),add=(list,otherList,otherGs)=>{
+  (Array.isArray(list)?list:[]).forEach(x=>{if(!x||typeof GV==="undefined"||GV[x.g]==null)return;
+   if(opened(otherGs,x)&&!has(otherList,x))return;map.set(stamp(x),x)})};
+ add(dst.rg,src.rg,src.gs);add(src.rg,dst.rg,dst.gs);
+ dst.rg=[...map.values()].sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));
+ const cap=typeof RG_MAX==="number"?RG_MAX:30;if(dst.rg.length>cap)dst.rg=dst.rg.slice(-cap);
+ /* 이 탭에서 선물을 열어 절망이 더 낮아졌으면 그 값을 남긴다. */
+ if((Array.isArray(src.rg)?src.rg.length:0)<(Array.isArray(dst.rg)?dst.rg.length:0)&&(Number(src.dz)||0)<=(Number(dst.dz)||0))dst.dz=src.dz;
+ return dst}
 function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  const gone=Object.assign({},src.petGone||{},dst.petGone||{});dst.petGone=gone;
  const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else if((Number(q.xp)||0)>(Number(L[i].xp)||0))L[i]=Object.assign({},L[i],{xp:q.xp})});dst.pets=L;
@@ -564,12 +583,16 @@ async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=t
    // 받은 선물은 바로 쓰이지 않고 '받은 선물함'에 보관된다. 가방에서 원할 때 꺼내 쓴다.
    C.rg=Array.isArray(C.rg)?C.rg:[];C.rg.push({g:v.g,n:String(v.n||"누군가").slice(0,20),u:f,ts:v.ts});if(C.rg.length>RG_MAX)C.rg=C.rg.slice(-RG_MAX);
    rs.push(String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 보냈다");note("gift",String(v.n||"누군가")+"님이 "+ITM.find(x=>x[0]===v.g)[1]+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",f)});
-  if(!rs.length)continue;save();updNav();toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
+  /* 낙관적 보관 + 즉시 PATCH. save() 600ms 지연이면 새로고침·동기화에 선물이 다시 들어오거나 빠질 수 있다. */
+  if(!rs.length)continue;if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}else save();
+  updNav();toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
   if(!$("#v-bag").hidden)drawRG();if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}catch(e){}}while(giftAgain)}finally{giftBusy=false}}
-const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+petEff("gift")));
+const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 function rgUse(idx){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if(idx==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  const b0=C.dz;let sum=0,xs=0;list.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});C.rg=idx==="all"?[]:C.rg.filter((x,i)=>i!==idx);titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(xs,-sum);updNav();
+ /* gain 이 save() 를 부르지만, 연 직후는 즉시 PATCH 로 서버에 맞춰 동기화가 옛 rg 를 되살리지 않게 한다. UI는 이미 열린 상태. */
+ if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}
  const who=[...new Set(list.map(x=>x.n))].join(", ");note("gift",who+"님의 선물을 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");bag((list.length>1?"선물 "+list.length+"개를 열었다. ":who+"님의 "+ITM.find(x=>x[0]===list[0].g)[1]+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":""))}
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=Array.isArray(C.rg)?C.rg:[];
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
