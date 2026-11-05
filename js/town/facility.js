@@ -2,7 +2,9 @@
    시설의 마을 경험치(sum)와 완공 단계(lv)는 vfac/{마을}/{키} 만 읽는다. 등대 합계와 재해 진압 합계는 tally 한 칸이다.
    사람별 기여도는 vfactop 과 캐릭터의 C.fc 에 있다. 그 값이 vfac 의 by 보다 크면 facCommit 이 차이만 서버 합계에 넣는다.
    마을이나 시설 화면에서는 등대 합계에 연결해 두고, 그 칸이 바뀌면 화면만 고친다. 화면을 벗어나면 연결을 닫는다.
-   score 전체는 그 합계가 아직 없을 때 한 클라이언트만 한 번 옮겨 적는다. 상위 5명은 시설 탭에서만 받는다. */
+   score 전체는 그 합계가 아직 없을 때 한 클라이언트만 한 번 옮겨 적는다. 상위 5명은 시설 탭에서만 받는다.
+   마을 단계는 자주 오르지 않으므로 FAC_TTL 동안은 메모리(FACD)를 쓰고 vfac·tally 통째 GET을 건너뛴다.
+   시설 탭을 열거나 loadFac(true) 로 강제할 때, 마을이 바뀌었을 때, TTL이 지났을 때만 다시 받는다. 내 기부는 facFly·facCommit 으로 바로 반영한다. */
 const facUsed=k=>!!(C.fu&&C.fu.d===today()&&C.fu.u&&C.fu.u[k]);
 const facQuake=()=>typeof disMine==="function"&&disMine()==="quake";
 let facUseBusy=false;
@@ -11,8 +13,11 @@ async function facUse(k){if(facUseBusy)return;facUseBusy=true;try{
  const lv=facLv(k);if(lv<1||facUsed(k)||!FAC_USE[k])return;if(!C.fu||C.fu.d!==today())C.fu={d:today(),u:{}};C.fu.u[k]=1;const t=FAC_USE[k][1](lv);titleState();C.stats.facUses=(C.stats.facUses||0)+1;save();checkTitles();const m=$("#fm2");if(m){m.style.color="var(--mu)";m.textContent=t}toast("🏛 "+t);if(!$("#v-fac").hidden)facView(true);if(!$("#v-hub").hidden)hubFac()}
  finally{facUseBusy=false}}
 const facReady=()=>C?FAC.filter(([k])=>facLv(k)>=1&&!facUsed(k)).length:0;
-let FACD={},facAt=0,facBusy=false,facAgain=false;
+/* FAC_TTL: 이 안에 다시 마을을 열면 vfac/{마을}·tally 를 다시 묻지 않는다. 숫자만 고치면 바뀐다. */
+const FAC_TTL=600000;
+let FACD={},facAt=0,facVill="",facBusy=false,facAgain=false,facForce=false;
 const facPts=(v,k)=>((FACD[v]||{})[k]||{}).sum||0;
+const facFresh=()=>!!(C&&facAt&&facVill===C.v&&Date.now()-facAt<FAC_TTL&&FACD[C.v]);
 const facLvOf=pts=>FAC_LV.filter(n=>pts>=n).length;
 const facLv=k=>C&&!(typeof disMine==="function"&&disMine()==="quake")?facLvOf(facPts(C.v,k)):0;
 const myFac=()=>Object.values((C&&C.fc)||{}).reduce((a,b)=>a+(Number(b)||0),0);
@@ -93,12 +98,15 @@ async function tallyLoad(){let wf=null;try{const s=await DB.doc("tally/wf").get(
  const d=wfPack(wf);if(d)wfApply(d);
  const x=typeof disInfo==="function"?disInfo(disSlot(Date.now())):null;if(!x)return;
  try{const s=await DB.doc("tally/dr/"+x.id).get(),p=s.exists?s.data():null;if(p&&p.pts)DRP[x.id]=Math.max(DRP[x.id]||0,Number(p.pts)||0)}catch(e){}}
-async function loadFac(){if(!C||!XON())return;if(facBusy){facAgain=true;return}facBusy=true;try{do{facAgain=false;await pubScore();await vfacEnsure(C.v);await vfacSync(C.v,false);await facPushMine();await tallyLoad();facNotice();facAt=Date.now()}while(facAgain)}finally{facBusy=false}}
+async function loadFac(force){if(!C||!XON())return;if(force)facForce=true;if(facBusy){facAgain=true;return}facBusy=true;
+ try{do{facAgain=false;const need=!!facForce||!facFresh();facForce=false;
+  await pubScore();await vfacEnsure(C.v);if(need)await vfacSync(C.v,false);await facPushMine();if(need)await tallyLoad();facNotice();
+  if(need||!facAt||facVill!==C.v){facAt=Date.now();facVill=C.v}}while(facAgain)}finally{facBusy=false}}
 function hubFac(){const box=$("#hfa");if(!box||!C)return;box.innerHTML="";if(!XON()){box.appendChild(elT("p","hint","서버에 연결되어야 마을 시설을 지을 수 있다."));return}box.appendChild(wfTile());
  const stopped=facQuake(),g=elT("div","fac-grid");FAC.forEach(([k,nm])=>{const pts=facPts(C.v,k),lv=facLvOf(pts),nx=FAC_LV[lv],pv=lv?FAC_LV[lv-1]:0,can=lv&&!facUsed(k)&&FAC_USE[k]&&!stopped,w=elT("button","fac-tile"+(can?" ready":""));w.type="button";
   const bar=elT("div","bar"),f=elT("i");f.style.width=(nx?Math.min(100,(pts-pv)/(nx-pv)*100):100)+"%";bar.appendChild(f);w.append(elT("b","",nm),elT("small","",lv+"단계"+(stopped&&lv?" · 지진으로 멈춤":can?" · 이용 가능":"")),bar);w.onclick=()=>facView();g.appendChild(w)});box.appendChild(g);
  const r=facReady();box.appendChild(elT("p","hint",(stopped?"지진이 마을을 흔드는 동안 시설 이용이 멈춘다. 진압되면 바로 다시 쓸 수 있다. ":"")+(r?"오늘 이용할 수 있는 시설 "+r+"곳 · ":"")+"누르면 기부하고 이용할 수 있다."));updNav()}
-function facView(keep){if(!keep){show("fac");if(typeof disPullNow==="function")disPullNow(false);$("#fm2").textContent="";loadFac().then(()=>vfacLoadTops(C.v)).then(()=>{if(!$("#v-fac").hidden)facView(true)})}const box=$("#fl3");box.innerHTML="";const v=C.v;
+function facView(keep){if(!keep){show("fac");if(typeof disPullNow==="function")disPullNow(false);$("#fm2").textContent="";loadFac(true).then(()=>vfacLoadTops(C.v)).then(()=>{if(!$("#v-fac").hidden)facView(true)})}const box=$("#fl3");box.innerHTML="";const v=C.v;
  box.appendChild(elT("p","x-cd",VL[v].n+" 주민 시설 · 내 기여 "+myFac()+"점 · 보유 골드 "+(C.gd||0)+" · 마력석 "+((C.inv||{}).mana||0)));if(facQuake())box.appendChild(elT("p","hint","지진이 마을을 흔들고 있다. 진압되면 바로, 진압되지 않아도 이 구간이 끝나면(최대 여섯 시간) 시설을 다시 쓸 수 있다."));box.appendChild(wfCard());box.appendChild(elT("h2","",VL[v].n+" 시설"));
  FAC.forEach(([k,nm,ds,ef])=>{const pts=facPts(v,k),lv=facLvOf(pts),nx=FAC_LV[lv],pv=lv?FAC_LV[lv-1]:0,c=elT("div","card");c.style.marginTop="10px";
   const top=elT("div","");top.style.cssText="display:flex;justify-content:space-between;align-items:baseline;gap:8px";top.append(elT("h2","",nm),elT("b","",lv+" / "+FAC_LV.length+"단계"));c.append(top,elT("p","hint",ds));
