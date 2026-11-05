@@ -118,7 +118,7 @@ function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
  else if(why.id==="http")say("서버가 오류 "+why.code+"로 응답해서 저장하지 못했다.",why.msg?why.msg.slice(0,140):"잠시 뒤에 자동으로 다시 시도한다.");
  else say("캐릭터를 저장하지 못했다.",(why.code?why.code+". ":"")+(why.msg?why.msg.slice(0,140):"잠시 뒤에 자동으로 다시 시도한다."));
  w.append(title,document.createTextNode(" "),body);
- if(why.id==="code"){const f=elT("form","row");f.style.cssText="margin-top:8px;flex-wrap:nowrap";const i=elT("input");i.type="password";i.placeholder="비밀 코드";i.setAttribute("aria-label","비밀 코드");i.style.flex="1";const b=elT("button","btn","저장하기");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
+ if(why.id==="code"){const f=elT("form","row");f.style.cssText="margin-top:8px;flex-wrap:nowrap";const i=elT("input");i.type="text";i.lang="ko";i.spellcheck=false;i.autocomplete="off";i.placeholder="비밀 코드";i.setAttribute("aria-label","비밀 코드");i.style.flex="1";const b=elT("button","btn","저장하기");b.type="submit";b.style.cssText="width:auto;margin:0;padding:9px 14px";f.append(i,b);
   f.onsubmit=async e=>{e.preventDefault();const v=i.value.trim().normalize("NFC");let ok=false;try{ok=await codeOk(v)}catch(x){}if(!ok){i.value="";i.placeholder="코드가 맞지 않다";return}AUTH.jc=v;keep("mgr_jc_"+AUTH.uid,v);saveErr="";saveCloud(true)};w.appendChild(f);return}
  const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};row.appendChild(rb);
  if(why.id==="login"||why.id==="denied"||why.id==="rule"||why.id==="body"){const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.appendChild(lb)}
@@ -261,7 +261,7 @@ async function verCheck(){if(verShown||location.protocol==="file:")return;try{co
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
 setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();checkRaid()}},30000);
-function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
+function showLogin(){show("login");mode(4);const lk=$("#lk");if(lk)lk.hidden=!!AUTH.key;const lm=$("#lm");if(lm)lm.textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
  c.append(elT("h2","","⚠ 서버에서 '"+String(p.n).slice(0,20)+"' 캐릭터 기록을 찾지 못했다"),elT("p","hint","서버 점검 중 문제로 캐릭터 기록이 사라졌을 수 있다. 이 기기에는 백업이 없다."),
@@ -277,7 +277,7 @@ function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(
   cmp:Object.fromEntries(COMP.map(x=>x[0]).concat(GRANT.map(x=>x[0])).filter(id=>id!=="restore-apology-20261016"&&id!=="maint-20261018").map(id=>[id,1]))};
  const m=String(p.wp||"").match(/^(.+?)(?: \+(\d))?$/),wi=m?WP.findIndex(w=>w[0]===m[1]):-1;if(wi>=0){c.wps=[wi];c.wp=wi;c.wl["w"+wi]=Math.min(5,Number(m[2])||0)}
  const C0=C;C=c;try{const need=(Number(p.pw)||0)-pw();if(need>0)c.b=need}catch(e){}C=C0;return c}
-async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AUTO_JC;
+async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||"";
  /* 이 브라우저에 기억된 비밀 코드가 지금 코드와 다르면(예전 코드) 버린다. 틀린 코드를 계속 보내면 첫 저장이 영원히 막힌다. */
  if(AUTH.jc){let ok=false;try{ok=await codeOk(AUTH.jc)}catch(e){ok=true}if(!ok){AUTH.jc="";try{localStorage.removeItem("mgr_jc_"+UID)}catch(e){}}}DB=fbdb(FBU);LOCAL=false;let d=null;
  try{const s=await DB.doc("accounts/"+UID).get();d=s.exists?s.data():null;accSeen=d?Number(d.ts)||null:null}catch(e){const c=String(e.message||e);throw new Error("서버에서 계정 정보를 읽지 못했다. "+(c==="401"||c==="403"?"데이터베이스 규칙에서 읽기가 막혀 있다. 규칙을 게시했는지 확인해야 한다.":c==="404"?"데이터베이스를 찾지 못했다. 데이터베이스를 만들었는지, 주소가 맞는지 확인해야 한다.":"서버에 접속하지 못했다. 주소와 인터넷 연결을 확인해야 한다.")+" (오류: "+c+", 주소: "+FBU+")")}
@@ -310,6 +310,8 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||AU
  mode(1);boot();checkFounder();setTimeout(checkComp,1500);
  if(frx){regPlayer(true);setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
 async function codeOk(v){const t=String(v||"").trim().normalize("NFC");if(!t||!(window.crypto&&crypto.subtle))return false;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")===SIGNUP_CODE_HASH}
+
+
 /* 로그인 주소는 항상 아이디@magic-growth.local 이다. 연동한 이메일은 별도 기록이고, 계정 주소를 바꾸지 않는다.
    예전에 주소 자체가 바뀐 계정은 mail/{아이디} 에 적어 둔 이메일로 한 번 더 시도한 뒤, 들어오면 주소를 아이디용으로 되돌린다. */
 const mailDummy=e=>typeof e==="string"&&e.toLowerCase().endsWith("@magic-growth.local");
@@ -317,15 +319,14 @@ const mailKey=em=>String(em||"").toLowerCase().replace(/\./g,",");
 function mailOpt(v){const em=String(v||"").trim().toLowerCase();if(!em)return "";if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)||mailDummy(em))return null;return em}
 function mailId(){const ok=s=>/^[A-Za-z0-9_]{3,20}$/.test(s)?String(s).toLowerCase():"";return ok(AUTH.name)||ok(lget("mgr_id"))}
 async function signInName(id,pw){const dummy=EM(id);
- try{return await idt("signInWithPassword",{email:dummy,password:pw,returnSecureToken:true})}
- catch(e){const msg=String(e&&e.message||"");
-  if(!/INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD/.test(msg))throw e;
+ try{return await idtWithPw("signInWithPassword",{email:dummy,returnSecureToken:true},pw)}
+ catch(e){if(!pwBadCred(e))throw e;
   let linked="";try{const base=String(FBU||"").replace(/\/+$/,"");if(base){const r=await fetch(base+"/mail/"+encodeURIComponent(id.toLowerCase())+".json");if(r.ok)linked=await r.json()}}catch(x){}
   if(typeof linked!=="string"||linked.indexOf("@")<0||linked===dummy)throw e;
-  return idt("signInWithPassword",{email:linked,password:pw,returnSecureToken:true})}}
+  return idtWithPw("signInWithPassword",{email:linked,returnSecureToken:true},pw)}}
 async function signInMail(em,pw){let id="";try{const base=String(FBU||"").replace(/\/+$/,"");if(base){const r=await fetch(base+"/elogin/"+encodeURIComponent(mailKey(em))+".json");if(r.ok)id=await r.json()}}catch(x){}
- if(typeof id==="string"&&/^[a-z0-9_]{3,20}$/.test(id)){try{return await idt("signInWithPassword",{email:EM(id),password:pw,returnSecureToken:true})}catch(e){const msg=String(e&&e.message||"");if(!/INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD/.test(msg))throw e}}
- return idt("signInWithPassword",{email:em,password:pw,returnSecureToken:true})}
+ if(typeof id==="string"&&/^[a-z0-9_]{3,20}$/.test(id)){try{return await idtWithPw("signInWithPassword",{email:EM(id),returnSecureToken:true},pw)}catch(e){if(!pwBadCred(e))throw e}}
+ return idtWithPw("signInWithPassword",{email:em,returnSecureToken:true},pw)}
 /* 연동 기록을 남기고, 계정 주소가 이메일로 바뀌어 있으면 아이디용 주소로 되돌린다. 기록부터 남긴다. */
 async function mailSave(id,em){id=id.toLowerCase();em=em.toLowerCase();if(!DB&&FBU)DB=fbdb(FBU);if(!DB)throw new Error("서버에 연결되지 않아 이메일을 남기지 못했다.");
  let prev="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")prev=s.data()}catch(x){}
@@ -334,17 +335,20 @@ async function mailSave(id,em){id=id.toLowerCase();em=em.toLowerCase();if(!DB&&F
  if(prev&&prev!==em){try{await DB.doc("elogin/"+mailKey(prev)).delete()}catch(x){}}
  const dummy=EM(id);if(AUTH.mail&&AUTH.mail!==dummy){try{const j=await idt("update",{idToken:AUTH.tok,email:dummy,returnSecureToken:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}AUTH.mail=dummy}catch(x){}}
  AUTH.name=id;keep("mgr_id",id)}
-async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,m=$("#lm"),useMail=!signup&&lmailMode,emLogin=useMail?mailOpt($("#lmail").value):"",em=signup?mailOpt($("#lem-in")&&$("#lem-in").value):"";m.textContent="";
- if(useMail&&!emLogin)return m.textContent="연동한 이메일을 적어야 한다.";
+async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,pw2=$("#lpw2")?$("#lpw2").value:"",code=$("#lcode")?$("#lcode").value:"",m=$("#lm"),useMail=!signup&&lmailMode,emLogin=useMail?mailOpt($("#lmail").value):"",em=signup?mailOpt($("#lem-in")&&$("#lem-in").value):"";m.textContent="";
+ if(useMail&&!emLogin)return m.textContent="연동한 이메일을 적어야 합니다.";
  if(signup&&em===null)return m.textContent="받을 수 있는 이메일을 적거나, 비워 두자.";
- if(!useMail&&!/^[A-Za-z0-9_]{3,20}$/.test(id))return m.textContent="아이디는 영문, 숫자, 밑줄 3~20자로 적어야 한다.";
- if(pw.length<6)return m.textContent="비밀번호는 6자 이상이어야 한다.";
- const k=AUTH.key||$("#lkey").value.trim();if(!k)return m.textContent="Firebase 웹 API 키를 입력해야 한다.";AUTH.key=k;
- let jc=signup?AUTO_JC:"";// 가입 코드는 화면에서 묻지 않고 자동으로 보낸다(예전 서버 규칙이 첫 저장 때 확인). 비밀 코드 없이 누구나 계정을 만들 수 있다(예전 비밀 코드 확인은 뺐다).
+ if(!useMail&&!/^[A-Za-z0-9_]{3,20}$/.test(id))return m.textContent="아이디는 영문, 숫자, 밑줄 3~20자로 적어야 합니다.";
+ if(signup){const bad=pwCheck(pw);if(bad)return m.textContent=bad;if(pw!==pw2)return m.textContent="비밀번호가 일치하지 않습니다.";
+  const jcIn=String(code||"").trim().normalize("NFC");if(!jcIn)return m.textContent="가입을 위해서는 비밀 코드를 적어야 합니다.";
+  let jcOk=false;try{jcOk=await codeOk(jcIn)}catch(x){return m.textContent=errMsg(x)}if(!jcOk)return m.textContent="비밀 코드가 맞지 않습니다."}
+ else if(pw.length<6)return m.textContent="비밀번호는 6자 이상이어야 합니다.";
+ const k=AUTH.key||($("#lkey")&&$("#lkey").value.trim())||"";if(!k)return m.textContent="Firebase 웹 API 키가 없다. 페이지를 새로고침하거나 서버 설정을 확인해야 한다.";AUTH.key=k;
+ const jc=signup?String(code||"").trim().normalize("NFC"):"";
  $("#lgo").disabled=true;
- try{const j=signup?await idt("signUp",{email:EM(id),password:pw,returnSecureToken:true}):useMail?await signInMail(emLogin,pw):await signInName(id,pw);
+ try{const j=signup?await idtWithPw("signUp",{email:EM(id),returnSecureToken:true},pw,{noLegacy:true}):useMail?await signInMail(emLogin,pw):await signInName(id,pw);
   const hinted=!useMail&&/^[A-Za-z0-9_]{3,20}$/.test(id)?id.toLowerCase():(/^[A-Za-z0-9_]{3,20}$/.test(j.displayName||"")?String(j.displayName).toLowerCase():mailId());
-  AUTH.uid=j.localId;AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||(useMail?emLogin:"");AUTH.name=hinted||(useMail?emLogin:id);if(jc){AUTH.jc=jc;keep("mgr_jc_"+j.localId,jc)}keep("mgr_key",k);keep("mgr_rt",AUTH.rt);if(hinted)keep("mgr_id",hinted);$("#lpw").value="";
+  AUTH.uid=j.localId;AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||(useMail?emLogin:"");AUTH.name=hinted||(useMail?emLogin:id);if(jc){AUTH.jc=jc;keep("mgr_jc_"+j.localId,jc)}keep("mgr_key",k);keep("mgr_rt",AUTH.rt);if(hinted)keep("mgr_id",hinted);$("#lpw").value="";if($("#lpw2"))$("#lpw2").value="";if($("#lcode"))$("#lcode").value="";
   let noted="";if(signup&&hinted){try{await idt("update",{idToken:AUTH.tok,displayName:hinted,returnSecureToken:true})}catch(x){}}
   if(em&&hinted){try{await mailSave(hinted,em);noted=em+" 으로도 로그인할 수 있다. 아이디 로그인은 그대로다."}catch(err){noted="계정은 만들어졌다. 이메일 연동은 설정에서 다시 하자."}}
   else if(useMail&&hinted&&AUTH.mail&&!mailDummy(AUTH.mail)){try{await mailSave(hinted,emLogin);noted="아이디 로그인을 되돌려 두었다. 이제 아이디와 이메일 둘 다 쓸 수 있다."}catch(err){noted="이메일로는 들어왔다. 아이디 로그인 기록은 남기지 못했다. 설정에서 이메일 연동을 다시 하자."}}
@@ -355,12 +359,27 @@ async function startAuth(){AUTH.key=lget("mgr_key")||FB_KEY;const rt=lget("mgr_r
  if(AUTH.key&&rt){AUTH.rt=rt;try{const j=await refresh();AUTH.uid=j.user_id;AUTH.name=lget("mgr_id");await enterGame();return}catch(e){AUTH.uid=null;AUTH.tok=null;showLogin();$("#lm").textContent=errMsg(e);return}}
  showLogin()}
 let lmailMode=false;
-function lmode(mail){if(!signup)lmailMode=!!mail;const a=$("#lmode-id"),b=$("#lmode-em");if(a)a.setAttribute("aria-pressed",!signup&&!lmailMode?"true":"false");if(b)b.setAttribute("aria-pressed",!signup&&lmailMode?"true":"false");
- $("#lmode").hidden=!!signup;$("#lid-box").hidden=!signup&&lmailMode;$("#lmail-box").hidden=!!signup||!lmailMode;$("#lem").hidden=!signup;
- $("#lhint").textContent=signup?"아이디로 계정을 만든다. 이메일은 선택이고, 적어도 아이디 로그인은 그대로다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다. 아이디 로그인도 막히지 않는다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
-$("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};$("#lmail").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};
+function lmode(mail) {
+   if (!signup) lmailMode =!!mail;
+   const a = $("#lmode-id"), b = $("#lmode-em");
+   if (a) a.setAttribute("aria-pressed", !signup && !lmailMode ? "true" : "false");
+   if (b) b.setAttribute("aria-pressed", !signup&&lmailMode ? "true" : "false");
+   $("#lmode").hidden =!!signup;
+   $("#lid-box").hidden =!signup && lmailMode;
+   $("#lmail-box").hidden =!!signup || !lmailMode;
+   $("#lem").hidden=!signup;
+   const pw2 = $("#lpw2-box"), lcd = $("#lcd"),
+   lpw = $("#lpw");
+   if (pw2) pw2.hidden =! signup;
+   if (lcd) lcd.hidden =! signup;
+   if (lpw) {
+      lpw.autocomplete = signup ? "new-password" : "current-password";
+      lpw.placeholder = signup ? "8자 이상, 영문·숫자":"6자 이상"
+   }
+ $("#lhint").textContent=signup?"아이디와 비밀번호, 비밀 코드로 계정을 만든다. 이메일은 선택이다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다. 아이디 로그인도 막히지 않는다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
+$("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};if($("#lpw2"))$("#lpw2").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};if($("#lcode"))$("#lcode").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};$("#lmail").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};
 $("#lmode-id").onclick=()=>lmode(false);$("#lmode-em").onclick=()=>lmode(true);
-$("#lsw").onclick=()=>{signup=!signup;$("#lcd").hidden=true;$("#lcode").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent="";lmode(lmailMode)};
+$("#lsw").onclick=()=>{signup=!signup;if($("#lcode"))$("#lcode").value="";if($("#lpw2"))$("#lpw2").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent="";lmode(lmailMode)};
 function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}
@@ -686,11 +705,12 @@ function drawSkills(){skDay();const l=$("#bgs");l.innerHTML="";const mx=mpMax(),
   b.onclick=()=>{skDay();if(C.sk.arm[k.id])delete C.sk.arm[k.id];else{if(mpLeft()<=0)return;C.sk.arm[k.id]=true}save();bag(on?k.nm+" 준비를 풀었다.":k.nm+"을(를) 준비했다. 다음 "+k.w+"에서 쓰인다.")};
   w.append(elT("span","sk-ic"),tx,b);l.appendChild(w)})}
 
-$("#tut-re").onclick=()=>{C.tut=C.tut||{got:{}};C.tut.hide=0;C.tut.fold=0;save();hub()};
+$("#tut-re").onclick=()=>{C.tut=C.tut||{};C.tut.got=C.tut.got&&typeof C.tut.got==="object"?C.tut.got:{};C.tut.hide=0;C.tut.fold=0;save();hub()};
 function alertBox(t,x){$("#alt").textContent=t;$("#alx").textContent=x;$("#alo").hidden=false;$("#alc").focus({preventScroll:true})}
 $("#alc").onclick=()=>{$("#alo").hidden=true};
 setInterval(()=>{if(C&&!$("#v-hub").hidden){hubGuard();hubBoss()}},30000);
-function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{got:{}};const t=C.tut;box.innerHTML="";if(t.hide)return;
+/* tut 에 fold·hide 만 있고 got 이 없으면(옛 저장) t.got['pf'] 에서 로그인 직후 마을 그리기가 깨진다. */
+function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{};C.tut.got=C.tut.got&&typeof C.tut.got==="object"?C.tut.got:{};const t=C.tut;box.innerHTML="";if(t.hide)return;
  const ok=TUT.map(x=>{let v=false;try{v=!!x[3](C)}catch(e){}return v}),got=TUT.filter(x=>t.got[x[0]]).length,all=got===TUT.length;
  const w=elT("div","tut"),hd=elT("div","");hd.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";hd.append(elT("h2","","튜토리얼 · "+got+" / "+TUT.length));
  const fold=elT("button","chip",t.fold?"펼치기 ▼":"접기 ▲");fold.type="button";fold.style.cssText="flex:0 0 auto;min-width:0;padding:5px 12px;font-size:.8rem";fold.onclick=()=>{t.fold=!t.fold;save();drawTut()};hd.appendChild(fold);w.appendChild(hd);
@@ -733,6 +753,8 @@ function retrait(){const r=rtReq();if(!r.ok)return;
  C.inv.mana-=RT_MANA;C.gd-=RT_GOLD;C.t=nt;C.rtT=Date.now();titleState();C.stats.traitChanges=(C.stats.traitChanges||0)+1;
  note("quest","운명의 재계약: 특성이 「"+old+"」에서 「"+nt+"」(으)로 바뀌었다.");gain(0,RT_DZ);save();regPlayer();checkTitles();
  alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");bag()}
+
+ 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
 function thmDraw(){const lt=document.documentElement.dataset.theme==="light";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}

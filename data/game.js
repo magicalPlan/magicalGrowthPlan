@@ -45,7 +45,7 @@
    const FB_KEY=(p=>{try{return atob(p.join("")).split("").reverse().join("")}catch(e){return ""}})(["Z0k2NDk4S0xGeD","U4ay1CLWJtQjFq","YnRQVG1pUEg3ZD","NEeVNheklB"] );
 
 
-   const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 6자 이상으로 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다."};
+   const ERR={EMAIL_EXISTS:"이미 있는 아이디다.",INVALID_LOGIN_CREDENTIALS:"아이디나 비밀번호가 맞지 않다.",EMAIL_NOT_FOUND:"아이디나 비밀번호가 맞지 않다.",INVALID_PASSWORD:"아이디나 비밀번호가 맞지 않다.",WEAK_PASSWORD:"비밀번호가 너무 약하다. 가입은 8자 이상·영문·숫자가 필요하다.",CRYPTO_UNAVAILABLE:"이 브라우저에서는 비밀번호를 안전하게 실을 수 없다. 최신 브라우저로 다시 하자.",MISSING_PASSWORD:"비밀번호를 적어야 한다.",OPERATION_NOT_ALLOWED:"Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않다.",TOO_MANY_ATTEMPTS_TRY_LATER:"시도가 너무 많다. 잠시 뒤에 다시 해야 한다."};
    
 
    /* 최초의 구세주: Firebase 계정이 FOUNDER_CUTOFF(한국 시각) 전에 만들어졌으면 칭호를 준다.
@@ -77,7 +77,8 @@
       const HEAL_MS=600000,HEAL_DZ=10;
 
 
-      /* 계정 만들기 비밀 코드: 코드 자체는 파일에 적지 않고, 바꾼 값(해시)만 적어 둔다. 코드를 바꾸려면 새 코드의 SHA-256 값으로 이 줄을 고친다. */
+      /* 계정 만들기 비밀 코드: 코드 자체는 파일에 적지 않고, 바꾼 값(해시)만 적어 둔다. 가입 화면에서 받은 뒤 authDigest 로 맞춰 본다.
+         코드를 바꾸려면 새 코드의 SHA-256 값으로 이 줄을 고친다. AUTO_JC 는 안내용 평문이다. 가입 화면에서는 직접 입력받는다. */
       const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f",AUTO_JC="희망하라";
       /* 재계약 시험 대기. 시작한 시각(C.trT)부터 이 시간이 지나야 다시 볼 수 있다. */
       const TRIAL_CD=12*3600000;
