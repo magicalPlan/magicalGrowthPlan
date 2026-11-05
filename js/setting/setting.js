@@ -4,16 +4,16 @@ function verKeep(){const v=typeof APP_VER==="string"&&APP_VER?APP_VER:"1.0.0";tr
 verKeep();
 let setLinked="";
 function pwShow(em){setLinked=em&&!mailDummy(em)?em:"";const b=$("#set-pw");if(b)b.hidden=!setLinked;if(!setLinked){const f=$("#set-pw-box");if(f)f.hidden=true}}
-function mailErr(e,act){const s=String(e&&e.message||e),pw=act==="pw";
- if(s==="401"||s==="403")return "서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
+function mailErr(e,act){const s=String(e&&e.message||e),pw=act==="pw",leave=act==="leave";
+ if(s==="401"||s==="403")return leave?"서버 규칙이 계정 기록 삭제를 막았다.":"서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
  if(s.indexOf("EMAIL_EXISTS")===0)return "이미 다른 계정에 쓰이는 이메일이다.";
  if(s.indexOf("INVALID_PASSWORD")===0||s.indexOf("INVALID_LOGIN_CREDENTIALS")===0||s.indexOf("EMAIL_NOT_FOUND")===0)return "비밀번호가 맞지 않다.";
  if(s.indexOf("WEAK_PASSWORD")===0)return "새 비밀번호는 8자 이상·영문·숫자가 필요하다.";
  if(s==="CRYPTO_UNAVAILABLE"||s.indexOf("CRYPTO_UNAVAILABLE")===0)return "이 브라우저에서는 비밀번호를 안전하게 실을 수 없다. 최신 브라우저로 다시 하자.";
  if(s.indexOf("INVALID_EMAIL")===0||s.indexOf("MISSING_EMAIL")===0)return "이메일 형식이 아니다.";
- if(s.indexOf("CREDENTIAL_TOO_OLD_LOGIN_AGAIN")===0)return "로그인한 지 오래되었다. 다시 로그인한 뒤에 "+(pw?"바꾸자.":"연동하자.");
+ if(s.indexOf("CREDENTIAL_TOO_OLD_LOGIN_AGAIN")===0)return "로그인한 지 오래되었다. 다시 로그인한 뒤에 "+(leave?"탈퇴하자.":pw?"바꾸자.":"연동하자.");
  if(s.indexOf("TOO_MANY_ATTEMPTS")===0)return "시도가 너무 많다. 잠시 뒤에 다시 하자.";
- return (pw?"비밀번호를 바꾸지 못했다. ":"연동하지 못했다. ")+"("+s+")"}
+ return (leave?"회원 탈퇴를 끝내지 못했다. ":pw?"비밀번호를 바꾸지 못했다. ":"연동하지 못했다. ")+"("+s+")"}
 async function mailReauth(id,pw,extra){const emails=[],add=e=>{e=String(e||"").trim().toLowerCase();if(e&&emails.indexOf(e)<0)emails.push(e)};if(id)add(EM(id));add(AUTH.mail);add(extra);
  let last;for(const e of emails){try{const j=await idtWithPw("signInWithPassword",{email:e,returnSecureToken:true},pw);AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||e;keep("mgr_rt",AUTH.rt);return j}catch(err){last=err}}
  throw last||new Error("비밀번호가 맞지 않다.")}
@@ -34,6 +34,7 @@ function drawSetting(){
  $("#set-theme").textContent=lt?"☾ 블랙 모드":"☀ 화이트 모드";
  $("#set-note").textContent=on?"로그인한 계정이다. 로그아웃하면 이 브라우저의 로그인만 풀린다.":"로그인해야 기록이 계정에 남는다.";
  $("#set-out").hidden=!on;
+ $("#set-leave").hidden=!on;
  $("#set-mail").hidden=!on;
  $("#set-em").hidden=!on;
  $("#set-mail-box").hidden=true;
@@ -45,6 +46,27 @@ function drawSetting(){
  oddsDraw();
  if(on)mailNote();
 }
+/* 회원 탈퇴: 비밀번호로 다시 확인한 뒤 Firebase 계정과 이 계정의 서버 기록을 지운다. */
+async function leaveWipe(){const uid=AUTH.uid,id=mailId();
+ if(DB&&uid){const del=p=>{try{return DB.doc(p).delete()}catch(e){return Promise.resolve()}};
+  await Promise.allSettled([del("accounts/"+uid),del("players/"+uid),del("who/"+uid),del("raid/"+uid),del("wboss/pic/"+uid),del("wboss/picm/"+uid)]);
+  if(id){let linked="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")linked=s.data()}catch(e){}
+   try{await DB.doc("mail/"+id).delete()}catch(e){}
+   if(linked&&!mailDummy(linked)){try{await DB.doc("elogin/"+mailKey(linked)).delete()}catch(e){}}}}
+ try{["mgr_rt","mgr_id","mgr"].forEach(k=>localStorage.removeItem(k));if(uid){localStorage.removeItem("mgr_jc_"+uid);localStorage.removeItem("mgr_bk_"+uid);localStorage.removeItem("mgr_pend_"+uid);localStorage.removeItem("mgr_rr_"+uid)}}catch(e){}}
+async function leaveAccount(){const m=$("#setm");if(m)m.textContent="";
+ if(!AUTH.uid){if(m)m.textContent="로그인한 뒤에 탈퇴할 수 있다.";return}
+ if(!confirm("정말 회원 탈퇴를 진행하시겠습니까?"))return;
+ const pw=prompt("비밀번호를 입력해주십시오.");if(pw==null)return;
+ if(!String(pw).length){if(m)m.textContent="비밀번호를 적어야 한다.";return}
+ const btn=$("#set-leave");if(btn)btn.disabled=true;
+ try{await mailReauth(mailId(),pw,setLinked||AUTH.mail||"");
+  await leaveWipe();
+  await idt("delete",{idToken:AUTH.tok});
+  AUTH.uid=null;AUTH.tok=null;AUTH.rt="";AUTH.mail="";AUTH.name="";
+  alert("회원 탈퇴에 성공하였습니다.");
+  location.reload()}
+ catch(err){if(m)m.textContent=mailErr(err,"leave");if(btn)btn.disabled=false}}
 function oddsTxt(p){const n=Math.round(Number(p)*1e6)/10000;if(!isFinite(n))return "-";return n.toFixed(4).replace(/0+$/,"").replace(/\.$/,"")+"%"}
 function oddsRows(pairs){const ul=elT("ul","set-odd-list");pairs.forEach(([lab,p])=>{if(!(p>0))return;const li=elT("li","set-odd");li.append(elT("span","",lab),elT("b","",oddsTxt(p)));ul.appendChild(li)});return ul}
 function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"||typeof PET_RATE==="undefined"||typeof PET_EV==="undefined")return;box.innerHTML="";
@@ -57,10 +79,10 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  box.append(egg,ev)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
-$("#set-theme").onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()};
-$("#set-srv").onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."};
-$("#set-mail").onclick=()=>{const b=$("#set-mail-box");if(!b||!AUTH.uid)return;b.hidden=!b.hidden;if(!b.hidden){$("#set-pw-box").hidden=true;const box=$("#set-mail-idbox");if(box)box.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}};
-$("#set-mail-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-mail-go"),em=mailOpt($("#set-mail-em").value),pw=$("#set-mail-pw").value,typed=($("#set-mail-id").value||"").trim();m.textContent="";
+{const b=$("#set-theme");if(b)b.onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()}}
+{const b=$("#set-srv");if(b)b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."}}
+{const b=$("#set-mail");if(b)b.onclick=()=>{const box=$("#set-mail-box");if(!box||!AUTH.uid)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-pw-box").hidden=true;const idb=$("#set-mail-idbox");if(idb)idb.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}}}
+{const f=$("#set-mail-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-mail-go"),em=mailOpt($("#set-mail-em").value),pw=$("#set-mail-pw").value,typed=($("#set-mail-id").value||"").trim();m.textContent="";
  if(em===null||!em){m.textContent=em===null?"이메일 형식이 아니다.":"받을 수 있는 이메일을 적어야 한다.";return}
  if(pw.length<6){m.textContent="비밀번호를 적어야 한다.";return}
  const id=mailId()||(/^[A-Za-z0-9_]{3,20}$/.test(typed)?typed.toLowerCase():"");
@@ -71,9 +93,9 @@ $("#set-mail-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=
   m.textContent=em+" 을 연동했다. 아이디로도, 이 이메일로도 로그인할 수 있다.";
   mailNote()}
  catch(err){m.textContent=mailErr(err)}
- btn.disabled=false};
-$("#set-pw").onclick=()=>{const b=$("#set-pw-box");if(!b||!AUTH.uid||!setLinked)return;b.hidden=!b.hidden;if(!b.hidden){$("#set-mail-box").hidden=true;$("#set-pw-old").focus()}};
-$("#set-pw-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-pw-go"),old=$("#set-pw-old").value,nw=$("#set-pw-new").value,nw2=$("#set-pw-new2").value;m.textContent="";
+ btn.disabled=false}}
+{const b=$("#set-pw");if(b)b.onclick=()=>{const box=$("#set-pw-box");if(!box||!AUTH.uid||!setLinked)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-mail-box").hidden=true;$("#set-pw-old").focus()}}}
+{const f=$("#set-pw-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-pw-go"),old=$("#set-pw-old").value,nw=$("#set-pw-new").value,nw2=$("#set-pw-new2").value;m.textContent="";
  if(!AUTH.uid||!setLinked){m.textContent="이메일을 연동한 계정만 비밀번호를 바꿀 수 있다.";return}
  if(old.length<6){m.textContent="지금 비밀번호를 적어야 한다.";return}
  const bad=pwCheck(nw);if(bad){m.textContent=bad;return}
@@ -84,5 +106,6 @@ $("#set-pw-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$(
   $("#set-pw-old").value="";$("#set-pw-new").value="";$("#set-pw-new2").value="";$("#set-pw-box").hidden=true;
   m.textContent="비밀번호를 바꿨다. 다음 로그인부터 새 비밀번호를 쓴다."}
  catch(err){m.textContent=mailErr(err,"pw")}
- btn.disabled=false};
-$("#set-out").onclick=()=>logOut();
+ btn.disabled=false}}
+{const b=$("#set-out");if(b)b.onclick=()=>logOut()}
+{const b=$("#set-leave");if(b)b.onclick=()=>leaveAccount()}
