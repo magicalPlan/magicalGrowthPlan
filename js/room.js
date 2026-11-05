@@ -26,11 +26,13 @@ async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");c=Str
   if(Object.keys(r.pl).length>=3)return rmsg("정원이 찬 방이다.");
   r.pl[UID]=me();r.rd[UID]=false;r.ts=Date.now();await rref(c).set(r);enter(c)}catch(e){rmsg("입장하지 못했다.")}}
 function enter(c){code=c;room=null;myV=null;holdN=0;choiceK="";roomBye=false;if(holdT){clearTimeout(holdT);holdT=null}clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#lg").dataset.m="";$("#rrm").textContent="";unR&&unR();unR=null;watchRoom()}
-/* 방에 연결해 두고, 참가·준비·진행처럼 내용이 바뀔 때만 받는다. 연결이 거절되면 20초마다 방을 통째로 묻는다. */
-function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>$("#rrm").textContent="연결이 끊겼다.",POLL_HUB)}
+/* 방에 연결해 두고, 참가·준비·진행처럼 내용이 바뀔 때만 받는다. 연결이 거절되면 20초마다 방을 통째로 묻는다.
+   잠깐 묻기가 실패해도 문구를 남기지 않는다(마을 쪽 감시와 같다). 방 화면이 열려 있을 때만 안내하고, 다시 받으면 지운다. */
+function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;const m=$("#rrm");if(m)m.textContent="";if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>{const m=$("#rrm");if(m&&$("#v-room")&&!$("#v-room").hidden)m.textContent="연결이 끊겼다."},POLL_HUB)}
 /* 진행 중에도 방 연결을 유지한다. 문장은 서버에 다시 쓰지 않고 시각으로 드러낸다. */
 function armChoice(){if(code&&DB&&!unR)watchRoom()}
-function leave(){unR&&unR();unR=null;if(holdT){clearTimeout(holdT);holdT=null}holdN=0;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;hub()}
+function stopRoom(){unR&&unR();unR=null;if(holdT){clearTimeout(holdT);holdT=null}holdN=0;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;const m=$("#rrm");if(m)m.textContent=""}
+function leave(){stopRoom();hub()}
 $("#rx").onclick=async()=>{if(room&&DB&&room.st==="lobby"){try{if(room.host===UID||Object.keys(room.pl).length<=1)await rref(code).delete();else{delete room.pl[UID];delete room.rd[UID];await rref(code).set(room)}}catch(e){}}
  // 끝난 방: 방장이 나가면 파티원들이 결과를 받을 시간을 10초 준 뒤 지운다.
  else if(room&&DB&&room.st==="done"&&room.host===UID){const c=code,r=room;setTimeout(()=>delRoom(c,r),10000)}leave()};

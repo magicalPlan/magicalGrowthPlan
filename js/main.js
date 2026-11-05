@@ -134,7 +134,7 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
    PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다(완전 서버 시계 권위는 아님). */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
-let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[];
+let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
 function wakeSave(ok){const w=saveWait;saveWait=[];w.forEach(r=>{try{r(!!ok)}catch(e){}})}
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
@@ -231,11 +231,13 @@ function saveCloud(now){
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
    const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
-   const done=()=>{accBase=JSON.parse(stamp);accReady=true;
+   const done=()=>{accBase=JSON.parse(stamp);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveAgain=false;return go()}
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
    const fail=async e=>{const c=String(e&&e.message||e);
     if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
+    /* 네트워크·20초 제한은 한 번은 조용히 다시 시도한다. 마을에 실시간 연결이 많을 때 잠깐 막히는 경우가 있다. */
+    const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
     saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
    if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
@@ -402,14 +404,14 @@ let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
 /* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다. */
-const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",craft:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
+const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",craft:"town",growth:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
 function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
  document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX))?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>{const e=$("#v-"+v);if(e)e.hidden=v!==id;else if(typeof includeHeal==="function")includeHeal()});if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="wave"&&typeof wvWatchStop==="function")wvWatchStop();if(id==="fac"){if(typeof wfWatchStart==="function")wfWatchStart()}else if(id!=="hub"&&typeof wfWatchStop==="function")wfWatchStop();if(id!=="ord"&&typeof clpWatchStop==="function")clpWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft"||id==="ord");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof chatLeave==="function")chatLeave();else{if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="rooms"||id==="room"||id==="xm"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved){if(typeof vnClose==="function")vnClose();window.scrollTo(0,0)}else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","growth","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>{const e=$("#v-"+v);if(e)e.hidden=v!==id;else if(typeof includeHeal==="function")includeHeal()});if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="wave"&&typeof wvWatchStop==="function")wvWatchStop();if(id!=="ord"&&typeof clpWatchStop==="function")clpWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft"||id==="ord");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof chatLeave==="function")chatLeave();else{if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="rooms"||id==="room"||id==="xm"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="growth"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved){if(typeof vnClose==="function")vnClose();window.scrollTo(0,0)}else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -572,7 +574,7 @@ const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
-function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRunes();drawPets();drawRetrait();drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";if(fresh)applyGift();
+function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";if(fresh)applyGift();
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
   if(ic){const t=document.createElement("div");t.style.minWidth="0";t.append(...i.childNodes);i.classList.add("it-row");i.append(ic,t)}w.appendChild(i);
@@ -685,6 +687,7 @@ $("#nav").onclick=e=>{
  if(v==="ord")ord();
  if(v==="bag")bag();
  if(v==="craft")craft();
+ if(v==="growth")growth();
  if(v==="titles")openRec();
  if(v==="inbox")inbox();
  if(v==="roster")roster();
@@ -735,32 +738,6 @@ function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
 function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
 
-function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
- $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
- RN.forEach(([k,nm,ic,ef])=>{const L=rnLv(k),mx=L>=RN_MAX,cost=rnCost(L),w=document.createElement("div");w.style.cssText="display:flex;gap:8px";
-  const i=elT("div","chip it-row rn-row"+(L?"":" rn-off"));i.style.cssText="flex:1;text-align:left;cursor:default";const tx=elT("div");tx.style.minWidth="0";tx.append(elT("b","",nm+" "+L+" / "+RN_MAX),elT("small","",(L?"지금: "+ef(L):"아직 새기지 않았다")+(mx?" (최고 단계)":" → 다음: "+ef(L+1))));
-  // 각인 도트 그림(assets/runes/{키}.png). 풍요의 각인만 luck.svg. 그림을 못 불러오면 원래 아이콘 글자로 바꾼다.
-  const im=document.createElement("img");im.src="assets/runes/"+k+(k==="luck"?".svg":".png")+"?v="+RN_IMG_V;im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="it-ic";im.onerror=()=>im.replaceWith(elT("span","rn-ic",ic));i.append(im,tx);
-  i.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
-  const b=elT("button","chip",mx?"완성":"새기기 (마력석 "+cost+"개)");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=mx||have<cost;b.onclick=()=>rnUp(k);w.append(i,b);box.appendChild(w)})}
-function rnUp(k){const r=RN.find(x=>x[0]===k),L=rnLv(k),cost=rnCost(L);if(!r||L>=RN_MAX||((C.inv||{}).mana||0)<cost)return;
- C.inv.mana-=cost;C.rn=C.rn||{};C.rn[k]=L+1;titleState();C.stats.runes=(C.stats.runes||0)+1;save();regPlayer();checkTitles();
- note("quest",r[1]+"을 "+(L+1)+"단계로 새겼다. ("+r[3](L+1)+")");bag("마력석 "+cost+"개가 녹아들며 "+r[2]+" "+r[1]+"이 "+(L+1)+"단계가 되었다. "+r[3](L+1)+".")}
-function rtReq(){const cdl=Math.max(0,RT_CD-(Date.now()-(C.rtT||0))),mana=(C.inv||{}).mana||0;
- const sw=(C.stats&&C.stats.soloWins)||0,L=[[sw>=RT_SOLO,"고독한 출정 성공 "+RT_SOLO+"회 이상 (지금 "+sw+"회) · 혼자 나선 길에서 자신과 마주해야 한다"],[(C.cl||0)>=RT_CL,"토벌 성공 "+RT_CL+"회 이상 (지금 "+(C.cl||0)+"회)"],[mana>=RT_MANA,"마력석 "+RT_MANA+"개 (가진 것 "+mana+")"],[(C.gd||0)>=RT_GOLD,"골드 "+RT_GOLD+" (가진 것 "+(C.gd||0)+")"],
-  [(C.dz||0)<=RT_DZMAX&&!C.fall,"절망도 "+RT_DZMAX+" 이하 (지금 "+(C.dz||0)+")"+(C.fall?" · 타락 중에는 불가":"")],[cdl<=0,cdl>0?"다음 재계약까지 "+(cdl>=86400000?Math.floor(cdl/86400000)+"일 "+Math.floor(cdl%86400000/3600000)+"시간":cdTxt(cdl)):"지난 재계약에서 7일 경과"]];return{L,ok:L.every(x=>x[0])}}
-function drawRetrait(){const box=$("#bgrt");if(!box||!C)return;box.innerHTML="";const r=rtReq(),c=elT("div","card rt-card");
- c.append(elT("p","hint","계약의 원천 앞에서 계약을 처음부터 다시 맺는다. 지금 특성 「"+C.t+"」은(는) 사라지고, 다른 특성 하나가 무작위로 새겨진다. 좋은 특성이 나온다는 보장은 없고, 되돌릴 수 없다. 의식이 끝나면 절망도가 "+RT_DZ+" 오른다."));
- const ul=elT("ul","pm-req");r.L.forEach(([ok,t])=>ul.appendChild(elT("li",ok?"ok":"",(ok?"✓ ":"· ")+t)));c.appendChild(ul);
- const b=elT("button","btn"+(r.ok?"":" g"),r.ok?"운명의 재계약을 맺는다":"조건을 모두 채워야 한다");b.type="button";b.disabled=!r.ok;b.onclick=retrait;c.appendChild(b);box.appendChild(c)}
-function retrait(){const r=rtReq();if(!r.ok)return;
- if(!confirm("정말 운명의 재계약을 맺을까?\n\n· 지금 특성 「"+C.t+"」은(는) 사라진다\n· 새 특성은 무작위다 (좋지 않은 특성이 나올 수도 있다)\n· 되돌릴 수 없다\n· 마력석 "+RT_MANA+"개, 골드 "+RT_GOLD+"를 쓰고 절망도가 "+RT_DZ+" 오른다"))return;
- const old=C.t,pool=TR.filter(t=>t!==old),nt=pool[Math.floor(Math.random()*pool.length)];
- C.inv.mana-=RT_MANA;C.gd-=RT_GOLD;C.t=nt;C.rtT=Date.now();titleState();C.stats.traitChanges=(C.stats.traitChanges||0)+1;
- note("quest","운명의 재계약: 특성이 「"+old+"」에서 「"+nt+"」(으)로 바뀌었다.");gain(0,RT_DZ);save();regPlayer();checkTitles();
- alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");bag()}
-
- 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
 function thmDraw(){const lt=document.documentElement.dataset.theme==="light";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}

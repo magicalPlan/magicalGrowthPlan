@@ -1,22 +1,22 @@
-/* 사역마를 데리고 돌보는 화면. main.js 다음에 불러야 한다.
-   가방은 drawPets 를, 출정은 petXp 를 그대로 부른다. */
+/* 사역마를 데리고 돌보는 화면. main.js · growth.js 다음에 불러도 된다.
+   성장 기록은 drawPets 를, 출정은 petXp 를 그대로 부른다. */
 function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(PET_LV[PET_LV.length-1],(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!")}}
-function petPat(q){if(q.pd===today())return;q.pd=today();petXp0(q,PET_PAT);save();bag(PETS[q.sp][2]+" "+q.nm+"을(를) 쓰다듬었다. 기분이 좋아 보인다. (친밀도 +"+PET_PAT+")")}
-function petFeed(q){if((C.gd||0)<PET_SNACK_G)return;if(!q.fd||q.fd.d!==today())q.fd={d:today(),n:0};if(q.fd.n>=PET_SNACK_N){petMsg("오늘은 간식을 충분히 먹었다.",1);return}q.fd.n++;C.gd-=PET_SNACK_G;petXp0(q,PET_FEED);save();bag(PETS[q.sp][2]+" "+q.nm+"이(가) 간식을 맛있게 먹었다. (친밀도 +"+PET_FEED+")")}
+function petPat(q){if(q.pd===today())return;q.pd=today();petXp0(q,PET_PAT);save();growth(PETS[q.sp][2]+" "+q.nm+"을(를) 쓰다듬었다. 기분이 좋아 보인다. (친밀도 +"+PET_PAT+")")}
+function petFeed(q){if((C.gd||0)<PET_SNACK_G)return;if(!q.fd||q.fd.d!==today())q.fd={d:today(),n:0};if(q.fd.n>=PET_SNACK_N){petMsg("오늘은 간식을 충분히 먹었다.",1);return}q.fd.n++;C.gd-=PET_SNACK_G;petXp0(q,PET_FEED);save();growth(PETS[q.sp][2]+" "+q.nm+"이(가) 간식을 맛있게 먹었다. (친밀도 +"+PET_FEED+")")}
 function petXp0(q,n){const cur=C.pet;C.pet=q.id;petXp(n);C.pet=cur;regPlayer()}
-function petRename(q){const nm=(prompt("새 이름 (최대 10자)",q.nm)||"").trim().slice(0,10);if(!nm)return;q.nm=nm;save();regPlayer();bag("이름을 '"+nm+"'(으)로 바꿨다.")}
+function petRename(q){const nm=(prompt("새 이름 (최대 10자)",q.nm)||"").trim().slice(0,10);if(!nm)return;q.nm=nm;save();regPlayer();growth("이름을 '"+nm+"'(으)로 바꿨다.")}
 /* 가질 수 있는 사역마 상한. 캐릭터마다 C.petMax 에 저장한다(없으면 기본 PET_MAX). 허가증으로 PET_MAX+PET_MAX_UP 까지 늘어난다. */
 const petCapMax=()=>PET_MAX+PET_MAX_UP;
 function petCap(){if(!C)return PET_MAX;const n=Math.floor(Number(C.petMax));C.petMax=Math.min(petCapMax(),Math.max(PET_MAX,isFinite(n)?n:PET_MAX));return C.petMax}
-// 사역마 조련 허가증 사용: 상한 +1.
+// 사역마 조련 허가증 사용: 상한 +1. 아이템은 가방에 두고, 성공하면 성장 기록으로 보낸다.
 function petLicense(){if(!C||(C.inv.license||0)<1)return;const cur=petCap();if(cur>=petCapMax()){bag("이미 사역마를 "+petCapMax()+"마리까지 데리고 있을 수 있다. 더는 늘릴 수 없다.");$("#bgm").style.color="var(--bad)";return}
  if(!confirm("사역마 조련 허가증을 사용할까?\n데리고 있을 수 있는 사역마가 "+cur+"마리 → "+(cur+1)+"마리가 된다."))return;
  C.inv.license--;C.petMax=cur+1;C.stats=C.stats||{};C.stats.petMax=Math.max(C.stats.petMax||0,C.petMax);note("quest","사역마 조련 허가증을 사용했다. 이제 사역마를 "+C.petMax+"마리까지 데리고 있을 수 있다.");save();regPlayer();
- bag("허가증에 여왕의 문양이 빛나며 새겨졌다. 이제 사역마를 "+C.petMax+"마리까지 데리고 있을 수 있다.")}
+ growth("허가증에 여왕의 문양이 빛나며 새겨졌다. 이제 사역마를 "+C.petMax+"마리까지 데리고 있을 수 있다.")}
 // 보내 주기: 친밀도 단계에 따라 유대의 증거(PET_BOND)를 남기고 떠난다.
 function petBye(q){const L=petLv(q),k=Math.max(0,Number(PET_BOND[L])||0);if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."+(k?"\n(유대의 증거 "+k+"개를 남기고 간다)":"")))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;
  if(k){C.inv=C.inv||{};C.inv.bond=(C.inv.bond||0)+k;try{dexAdd("it","bond")}catch(e){}note("quest",q.nm+"이(가) 유대의 증거 "+k+"개를 남기고 떠났다.")}
- save();regPlayer();bag(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다."+(k?" 그 자리에 유대의 증거 "+k+"개가 남았다.":""))}
+ save();regPlayer();growth(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다."+(k?" 그 자리에 유대의 증거 "+k+"개가 남았다.":""))}
 function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix==="function"&&eggFix())save()}catch(e){}try{petEvMelt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
  box.appendChild(elT("p","hint","곁을 지키는 작은 마수. '함께하기'로 정한 한 마리의 효과를 받는다. 쓰다듬고, 간식을 주고, 함께 출정할수록 친밀도가 올라 효과가 커진다.\n허나 그 역시 마수, 세 마리 이상 데리고 다니는 것은 권장하지 않는다."));
  box.appendChild(elT("p","hint pet-cap","데리고 있는 사역마 "+C.pets.length+" / "+petCap()+"마리"+(petCap()<petCapMax()?" · 공방의 '사역마 조련 허가증'으로 "+petCapMax()+"마리까지 늘릴 수 있다.":" (최대)")));
@@ -39,7 +39,7 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix
   bd.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]),elT("small","","효과: "+P[5](L)+" · 친밀도 "+L+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (최고)")));
   const bar=elT("div","bar"),f=elT("i");const pv=PET_LV[L-1]||0;f.style.width=(nx!=null?Math.min(100,((q.xp||0)-pv)/(nx-pv)*100):100)+"%";bar.appendChild(f);bd.appendChild(bar);
   const a=elT("div","pet-act"),mk=(t,fn,dis)=>{const b=elT("button","chip",t);b.type="button";b.disabled=!!dis;b.onclick=fn;a.appendChild(b)};
-  if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();bag(q.nm+"와(과) 함께하기로 했다.")});
+  if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
   mk(q.pd===today()?"쓰다듬기 (내일 다시)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),q.pd===today());
   const fn=(q.fd&&q.fd.d===today())?q.fd.n:0;mk("간식 "+PET_SNACK_G+"골드 ("+fn+"/"+PET_SNACK_N+")",()=>petFeed(q),fn>=PET_SNACK_N||(C.gd||0)<PET_SNACK_G);
   mk("이름 바꾸기",()=>petRename(q));mk("보내 주기",()=>petBye(q));bd.appendChild(a);box.appendChild(c)})}

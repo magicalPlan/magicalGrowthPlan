@@ -38,7 +38,7 @@ function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH
  /* 타락 명단과 포탈 인원을 먼저 읽는다. 그 답이 온 뒤에 출정·시설·재해·선물 연결을 연다. */
  const hubTop=Promise.all([Promise.resolve(typeof drawRaids==="function"?drawRaids():null),Promise.resolve(typeof pTick==="function"?pTick():null)].map(p=>Promise.resolve(p).catch(()=>{})));
  hubBoss();hubFac();hubDis();disAlert();hubLH();
- hubTop.then(()=>{if($("#v-hub").hidden)return;if(typeof xRejoin==="function")xRejoin();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(typeof wfWatchStart==="function")wfWatchStart();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(typeof rrWatch==="function")rrWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
+ hubTop.then(()=>{if($("#v-hub").hidden)return;if(typeof xRejoin==="function")xRejoin();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
 
 // 장기 토벌 칸 열고 닫기. 닫아도 제목 옆에 진행 상황(토벌 중·귀환)이 보인다. 이 기기에서 마지막 상태를 기억한다.
 function lhFold(open){const b=$("#lhtog"),box=$("#hlh");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_lhopen",open?"1":"0")}catch(e){}}

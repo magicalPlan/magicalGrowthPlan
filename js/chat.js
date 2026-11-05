@@ -30,7 +30,12 @@ function newBtn(el,on){let b=document.getElementById(el.id+"-nb");
  if(!b){b=elT("button","newmsg","새 메시지 ↓");b.type="button";b.id=el.id+"-nb";b.hidden=true;b.onclick=()=>{pinLog(el,el.scrollHeight);b.hidden=true};el.after(b);
   el.addEventListener("scroll",()=>{if(el.scrollHeight-el.scrollTop-el.clientHeight<40)b.hidden=true})}
  b.hidden=!on}
-async function dmPng(el,title){const ms=(el&&el._ms||[]).slice().sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));if(!ms.length)return toast("저장할 대화가 없다.");
+async function dmPng(el,title){let ms=(el&&el._ms||[]).slice();
+ /* 1:1 방(#dl) PDF는 화면에 안 보이는 예전 말까지 전부 받는다. 화면의 30개씩 로딩은 그대로 둔다. */
+ if(el&&el.id==="dl"&&peer&&DB&&typeof XON==="function"&&XON()&&typeof apiDmThreadAll==="function"){
+  toast("대화 전체를 불러오는 중…");
+  try{ms=dmMsgs(await apiDmThreadAll(dmKey(UID,peer)))}catch(e){return toast("대화 전체를 불러오지 못했다.")}}
+ ms=ms.slice().sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));if(!ms.length)return toast("저장할 대화가 없다.");
  try{
   const font=await dmFontOpen();
   const two=n=>String(n).padStart(2,"0"),dt=t=>{const d=new Date(Number(t)||0);return d.getFullYear()+"."+two(d.getMonth()+1)+"."+two(d.getDate())+" "+two(d.getHours())+":"+two(d.getMinutes())};

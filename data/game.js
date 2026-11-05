@@ -449,7 +449,7 @@
       새기는 비용은 rnCost(지금 단계)개의 마력석(2, 3, 4, 5, 6 → 각인 하나를 끝까지 새기는 데 20개). */
    const RN=[["pow","힘의 각인","⚔",l=>"전투력 +"+4*l],["calm","평온의 각인","🕊",l=>"오르는 절망도 -"+4*l+"%"],["wis","지혜의 각인","📖",l=>"얻는 경험치 +"+4*l+"%"],["luck","풍요의 각인","💰",l=>"출정 골드 +"+5*l+"%"]];
    const RN_MAX=5;
-   /* 각인 도트 그림(32×32): assets/runes/{키}.png. 풍요의 각인만 assets/runes/luck.svg. 그림을 바꾸면 RN_IMG_V 를 올린다. 그림을 그리는 곳은 js/main.js 의 drawRunes. */
+   /* 각인 도트 그림(32×32): assets/runes/{키}.png. 풍요의 각인만 assets/runes/luck.svg. 그림을 바꾸면 RN_IMG_V 를 올린다. 그림을 그리는 곳은 js/growth/growth.js 의 drawRunes. */
    const RN_IMG_V=2;
 
 
