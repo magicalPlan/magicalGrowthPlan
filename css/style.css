@@ -383,6 +383,8 @@ img.av:not(#pv):not(#ev){cursor:zoom-in}
 .set-fold-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--ln);padding:18px 0 6px}
 .set-fold-t{min-width:0;font-family:"Gowun Batang","Noto Serif KR",serif;font-size:1.1rem;font-weight:700;color:#d8c79a;letter-spacing:.02em}
 .set-fold-mark{flex:none;font-size:.78rem;color:var(--mu)}
+.set-leave-row{display:flex;justify-content:flex-end;margin:6px 0 0}
+button.set-fold-mark{margin:0;padding:0;border:0;background:none;font:inherit;font-size:.78rem;color:var(--mu);cursor:pointer;letter-spacing:inherit;box-shadow:none;width:auto}
 .set-odd-box{margin:12px 0 0}.set-odd-name{margin:0 0 4px;font-family:"Gowun Batang",serif;font-weight:700}
 .set-odd-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
 .set-odd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 10px;border:1px solid var(--ln);border-radius:10px;background:var(--pn)}
