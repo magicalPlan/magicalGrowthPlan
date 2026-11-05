@@ -1,5 +1,5 @@
-/* 재계약 시험. 마을 화면의 도전 버튼과 여왕의 시련 화면.
-   main.js 다음에 불러야 한다. 마을 화면이 trLeft, trLeftTxt, need 를 그대로 부른다. */
+/* 재계약 시험. 계약 화면(#b-trial) 도전 버튼과 여왕의 시련 화면.
+   main.js 다음에 불러야 한다. 계약·마을이 trLeft, trLeftTxt, need 를 그대로 부른다. */
 /* 재계약 시험은 도전한 순간부터 TRIAL_CD(12시간)가 지나야 다시 볼 수 있다(성공, 실패 상관없이).
    예전에는 24시간이었다. 그 기준으로 12시간보다 많이 남은 사람은 12시간으로 맞춘다.
    12시간보다 짧게 남은 사람은 그 시간을 유지한다. C.tr12 가 있으면 이미 맞춘 것이므로 다시 건드리지 않는다.
@@ -14,13 +14,16 @@ const need=()=>{const k=C.t==="계약의 가호"?1:0;return{lv:Math.max(1,6+4*gi
 
 let T=null;
 const trGoal=()=>31+gi()*22+T.f*4+(T.f+1===T.n?12:0);
-$("#b-trial").onclick=()=>{if(trLeft()>0)return;T={f:0,n:3+gi(),l:[],cd:0,started:false};show("trial");tr()};
+/* 계약 화면의 재계약 시험 버튼 글·활성. html/pact/pact.html 의 #b-trial. */
+function trBtnPaint(bt){if(!bt||!C||typeof need!=="function")return;const lv=typeof hubLv==="function"?hubLv():(C.lv||1),n=need(),ok=lv>=n.lv&&C.cl>=n.cl,cd=trLeft()>0,can=!C.fall&&gi()<5&&ok&&!cd;
+ bt.disabled=!can;bt.textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전"}
+{const bt=$("#b-trial");if(bt)bt.onclick=()=>{if(trLeft()>0)return;T={f:0,n:3+gi(),l:[],cd:0,started:false};show("trial");tr()}}
 /* 시작·성공은 낙관적(로컬 즉시) + saveNow(즉시 PATCH). save() 600ms 지연은 나가기·새로고침에 약하다. */
 function trStart(){if(T.started)return;T.started=true;C.trT=Date.now();
  if(useItem("candle")){T.cd+=5;T.l.push("계약의 촛불에 불을 붙였다. 이번 시험의 판정에 +5가 더해진다.")}
  if(C.tcb){T.cd+=C.tcb;T.l.push("여왕의 표식이 빛난다. 이번 시험의 판정에 +"+C.tcb+"이(가) 더해진다.");C.tcb=0}{const ob=petEff("trial");if(ob){T.cd+=ob;T.l.push("지혜부엉이가 어깨 위에서 조용히 속삭인다. 판정 +"+ob+".")}}
  if(typeof saveNow==="function")saveNow();else save()}
-$("#tb").onclick=()=>{if(T&&T.started&&!T.end&&!confirm("지금 나가면 이번 시험은 끝나고, "+trCdTxt()+" 뒤에야 다시 볼 수 있다. 나갈까?"))return;hub()};
+$("#tb").onclick=()=>{if(T&&T.started&&!T.end&&!confirm("지금 나가면 이번 시험은 끝나고, "+trCdTxt()+" 뒤에야 다시 볼 수 있다. 나갈까?"))return;if(typeof pact==="function")pact();else hub()};
 function tr(msg){const done=T.end;$("#tc").innerHTML="<h2>"+(T.f+1>T.n?"":(T.f+1===T.n?"마지막 층: 여왕님":(T.f+1)+"층"))+"</h2><dl class='kv'><dt>판정</dt><dd>"+(pw()+VL[C.v].tb+(C.a.includes("땅")?4:0)+(T.cd||0)+(C.t==="집중"?3:0)+facLv("library"))+" + 운(0~19)</dd>"+(T.f<T.n?"<dt>이번 층 목표</dt><dd>"+trGoal()+" 이상</dd>":"")+"<dt>실패 허용</dt><dd>"+Math.max(0,TRIAL_LIVES-(T.fails||0))+"번 남음</dd>"+((()=>{const a=[armed("seal")?"여왕의 인장":"",!T.started&&armed("candle")?"계약의 촛불":"",!T.started&&C.tcb?"여왕의 표식 +"+C.tcb:""].filter(Boolean);return a.length?"<dt>준비</dt><dd>"+a.join(", ")+"</dd>":""})())+"<dt>절망도</dt><dd>"+C.dz+"/100</dd></dl>";
  $("#tl").innerHTML=T.l.map(t=>"<p>"+t+"</p>").join("")||"<p>여왕님이 시련의 문을 열었다. 총 "+T.n+"층을 통과해야 한다.</p>"+(T.started?"":"<p class='hint'>아직 시험을 시작하지 않았다. '나아간다'를 누르는 순간 시작되고, 그때부터 "+trCdTxt()+" 뒤에 다시 볼 수 있다. 지금 돌아가면 아무것도 잃지 않는다.</p>");
  $("#tg").hidden=!!done;$("#tb").hidden=!done&&false}

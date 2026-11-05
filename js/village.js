@@ -6,8 +6,7 @@ function hubLv(){return C&&C.xv>=2?lvOf(C.ex||0):(C&&C.lv)||1}
 function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
  const a=$("#hclv");if(a)a.textContent=String(lv);const bar=$("#hcxb");if(bar)bar.style.width=Math.min(100,into/nx*100)+"%";const tx=$("#hcxt");if(tx)tx.textContent=into+" / "+nx;
  const pwEl=$("#hcpw");if(pwEl){const keep=C.lv;C.lv=lv;pwEl.textContent=String(pw());C.lv=keep}
- const n=typeof need==="function"?need():null,bt=$("#b-trial");if(n&&bt){const ok=lv>=n.lv&&C.cl>=n.cl,cd=trLeft()>0,can=!C.fall&&gi()<5&&ok&&!cd;bt.disabled=!can;
-  bt.textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전"}}
+}
 let progBusy=false,progAgain=false;
 async function readProg(){if(!C||!AUTH.uid||LOCAL||!DB)return;if(progBusy){progAgain=true;return}progBusy=true;
  try{do{progAgain=false;if(savePending&&typeof saveCloud==="function"){try{await saveCloud(true)}catch(e){}}if(savePending)break;
@@ -33,12 +32,11 @@ function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH
   b.textContent=C.fall?"타락":"타락 직전";p.textContent=C.fall?"절망에 삼켜져 마수가 되었다. 친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다.":"절망도가 "+C.dz+"이다. 100이 되면 타락한다. 공명이나 선물로 절망도를 낮추자.";d.append(b,p);
   if(C.fall){const g=document.createElement("button");g.type="button";g.className="btn";g.textContent="나의 그림자 보기";g.onclick=()=>openRaid(UID);d.appendChild(g)}fb.appendChild(d)}
  if(C.du&&!C.du.fin&&!unDu)duWatch();
- const n=need(),ok=lv>=n.lv&&C.cl>=n.cl,cd=trLeft()>0,can=!C.fall&&gi()<5&&ok&&!cd;$("#b-trial").disabled=!can;
- $("#b-trial").textContent=C.fall?"재계약 시험 (타락 중에는 할 수 없다)":gi()>=5?"재계약 시험 (최고 등급)":!ok?"재계약 시험 (레벨 "+n.lv+", 토벌 "+n.cl+"회 필요)":cd?"재계약 시험 (약 "+trLeftTxt()+" 뒤에 다시 볼 수 있다)":"재계약 시험 도전";$("#hm").textContent="";drawDQ();drawTut();updNav();hubPortal();
+ $("#hm").textContent="";drawDQ();drawTut();updNav();hubPortal();
  /* 타락 명단과 포탈 인원을 먼저 읽는다. 그 답이 온 뒤에 출정·시설·재해·선물 연결을 연다. */
  const hubTop=Promise.all([Promise.resolve(typeof drawRaids==="function"?drawRaids():null),Promise.resolve(typeof pTick==="function"?pTick():null)].map(p=>Promise.resolve(p).catch(()=>{})));
  hubBoss();hubFac();hubDis();disAlert();hubLH();
- hubTop.then(()=>{if($("#v-hub").hidden)return;if(typeof xRejoin==="function")xRejoin();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(typeof wfWatchStart==="function")wfWatchStart();if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(typeof rrWatch==="function")rrWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
+ hubTop.then(()=>{if($("#v-hub").hidden)return;if(typeof xRejoin==="function")xRejoin();checkRaid();sweepRooms();hubGuard(fresh);onlineOnce();if(typeof disPullNow==="function")disPullNow(false);if(fresh)loadFac().then(()=>{if($("#v-hub").hidden)return;hubFac();disCheck();hubDis()});if(fresh)applyGift();if(typeof giftWatch==="function")giftWatch();if(fresh&&online&&typeof checkDM==="function")checkDM();if(fresh&&online)readProg()})}
 
 // 장기 토벌 칸 열고 닫기. 닫아도 제목 옆에 진행 상황(토벌 중·귀환)이 보인다. 이 기기에서 마지막 상태를 기억한다.
 function lhFold(open){const b=$("#lhtog"),box=$("#hlh");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_lhopen",open?"1":"0")}catch(e){}}

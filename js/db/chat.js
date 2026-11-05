@@ -24,8 +24,10 @@ function apiDmLeave(to){return apiPut("dmn/"+to+"/"+UID,{n:nmOf(),ts:{".sv":"tim
 function apiDmDrop(id){return DB.doc("rooms/xd"+UID+"/"+id).delete()}
 
 /* 1:1 본문. 그 대화 키의 최근 n개만 읽는다(기본 30). 목록을 보는 동안에는 부르지 않는다.
-   예전 말을 더 볼 때는 n 을 키워 다시 받는다(limitToLast). */
+   예전 말을 더 볼 때는 n 을 키워 다시 받는다(limitToLast).
+   PDF 저장만 전체(apiDmThreadAll)를 받는다. 화면 목록은 건드리지 않는다. */
 function apiDmThread(k,n){n=Math.max(1,Math.min(500,Number(n)||30));return once(apiCol("dm").where("k","==",k).limit(n))}
+function apiDmThreadAll(k){return once(apiCol("dm").where("k","==",k))}
 function apiDmBox(){return apiGet("rooms/xd"+UID)}
 function apiDmnList(){return once(apiCol("dmn/"+UID))}
 

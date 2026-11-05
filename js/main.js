@@ -134,7 +134,7 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
    PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다(완전 서버 시계 권위는 아님). */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
-let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[];
+let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
 function wakeSave(ok){const w=saveWait;saveWait=[];w.forEach(r=>{try{r(!!ok)}catch(e){}})}
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
@@ -231,11 +231,13 @@ function saveCloud(now){
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
    const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
-   const done=()=>{accBase=JSON.parse(stamp);accReady=true;
+   const done=()=>{accBase=JSON.parse(stamp);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveAgain=false;return go()}
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
    const fail=async e=>{const c=String(e&&e.message||e);
     if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
+    /* 네트워크·20초 제한은 한 번은 조용히 다시 시도한다. 마을에 실시간 연결이 많을 때 잠깐 막히는 경우가 있다. */
+    const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
     saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
    if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
@@ -402,14 +404,14 @@ let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
 /* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다. */
-const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",craft:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
+const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",pact:"town",trial:"town",craft:"town",growth:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
 function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
- document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX))?"true":"false"));
+ document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX)||(b.dataset.v==="pact"&&id==="trial"))?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
  if(typeof updNav==="function"&&C)updNav()}
-function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","craft","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>{const e=$("#v-"+v);if(e)e.hidden=v!==id;else if(typeof includeHeal==="function")includeHeal()});if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="wave"&&typeof wvWatchStop==="function")wvWatchStop();if(id==="fac"){if(typeof wfWatchStart==="function")wfWatchStart()}else if(id!=="hub"&&typeof wfWatchStop==="function")wfWatchStop();if(id!=="ord"&&typeof clpWatchStop==="function")clpWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft"||id==="ord");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof chatLeave==="function")chatLeave();else{if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="rooms"||id==="room"||id==="xm"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="craft"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved){if(typeof vnClose==="function")vnClose();window.scrollTo(0,0)}else keepY()}
+function show(id){const moved=curView!==id;curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","trial","shop","chat","friends","bag","pact","craft","growth","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>{const e=$("#v-"+v);if(e)e.hidden=v!==id;else if(typeof includeHeal==="function")includeHeal()});if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="wave"&&typeof wvWatchStop==="function")wvWatchStop();if(id!=="ord"&&typeof clpWatchStop==="function")clpWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft"||id==="ord");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof chatLeave==="function")chatLeave();else{if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="rooms"||id==="room"||id==="xm"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="pact"||id==="trial"||id==="craft"||id==="growth"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved){if(typeof vnClose==="function")vnClose();window.scrollTo(0,0)}else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
@@ -559,7 +561,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$
 function updNav(){const cb=document.querySelector("#nav [data-g=chat]");if(cb&&C){const k=Object.keys(C.dmu||{}).length,chatOpen=document.querySelector('#nav .nav-sub[data-for="chat"]'),folded=!chatOpen||chatOpen.hidden;cb.textContent=k&&folded?"채팅 ("+k+")":"채팅";const dm=document.querySelector("#nav [data-ct=d]");if(dm)dm.textContent=k&&!folded?"1:1 채팅 ("+k+")":"1:1 채팅";document.title=(k?"("+k+") ":"")+"魔法 成長記錄"}
  const b=document.querySelector("#nav [data-v=friends]");if(b){const n=Object.keys((C&&C.fq)||{}).length+Object.keys((C&&C.rqIn)||{}).length;b.textContent=n?"친구 ("+n+")":"친구"}
  const dub=document.querySelector("#nav [data-v=arena]");if(dub&&C){const n=(typeof DUI!=="undefined"?DUI.length:0),on=C.du&&!C.du.fin;dub.textContent=on?"대련 ⚔":n?"대련 ("+n+")":"대련";const act=document.querySelector("#nav [data-g=act]"),actOpen=document.querySelector('#nav .nav-sub[data-for="act"]');if(act)act.textContent=(on||n)&&actOpen&&actOpen.hidden?(on?"실전 ⚔":"실전 ("+n+")"):"실전"}
- const bgb=document.querySelector("#nav [data-v=bag]");if(bgb&&C){const n=Array.isArray(C.rg)?C.rg.length:0;bgb.textContent=n?"마법·가방 ("+n+")":"마법·가방"}
+ const bgb=document.querySelector("#nav [data-v=bag]");if(bgb&&C){const n=Array.isArray(C.rg)?C.rg.length:0;bgb.textContent=n?"가방 ("+n+")":"가방"}
  const h=document.querySelector("#nav [data-v=hub]");if(h&&C){let k=dqReady();try{k+=facReady()}catch(e){}h.textContent=k?"마을 ("+k+")":"마을"}
  {const nb2=document.querySelector("#nav [data-v=ntc]");if(nb2&&C){let k=0;try{k=NTC.filter(n=>Number(n.ts)>(C.ntcSeen||0)).length}catch(e){}nb2.textContent=k?"공지 ("+k+")":"공지"}}
  const ib=document.querySelector("#nav [data-v=inbox]");if(ib&&C){const k=(C.nt||[]).filter(n=>!n.r).length;ib.textContent=k?"알림 ("+(k>9?"9+":k)+")":"알림";
@@ -572,7 +574,7 @@ const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
-function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRunes();drawPets();drawRetrait();drawRG();drawSkills();const bm=$("#bgm");bm.style.color="var(--mu)";bm.textContent=msg||"";if(fresh)applyGift();
+function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRG();
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
   if(ic){const t=document.createElement("div");t.style.minWidth="0";t.append(...i.childNodes);i.classList.add("it-row");i.append(ic,t)}w.appendChild(i);
@@ -580,14 +582,13 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
  const it=$("#bgi");it.innerHTML="";const own=ITM.filter(x=>(C.inv[x[0]]||0)>0);
  if(!own.length)it.innerHTML="<p class='hint'>가진 아이템이 없다. 상점에서 살 수 있다.</p>";
  C.arm=C.arm||{};own.forEach(x=>{const id=x[0],on=armed(id);
-  // 희망의 결정: 준비 없이 바로 쓰는 아이템. 절망도 하락량은 HOPE_DZ만 고치면 바뀐다.
   if(id==="license"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (지금 상한 "+petCap()+" / "+petCapMax()+"마리)",[["사용",petLicense,petCap()>=petCapMax()]],itIc(id)));return}
   if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]],itIc(id)));if(prismOn)it.appendChild(prismBox());return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
  bagWeapons(rowEl);
- if(!C.wps.length&&!own.length)bm.textContent=msg||""}
+ const bm=$("#bgm");if(bm){bm.style.color="var(--mu)";bm.textContent=msg||""}if(fresh)applyGift()}
 // 이 친구에게 쓸 수 있는 빈 칸 번호와, 다 찼다면 가장 빨리 비는 시각
 function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let best=-1,soon=Infinity;
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
@@ -613,18 +614,26 @@ async function applyGift(){if(!AUTH.uid||!C||!DB)return;if(giftBusy){giftAgain=t
   updNav();toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
   if(!$("#v-bag").hidden)drawRG();if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}catch(e){}}while(giftAgain)}finally{giftBusy=false}}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
-function rgUse(idx){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
- const list=idx==="all"?C.rg.slice():[C.rg[idx]].filter(Boolean);if(!list.length)return;if(idx==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
- const b0=C.dz;let sum=0,xs=0;list.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});C.rg=idx==="all"?[]:C.rg.filter((x,i)=>i!==idx);titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(xs,-sum);updNav();
+const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
+/* 받은 선물함을 아이템 종류별로 합친다. 화면에는 이름×개수만 보인다. */
+function rgGroups(){const m={};(Array.isArray(C.rg)?C.rg:[]).forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
+function rgUse(key){C.rg=Array.isArray(C.rg)?C.rg:[];const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
+ const list=key==="all"?C.rg.slice():(()=>{const i=C.rg.findIndex(x=>x&&x.g===key);return i<0?[]:[C.rg[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
+ const b0=C.dz;let sum=0,xs=0;list.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});
+ if(key==="all")C.rg=[];else{const i=C.rg.findIndex(x=>x&&x.g===key);if(i>=0)C.rg.splice(i,1)}
+ titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+list.length;gain(xs,-sum);updNav();
  /* gain 이 save() 를 부르지만, 연 직후는 즉시 PATCH 로 서버에 맞춰 동기화가 옛 rg 를 되살리지 않게 한다. UI는 이미 열린 상태. */
  if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}
- const who=[...new Set(list.map(x=>x.n))].join(", ");note("gift",who+"님의 선물을 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");bag((list.length>1?"선물 "+list.length+"개를 열었다. ":who+"님의 "+ITM.find(x=>x[0]===list[0].g)[1]+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":""))}
-function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=Array.isArray(C.rg)?C.rg:[];
+ const nm=ITM.find(x=>x[0]===list[0].g);note("gift",(list.length>1?"선물 "+list.length+"개":(nm?nm[1]:"선물"))+"을(를) 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");
+ bag((list.length>1?"선물 "+list.length+"개를 열었다. ":(nm?nm[1]:"선물")+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":""))}
+function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=Array.isArray(C.rg)?C.rg:[],gr=rgGroups();
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
- if(!rg.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
- rg.map((x,i)=>[x,i]).reverse().forEach(([x,i])=>{const it=ITM.find(t=>t[0]===x.g);if(!it)return;const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const c=elT("div","chip");c.style.cssText="flex:1;text-align:left;cursor:default";
-  c.append((()=>{const t=elT("b","",(ITEM_IMG[x.g]?"":"🎁 ")+it[1]),ic=itIc(x.g,"sm");if(ic)t.prepend(ic);return t})(),elT("small","",x.n+"님이 보냄 · "+bdAgo(x.ts)+" · 절망도 -"+rgVal(x.g)+(GIFT_EX[x.g]?" · 경험치 +"+GIFT_EX[x.g]:"")));c.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
-  const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(i);w.append(c,b);box.appendChild(w)});
+ if(!gr.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
+ gr.forEach(({g,n})=>{const it=ITM.find(t=>t[0]===g);if(!it)return;const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";
+  const c=elT("div","chip it-row");c.style.cssText="flex:1;text-align:left;cursor:default";const tx=elT("div");tx.style.minWidth="0";
+  tx.append(elT("b","",(ITEM_IMG[g]?"":"🎁 ")+it[1]+" x"+n),elT("small","",rgEff(g)));tx.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
+  const ic=itIc(g);if(ic)c.append(ic,tx);else c.append(tx);
+  const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(g);w.append(c,b);box.appendChild(w)});
  if(rg.length>1){const a=elT("button","btn g","모두 열기 (절망도 -"+rg.reduce((s,x)=>s+rgVal(x.g),0)+")");a.type="button";a.disabled=!!C.fall;a.onclick=()=>rgUse("all");box.appendChild(a)}}
 $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;return}C.inv=C.inv||{};gb.hidden=false;gb.innerHTML="";
  const sl=giftSlot(u);gb.appendChild(elT("p","hint","이 친구에게 오늘 보낼 수 있는 선물 "+sl.left+" / "+GIFT_DAY+"개"+(sl.i<0?" · 약 "+cdTxt(sl.soon-Date.now())+" 뒤에 다시 보낼 수 있다":"")));
@@ -684,7 +693,9 @@ $("#nav").onclick=e=>{
  if(v==="arena")arena();
  if(v==="ord")ord();
  if(v==="bag")bag();
+ if(v==="pact"&&typeof pact==="function")pact();
  if(v==="craft")craft();
+ if(v==="growth")growth();
  if(v==="titles")openRec();
  if(v==="inbox")inbox();
  if(v==="roster")roster();
@@ -703,12 +714,12 @@ const mpLeft=()=>{skDay();return mpMax()-C.sk.used-Object.keys(C.sk.arm).length}
 const armedSk=id=>{if(!C)return false;skDay();return !!C.sk.arm[id]&&!!SKID[id]&&(C.a||[]).includes(SKID[id].a)};
 // 준비해 둔 마법을 실제로 쓴다. 썼으면 true.
 const useSk=id=>{if(!armedSk(id))return false;delete C.sk.arm[id];C.sk.used++;dexAdd("sk",id);return true};
-function drawSkills(){skDay();const l=$("#bgs");l.innerHTML="";const mx=mpMax(),left=mpLeft();
- const h=$("#skh");h.textContent="오늘 남은 마력 "+left+" / "+mx+" (준비한 마법 몫 제외). 매일 밤 12시에 회복된다.";const dots=elT("span","mp");for(let i=0;i<mx;i++)dots.appendChild(elT("i",i<left?"":"off"));h.appendChild(dots);
+function drawSkills(){skDay();const l=$("#bgs"),h=$("#skh");if(!l||!h)return;l.innerHTML="";const mx=mpMax(),left=mpLeft();
+ h.textContent="오늘 남은 마력 "+left+" / "+mx+" (준비한 마법 몫 제외). 매일 밤 12시에 회복된다.";const dots=elT("span","mp");for(let i=0;i<mx;i++)dots.appendChild(elT("i",i<left?"":"off"));h.appendChild(dots);
  (C.a||[]).forEach(a=>{const k=SK[a];if(!k)return;const on=!!C.sk.arm[k.id],col=(AT.find(t=>t[0]===a)||[])[1]||"#8a6fd1",w=elT("div","sk"+(on?" on":""));w.style.setProperty("--c",col);
   const tx=elT("div","sk-tx");tx.append(elT("b","",k.nm+" · "+a+" 속성"),elT("small","",k.d+" ("+k.w+"에서 쓰인다)"));
   const b=elT("button","chip",on?"준비 해제":"준비");b.type="button";b.disabled=!on&&left<=0;
-  b.onclick=()=>{skDay();if(C.sk.arm[k.id])delete C.sk.arm[k.id];else{if(mpLeft()<=0)return;C.sk.arm[k.id]=true}save();bag(on?k.nm+" 준비를 풀었다.":k.nm+"을(를) 준비했다. 다음 "+k.w+"에서 쓰인다.")};
+  b.onclick=()=>{skDay();if(C.sk.arm[k.id])delete C.sk.arm[k.id];else{if(mpLeft()<=0)return;C.sk.arm[k.id]=true}save();(typeof pact==="function"?pact:bag)(on?k.nm+" 준비를 풀었다.":k.nm+"을(를) 준비했다. 다음 "+k.w+"에서 쓰인다.")};
   w.append(elT("span","sk-ic"),tx,b);l.appendChild(w)})}
 
 $("#tut-re").onclick=()=>{C.tut=C.tut||{};C.tut.got=C.tut.got&&typeof C.tut.got==="object"?C.tut.got:{};C.tut.hide=0;C.tut.fold=0;save();hub()};
@@ -735,32 +746,6 @@ function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
 function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
 
-function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
- $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
- RN.forEach(([k,nm,ic,ef])=>{const L=rnLv(k),mx=L>=RN_MAX,cost=rnCost(L),w=document.createElement("div");w.style.cssText="display:flex;gap:8px";
-  const i=elT("div","chip it-row rn-row"+(L?"":" rn-off"));i.style.cssText="flex:1;text-align:left;cursor:default";const tx=elT("div");tx.style.minWidth="0";tx.append(elT("b","",nm+" "+L+" / "+RN_MAX),elT("small","",(L?"지금: "+ef(L):"아직 새기지 않았다")+(mx?" (최고 단계)":" → 다음: "+ef(L+1))));
-  // 각인 도트 그림(assets/runes/{키}.png). 풍요의 각인만 luck.svg. 그림을 못 불러오면 원래 아이콘 글자로 바꾼다.
-  const im=document.createElement("img");im.src="assets/runes/"+k+(k==="luck"?".svg":".png")+"?v="+RN_IMG_V;im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="it-ic";im.onerror=()=>im.replaceWith(elT("span","rn-ic",ic));i.append(im,tx);
-  i.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
-  const b=elT("button","chip",mx?"완성":"새기기 (마력석 "+cost+"개)");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=mx||have<cost;b.onclick=()=>rnUp(k);w.append(i,b);box.appendChild(w)})}
-function rnUp(k){const r=RN.find(x=>x[0]===k),L=rnLv(k),cost=rnCost(L);if(!r||L>=RN_MAX||((C.inv||{}).mana||0)<cost)return;
- C.inv.mana-=cost;C.rn=C.rn||{};C.rn[k]=L+1;titleState();C.stats.runes=(C.stats.runes||0)+1;save();regPlayer();checkTitles();
- note("quest",r[1]+"을 "+(L+1)+"단계로 새겼다. ("+r[3](L+1)+")");bag("마력석 "+cost+"개가 녹아들며 "+r[2]+" "+r[1]+"이 "+(L+1)+"단계가 되었다. "+r[3](L+1)+".")}
-function rtReq(){const cdl=Math.max(0,RT_CD-(Date.now()-(C.rtT||0))),mana=(C.inv||{}).mana||0;
- const sw=(C.stats&&C.stats.soloWins)||0,L=[[sw>=RT_SOLO,"고독한 출정 성공 "+RT_SOLO+"회 이상 (지금 "+sw+"회) · 혼자 나선 길에서 자신과 마주해야 한다"],[(C.cl||0)>=RT_CL,"토벌 성공 "+RT_CL+"회 이상 (지금 "+(C.cl||0)+"회)"],[mana>=RT_MANA,"마력석 "+RT_MANA+"개 (가진 것 "+mana+")"],[(C.gd||0)>=RT_GOLD,"골드 "+RT_GOLD+" (가진 것 "+(C.gd||0)+")"],
-  [(C.dz||0)<=RT_DZMAX&&!C.fall,"절망도 "+RT_DZMAX+" 이하 (지금 "+(C.dz||0)+")"+(C.fall?" · 타락 중에는 불가":"")],[cdl<=0,cdl>0?"다음 재계약까지 "+(cdl>=86400000?Math.floor(cdl/86400000)+"일 "+Math.floor(cdl%86400000/3600000)+"시간":cdTxt(cdl)):"지난 재계약에서 7일 경과"]];return{L,ok:L.every(x=>x[0])}}
-function drawRetrait(){const box=$("#bgrt");if(!box||!C)return;box.innerHTML="";const r=rtReq(),c=elT("div","card rt-card");
- c.append(elT("p","hint","계약의 원천 앞에서 계약을 처음부터 다시 맺는다. 지금 특성 「"+C.t+"」은(는) 사라지고, 다른 특성 하나가 무작위로 새겨진다. 좋은 특성이 나온다는 보장은 없고, 되돌릴 수 없다. 의식이 끝나면 절망도가 "+RT_DZ+" 오른다."));
- const ul=elT("ul","pm-req");r.L.forEach(([ok,t])=>ul.appendChild(elT("li",ok?"ok":"",(ok?"✓ ":"· ")+t)));c.appendChild(ul);
- const b=elT("button","btn"+(r.ok?"":" g"),r.ok?"운명의 재계약을 맺는다":"조건을 모두 채워야 한다");b.type="button";b.disabled=!r.ok;b.onclick=retrait;c.appendChild(b);box.appendChild(c)}
-function retrait(){const r=rtReq();if(!r.ok)return;
- if(!confirm("정말 운명의 재계약을 맺을까?\n\n· 지금 특성 「"+C.t+"」은(는) 사라진다\n· 새 특성은 무작위다 (좋지 않은 특성이 나올 수도 있다)\n· 되돌릴 수 없다\n· 마력석 "+RT_MANA+"개, 골드 "+RT_GOLD+"를 쓰고 절망도가 "+RT_DZ+" 오른다"))return;
- const old=C.t,pool=TR.filter(t=>t!==old),nt=pool[Math.floor(Math.random()*pool.length)];
- C.inv.mana-=RT_MANA;C.gd-=RT_GOLD;C.t=nt;C.rtT=Date.now();titleState();C.stats.traitChanges=(C.stats.traitChanges||0)+1;
- note("quest","운명의 재계약: 특성이 「"+old+"」에서 「"+nt+"」(으)로 바뀌었다.");gain(0,RT_DZ);save();regPlayer();checkTitles();
- alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");bag()}
-
- 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
 function thmDraw(){const lt=document.documentElement.dataset.theme==="light";const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=lt?"#f4efe6":"#0c0a14"}

@@ -144,15 +144,8 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
  if(!boot||(Number(C.rstn)||0)>=due)return;
  C.rstn=due;note("notice",rstNoteTxt(isOne));save();
  setTimeout(()=>alertBox(isOne?"🌑 개인 회귀":"🌑 새 시즌",rstAlertMsg(isOne)),900)}
-/* 접속 중 rr: 서버에 이미 회귀된 캐릭터를 읽어 맞춘다. 팝업은 띄우지 않고(다음 접속 rstCheck), 알림함만 남긴다. */
-let unRr=null,rrGen=0;
-function rrWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unRr)return;const uid=UID,gen=++rrGen;
- const take=async sn=>{if(gen!==rrGen||!C||UID!==uid)return;const id=sn.exists?Number(sn.data())||0:0;if(!(id>(Number(C.rsv)||0)))return;
-  if(Number(C.born)>id){C.rsv=id;try{keep("mgr_rr_"+uid,String(id))}catch(e){}save();return}
-  const ok=await rstTakeCloud(id);if(!ok){C=rstShape(C,id);try{clearPend()}catch(e){}try{keep("mgr_rr_"+uid,String(id))}catch(e){}
-   try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}try{if(typeof raidClear==="function")raidClear()}catch(e){}}
-  note("notice",rstNoteTxt(!(RST&&Number(RST.id)===id)));save();try{hub()}catch(e){}};
- unRr=DB.doc("players/"+uid+"/rr").live().onSnapshot(take,()=>{},120000)}
+/* 회귀는 서버에서 캐릭터를 통째로 바꾼 뒤, 로그인·공지 화면의 rstCheck 로만 맞춘다.
+   마을에 머무는 동안 rr 실시간 연결은 두지 않는다. */
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
