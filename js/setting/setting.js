@@ -8,13 +8,14 @@ function mailErr(e,act){const s=String(e&&e.message||e),pw=act==="pw";
  if(s==="401"||s==="403")return "서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
  if(s.indexOf("EMAIL_EXISTS")===0)return "이미 다른 계정에 쓰이는 이메일이다.";
  if(s.indexOf("INVALID_PASSWORD")===0||s.indexOf("INVALID_LOGIN_CREDENTIALS")===0||s.indexOf("EMAIL_NOT_FOUND")===0)return "비밀번호가 맞지 않다.";
- if(s.indexOf("WEAK_PASSWORD")===0)return "새 비밀번호는 6자 이상이어야 한다.";
+ if(s.indexOf("WEAK_PASSWORD")===0)return "새 비밀번호는 8자 이상·영문·숫자가 필요하다.";
+ if(s==="CRYPTO_UNAVAILABLE"||s.indexOf("CRYPTO_UNAVAILABLE")===0)return "이 브라우저에서는 비밀번호를 안전하게 실을 수 없다. 최신 브라우저로 다시 하자.";
  if(s.indexOf("INVALID_EMAIL")===0||s.indexOf("MISSING_EMAIL")===0)return "이메일 형식이 아니다.";
  if(s.indexOf("CREDENTIAL_TOO_OLD_LOGIN_AGAIN")===0)return "로그인한 지 오래되었다. 다시 로그인한 뒤에 "+(pw?"바꾸자.":"연동하자.");
  if(s.indexOf("TOO_MANY_ATTEMPTS")===0)return "시도가 너무 많다. 잠시 뒤에 다시 하자.";
  return (pw?"비밀번호를 바꾸지 못했다. ":"연동하지 못했다. ")+"("+s+")"}
 async function mailReauth(id,pw,extra){const emails=[],add=e=>{e=String(e||"").trim().toLowerCase();if(e&&emails.indexOf(e)<0)emails.push(e)};if(id)add(EM(id));add(AUTH.mail);add(extra);
- let last;for(const e of emails){try{const j=await idt("signInWithPassword",{email:e,password:pw,returnSecureToken:true});AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||e;keep("mgr_rt",AUTH.rt);return j}catch(err){last=err}}
+ let last;for(const e of emails){try{const j=await idtWithPw("signInWithPassword",{email:e,returnSecureToken:true},pw);AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||e;keep("mgr_rt",AUTH.rt);return j}catch(err){last=err}}
  throw last||new Error("비밀번호가 맞지 않다.")}
 async function mailNote(){const n=$("#set-em");if(!n||!AUTH.uid){pwShow("");return}
  n.textContent="연동 상태를 확인하는 중이다.";
@@ -75,11 +76,11 @@ $("#set-pw").onclick=()=>{const b=$("#set-pw-box");if(!b||!AUTH.uid||!setLinked)
 $("#set-pw-box").onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-pw-go"),old=$("#set-pw-old").value,nw=$("#set-pw-new").value,nw2=$("#set-pw-new2").value;m.textContent="";
  if(!AUTH.uid||!setLinked){m.textContent="이메일을 연동한 계정만 비밀번호를 바꿀 수 있다.";return}
  if(old.length<6){m.textContent="지금 비밀번호를 적어야 한다.";return}
- if(nw.length<6){m.textContent="새 비밀번호는 6자 이상이어야 한다.";return}
+ const bad=pwCheck(nw);if(bad){m.textContent=bad;return}
  if(nw!==nw2){m.textContent="새 비밀번호가 서로 다르다.";return}
  if(nw===old){m.textContent="새 비밀번호는 지금 것과 달라야 한다.";return}
  btn.disabled=true;
- try{await mailReauth(mailId(),old,setLinked);const j=await idt("update",{idToken:AUTH.tok,password:nw,returnSecureToken:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}
+ try{await mailReauth(mailId(),old,setLinked);const j=await idtWithPw("update",{idToken:AUTH.tok,returnSecureToken:true},nw,{noLegacy:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}
   $("#set-pw-old").value="";$("#set-pw-new").value="";$("#set-pw-new2").value="";$("#set-pw-box").hidden=true;
   m.textContent="비밀번호를 바꿨다. 다음 로그인부터 새 비밀번호를 쓴다."}
  catch(err){m.textContent=mailErr(err,"pw")}
