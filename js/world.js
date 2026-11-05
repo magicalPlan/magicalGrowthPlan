@@ -101,18 +101,56 @@ function worldView () {
 
 /* 세계관 > 이벤트. 버튼은 data/story/lock.js 의 WORLD_STORY_OPEN(open:true) 만 본다.
    장기 의뢰 단서 조각(STORY_LOCK·CLPN·clpStories)과 별개다. open 은 lock.js 에서 손으로 켠다. */
-function worldEvent(){show("wev");const root=$("#v-wev");if(!root)return;root.replaceChildren();
- const open=(typeof WORLD_STORY_OPEN!=="undefined"?WORLD_STORY_OPEN:[]).filter(r=>r&&r.open&&r.id);
- if(!open.length){root.append(elT("p","world-lead","이 기억은 아직 잠겨 있다."),elT("p","hint","장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."));return}
- root.appendChild(elT("p","world-lead","열린 이벤트 이야기"));
- const slot=elT("div","clp-stories"),box=elT("div","card");box.appendChild(slot);root.appendChild(box);
- if(typeof storyLoad!=="function"){slot.appendChild(elT("p","hint","이야기를 불러올 수 없다."));return}
- storyLoad().then(book=>{const list=Array.isArray(book&&book.shards)?book.shards:[];
-  open.forEach(row=>{const story=list.find(s=>s&&s.id===row.id);if(!story||!story.start)return;const line=elT("div","clp-story");
-   line.appendChild(elT("span","clp-story-name",story.title||"이야기"));const b=elT("button","chip","스토리 보기");b.type="button";
-   b.onclick=()=>{if(typeof vnOpen==="function")vnOpen(story)};line.appendChild(b);slot.appendChild(line)});
-  if(!slot.childNodes.length){root.replaceChildren(elT("p","world-lead","이 기억은 아직 잠겨 있다."),elT("p","hint","이야기 글을 찾지 못했다."));}}).catch(()=>{slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
+function worldEvent() {
+   show("wev");
+   const root = $("#v-wev");
+   
+   if (!root) return;
+   
+   root.replaceChildren();
+   
+   const open = (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).filter(r => r && r.open && r.id);
+   
+   if (!open.length) {
+      root.append(elT("p","world-lead","이 기억은 아직 잠겨 있다."), elT("p", "hint", "장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."));
+      return
+   }
+   
+   root.appendChild(elT("p", "world-lead", "열린 이벤트 이야기"));
+   
+   const slot = elT("div", "clp-stories"), box = elT("div","card");
+   box.appendChild(slot);
+   root.appendChild(box);
 
+   if(typeof storyLoad !== "function") {
+      slot.appendChild(elT("p", "hint", "이야기를 불러올 수 없다."));
+      return
+   }
+
+   storyLoad().then(book => {
+      const list = Array.isArray(book && book.shards) ? book.shards : [];
+      open.forEach(row => {
+         const story = list.find(s => s && s.id === row.id);
+         if(!story || !story.start) return;
+         const line = elT("div", "clp-story");
+         line.appendChild(elT("span", "clp-story-name", story.title || "이야기"));
+         const b = elT("button", "chip", "스토리 보기");
+         b.type = "button";
+         b.onclick = () => {
+            if(typeof vnOpen === "function") vnOpen(story)
+         };
+            
+         line.appendChild(b);slot.appendChild(line)});
+         if(!slot.childNodes.length) {
+            root.replaceChildren(elT("p", "world-lead", "이 기억은 아직 잠겨 있다."), elT("p", "hint", "이야기 글을 찾지 못했다."));
+         }}
+      ).catch( () => {
+         slot.appendChild(elT("p", "hint", "이야기를 불러오지 못했다."))
+      }
+   )
+}
+
+// ===================================
 /* Q&A. 글은 data/world/qa.json.
    한 란은 { "title": "제목", "tone": "hope 또는 despair, 없으면 생략", "qa": [ { "q": "질문", "a": "답변" } ] }.
    답을 여러 줄로 쓰려면 a 안에 \n 을 넣는다. 질문을 고친 뒤에는 아래 주소의 v 숫자를 올린다. */

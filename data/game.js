@@ -191,7 +191,8 @@
    // 내가 참가한 출정을 진행한다. 화면을 보고 있지 않아도 돌아가서 결과와 보상을 받는다.
    // 출정이 서버 문제 등으로 끝나지 못하면 캐릭터가 출정에 묶이지 않도록 정리한다(시간 제한, 직접 정리 버튼).
    // X_FETCH_GIVEUP: 출발 후 xr 미수신·빈 응답 대기 한도(클라 X_XR_MISS 와 동일). T0 에는 calc=1 로 roomCalc 를 깨우고, expireMarch(1분)는 백업이다.
-   const X_FETCH_GIVEUP=5*60000,X_HARD_LIMIT=20*60000;
+   // X_EMPTY_RETRY: T0 직후 빈 파티(empty)로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set·백그라운드 탭 대비).
+   const X_FETCH_GIVEUP=5*60000,X_HARD_LIMIT=20*60000,X_EMPTY_RETRY=60000;
 
 
    /* 상점 */
