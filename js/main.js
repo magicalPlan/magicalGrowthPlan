@@ -261,7 +261,7 @@ async function verCheck(){if(verShown||location.protocol==="file:")return;try{co
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
 setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();checkRaid()}},30000);
-function showLogin(){show("login");mode(4);$("#lk").hidden=!!AUTH.key;$("#lm").textContent=""}
+function showLogin(){show("login");mode(4);const lk=$("#lk");if(lk)lk.hidden=!!AUTH.key;const lm=$("#lm");if(lm)lm.textContent=""}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
  c.append(elT("h2","","⚠ 서버에서 '"+String(p.n).slice(0,20)+"' 캐릭터 기록을 찾지 못했다"),elT("p","hint","서버 점검 중 문제로 캐릭터 기록이 사라졌을 수 있다. 이 기기에는 백업이 없다."),
@@ -343,7 +343,7 @@ async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,pw2=
   const jcIn=String(code||"").trim().normalize("NFC");if(!jcIn)return m.textContent="가입을 위해서는 비밀 코드를 적어야 합니다.";
   let jcOk=false;try{jcOk=await codeOk(jcIn)}catch(x){return m.textContent=errMsg(x)}if(!jcOk)return m.textContent="비밀 코드가 맞지 않습니다."}
  else if(pw.length<6)return m.textContent="비밀번호는 6자 이상이어야 합니다.";
- const k=AUTH.key||$("#lkey").value.trim();if(!k)return m.textContent="Firebase 웹 API 키를 입력해야 한다.";AUTH.key=k;
+ const k=AUTH.key||($("#lkey")&&$("#lkey").value.trim())||"";if(!k)return m.textContent="Firebase 웹 API 키가 없다. 페이지를 새로고침하거나 서버 설정을 확인해야 한다.";AUTH.key=k;
  const jc=signup?String(code||"").trim().normalize("NFC"):"";
  $("#lgo").disabled=true;
  try{const j=signup?await idtWithPw("signUp",{email:EM(id),returnSecureToken:true},pw,{noLegacy:true}):useMail?await signInMail(emLogin,pw):await signInName(id,pw);
@@ -705,11 +705,12 @@ function drawSkills(){skDay();const l=$("#bgs");l.innerHTML="";const mx=mpMax(),
   b.onclick=()=>{skDay();if(C.sk.arm[k.id])delete C.sk.arm[k.id];else{if(mpLeft()<=0)return;C.sk.arm[k.id]=true}save();bag(on?k.nm+" 준비를 풀었다.":k.nm+"을(를) 준비했다. 다음 "+k.w+"에서 쓰인다.")};
   w.append(elT("span","sk-ic"),tx,b);l.appendChild(w)})}
 
-$("#tut-re").onclick=()=>{C.tut=C.tut||{got:{}};C.tut.hide=0;C.tut.fold=0;save();hub()};
+$("#tut-re").onclick=()=>{C.tut=C.tut||{};C.tut.got=C.tut.got&&typeof C.tut.got==="object"?C.tut.got:{};C.tut.hide=0;C.tut.fold=0;save();hub()};
 function alertBox(t,x){$("#alt").textContent=t;$("#alx").textContent=x;$("#alo").hidden=false;$("#alc").focus({preventScroll:true})}
 $("#alc").onclick=()=>{$("#alo").hidden=true};
 setInterval(()=>{if(C&&!$("#v-hub").hidden){hubGuard();hubBoss()}},30000);
-function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{got:{}};const t=C.tut;box.innerHTML="";if(t.hide)return;
+/* tut 에 fold·hide 만 있고 got 이 없으면(옛 저장) t.got['pf'] 에서 로그인 직후 마을 그리기가 깨진다. */
+function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{};C.tut.got=C.tut.got&&typeof C.tut.got==="object"?C.tut.got:{};const t=C.tut;box.innerHTML="";if(t.hide)return;
  const ok=TUT.map(x=>{let v=false;try{v=!!x[3](C)}catch(e){}return v}),got=TUT.filter(x=>t.got[x[0]]).length,all=got===TUT.length;
  const w=elT("div","tut"),hd=elT("div","");hd.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";hd.append(elT("h2","","튜토리얼 · "+got+" / "+TUT.length));
  const fold=elT("button","chip",t.fold?"펼치기 ▼":"접기 ▲");fold.type="button";fold.style.cssText="flex:0 0 auto;min-width:0;padding:5px 12px;font-size:.8rem";fold.onclick=()=>{t.fold=!t.fold;save();drawTut()};hd.appendChild(fold);w.appendChild(hd);

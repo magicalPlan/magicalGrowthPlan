@@ -9,7 +9,7 @@ const PW_WIRE={salt:"magical-growth-pw-v1",iter:120000,ver:"mg1"};
 /* 가입·비밀번호 변경용 무결성. 빈 글자면 통과, 아니면 안내 문장. */
 function pwCheck(pw){const t=String(pw||"");
  if(t.length<8)return "비밀번호는 8자 이상이어야 합니다.";
- if(t.length>16)return "비밀번호는 16자 이하여야 합니다.";
+ if(t.length>32)return "비밀번호는 32자 이하여야 합니다.";
  if(/\s/.test(t))return "비밀번호에 공백을 넣을 수 없습니다.";
  if(!/[A-Za-z]/.test(t)||!/[0-9]/.test(t))return "비밀번호에 영문과 숫자를 함께 넣어야 합니다.";
  return ""}
