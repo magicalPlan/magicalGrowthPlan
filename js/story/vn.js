@@ -209,17 +209,18 @@ function vnOpen (story) {
     root.addEventListener("click", e => {
       if (e.target.closest("button")) return;
       if(!vnState)return;if(vnState.phase==="end"){vnClose();return}if(vnState.phase!=="line")return;vnAdvance()});
-      const stage = elT("div", "vn-stage"), stand = elT("div", "vn-stand"), x = elT("button", "vn-x", "닫기");
+      const col = elT("div", "vn-col"), stage = elT("div", "vn-stage"), stand = elT("div", "vn-stand"), x = elT("button", "vn-x", "닫기");
       x.type = "button";
       x.setAttribute("aria-label", "이야기 닫기");
       x.onclick = vnClose;
       const box = elT("div", "vn-box"), name = elT("p", "vn-name"), text = elT("p","vn-text"), row = elT("div", "vn-row"), next = elT("button", "vn-next", "다음");
       next.type = "button";
       const choices = elT("div", "vn-choices");
-      stage.append(stand, x);
+      stage.appendChild(stand);
       row.appendChild(next);
       box.append(name, text, choices, row);
-      root.append(stage, box);
+      col.append(stage, box);
+      root.append(x, col);
       document.body.appendChild(root);
       document.body.classList.add("vn-open");
       vnRoot = root;vnPaint()

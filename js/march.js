@@ -187,9 +187,8 @@ function xWhyEmpty(x){return x.nm+" 출정은 출발 시각에 참가자가 한 
 const xEmptyRetry=()=>typeof X_EMPTY_RETRY==="number"?X_EMPTY_RETRY:60000;
 /* empty 문서인데 all 에 내 자리 jt 만 있으면 유예 초과·정원 초과로 본다(진짜 빈 방과 구분). */
 function xWhyEmptyDoc(x,doc){const all=doc&&doc.all||{},jt=all[UID];if(jt==null)return xWhyEmpty(x);const d={};Object.keys(all).forEach(u=>{d[u]={jt:all[u]}});return xSeatMiss(x,d)}
-function xWhyQuit(x){return (x&&x.nm?x.nm+" ":"")+"출정에서 직접 나왔다(원인: 수동 퇴장). 이번 보상은 받지 않는다."}
 // 출발 시각이 지난 자리는 지우지 않는다. 창을 닫았다가 돌아온 사람이 같은 파티로 이어가야 한다.
-// 다만 보상·의도 퇴장·확정 실패 뒤에는 C.ms 로 같은 출정에 다시 묶이지 않게 한다.
+// 다만 결과 수령·확정 실패 뒤에는 C.ms 로 같은 출정에 다시 묶이지 않게 한다.
 function xExpired(j){if(!j)return false;const s=Number(j.s),i=Number(j.i),T0=Number(j.T0);if(!Number.isFinite(s)||!Number.isFinite(i)||!Number.isFinite(T0))return true;
  if(XR&&XR.id===j.id&&(XR.fin||XR.gone))return true;return xNow()>=T0+X_RUN_MAX}
 function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Number(j.i),id=j.id,T0=Number(j.T0);if(xPend&&xPend.id===id)xPend=null;C.mj=null;C.ms=id;if(XR&&XR.id===id)XR=null;stopXr();if(why){note("march",why);xSay(why,1)}save();drawXAll();
@@ -198,15 +197,14 @@ function xRelease(why){const j=C&&C.mj;if(!j||!C)return;const s=Number(j.s),i=Nu
 function xMarkDone(s,i,endAt){if(!XON()||!Number.isFinite(Number(s))||!Number.isFinite(Number(i)))return;const now=xNow(),want=Number.isFinite(Number(endAt))?Number(endAt)+X_DROP:now+X_DROP;
  DB.doc(xSeat(s,i)+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return now}).catch(()=>{});
  DB.doc("live/xdrop/"+s+"_"+i).transact(c=>{if(typeof c==="number"&&c>0){if(c>=want)return;return want}return want}).catch(()=>{})}
-/* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 방에서 풀려난다.
-   보상까지 받은 뒤에는 C.mj 가 없어도 결과 화면에서 나갈 수 있다. */
+/* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 화면에서 풀려난다.
+   계정 보상은 서버 지급이라 나가기와 무관. 결과 문구·통계만 클라 settle. */
 function xQuitOpen(x){if(!C||!x)return false;const now=xNow(),mine=C.mj&&C.mj.id===x.id,done=XR&&XR.id===x.id&&XR.fin;if(!mine&&!done)return false;const end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;if(done)return true;return now>=Number(x.T0)+X_STUCK}
-/* 나가기 전에 결과·endAt 이 준비됐으면 보상을 먼저 지급한다. 지급 후에는 마을로 확인만 받고, 미지급이면 기존처럼 포기 경고 후 퇴장한다. */
+/* 나가기: 확인·보상 포기 문구 없음. 결과 settle 가능하면 넣고, 화면만 정기 토벌(매지컬 마치) 목록으로 돌린다. */
 function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)xGrant(x)}
  const j=C&&C.mj,done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;
- if(!confirm(done&&!j?"마을로 돌아갈까?":"이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;
- if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}
- if(!$("#v-xm").hidden){if(typeof hub==="function")hub();else show("hub")}}
+ const id=j?j.id:(XR&&XR.id);if(j){if(xPend&&xPend.id===j.id)xPend=null;C.mj=null}if(id)C.ms=id;XR=null;stopXr();save();drawXAll();
+ if(typeof openRooms==="function")openRooms();else show("rooms")}
 /* 출발 시각에 내 자리가 파티에 없는 이유. 기록 없음, 마감 이후 기록, 정원 초과를 구분한다. */
 function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 서버 자리 기록 없음 — 참가 미저장·출발 전 삭제).";if(jtOf(mine)>xCloseAt(x))return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 참가 시각이 마감 유예("+xHM(xCloseAt(x))+") 이후 — 기기 시각이 서버보다 느릴 수 있음).";return x.nm+" 출정 전투 파티에 들어가지 못했다(원인: 마감 전 정원 "+XMAX+"명 초과)."}
 /* 출정 결과는 연결로 받는다. 서버가 기록을 고칠 때만 바뀐 내용이 오고, 1초마다 전체를 다시 읽지 않는다.
