@@ -236,21 +236,36 @@ function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}
 /* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다.
-   1차 서버 지급: rooms/xr…/pay/{나} 가 있으면 경제(gd/ex/cl)는 서버 권위. settle 은 부가만, 계정에서 숫자만 맞춘다. */
+   서버 지급: pay 가 있으면 경제·fx·소모·펫까지 서버 권위. settle 은 통계·문구·UI 위주. */
 function xPayOk(row){return!!(row&&(row.ok===1||row.ok===true))}
 async function xWaitPay(x){if(!DB||!AUTH||!AUTH.uid||!x)return null;const path="rooms/xr"+x.s+"_"+x.i+"/pay/"+UID;
  for(let i=0;i<8;i++){try{const sn=await DB.doc(path).get();if(sn.exists){const d=typeof sn.data==="function"?sn.data():sn.data;if(xPayOk(d))return d}}catch(e){}
   if(i<7)await new Promise(r=>setTimeout(r,350))}return null}
-/* 서버가 올린 gd/ex/lv/cl 만 가져 온다. 절망·가방 등 방금 settle 한 로컬 값은 덮지 않는다. accBase 경제 칸만 맞춰 낡은 PATCH 를 막는다. */
-async function xPullPayEconomy(){if(!AUTH||!AUTH.uid||!C||!DB)return;
+/* 서버가 올린 마치 지급분 전체를 가져 온다. 통계·칭호 등 settle 로컬만 덮지 않는다. */
+async function xPullPayEconomy(paid){if(!AUTH||!AUTH.uid||!C||!DB)return;
  try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object")return;
   if(rem.gd!=null)C.gd=rem.gd;if(rem.ex!=null){C.ex=rem.ex;C.lv=rem.lv!=null?rem.lv:(typeof lvOf==="function"?lvOf(C.ex):C.lv);if(rem.xv!=null)C.xv=rem.xv}if(rem.cl!=null)C.cl=rem.cl;
+  if(rem.dz!=null){C.dz=rem.dz;if((C.dz||0)>=100&&!C.fall&&typeof fallen==="function")fallen();else if(typeof titleState==="function")titleState()}
+  if(rem.tcb!=null)C.tcb=rem.tcb;else if(paid&&(Number(paid.tc)||0)>0)C.tcb=Math.max(C.tcb||0,Number(paid.tc)||0);
+  if(rem.rsb!=null)C.rsb=rem.rsb;else if(paid&&paid.rb)C.rsb=1;
+  if(rem.wtmp&&typeof rem.wtmp==="object")C.wtmp=JSON.parse(JSON.stringify(rem.wtmp));else if(paid&&paid.wa&&paid.day)C.wtmp={day:String(paid.day),v:1};
+  if(rem.eggs!=null)C.eggs=rem.eggs;if(rem.eggsEv!=null)C.eggsEv=rem.eggsEv;
+  if(Array.isArray(rem.pets))C.pets=JSON.parse(JSON.stringify(rem.pets));
+  if(rem.sk&&typeof rem.sk==="object")C.sk=JSON.parse(JSON.stringify(rem.sk));
+  if(rem.inv&&typeof rem.inv==="object"){C.inv=C.inv||{};const extra=[];if(paid){if(paid.charm)extra.push("charm");if(paid.flag)extra.push("flag");if(paid.map)extra.push("map")}
+   const want=paid&&paid.inv&&typeof paid.inv==="object"?Object.keys(paid.inv).concat(extra):Object.keys(rem.inv);
+   want.forEach(id=>{if(rem.inv[id]!=null)C.inv[id]=rem.inv[id]})}
+  if(paid&&C.arm){if(paid.charm)delete C.arm.charm;if(paid.flag)delete C.arm.flag;if(paid.map)delete C.arm.map}
+  if(rem.arm&&typeof rem.arm==="object")C.arm=JSON.parse(JSON.stringify(rem.arm));
+  if(rem.clp&&typeof rem.clp==="object")C.clp=JSON.parse(JSON.stringify(rem.clp));
+  if(rem.stats&&typeof rem.stats==="object"){C.stats=C.stats||{};if(rem.stats.mats!=null)C.stats.mats=rem.stats.mats;if(rem.stats.clpN!=null)C.stats.clpN=rem.stats.clpN;if(rem.stats.maxDespair!=null)C.stats.maxDespair=rem.stats.maxDespair}
   const ts=Number(d.ts)||0;if(ts&&(accSeen==null||ts>Number(accSeen)))accSeen=ts;
-  if(typeof accBase!=="undefined"&&accBase){accBase.gd=C.gd;accBase.ex=C.ex;accBase.lv=C.lv;accBase.cl=C.cl;if(C.xv!=null)accBase.xv=C.xv}}catch(e){}}
+  if(typeof accBase!=="undefined"&&accBase){accBase.gd=C.gd;accBase.ex=C.ex;accBase.lv=C.lv;accBase.cl=C.cl;accBase.dz=C.dz;if(C.xv!=null)accBase.xv=C.xv;if(C.tcb!=null)accBase.tcb=C.tcb;if(C.rsb!=null)accBase.rsb=C.rsb;if(C.wtmp)accBase.wtmp=JSON.parse(JSON.stringify(C.wtmp));if(C.eggs!=null)accBase.eggs=C.eggs;if(C.eggsEv!=null)accBase.eggsEv=C.eggsEv;if(C.pets)accBase.pets=JSON.parse(JSON.stringify(C.pets));if(C.sk)accBase.sk=JSON.parse(JSON.stringify(C.sk));
+   if(C.inv){accBase.inv=accBase.inv||{};Object.keys(C.inv).forEach(id=>{accBase.inv[id]=C.inv[id]})}if(C.clp)accBase.clp=JSON.parse(JSON.stringify(C.clp))}}catch(e){}}
 async function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||XR._payBusy||xNow()<Number(doc.endAt))return;XR._payBusy=1;
  try{let paid=doc.pay&&doc.pay[UID]?doc.pay[UID]:null;if(!xPayOk(paid))paid=await xWaitPay(x);const serverPay=xPayOk(paid);
-  let h="";try{h=settle(doc.r,{serverPay})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}
-  if(serverPay){try{await xPullPayEconomy()}catch(e){}}
+  let h="";try{h=settle(doc.r,{serverPay,pay:paid})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}
+  if(serverPay){try{await xPullPayEconomy(paid)}catch(e){}}
   XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
   if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
  finally{XR._payBusy=0}}
