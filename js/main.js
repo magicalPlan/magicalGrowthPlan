@@ -129,10 +129,11 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    ① 로그인 토큰이 만료됐을 수 있으니 새 토큰을 받아 다시 저장 ② 비밀 코드(jc)를 빼고 저장(이미 있는 계정) ③ 비밀 코드를 넣고 저장(처음 만드는 계정).
    그래도 안 되면 작은 값 하나만 저장해 보고, 결과를 경고에 함께 적어 원인(토큰·규칙·내용)을 짐작할 수 있게 한다. */
 /* 저장은 계정 문서를 통째로 바꾸지 않는다. 마지막으로 서버에 반영된 캐릭터(accBase)와 지금 캐릭터를 견주어, 바뀐 칸만 PATCH 한다.
-   레벨·경험치는 accounts/{계정}/prog 에도 같이 적어, 마을을 열 때와 출정에서 돌아올 때 읽는다. 본문과 prog 중 큰 경험치를 남긴다.
+   레벨·경험치는 accounts/{계정}/prog 에도 같이 적어, 마을을 열 때와 출정에서 돌아올 때 읽는다. 계정 ts 가 더 새면 본문(경험·골드 포함)을 따르고 prog 를 맞춘다.
    보내기 전에 막히면 바뀐 칸만 mgr_pend_{계정} 에 남긴다. 캐릭터 전체 백업은 쓰지 않는다.
    전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
-   PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다(완전 서버 시계 권위는 아님). */
+   PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다.
+   경험·골드는 더 새 ts 본문에, 이 탭이 accBase 이후로 쌓은 미저장 증감(delta)만 더한다. 옛 절대값으로 덮지 않는다. */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
 let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
@@ -170,28 +171,32 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
  }catch(e){}
  return true}
-/* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행·더 큰 골드/경험을 합친다. */
+/* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
+   경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다. */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
  let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
  if(!(remoteTs>Number(accSeen)))return false;
  const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;return false}
- const mine=JSON.parse(JSON.stringify(C));C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
+ const mine=JSON.parse(JSON.stringify(C)),base=accBase;C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
- /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭의 더 큰 골드·경험으로 회귀를 되돌리지 않는다. */
+ /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭으로 회귀를 되돌리지 않는다. */
  const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
  if(rstNewer){try{clearPend()}catch(e){}}
- if(!rstNewer){
-  if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
-  if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
- /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계)을 서버 옛값으로 되돌리지 않는다. */
- if(!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"))){
+ /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계·경험·골드)을 서버 옛값으로 되돌리지 않는다. */
+ const claimed=!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
+ if(claimed){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
-  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot}
+  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot;
+  if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
+ else if(!rstNewer&&base){
+  const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0);
+  if(dEx){C.ex=Math.max(0,(Number(C.ex)||0)+dEx);C.lv=typeof lvOf==="function"?lvOf(C.ex):(mine.lv||C.lv);if(mine.xv!=null)C.xv=mine.xv}
+  if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd)}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
- /* 회귀 직후면 서버본을 기준으로 두고, 옛 탭 keepMerge 잔여로 다시 PATCH 하지 않게 accBase 를 맞춘다. */
+ /* 회귀 직후면 서버본 기준. 그 외는 accBase=rem 으로 두어 미저장 delta 가 이어지는 PATCH 에 나가게 한다. */
  accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
  try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
@@ -227,7 +232,7 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
  dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
  dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t})}catch(e){}return dst}
-// 예전에는 다른 창의 계정 문서를 통째로 가져와 이 창의 레벨까지 덮어썼다. 이제는 바뀐 칸만 저장하고, 마을·귀환 때 본문과 prog 중 큰 경험치를 남긴다.
+// 예전에는 다른 창의 계정 문서를 통째로 가져와 이 창의 레벨까지 덮어썼다. 이제는 바뀐 칸만 저장하고, 계정 ts 가 더 새면 본문(경험·골드)을 따른다.
 async function syncAdopt(){return false}
 async function syncPeek(){return "same"}
 async function saveRescue(){if(saveFix)return false;saveFix=true;try{
@@ -316,14 +321,12 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||""
   try{if(typeof rstFresh==="function")await rstFresh()}catch(e){}
   /* 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다.
      서버 ts 가 pend 시각보다 더 새롭면(다른 기기·탭이 이미 저장) 낡은 pend 로 되돌리지 않는다.
-     회귀(rr) 시각보다 오래된 pend 도 버린다. 붙인 뒤에도 골드·경험은 서버와 pend 중 큰 쪽을 남긴다. */
+     회귀(rr) 시각보다 오래된 pend 도 버린다. pend 가 더 새면 그 칸(경험·골드 포함)을 그대로 쓴다. */
   try{const pend=pendRead();if(pend&&pend.fields&&Object.keys(pend.fields).length){const srvTs=Number(accSeen)||0;
    let rr=0;try{rr=await rstDueRemote()}catch(e){}
    if((rr&&pend.t&&pend.t<rr)||(rr>(Number(C.rsv)||0))||(pend.t&&srvTs&&pend.t<srvTs))clearPend();
-   else{const before=JSON.parse(JSON.stringify(C));applyPend(C,pend.fields);
-    if(pend.fields["prog/ex"]!=null){C.ex=pend.fields["prog/ex"];if(pend.fields["prog/xv"]!=null)C.xv=pend.fields["prog/xv"]}
-    if((Number(before.gd)||0)>(Number(C.gd)||0))C.gd=before.gd;
-    if((Number(before.ex)||0)>(Number(C.ex)||0)){C.ex=before.ex;if(before.lv!=null)C.lv=before.lv;if(before.xv!=null)C.xv=before.xv}
+   else{applyPend(C,pend.fields);
+    if(pend.fields["prog/ex"]!=null){C.ex=pend.fields["prog/ex"];if(pend.fields["prog/xv"]!=null)C.xv=pend.fields["prog/xv"];if(pend.fields["prog/lv"]!=null)C.lv=pend.fields["prog/lv"]}
     if(typeof xpMigrate==="function")xpMigrate();saveCloud(true)}}}catch(e){}}
  else{let bk=null;try{bk=JSON.parse(localStorage.getItem("mgr_bk_"+UID))}catch(e){}
   // 서버에 캐릭터가 없는데 이 브라우저에 이 계정의 백업이 있으면 그걸로 되살리고 서버에 다시 올린다.
@@ -632,7 +635,7 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
                  giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
                gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
-   [소모] rgUse: ginbox 삭제 성공 → gs 기록 → gift 칸 삭제(재시도). 효과는 성공분만.
+   [소모] rgUse: ginbox 삭제 성공 직후 효과·화면. gs·gift 칸 삭제는 백그라운드(효과 대기 안 함).
    [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
        COMPAT_GIFT_PULL(ginPullGift·giftBellWatch), 보내기의 gift/ 쓰기,
        rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
@@ -699,24 +702,23 @@ function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
-/* 열기: ginbox 삭제 성공분만 효과. 그다음 gs·gift 삭제(호환 잔여 방지). 후일 gift 삭제·gs 칸 키는 선택. */
+/* 열기: ginbox 삭제 성공 직후 효과·화면. gift/ 잔여 삭제는 백그라운드. 후일 gift 삭제·gs 칸 키는 선택. */
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
- C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];
- if(DB&&AUTH.uid){for(const x of list){if(!(await giftDbDel(ginPath(x.id))))continue;
-  const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
-  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);await giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
-  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);await giftDbDel("gift/"+UID+"/"+x.u)}
-  opened.push(x)}}
- else opened.push(...list);
+ C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
+ const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML=""};
+ const takeOne=x=>{opened.push(x);ginList=ginList.filter(y=>y&&y.id!==x.id);ginIds=ginList.map(y=>y.id).join("|");
+  const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
+ const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
+  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
+  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
+ if(DB&&AUTH.uid){for(const x of list){if(!(await giftDbDel(ginPath(x.id))))continue;giftSweep(x);takeOne(x)}}
+ else list.forEach(takeOne);
  if(!opened.length){bag("선물을 열지 못했다. 잠시 뒤 다시 시도해 보자.");if(m)m.style.color="var(--bad)";return}
- const b0=C.dz;let sum=0,xs=0;opened.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});
- const ids=new Set(opened.map(x=>x.id));ginList=ginList.filter(x=>!ids.has(x.id));ginIds=ginList.map(x=>x.id).join("|");
- titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+opened.length;gain(xs,-sum);updNav();
- if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}
- const nm=ITM.find(x=>x[0]===opened[0].g),fail=list.length-opened.length;
- note("gift",(opened.length>1?"선물 "+opened.length+"개":(nm?nm[1]:"선물"))+"을(를) 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");
- bag((opened.length>1?"선물 "+opened.length+"개를 열었다. ":(nm?nm[1]:"선물")+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":"")+(fail?" (일부 "+fail+"개는 열지 못했다.)":""))}
+ const nm=ITM.find(x=>x[0]===opened[0].g),fail=list.length-opened.length,drop=b0-(C.dz||0);
+ note("gift",(opened.length>1?"선물 "+opened.length+"개":(nm?nm[1]:"선물"))+"을(를) 열었다. 절망도가 "+drop+" 내려갔다.");
+ bag((opened.length>1?"선물 "+opened.length+"개를 열었다. ":(nm?nm[1]:"선물")+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+drop+" 내려갔다."+(xs?" 경험치 +"+xs+".":"")+(fail?" (일부 "+fail+"개는 열지 못했다.)":""));
+ if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}}
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=ginList,gr=rgGroups();
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!gr.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
