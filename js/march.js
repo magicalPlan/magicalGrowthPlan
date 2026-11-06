@@ -24,13 +24,19 @@ const xClock = () => {
 // 서버 시간 보정 함수 5. apiClockSync가 있으면 동기화 Promise를 돌려줌. force면 강제.  없으면 즉시 resolve. 참가 시 백그라운드에서 맞춤.
 // 백그라운드에서도 잘 돌아가는지 확인 필요. 
 const xClockWait = force => typeof apiClockSync === "function" ? apiClockSync(!!force) : Promise.resolve();
+
 // 출정의 고정 정보를 계산. (저장 없이 id 시드로 결정..? 이걸 왜 서버에서 처리하지 않죠?)
 /*
    id :: x{s}_{i}  / v :: 마을 / d :: 위험도(심연은 4) / nm :: 이름 / total :: 전투 횟수 / T0 :: 출발 시각 (s+1)*XS / close :: 화면 참가 마감 T0 - XCLOSE
    같은 (s, i)면 모든 플레이어에게 같은 출정이 보임
    이 함수가 왜 서버 사이드에서가 아니라 클라이언트에서 돌지
 */
-function xInfo(s,i){const id="x"+s+"_"+i,g=rng(hs32(id)),p=n=>Math.floor(g()*n),v="ABCD"[p(4)],ab=isAbyss(s,i),d=ab?4:1+p(3);const pl=XPL[p(XPL.length)],t=3+p(3);return{id,s,i,v,d,nm:ab?ABYSS_PL[((s+(i===((s%XN)+XN)%XN?0:2))%ABYSS_PL.length+ABYSS_PL.length)%ABYSS_PL.length]:VL[v].n+" "+pl,total:ab?5:t,T0:(s+1)*XS,close:(s+1)*XS-XCLOSE}}
+function xInfo (s, i) {
+   const id = "x" + s + "_" + i, g = rng(hs32(id)), p = n => Math.floor(g() * n), v = "ABCD"[p(4)], ab = isAbyss(s, i), d = ab ? 4 : 1 + p(3);
+   const pl = XPL[p(XPL.length)], t = 3 + p(3);
+   return{id, s, i, v, d, nm : ab ? ABYSS_PL[((s + (i === ((s % XN) + XN) % XN ? 0 : 2)) % ABYSS_PL.length + ABYSS_PL.length) % ABYSS_PL.length] : VL[v].n + " " + pl, total : ab ? 5 : t, T0 : (s + 1) * XS, close : (s+1) * XS - XCLOSE
+   }
+}
 const xSlot=()=>Math.floor(xNow()/XS);
 // 지금 참가할 수 있는 출정 묶음(마감이 지나면 다음 묶음). 유예는 서버 집계·미반영 쓰기용.
 const xLs=()=>{const s=xSlot();return xNow()>=(s+1)*XS-XCLOSE?s+1:s};
@@ -196,7 +202,7 @@ function xMarkDone(s,i,endAt){if(!XON()||!Number.isFinite(Number(s))||!Number.is
    보상까지 받은 뒤에는 C.mj 가 없어도 결과 화면에서 나갈 수 있다. */
 function xQuitOpen(x){if(!C||!x)return false;const now=xNow(),mine=C.mj&&C.mj.id===x.id,done=XR&&XR.id===x.id&&XR.fin;if(!mine&&!done)return false;const end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;if(done)return true;return now>=Number(x.T0)+X_STUCK}
 /* 나가기 전에 결과·endAt 이 준비됐으면 보상을 먼저 지급한다. 지급 후에는 마을로 확인만 받고, 미지급이면 기존처럼 포기 경고 후 퇴장한다. */
-async function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)try{await xGrant(x)}catch(e){}}
+function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)xGrant(x)}
  const j=C&&C.mj,done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;
  if(!confirm(done&&!j?"마을로 돌아갈까?":"이 출정에서 나갈까? 아직 결과를 받지 못했다면 이번 보상은 받지 못한다."))return;
  if(j){xAbandon(xWhyQuit(xInfo(j.s,j.i)),true)}else if(XR){C.ms=XR.id;XR=null;stopXr();save();drawXAll()}
@@ -235,40 +241,10 @@ function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;st
 function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc:0,fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=xNormPicks(doc.picks);XR.pc=typeof doc.pc==="number"?doc.pc:XR.picks.filter(v=>v!=null).length;XR.res=doc;const j=C&&C.mj;
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}
-/* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다.
-   서버 지급: pay 가 있으면 경제·fx·소모·펫까지 서버 권위. settle 은 통계·문구·UI 위주. */
-function xPayOk(row){return!!(row&&(row.ok===1||row.ok===true))}
-async function xWaitPay(x){if(!DB||!AUTH||!AUTH.uid||!x)return null;const path="rooms/xr"+x.s+"_"+x.i+"/pay/"+UID;
- for(let i=0;i<8;i++){try{const sn=await DB.doc(path).get();if(sn.exists){const d=typeof sn.data==="function"?sn.data():sn.data;if(xPayOk(d))return d}}catch(e){}
-  if(i<7)await new Promise(r=>setTimeout(r,350))}return null}
-/* 서버가 올린 마치 지급분 전체를 가져 온다. 통계·칭호 등 settle 로컬만 덮지 않는다. */
-async function xPullPayEconomy(paid){if(!AUTH||!AUTH.uid||!C||!DB)return;
- try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object")return;
-  if(rem.gd!=null)C.gd=rem.gd;if(rem.ex!=null){C.ex=rem.ex;C.lv=rem.lv!=null?rem.lv:(typeof lvOf==="function"?lvOf(C.ex):C.lv);if(rem.xv!=null)C.xv=rem.xv}if(rem.cl!=null)C.cl=rem.cl;
-  if(rem.dz!=null){C.dz=rem.dz;if((C.dz||0)>=100&&!C.fall&&typeof fallen==="function")fallen();else if(typeof titleState==="function")titleState()}
-  if(rem.tcb!=null)C.tcb=rem.tcb;else if(paid&&(Number(paid.tc)||0)>0)C.tcb=Math.max(C.tcb||0,Number(paid.tc)||0);
-  if(rem.rsb!=null)C.rsb=rem.rsb;else if(paid&&paid.rb)C.rsb=1;
-  if(rem.wtmp&&typeof rem.wtmp==="object")C.wtmp=JSON.parse(JSON.stringify(rem.wtmp));else if(paid&&paid.wa&&paid.day)C.wtmp={day:String(paid.day),v:1};
-  if(rem.eggs!=null)C.eggs=rem.eggs;if(rem.eggsEv!=null)C.eggsEv=rem.eggsEv;
-  if(Array.isArray(rem.pets))C.pets=JSON.parse(JSON.stringify(rem.pets));
-  if(rem.sk&&typeof rem.sk==="object")C.sk=JSON.parse(JSON.stringify(rem.sk));
-  if(rem.inv&&typeof rem.inv==="object"){C.inv=C.inv||{};const extra=[];if(paid){if(paid.charm)extra.push("charm");if(paid.flag)extra.push("flag");if(paid.map)extra.push("map")}
-   const want=paid&&paid.inv&&typeof paid.inv==="object"?Object.keys(paid.inv).concat(extra):Object.keys(rem.inv);
-   want.forEach(id=>{if(rem.inv[id]!=null)C.inv[id]=rem.inv[id]})}
-  if(paid&&C.arm){if(paid.charm)delete C.arm.charm;if(paid.flag)delete C.arm.flag;if(paid.map)delete C.arm.map}
-  if(rem.arm&&typeof rem.arm==="object")C.arm=JSON.parse(JSON.stringify(rem.arm));
-  if(rem.clp&&typeof rem.clp==="object")C.clp=JSON.parse(JSON.stringify(rem.clp));
-  if(rem.stats&&typeof rem.stats==="object"){C.stats=C.stats||{};if(rem.stats.mats!=null)C.stats.mats=rem.stats.mats;if(rem.stats.clpN!=null)C.stats.clpN=rem.stats.clpN;if(rem.stats.maxDespair!=null)C.stats.maxDespair=rem.stats.maxDespair}
-  const ts=Number(d.ts)||0;if(ts&&(accSeen==null||ts>Number(accSeen)))accSeen=ts;
-  if(typeof accBase!=="undefined"&&accBase){accBase.gd=C.gd;accBase.ex=C.ex;accBase.lv=C.lv;accBase.cl=C.cl;accBase.dz=C.dz;if(C.xv!=null)accBase.xv=C.xv;if(C.tcb!=null)accBase.tcb=C.tcb;if(C.rsb!=null)accBase.rsb=C.rsb;if(C.wtmp)accBase.wtmp=JSON.parse(JSON.stringify(C.wtmp));if(C.eggs!=null)accBase.eggs=C.eggs;if(C.eggsEv!=null)accBase.eggsEv=C.eggsEv;if(C.pets)accBase.pets=JSON.parse(JSON.stringify(C.pets));if(C.sk)accBase.sk=JSON.parse(JSON.stringify(C.sk));
-   if(C.inv){accBase.inv=accBase.inv||{};Object.keys(C.inv).forEach(id=>{accBase.inv[id]=C.inv[id]})}if(C.clp)accBase.clp=JSON.parse(JSON.stringify(C.clp))}}catch(e){}}
-async function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||XR._payBusy||xNow()<Number(doc.endAt))return;XR._payBusy=1;
- try{let paid=doc.pay&&doc.pay[UID]?doc.pay[UID]:null;if(!xPayOk(paid))paid=await xWaitPay(x);const serverPay=xPayOk(paid);
-  let h="";try{h=settle(doc.r,{serverPay,pay:paid})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}
-  if(serverPay){try{await xPullPayEconomy(paid)}catch(e){}}
-  XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
-  if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
- finally{XR._payBusy=0}}
+/* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다. */
+function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||xNow()<Number(doc.endAt))return;
+ let h="";try{h=settle(doc.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
+ if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
 function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
  if(XR&&XR.id===j.id&&XR.fin){stopXr();return}
  const x=xInfo(j.s,j.i),late=xNow()-x.T0;
