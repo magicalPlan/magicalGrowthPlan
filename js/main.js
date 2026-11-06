@@ -300,7 +300,7 @@ async function verCheck(){if(verShown||location.protocol==="file:")return;try{co
 function verBanner(){const b=document.createElement("div");b.className="ver-bar";b.setAttribute("role","status");const t=document.createElement("span");t.textContent="게임이 새 버전으로 업데이트되었다. 새로고침해야 고친 내용이 적용된다.";const go=document.createElement("button");go.type="button";go.className="chip";go.textContent="새로고침";go.onclick=()=>{try{if(C)save()}catch(e){}setTimeout(()=>location.reload(),300)};b.append(t,go);document.body.appendChild(b)}
 verCheck();setInterval(verCheck,600000);
 setInterval(()=>{if(AUTH.uid&&C&&!document.hidden){guardPush();devClaim();checkRaid()}},30000);
-function showLogin(){show("login");mode(4);const lk=$("#lk");if(lk)lk.hidden=!!AUTH.key;const lm=$("#lm");if(lm)lm.textContent=""}
+function showLogin(){show("login");mode(4);lForgot=false;const lk=$("#lk");if(lk)lk.hidden=!!AUTH.key;const lm=$("#lm");if(lm)lm.textContent="";try{drawLogin()}catch(e){}}
 /* 긴급 복구: 서버에서 캐릭터가 사라졌을 때 쓰는 화면과, players에 남은 정보로 캐릭터를 다시 만드는 기능. */
 function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style.cursor="default";const c=elT("div","card");c.style.cssText="max-width:440px;width:100%;text-align:left";
  c.append(elT("h2","","⚠ 서버에서 '"+String(p.n).slice(0,20)+"' 캐릭터 기록을 찾지 못했다"),elT("p","hint","서버 점검 중 문제로 캐릭터 기록이 사라졌을 수 있다. 이 기기에는 백업이 없다."),
@@ -350,8 +350,8 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||""
 async function codeOk(v){const t=String(v||"").trim().normalize("NFC");if(!t||!(window.crypto&&crypto.subtle))return false;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")===SIGNUP_CODE_HASH}
 
 
-/* 로그인 주소는 항상 아이디@magic-growth.local 이다. 연동한 이메일은 별도 기록이고, 계정 주소를 바꾸지 않는다.
-   예전에 주소 자체가 바뀐 계정은 mail/{아이디} 에 적어 둔 이메일로 한 번 더 시도한 뒤, 들어오면 주소를 아이디용으로 되돌린다. */
+/* 가입 직후 Auth 주소는 아이디@magic-growth.local 이다. 이메일을 연동하면 Auth 주소도 그 이메일로 바뀐다.
+   아이디 로그인은 먼저 아이디용 주소로 시도하고, 안 되면 mail/{아이디} 의 연동 이메일로 같은 계정에 들어간다. */
 const mailDummy=e=>typeof e==="string"&&e.toLowerCase().endsWith("@magic-growth.local");
 const mailKey=em=>String(em||"").toLowerCase().replace(/\./g,",");
 function mailOpt(v){const em=String(v||"").trim().toLowerCase();if(!em)return "";if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)||mailDummy(em))return null;return em}
@@ -365,13 +365,14 @@ async function signInName(id,pw){const dummy=EM(id);
 async function signInMail(em,pw){let id="";try{const base=String(FBU||"").replace(/\/+$/,"");if(base){const r=await fetch(base+"/elogin/"+encodeURIComponent(mailKey(em))+".json");if(r.ok)id=await r.json()}}catch(x){}
  if(typeof id==="string"&&/^[a-z0-9_]{3,20}$/.test(id)){try{return await idtWithPw("signInWithPassword",{email:EM(id),returnSecureToken:true},pw)}catch(e){if(!pwBadCred(e))throw e}}
  return idtWithPw("signInWithPassword",{email:em,returnSecureToken:true},pw)}
-/* 연동 기록을 남기고, 계정 주소가 이메일로 바뀌어 있으면 아이디용 주소로 되돌린다. 기록부터 남긴다. */
+/* 연동 기록을 남기고, Firebase 계정 주소도 그 이메일로 맞춘다. 비밀번호 찾기는 이 주소로 메일을 보낸다.
+   아이디 로그인은 mail/{아이디} 로 연동 이메일을 찾아 같은 계정에 들어간다. */
 async function mailSave(id,em){id=id.toLowerCase();em=em.toLowerCase();if(!DB&&FBU)DB=fbdb(FBU);if(!DB)throw new Error("서버에 연결되지 않아 이메일을 남기지 못했다.");
  let prev="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")prev=s.data()}catch(x){}
  try{const j=await idt("update",{idToken:AUTH.tok,displayName:id,returnSecureToken:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}}catch(x){}
+ if(String(AUTH.mail||"").toLowerCase()!==em){const j=await idt("update",{idToken:AUTH.tok,email:em,returnSecureToken:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}AUTH.mail=em}
  await DB.doc("mail/"+id).set(em);await DB.doc("elogin/"+mailKey(em)).set(id);
  if(prev&&prev!==em){try{await DB.doc("elogin/"+mailKey(prev)).delete()}catch(x){}}
- const dummy=EM(id);if(AUTH.mail&&AUTH.mail!==dummy){try{const j=await idt("update",{idToken:AUTH.tok,email:dummy,returnSecureToken:true});if(j.idToken){AUTH.tok=j.idToken;if(j.refreshToken){AUTH.rt=j.refreshToken;keep("mgr_rt",AUTH.rt)}}AUTH.mail=dummy}catch(x){}}
  AUTH.name=id;keep("mgr_id",id)}
 async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,pw2=$("#lpw2")?$("#lpw2").value:"",code=$("#lcode")?$("#lcode").value:"",m=$("#lm"),useMail=!signup&&lmailMode,emLogin=useMail?mailOpt($("#lmail").value):"",em=signup?mailOpt($("#lem-in")&&$("#lem-in").value):"";m.textContent="";
  if(useMail&&!emLogin)return m.textContent="연동한 이메일을 적어야 합니다.";
@@ -389,9 +390,10 @@ async function doLogin(){const id=$("#lid").value.trim(),pw=$("#lpw").value,pw2=
   AUTH.uid=j.localId;AUTH.tok=j.idToken;AUTH.rt=j.refreshToken;AUTH.mail=j.email||(useMail?emLogin:"");AUTH.name=hinted||(useMail?emLogin:id);if(jc){AUTH.jc=jc;keep("mgr_jc_"+j.localId,jc)}keep("mgr_key",k);keep("mgr_rt",AUTH.rt);if(hinted)keep("mgr_id",hinted);$("#lpw").value="";if($("#lpw2"))$("#lpw2").value="";if($("#lcode"))$("#lcode").value="";
   let noted="";if(signup&&hinted){try{await idt("update",{idToken:AUTH.tok,displayName:hinted,returnSecureToken:true})}catch(x){}}
   if(em&&hinted){try{await mailSave(hinted,em);noted=em+" 으로도 로그인할 수 있다. 아이디 로그인은 그대로다."}catch(err){noted="계정은 만들어졌다. 이메일 연동은 설정에서 다시 하자."}}
-  else if(useMail&&hinted&&AUTH.mail&&!mailDummy(AUTH.mail)){try{await mailSave(hinted,emLogin);noted="아이디 로그인을 되돌려 두었다. 이제 아이디와 이메일 둘 다 쓸 수 있다."}catch(err){noted="이메일로는 들어왔다. 아이디 로그인 기록은 남기지 못했다. 설정에서 이메일 연동을 다시 하자."}}
+  else if(useMail&&hinted&&AUTH.mail&&!mailDummy(AUTH.mail)){try{await mailSave(hinted,emLogin)}catch(err){}}
   if($("#lem-in"))$("#lem-in").value="";
-  /* 인증은 됐는데 마을 진입만 실패하면 유지 토큰(mgr_rt)은 남긴다. 지우면 새로고침마다 로그인 화면만 나온다. */
+  /* 인증은 됐는데 마을 진입만 실패하면 유지 토큰(mgr_rt)은 남긴다. 지우면 새로고침마다 로그인 화면만 나온다.
+     이메일로 로그인할 때는 연동 안내 창을 띄우지 않는다. 가입 때 이메일을 적은 경우만 한 번 알린다. */
   try{await enterGame();if(noted)setTimeout(()=>alertBox("이메일 연동",noted),900)}catch(e){m.textContent=errMsg(e)}}
  catch(e){AUTH.uid=null;AUTH.tok=null;AUTH.rt="";try{localStorage.removeItem("mgr_rt")}catch(x){}m.textContent=errMsg(e)}
  $("#lgo").disabled=false}
@@ -402,9 +404,10 @@ async function startAuth(){AUTH.key=lget("mgr_key")||FB_KEY;const rt=lget("mgr_r
   try{await enterGame();return}
   catch(e){showLogin();$("#lm").textContent=errMsg(e);return}}
  showLogin()}
-let lmailMode=false;
+let lmailMode=true,lForgot=false;
 function lmode(mail) {
    if (!signup) lmailMode =!!mail;
+   if(lForgot){drawLogin();return}
    const a = $("#lmode-id"), b = $("#lmode-em");
    if (a) a.setAttribute("aria-pressed", !signup && !lmailMode ? "true" : "false");
    if (b) b.setAttribute("aria-pressed", !signup&&lmailMode ? "true" : "false");
@@ -413,17 +416,40 @@ function lmode(mail) {
    $("#lmail-box").hidden =!!signup || !lmailMode;
    $("#lem").hidden=!signup;
    const pw2 = $("#lpw2-box"), lcd = $("#lcd"),
-   lpw = $("#lpw");
+   lpw = $("#lpw"),fp=$("#lfp");
    if (pw2) pw2.hidden =! signup;
    if (lcd) lcd.hidden =! signup;
+   if (fp) fp.hidden =!!signup;
    if (lpw) {
       lpw.autocomplete = signup ? "new-password" : "current-password";
       lpw.placeholder = signup ? "8자 이상, 영문·숫자":"6자 이상"
    }
- $("#lhint").textContent=signup?"아이디와 비밀번호, 비밀 코드로 계정을 만든다. 이메일은 선택이다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다. 아이디 로그인도 막히지 않는다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
+ $("#lhint").textContent=signup?"아이디와 비밀번호, 비밀 코드로 계정을 만든다. 이메일은 선택이다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
+function drawLogin(){const form=$("#lform"),box=$("#lfp-box"),lt=$("#lt"),hint=$("#lhint"),m=$("#lm");
+ if(box)box.hidden=!lForgot;if(form)form.hidden=!!lForgot;
+ if(lForgot){if(lt)lt.textContent="비밀번호 초기화";if(hint)hint.textContent="이메일 연동을 한 계정만 쓸 수 있다.";if(m)m.textContent="";const em=$("#lfp-em");if(em){em.value=$("#lmail")&&!$("#lmail-box").hidden?$("#lmail").value:em.value;setTimeout(()=>em.focus(),0)}return}
+ if(lt)lt.textContent=signup?"계정 만들기":"로그인";if($("#lgo"))$("#lgo").textContent=signup?"계정 만들기":"로그인";if($("#lsw"))$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";
+ lmode(lmailMode)}
+async function sendPwReset(){const m=$("#lm"),em=mailOpt($("#lfp-em")&&$("#lfp-em").value);if(m)m.textContent="";
+ if(em===null||!em){if(m)m.textContent=em===null?"이메일 형식이 아니다.":"연동한 이메일을 적어야 한다.";return}
+ const k=AUTH.key||($("#lkey")&&$("#lkey").value.trim())||"";if(!k){if(m)m.textContent="Firebase 웹 API 키가 없다. 페이지를 새로고침하거나 서버 설정을 확인해야 한다.";return}AUTH.key=k;
+ const btn=$("#lfp-go");if(btn)btn.disabled=true;
+ try{let id="";try{const base=String(FBU||"").replace(/\/+$/,"");if(base){const r=await fetch(base+"/elogin/"+encodeURIComponent(mailKey(em))+".json");if(r.ok)id=await r.json()}}catch(x){}
+  if(typeof id!=="string"||!/^[a-z0-9_]{3,20}$/.test(id)){if(m)m.textContent="이메일 연동을 한 계정만 초기화할 수 있다.";return}
+  let linked="";try{const base=String(FBU||"").replace(/\/+$/,"");if(base){const r=await fetch(base+"/mail/"+encodeURIComponent(id)+".json");if(r.ok)linked=await r.json()}}catch(x){}
+  if(typeof linked!=="string"||linked.toLowerCase()!==em){if(m)m.textContent="이메일 연동을 한 계정만 초기화할 수 있다.";return}
+  try{await idt("sendOobCode",{requestType:"PASSWORD_RESET",email:em})}
+  catch(e){const c=String(e&&e.message||e);if(/EMAIL_NOT_FOUND|USER_NOT_FOUND|INVALID_EMAIL/.test(c)){if(m)m.textContent="연동 기록은 있으나 계정 주소가 아직 아이디용이라 메일을 보내지 못했다. 한 번 로그인한 뒤 설정에서 이메일을 다시 연동하거나, 운영자에게 문의해야 한다.";return}throw e}
+  if(m){m.style.color="";m.textContent="재설정 메일을 보냈다. 메일함과 스팸함을 확인한 뒤, 새 비밀번호로 로그인하자."}}
+ catch(e){if(m)m.textContent=errMsg(e)}
+ finally{if(btn)btn.disabled=false}}
 $("#lgo").onclick=doLogin;$("#lpw").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};if($("#lpw2"))$("#lpw2").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};if($("#lcode"))$("#lcode").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};$("#lmail").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)doLogin()};
 $("#lmode-id").onclick=()=>lmode(false);$("#lmode-em").onclick=()=>lmode(true);
-$("#lsw").onclick=()=>{signup=!signup;if($("#lcode"))$("#lcode").value="";if($("#lpw2"))$("#lpw2").value="";$("#lt").textContent=signup?"계정 만들기":"로그인";$("#lgo").textContent=signup?"계정 만들기":"로그인";$("#lsw").textContent=signup?"이미 계정이 있다":"계정이 없다면 계정 만들기";$("#lm").textContent="";lmode(lmailMode)};
+$("#lsw").onclick=()=>{lForgot=false;signup=!signup;if($("#lcode"))$("#lcode").value="";if($("#lpw2"))$("#lpw2").value="";if($("#lm"))$("#lm").textContent="";drawLogin()};
+{const b=$("#lfp");if(b)b.onclick=()=>{signup=false;lForgot=true;drawLogin()}}
+{const b=$("#lfp-back");if(b)b.onclick=()=>{lForgot=false;if($("#lm"))$("#lm").textContent="";drawLogin()}}
+{const b=$("#lfp-go");if(b)b.onclick=()=>sendPwReset()}
+{const i=$("#lfp-em");if(i)i.onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)sendPwReset()}}
 function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}

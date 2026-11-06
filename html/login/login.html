@@ -2,24 +2,27 @@
 <div class="card">
     <h2 id="lt">로그인</h2>
     <p class="hint" id="lhint">계약직 마법사 여러분을 다시 한 번 환영합니다.</p>
+    <div id="lform">
     <div class="tabs" id="lmode">
-        <button type="button" id="lmode-id" aria-pressed="true">아이디로 로그인</button>
-        <button type="button" id="lmode-em" aria-pressed="false">이메일로 로그인</button>
+        <button type="button" id="lmode-em" aria-pressed="true">이메일로 로그인</button>
+        <button type="button" id="lmode-id" aria-pressed="false">아이디로 로그인</button>
     </div>
-<div id="lid-box">
-    <h2 class="lbl">아이디</h2>
-    <input id="lid" type="text" maxlength="20" autocomplete="username" aria-label="아이디" placeholder="영문, 숫자, 밑줄 3~20자">
-</div>
-<div id="lmail-box" hidden>
+<div id="lmail-box">
     <h2 class="lbl">이메일</h2>
     <input id="lmail" type="email" maxlength="80" autocomplete="email" aria-label="이메일" placeholder="연동한 이메일">
+</div>
+<div id="lid-box" hidden>
+    <h2 class="lbl">아이디</h2>
+    <input id="lid" type="text" maxlength="20" autocomplete="username" aria-label="아이디" placeholder="영문, 숫자, 밑줄 3~20자">
 </div>
 <div id="lem" hidden>
     <h2 class="lbl">이메일</h2>
     <input id="lem-in" type="email" maxlength="80" autocomplete="email" aria-label="이메일" placeholder="받을 수 있는 이메일">
 </div>
+<div id="lpw-box">
 <h2 class="lbl">비밀번호</h2>
 <input id="lpw" type="password" maxlength="64" autocomplete="current-password" aria-label="비밀번호" placeholder="6자 이상">
+</div>
 <div id="lpw2-box" hidden>
     <h2 class="lbl">비밀번호 확인</h2>
     <input id="lpw2" type="password" maxlength="64" autocomplete="new-password" aria-label="비밀번호 확인" placeholder="다시 한 번 비밀번호를 적어주십시오.">
@@ -34,6 +37,15 @@
 </div> -->
 <button class="btn" id="lgo" type="button">로그인</button>
 <button class="btn g" id="lsw" type="button">계정이 없다면 계정 만들기</button>
+<button type="button" id="lfp" style="display:block;width:100%;margin:10px 0 0;padding:0;border:0;background:none;color:var(--mu);font:inherit;text-align:center;text-decoration:underline;cursor:pointer">비밀번호를 잊으셨나요?</button>
+    </div>
+<div id="lfp-box" hidden>
+    <p class="hint">2026년 11월 07일 이후 이메일 연동을 하신 분들만 이용하실 수 있습니다. 입력 시, 재설정 이메일을 보냅니다.</p>
+    <h2 class="lbl">연동한 이메일</h2>
+    <input id="lfp-em" type="email" maxlength="80" autocomplete="email" aria-label="연동한 이메일" placeholder="연동한 이메일">
+    <button class="btn" id="lfp-go" type="button">재설정 메일 보내기</button>
+    <button class="btn g" id="lfp-back" type="button">로그인으로 돌아가기</button>
+</div>
 <p class="msg" id="lm" role="alert"></p>
 </div>
 </div>
