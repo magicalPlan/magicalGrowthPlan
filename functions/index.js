@@ -100,8 +100,8 @@ async function scheduleXDrop(db, s, i, at) {
 function xDropAt(doc, now) {
   return (doc && typeof doc.endAt === "number" ? doc.endAt : now) + X_DROP;
 }
-/* 출정 done 직후·이미 done 재방문: 1차 서버 지급(gd/ex/cl/prog) + xdrop 예약.
-   배포는 신클라(pay 있으면 경제 skip) 먼저, 그다음 Functions. */
+/* 출정 done 직후·이미 done 재방문: 서버 지급(경제·fx·소모·펫·배율 전부, functions/account) + xdrop.
+   배포는 신클라(pay 있으면 해당 칸 skip) 먼저, 그다음 Functions. */
 async function afterExpeditionDone(db, s, i, doc, now) {
   if (!doc || !doc.done) return;
   await scheduleXDrop(db, s, i, xDropAt(doc, now));

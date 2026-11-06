@@ -153,30 +153,55 @@ function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(
  $("#st").hidden=!(r.st==="lobby"&&r.host===UID);$("#st").disabled=!all;$("#bt").hidden=!(LOCAL&&r.st==="lobby"&&ids.length<3);
  if(r.st!=="lobby"){$("#rx").textContent="마을로 돌아가기";paintRun()}else{choiceK="";$("#chv").hidden=true}armChoice()}
 /* 출정 결과를 내 캐릭터에 반영하고, 기록 창에 붙일 HTML을 돌려준다. 같은 출정은 한 번만 반영된다.
-   opt.serverPay: 정기 출정 1차 서버 지급(rooms/xr…/pay + accounts gd/ex/cl/prog)이 있으면 true.
-   true 이면 본선 골드·경험·cl 은 올리지 않는다(이중 지급 방지). 절망·fx·소모·통계·UI 는 클라 유지. */
-function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay;if(C.last===r.code+r.seq.length)return "";C.last=r.code+r.seq.length;let out="";const v=VL[C.v],m=(Object.keys(r.pl).length===1&&r.solo?SOLO_M:([0,.6,.7,.8,.87,.93,.97,1][Object.keys(r.pl).length]||1))*(r.rw||1);
-   const mine=r.pl[UID]||{},used=[],msk=mine.sk||[],dkz=msk.includes("dark")?6:0,wtz=r.wsk?5:0;msk.forEach(id=>{if(useSk(id))used.push(SKID[id].nm)});if(mine.f&&useItem("flag"))used.push("용기의 깃발");if(mine.m&&useItem("map"))used.push("마수 사냥 지도");const ch=useItem("charm");if(ch)used.push("결계 부적");
-   // 결계 부적: 오르는 절망도를 절반으로. 물 속성과 겹쳐도 합쳐서 절반까지만 줄어든다.
+   opt.serverPay: 정기 출정 서버 지급(rooms/xr…/pay + accounts)이 있으면 true.
+   true 이면 경제·절망·전 fx·부적/깃발/지도/스킬 소모·펫 XP·알·수집가/까마귀/고독 마력석은 올리지 않는다(Functions/account).
+   opt.pay 로 서버가 준 양을 결과·노트에 다시 알려 준다.
+   통계·칭호·UI·도감 알림 등만 클라 유지. */
+function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||null;if(C.last===r.code+r.seq.length)return "";C.last=r.code+r.seq.length;let out="";const v=VL[C.v],m=(Object.keys(r.pl).length===1&&r.solo?SOLO_M:([0,.6,.7,.8,.87,.93,.97,1][Object.keys(r.pl).length]||1))*(r.rw||1);
+   const mine=r.pl[UID]||{},used=[],msk=mine.sk||[],dkz=msk.includes("dark")?6:0,wtz=r.wsk?5:0;
+   if(serverPay){(pay&&pay.skNm||[]).forEach(nm=>{if(nm)used.push(nm)});if(pay&&pay.flag)used.push("용기의 깃발");if(pay&&pay.map)used.push("마수 사냥 지도")}
+   else{msk.forEach(id=>{if(useSk(id))used.push(SKID[id].nm)});if(mine.f&&useItem("flag"))used.push("용기의 깃발");if(mine.m&&useItem("map"))used.push("마수 사냥 지도")}
+   /* 결계 부적: 서버 지급이면 Functions 가 소모. 아니면 클라. */
+   const ch=serverPay?(pay&&pay.charm?1:0):useItem("charm");if(ch)used.push("결계 부적");
    const cut=d=>ch&&d>0?d*(C.a.includes("물")?2/3:.5):d,base=r.rt||r.total;
-   if(r.gx){if(!serverPay)C.gd=Math.max(0,(C.gd||0)+r.gx)}const tn=r.gx?["이벤트 골드 "+(r.gx>0?"+":"")+r.gx]:[],gd=C.t==="수호"?4:0,sc=eq(2)?SCY_DZ:0,wx=(eq(5)?1+WAND_EX:1)*(1+.03*facLv("drill"))*(wfLv()>=1?1+WF_EXP:1)*(1+petEff("ex"))*(disMine()==="storm"?.8:1);if(gd)tn.push("수호: 절망도 상승 4 감소");if(sc)tn.push("낫: 절망도 "+SCY_DZ+" 추가");if(eq(5))tn.push("완드: 경험치 "+Math.round(WAND_EX*100)+"% 증가");if(eq(3)&&!r.ok)tn.push("방패: 실패로 오르는 절망도가 줄었다");
-   if(serverPay)tn.push("골드·경험·토벌 횟수는 서버에서 반영");
+   /* 서버 지급분(pay.g)에 이벤트 골드가 이미 포함되어 있어 serverPay 때는 따로 적지 않는다. */
+   if(r.gx){if(!serverPay)C.gd=Math.max(0,(C.gd||0)+r.gx)}const tn=(!serverPay&&r.gx)?["이벤트 골드 "+(r.gx>0?"+":"")+r.gx]:[],gd=C.t==="수호"?4:0,sc=eq(2)?SCY_DZ:0,wx=(eq(5)?1+WAND_EX:1)*(1+.03*facLv("drill"))*(wfLv()>=1?1+WF_EXP:1)*(1+petEff("ex"))*(disMine()==="storm"?.8:1);if(gd)tn.push("수호: 절망도 상승 4 감소");if(sc)tn.push("낫: 절망도 "+SCY_DZ+" 추가");if(eq(5))tn.push("완드: 경험치 "+Math.round(WAND_EX*100)+"% 증가");if(eq(3)&&!r.ok)tn.push("방패: 실패로 오르는 절망도가 줄었다");
+   /* 서버가 올린 pay 숫자로 보상 안내. 계정에는 이미 반영됐으니 여기선 문구만. */
+   if(serverPay&&pay){const pg=Math.max(0,Math.floor(Number(pay.g)||0)),pex=Math.max(0,Math.floor(Number(pay.ex)||0)),pcl=Math.max(0,Math.floor(Number(pay.cl)||0)),pdz=Math.round(Number(pay.dz)||0);
+    if(pg)tn.push("골드 +"+pg);if(pex)tn.push("경험치 +"+pex);if(pcl)tn.push("토벌 횟수 +"+pcl);
+    if(pdz)tn.push("절망도 "+(pdz>0?"+":"")+pdz);
+    if(pay.inv&&typeof pay.inv==="object"){const ks=Object.keys(pay.inv).filter(id=>(Number(pay.inv[id])||0)>0);if(ks.length){if(pay.inv.g1)dexAdd("it","g1");tn.push(ks.map(id=>{const n=Number(pay.inv[id])||0;if(id==="mana")return"마력석 +"+n;if(id==="g1")return"작은 꽃다발 +"+n;return(typeof cfName==="function"?cfName(id):id)+" +"+n}).join(", "))}}
+    if((Number(pay.clp)||0)>0&&typeof CLP!=="undefined")tn.push(CLP.ic+" "+CLP.nm+" +"+pay.clp);
+    if((Number(pay.tc)||0)>0)tn.push("여왕의 표식: 다음 재계약 시험 판정 +"+pay.tc);
+    if(pay.rb)tn.push("요정의 축복: 다음 공명 효과 증가");
+    if(pay.wa)tn.push("요새 무기고: 오늘 하루 무기 +1");
+    if(pay.wp&&pay.wpn){const wr=[["칼",{ex:10}],["총",{gd:20}],["낫",{ex:15}],["방패",{dz:-8}],["오브",{dz:-5}],["완드",{ex:12}],["스태프",{mm:1}]].find(x=>x[0]===pay.wpn)||[pay.wpn,{}];tn.push("무기 더미("+pay.wpn+")"+fxTxt(wr[1]||{}))}
+    if(pay.dh)tn.push("절망의 거울: 절망도 "+(Number(pay.dh)>0?"+":"")+pay.dh);
+    if(pay.collector)tn.push("수집가: 마력석 1개를 주웠다");
+    if(pay.crow)tn.push("밤까마귀가 마력석 1개를 물어 왔다");
+    if(pay.egg)tn.push("🥚 사역마의 알을 주웠다!");
+    if(pay.eggEv&&typeof PET_EV!=="undefined")tn.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!");
+    if(pay.petXp)tn.push("사역마 친밀도 +"+pay.petXp)}
+   else if(serverPay)tn.push("출정 보상·소모·펫은 서버에서 반영");
    const fx=r.fx||{};let xe=0,xz=0;C.inv=C.inv||{};
-   if(fx.mm){C.inv.mana=(C.inv.mana||0)+fx.mm;tn.push("마력석 +"+fx.mm)}
-   if(fx.gi){C.inv.g1=(C.inv.g1||0)+fx.gi;dexAdd("it","g1");tn.push("작은 꽃다발 +"+fx.gi)}
-   if(fx.tc){C.tcb=Math.max(C.tcb||0,fx.tc);tn.push("여왕의 표식: 다음 재계약 시험 판정 +"+fx.tc)}
-   if(fx.rb){C.rsb=1;tn.push("요정의 축복: 다음 공명 효과 증가")}
-   if(fx.wa){C.wtmp={day:today(),v:1};tn.push("요새 무기고: 오늘 하루 무기 +1")}
-   if(fx.wp){const wr=[["칼",{ex:10}],["총",{gd:20}],["낫",{ex:15}],["방패",{dz:-8}],["오브",{dz:-5}],["완드",{ex:12}],["스태프",{mm:1}]][C.wp]||["맨손",{gd:10}],e=wr[1];xe+=e.ex||0;xz+=e.dz||0;if(e.gd)C.gd=(C.gd||0)+e.gd;if(e.mm)C.inv.mana=(C.inv.mana||0)+e.mm;tn.push("무기 더미("+wr[0]+")"+fxTxt(e))}
-   if(fx.dh&&(Number(mine.dz)||0)>=70){xz+=fx.dh;tn.push("절망의 거울: 절망도 "+(fx.dh>0?"+":"")+fx.dh)}
-   if(r.ok){if(!serverPay)C.cl++;titleState();C.stats.huntsWon=(C.stats.huntsWon||0)+1;{const pe=petDrop("x");if(pe)tn.push(pe)}{const mt=matGain(["x_ok",(r.rw||1)>=1.4?"x_hi":null,r.ab?"x_ab":null]);if(mt)tn.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("x",{ok:1});if(cp)tn.push(cp)}petXp(PET_XP_RUN);if((C.dz||0)>=90)C.stats.clutch=1;if(new Date(Date.now()+9*3600000).getUTCHours()===3)C.stats.dawnWin=1;if(r.solo){const sg=SOLO_RW.g,sm=Math.random()<SOLO_RW.mp?1:0;if(!serverPay)C.gd=(C.gd||0)+sg;if(sm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+sm}C.stats.soloWins=(C.stats.soloWins||0)+1;if(r.ab)C.stats.soloAbyss=1;tn.push("고독의 보상: 골드 +"+sg+(sm?", 마력석 +1":""))}
+   if(!serverPay&&fx.mm){C.inv.mana=(C.inv.mana||0)+fx.mm;tn.push("마력석 +"+fx.mm)}
+   if(!serverPay&&fx.gi){C.inv.g1=(C.inv.g1||0)+fx.gi;dexAdd("it","g1");tn.push("작은 꽃다발 +"+fx.gi)}
+   if(!serverPay&&fx.tc){C.tcb=Math.max(C.tcb||0,fx.tc);tn.push("여왕의 표식: 다음 재계약 시험 판정 +"+fx.tc)}
+   if(!serverPay&&fx.rb){C.rsb=1;tn.push("요정의 축복: 다음 공명 효과 증가")}
+   if(!serverPay&&fx.wa){C.wtmp={day:today(),v:1};tn.push("요새 무기고: 오늘 하루 무기 +1")}
+   if(!serverPay&&fx.wp){const wr=[["칼",{ex:10}],["총",{gd:20}],["낫",{ex:15}],["방패",{dz:-8}],["오브",{dz:-5}],["완드",{ex:12}],["스태프",{mm:1}]][C.wp]||["맨손",{gd:10}],e=wr[1];xe+=e.ex||0;xz+=e.dz||0;if(e.gd)C.gd=(C.gd||0)+e.gd;if(e.mm)C.inv.mana=(C.inv.mana||0)+e.mm;tn.push("무기 더미("+wr[0]+")"+fxTxt(e))}
+   if(!serverPay&&fx.dh&&(Number(mine.dz)||0)>=70){xz+=fx.dh;tn.push("절망의 거울: 절망도 "+(fx.dh>0?"+":"")+fx.dh)}
+   if(r.ok){if(!serverPay)C.cl++;titleState();C.stats.huntsWon=(C.stats.huntsWon||0)+1;
+    if(!serverPay){const pe=petDrop("x");if(pe)tn.push(pe);const mt=matGain(["x_ok",(r.rw||1)>=1.4?"x_hi":null,r.ab?"x_ab":null]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:1});if(cp)tn.push(cp)};petXp(PET_XP_RUN)}
+    if((C.dz||0)>=90)C.stats.clutch=1;if(new Date(Date.now()+9*3600000).getUTCHours()===3)C.stats.dawnWin=1;if(r.solo){const sg=SOLO_RW.g;if(!serverPay){const sm=Math.random()<SOLO_RW.mp?1:0;C.gd=(C.gd||0)+sg;if(sm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+sm}tn.push("고독의 보상: 골드 +"+sg+(sm?", 마력석 +1":""))}else tn.push("고독의 보상"+(pay&&pay.soloM?", 마력석 +1":""));C.stats.soloWins=(C.stats.soloWins||0)+1;if(r.ab)C.stats.soloAbyss=1}
    if(r.ab){C.stats.abyssWins=(C.stats.abyssWins||0)+1;if(!(C.wp>=0))C.stats.abyssBare=1;tn.push("심연을 끝까지 걸어 나왔다")}
-    if(!serverPay){C.gd=(C.gd||0)+Math.round((30+10*base)*m*(C.t==="행운"?1.1:1)*(1+.05*facLv("workshop"))*(disMine()==="eclipse"?.7:1)*(1+.05*rnLv("luck"))*(wfLv()>=2?1+WF_GOLD:1)*(1+petEff("gd")));if(C.t==="행운")tn.push("행운: 골드 10% 증가")}
-    if(C.t==="수집가"&&Math.random()<.3){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("수집가: 마력석 1개를 주웠다")}
-    if(petEff("mana")&&Math.random()<petEff("mana")){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("밤까마귀가 마력석 1개를 물어 왔다")}
-    {const dzAmt=cut(Math.max(0,r.ev+v.dz+r.total*3-gd+sc-wtz+dkz));gain(serverPay?0:((30+10*base)*v.x*m+(r.ex||0))*wx,dzAmt)}}
-   else{titleState();C.stats.huntsLost=(C.stats.huntsLost||0)+1;{const mt=matGain(["x_fail"]);if(mt)tn.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("x",{ok:0});if(cp)tn.push(cp)}
-    if(!serverPay)C.gd=(C.gd||0)+5;{const dzAmt=cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
-   if(xe||xz)gain(xe,xz);checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+(r.gx?" · 이벤트 골드 +"+r.gx:""));
+    if(!serverPay){C.gd=(C.gd||0)+Math.round((30+10*base)*m*(C.t==="행운"?1.1:1)*(1+.05*facLv("workshop"))*(disMine()==="eclipse"?.7:1)*(1+.05*rnLv("luck"))*(wfLv()>=2?1+WF_GOLD:1)*(1+petEff("gd")));if(C.t==="행운")tn.push("행운: 골드 10% 증가");if(C.t==="수집가"&&Math.random()<.3){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("수집가: 마력석 1개를 주웠다")}if(petEff("mana")&&Math.random()<petEff("mana")){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("밤까마귀가 마력석 1개를 물어 왔다")}}
+    {const dzAmt=serverPay?0:cut(Math.max(0,r.ev+v.dz+r.total*3-gd+sc-wtz+dkz));gain(serverPay?0:((30+10*base)*v.x*m+(r.ex||0))*wx,dzAmt)}}
+   else{titleState();C.stats.huntsLost=(C.stats.huntsLost||0)+1;
+    if(!serverPay){const mt=matGain(["x_fail"]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:0});if(cp)tn.push(cp)}}
+    if(!serverPay)C.gd=(C.gd||0)+5;{const dzAmt=serverPay?0:cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
+   if(xe||xz)gain(xe,xz);checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}
+   {const payBits=serverPay&&pay?[pay.g>0?"골드 +"+Math.floor(Number(pay.g)||0):"",pay.ex>0?"경험치 +"+Math.floor(Number(pay.ex)||0):"",pay.dz?("절망도 "+(Number(pay.dz)>0?"+":"")+Math.round(Number(pay.dz)||0)):""].filter(Boolean).join(" · "):"";
+    note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+(payBits?" · "+payBits:(r.gx?" · 이벤트 골드 +"+r.gx:"")))}
    guardAdd(r.ok?Math.round(10*(r.rw||1)):2);out+="<p><strong>"+(r.ok?"토벌 횟수가 늘었다.":"절망도가 올랐다.")+"</strong></p>"+(used.length?"<p>사용한 아이템·마법: "+used.join(", ")+(ch?" (절망도 상승이 절반으로 줄었다)":"")+"</p>":"");return out}
 

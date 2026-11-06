@@ -173,8 +173,13 @@
       전투 기록은 각자 자기 자리만 rooms/xm{묶음}_e{번호}/{나}에 남긴다. 마을 목록은 rooms/xn{묶음}_e{번호}/{나}에 이름과 참가 시각만 두고, 그 가벼운 기록만 연결한다.
       화면 참가·취소는 마감(출발 2분 전)까지다. 서버만 마감 후 X_JOIN_GRACE(5초)까지 찍힌 jt 를 파티에 넣어, 시계·전송 지연으로 마감 직후 찍힌 참가를 빈 파티로 버리지 않는다.
       전투와 이벤트는 서버 함수가 출정 번호를 씨앗으로 계산해 rooms/xr{묶음}_{번호}에 남긴다.
-      1차부터 골드·경험·토벌 횟수(cl)·prog 는 Functions 가 done 시 accounts 에 넣고 rooms/xr…/pay/{uid} 원장으로 1회만 지급한다.
-      클라는 pay 가 있으면 그 경제는 중복으로 올리지 않고, 절망·가방·부가 효과만 settle 한다. (배포: 신클라 먼저 → Functions.)
+      서버 지급(Functions/account + sim/xpay): done 시 아래를 accounts 작은 경로 PATCH + rooms/xr…/pay/{uid} 원장 1회.
+        · 경제: gd/ex/cl/prog · 재료·단서 · 절망(dz)
+        · fx: mm/gi/tc/rb/wa/wp/dh
+        · 소모: 부적·깃발·지도·출정 스킬(arm 해제·sk.used)
+        · 펫: 친밀도 XP · 알(eggs/eggsEv) · 수집가·까마귀·고독 마력석
+      산식·배율·확률은 functions/account/boost.js (클라 settle 과 맞춤). 숫자를 고치면 Functions 배포.
+      클라는 pay 가 있으면 위 칸은 올리지 않고 문구·통계·칭호·UI 만 settle. (배포: 신클라 먼저 → Functions.)
       선택지 투표는 rooms/xv{출정}_c{번호}/{나}에 기록하고, 마감 시각까지 들어온 표만 센다. */
    const XS=300000,XN=15,XCLOSE=120000,X_JOIN_GRACE=5000,XSTEP=2200,XKEEP=24;
    /* 출정 진행은 출발 후 X_RUN_MAX 안에 끝난다.
