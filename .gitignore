@@ -1,2 +1,5 @@
 database.rules.json
 functions/node_modules
+# Firebase 서비스 계정 키(비밀번호 재설정 일회용 스크립트 등). 커밋하지 않는다.
+*firebase-adminsdk*.json
+serviceAccount*.json
