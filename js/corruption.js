@@ -9,6 +9,8 @@ let WCH=[];// 지금 살아 있는 마인들 [{u,n,v,rid,hp,mx}]
 const fallsRecent=()=>((C&&C.fallT)||[]).filter(t=>Date.now()-t<WITCH_WIN);
 const witchCurse=()=>!!C&&WCH.some(w=>w.v===C.v&&w.u!==UID);
 let unRd=null,rdU=null,rdR=null,rdLast=null,rdHp=0,rdReq=0,rdPaint="";
+/* 공격 중 rdBusy. 버튼은 잠그지 않고, 진행 중 연타만 무시한다. 2분 HIT_CD 와 별개다. */
+let rdBusy=false;
 const sumHits=list=>list.reduce((a,v)=>a+(Number(v&&v.d)||0),0);
 const raidKids=v=>v&&typeof v==="object"&&!Array.isArray(v)?Object.keys(v).map(k=>v[k]).filter(x=>x&&typeof x==="object"):[];
 const scarLeft=()=>Math.max(0,((C&&C.scar)||0)-Date.now());
@@ -89,10 +91,12 @@ function rdBtn(){const u=rdU,own=u===UID,b=$("#rdgo"),m=$("#rdm");if(!rdR)return
  else if(!(C.fr&&C.fr[u])&&!rdR.w){b.disabled=true;b.textContent="친구만 맞설 수 있다"}
  else if(C.fall||C.dz>=90){b.disabled=true;b.textContent=C.fall?"타락한 동안에는 맞설 수 없다":"절망도가 너무 높아 맞설 수 없다"}
  else{const left=HIT_CD-(Date.now()-((C.rc&&C.rc[u])||0));b.disabled=left>0;b.textContent=left>0?"다시 공격까지 "+Math.ceil(left/1000)+"초":(armedSk("light")?"구원의 빛으로 공격한다 (피해 3배)":"공격한다 (예상 피해 "+Math.round(pw()*(C.a.includes("불")?1.2:1))+"~"+Math.round((pw()+9)*(C.a.includes("불")?1.2:1))+")")}}
-$("#rdgo").onclick=async()=>{const u=rdU,r=rdR,own=u===UID,m=$("#rdm"),b=$("#rdgo");if(!u||!r||rdHp<=0)return;C.rc=C.rc||{};
- if(own){if(!C.fall||SELF_CD-(Date.now()-(C.fall.st||0))>0)return;const d=Math.max(1,Math.round((pw()+R(10))/2));C.fall.sd=(C.fall.sd||0)+d;C.fall.st=Date.now();save();putRaid();
-  m.style.color="var(--mu)";m.textContent="스스로의 그림자에 맞섰다. 피해 "+d+".";drawRaid(rdLast||[]);return}
- if(!((C.fr&&C.fr[u])||r.w)||C.fall||C.dz>=90||HIT_CD-(Date.now()-(C.rc[u]||0))>0)return;b.disabled=true;
+$("#rdgo").onclick=async()=>{const u=rdU,r=rdR,own=u===UID,m=$("#rdm");if(!u||!r||rdHp<=0||rdBusy)return;C.rc=C.rc||{};
+ if(own){if(!C.fall||SELF_CD-(Date.now()-(C.fall.st||0))>0)return;rdBusy=true;
+  try{const d=Math.max(1,Math.round((pw()+R(10))/2));C.fall.sd=(C.fall.sd||0)+d;C.fall.st=Date.now();save();putRaid();
+   m.style.color="var(--mu)";m.textContent="스스로의 그림자에 맞섰다. 피해 "+d+".";drawRaid(rdLast||[])}
+  finally{rdBusy=false;rdBtn()}return}
+ if(!((C.fr&&C.fr[u])||r.w)||C.fall||C.dz>=90||HIT_CD-(Date.now()-(C.rc[u]||0))>0)return;rdBusy=true;
  try{const ref=DB.doc("raidhit/"+u+"/"+r.rid+"/"+UID),old=await ref.get(),o=(old.exists&&old.data())||{},lt=armedSk("light"),d=Math.round((pw()+R(10))*(lt?3:1)*(C.a.includes("불")?1.2:1)*(1+petEff("raid")));
   await ref.set({u:UID,n:nmOf(),d:(Number(o.d)||0)+d,c:(Number(o.c)||0)+1,ts:Date.now()});if(lt)useSk("light");C.rc[u]=Date.now();const hg=r.w?WITCH_HIT:8,hz=r.w?WITCH_DZ:RAID_DZ;C.gd=(C.gd||0)+hg;titleState();C.stats.raidHits=(C.stats.raidHits||0)+1;if(r.w){C.wj=C.wj||{};C.wj[u+"_"+r.rid]=C.wj[u+"_"+r.rid]||Date.now()}let crown=false;if(r.w&&typeof MAT_CROWN_P!=="undefined"&&Math.random()<MAT_CROWN_P){C.inv=C.inv||{};C.inv.m_crown=(C.inv.m_crown||0)+1;crown=true;note("raid","절망의 마인에게서 검은 왕관의 조각을 주웠다.",u)}gain(0,hz);
   const hits=await pullRaidHits(u,r);if(rdU!==u||rdR!==r)return;const hp=r.mx-(Number(r.sd)||0)-sumHits(hits||[]);let t=(lt?"구원의 빛! ":"")+(r.w?"절망의 마인 ":"타락한 ")+r.n+"에게 "+d+"의 피해를 주었다. (골드 +"+hg+", "+(r.w?"마인의":"그림자의")+" 절망이 스며들어 절망도 +"+hz+")";
@@ -100,5 +104,5 @@ $("#rdgo").onclick=async()=>{const u=rdU,r=rdR,own=u===UID,m=$("#rdm"),b=$("#rdg
   else if(hp<=0){C.gd+=40;C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;C.stats.raidKills=(C.stats.raidKills||0)+1;guardAdd(20);note("raid","타락한 "+r.n+"에게 마지막 일격을 넣어 되돌렸다.",u);t="마지막 일격! "+r.n+"을(를) 쓰러뜨렸다. 곧 원래 모습으로 돌아온다. (골드 +48, 마력석 +1)"}
   if(crown)t+=" ♚ 검은 왕관의 조각을 주웠다!";save();checkTitles();m.style.color="var(--mu)";m.textContent=t}
  catch(e){m.style.color="var(--bad)";m.textContent="공격하지 못했다. 데이터베이스 규칙에서 raid와 raidhit 경로가 열려 있는지 확인해야 한다."}
- b.disabled=false;rdBtn()};
+ finally{rdBusy=false;rdBtn()}};
 $("#rdb").onclick=()=>hub();

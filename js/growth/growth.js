@@ -1,8 +1,7 @@
 /* 성장 기록. 사역마.
    화면은 html/growth/growth.html, 탭은 html/home/main.html.
    사역마 목록은 js/pet/care.js 의 drawPets 를 그대로 부른다.
-   운명의 재계약은 js/pact/pact.js · html/pact/pact.html.
-   마력 각인 그리기(drawRunes)는 남겨 두었으나 성장 화면에는 사역마만 둔다. */
+   마력 각인·운명의 재계약은 js/pact/pact.js · html/pact/pact.html (drawRunes·drawRetrait). */
 function growth(msg){show("growth");
  if(typeof drawPets==="function")drawPets();
  const m=$("#grm");if(m){m.style.color="var(--mu)";m.textContent=msg||""}}
@@ -12,10 +11,11 @@ function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";con
   const i=elT("div","chip it-row rn-row"+(L?"":" rn-off"));i.style.cssText="flex:1;text-align:left;cursor:default";const tx=elT("div");tx.style.minWidth="0";tx.append(elT("b","",nm+" "+L+" / "+RN_MAX),elT("small","",(L?"지금: "+ef(L):"아직 새기지 않았다")+(mx?" (최고 단계)":" → 다음: "+ef(L+1))));
   const im=document.createElement("img");im.src="assets/runes/"+k+(k==="luck"?".svg":".png")+"?v="+RN_IMG_V;im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="it-ic";im.onerror=()=>im.replaceWith(elT("span","rn-ic",ic));i.append(im,tx);
   i.querySelector("small").style.cssText="display:block;color:var(--mu);font-weight:400";
-  const b=elT("button","chip",mx?"완성":"새기기 (마력석 "+cost+"개)");b.type="button";b.disabled=mx||have<cost;b.onclick=()=>rnUp(k);w.append(i,b);box.appendChild(w)})}
+  const b=elT("button","chip",mx?"완성":"새기기 (마력석 "+cost+"개)");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=mx||have<cost;b.onclick=()=>rnUp(k);w.append(i,b);box.appendChild(w)})}
 function rnUp(k){const r=RN.find(x=>x[0]===k),L=rnLv(k),cost=rnCost(L);if(!r||L>=RN_MAX||((C.inv||{}).mana||0)<cost)return;
  C.inv.mana-=cost;C.rn=C.rn||{};C.rn[k]=L+1;titleState();C.stats.runes=(C.stats.runes||0)+1;save();regPlayer();checkTitles();
- note("quest",r[1]+"을 "+(L+1)+"단계로 새겼다. ("+r[3](L+1)+")");growth("마력석 "+cost+"개가 녹아들며 "+r[2]+" "+r[1]+"이 "+(L+1)+"단계가 되었다. "+r[3](L+1)+".")}
+ const msg="마력석 "+cost+"개가 녹아들며 "+r[2]+" "+r[1]+"이 "+(L+1)+"단계가 되었다. "+r[3](L+1)+".";
+ note("quest",r[1]+"을 "+(L+1)+"단계로 새겼다. ("+r[3](L+1)+")");if(typeof pact==="function")pact(msg);else growth(msg)}
 function rtReq(){const cdl=Math.max(0,RT_CD-(Date.now()-(C.rtT||0))),mana=(C.inv||{}).mana||0;
  const sw=(C.stats&&C.stats.soloWins)||0,L=[[sw>=RT_SOLO,"고독한 출정 성공 "+RT_SOLO+"회 이상 (지금 "+sw+"회) · 혼자 나선 길에서 자신과 마주해야 한다"],[(C.cl||0)>=RT_CL,"토벌 성공 "+RT_CL+"회 이상 (지금 "+(C.cl||0)+"회)"],[mana>=RT_MANA,"마력석 "+RT_MANA+"개 (가진 것 "+mana+")"],[(C.gd||0)>=RT_GOLD,"골드 "+RT_GOLD+" (가진 것 "+(C.gd||0)+")"],
   [(C.dz||0)<=RT_DZMAX&&!C.fall,"절망도 "+RT_DZMAX+" 이하 (지금 "+(C.dz||0)+")"+(C.fall?" · 타락 중에는 불가":"")],[cdl<=0,cdl>0?"다음 재계약까지 "+(cdl>=86400000?Math.floor(cdl/86400000)+"일 "+Math.floor(cdl%86400000/3600000)+"시간":cdTxt(cdl)):"지난 재계약에서 7일 경과"]];return{L,ok:L.every(x=>x[0])}}
