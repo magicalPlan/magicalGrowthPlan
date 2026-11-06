@@ -19,12 +19,25 @@ function consumeGear(bump, id) {
   bump["c/arm/" + id] = null;
 }
 
-/* pay 필드 → 계정. dz 상승분(음수 가능). */
-async function applyMarchPay(db, uid, pay) {
+/* grantKey: 출정 1회 고유 키(예 x{s}_{i}_{endAt}). 있으면 accounts/{uid}/xpay/{key}=1 을
+   보상 increment 와 같은 update 에 넣어, apply 성공·pay.ok 실패 후 재시도해도 이중 지급되지 않는다. */
+function xpayKey(grantKey) {
+  const k = String(grantKey || "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64);
+  return k || "";
+}
+
+/* pay 필드 → 계정. dz 상승분(음수 가능). grantKey 있으면 멱등. */
+async function applyMarchPay(db, uid, pay, grantKey) {
   if (!pay || !(await accountExists(db, uid))) return false;
   const root = db.ref("accounts/" + uid);
+  const gk = xpayKey(grantKey);
+  if (gk) {
+    const had = await root.child("xpay/" + gk).get();
+    if (had.exists() && had.val()) return true;
+  }
   const bump = {ts: Date.now(), sid: "xpay"};
   let any = false;
+  if (gk) bump["xpay/" + gk] = 1;
   if (pay.g > 0) { bump["c/gd"] = ServerValue.increment(pay.g); any = true; }
   if (pay.ex > 0) { bump["c/ex"] = ServerValue.increment(pay.ex); any = true; }
   if (pay.cl > 0) { bump["c/cl"] = ServerValue.increment(pay.cl); any = true; }

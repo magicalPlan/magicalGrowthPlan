@@ -171,8 +171,11 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
  }catch(e){}
  return true}
+/* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
+const ACC_SID_SERVER={xpay:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
-   경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다. */
+   경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
+   sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
  let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
  if(!(remoteTs>Number(accSeen)))return false;
@@ -198,7 +201,8 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  try{giftBoxMerge(C,mine)}catch(e){}
  /* 회귀 직후면 서버본 기준. 그 외는 accBase=rem 으로 두어 미저장 delta 가 이어지는 PATCH 에 나가게 한다. */
  accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
- try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
+ const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
+ try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  return true}

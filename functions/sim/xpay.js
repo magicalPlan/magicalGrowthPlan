@@ -82,6 +82,9 @@ async function grantMarchCore(db, s, i, doc) {
   if (!doc || !doc.done || doc.empty || !doc.r || !doc.r.pl) return;
   const ids = Object.keys(doc.r.pl).filter(u => u && !String(u).startsWith("bot"));
   const seedKey = (doc.r && doc.r.code) || ("x" + s + "_" + i);
+  /* 슬롯 id(x{s}_{i})는 재사용되므로 endAt 을 붙여 이번 출정만 가리킨다. */
+  const endAt = typeof doc.endAt === "number" ? doc.endAt : 0;
+  const grantKey = seedKey + "_" + endAt;
   const now = Date.now();
   const cache = {};
   for (const uid of ids) {
@@ -104,12 +107,18 @@ async function grantMarchCore(db, s, i, doc) {
       claimed = !!(tx && tx.committed);
     } catch (e) { continue; }
     if (!claimed) continue;
+    /* 계정 지급이 성공한 뒤에는 pay 를 지우지 않는다(영수증 xpay 로 이중 지급 방지, ok:1 만 재시도). */
+    let applied = false;
     try {
-      const ok = await acc.applyMarchPay(db, uid, amt);
-      if (!ok) { await payRef.set(null); continue; }
+      applied = !!(await acc.applyMarchPay(db, uid, amt, grantKey));
+      if (!applied) { await payRef.set(null); continue; }
       await payRef.update({ok: 1});
     } catch (e) {
-      try { await payRef.set(null); } catch (e2) { /* ignore */ }
+      if (!applied) {
+        try { await payRef.set(null); } catch (e2) { /* ignore */ }
+      } else {
+        try { await payRef.update({ok: 1}); } catch (e2) { /* 다음 step 재시도 */ }
+      }
     }
   }
 }
