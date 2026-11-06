@@ -1,7 +1,7 @@
 /* 마을 화면. main.js 와 js/trial.js 다음에 불러야 한다. 다른 화면이 hub, pmCleanup 을 그대로 부른다.
    마을을 그릴 때는 공개 카드(players)를 다시 쓰지 않는다. 카드는 프로필·기여·타락처럼 내용이 바뀔 때 쓴다.
-   로그인한 뒤 마을을 열 때와, 출정·장기 토벌에서 마을로 돌아올 때 서버의 prog(레벨·경험치)를 한 번만 읽는다.
-   본문과 prog 의 경험치 중 큰 쪽을 남긴다. 본문이 더 크면 prog 를 그 값으로 맞춘다. */
+   로그인한 뒤 마을을 열 때와, 출정·장기 토벌에서 마을로 돌아올 때 계정 ts·본문을 맞춘 뒤 prog 를 본문에 맞춘다.
+   경험치는 큰 값이 아니라 더 새 계정 ts 의 본문을 따른다. */
 function hubLv(){return C&&C.xv>=2?lvOf(C.ex||0):(C&&C.lv)||1}
 function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
  const a=$("#hclv");if(a)a.textContent=String(lv);const bar=$("#hcxb");if(bar)bar.style.width=Math.min(100,into/nx*100)+"%";const tx=$("#hcxt");if(tx)tx.textContent=into+" / "+nx;
@@ -10,15 +10,13 @@ function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.m
 let progBusy=false,progAgain=false;
 async function readProg(){if(!C||!AUTH.uid||LOCAL||!DB)return;if(progBusy){progAgain=true;return}progBusy=true;
  try{do{progAgain=false;if(savePending&&typeof saveCloud==="function"){try{await saveCloud(true)}catch(e){}}if(savePending)break;
+  /* 계정 ts 가 더 새면 본문(경험·골드)을 먼저 맞춘다. prog 는 거울이라 큰 값으로 끌어올리지 않는다. */
+  if(typeof accSyncIfNewer==="function"){try{await accSyncIfNewer()}catch(e){}}if(savePending)break;
   let p=null;try{const s=await DB.doc("accounts/"+UID+"/prog").get();p=s.exists?s.data():null}catch(e){break}if(savePending)break;
-  if(p&&p.ex!=null){xpMigrate();let mine=Math.max(0,Number(C.ex)||0);const got=xpCurve(p.ex,p.xv==null||p.xv===""?2:p.xv);
-   /* 서버 prog 가 더 작으면 회귀로 내려간 것일 수 있다. 계정 동기화로 rsv·본문을 맞춘 뒤 다시 본다. */
-   if(got<mine&&typeof accSyncIfNewer==="function"){try{await accSyncIfNewer()}catch(e){}mine=Math.max(0,Number(C.ex)||0)}
-   const ex=Math.max(mine,got),lv=lvOf(ex),px=C.ex,plv=C.lv,pxv=Number(C.xv)||0;
-   C.ex=ex;C.xv=3;C.lv=lv;
-   if(ex!==got||(Number(p.lv)||0)!==lv||(Number(p.xv)||0)!==3||C.ex!==px||C.lv!==plv||pxv!==3){if(typeof accBase!=="undefined"&&accBase&&Number(accBase.ex)===ex&&Number(accBase.lv)===lv&&Number(accBase.xv)===3){accBase.ex=got;if((Number(p.lv)||0)!==lv)accBase.lv=Number(p.lv)||0}save()}}
-  else{const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=3;
-   if(C.ex!==ex0||C.lv!==lv0||C.xv!==xv0)save();else{try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":3,ts:Date.now(),sid:MY_SID})}catch(e){}}}}while(progAgain)}
+  const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=3;
+  const needProg=!p||p.ex==null||Number(p.ex)!==Number(C.ex)||(Number(p.lv)||0)!==(C.lv||1)||(Number(p.xv)||0)!==3;
+  if(C.ex!==ex0||C.lv!==lv0||C.xv!==xv0)save();
+  else if(needProg){try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":3,ts:Date.now(),sid:MY_SID})}catch(e){}}}while(progAgain)}
  finally{progBusy=false}if(!$("#v-hub").hidden){pmCleanup();paintLv()}}
 function pmCleanup(){if(!C)return;xpMigrate();if(C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=lvOf(C.ex)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
 function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH.uid&&!LOCAL&&DB);show("hub");if(!fresh||!online)pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);

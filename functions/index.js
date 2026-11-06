@@ -9,6 +9,7 @@ const {initializeApp} = require("firebase-admin/app");
 const {getDatabase} = require("firebase-admin/database");
 const {getFunctions} = require("firebase-admin/functions");
 const sim = require("./sim/engine");
+const {grantMarchCore} = require("./sim/xpay");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -98,6 +99,13 @@ async function scheduleXDrop(db, s, i, at) {
 }
 function xDropAt(doc, now) {
   return (doc && typeof doc.endAt === "number" ? doc.endAt : now) + X_DROP;
+}
+/* 출정 done 직후·이미 done 재방문: 1차 서버 지급(gd/ex/cl/prog) + xdrop 예약.
+   배포는 신클라(pay 있으면 경제 skip) 먼저, 그다음 Functions. */
+async function afterExpeditionDone(db, s, i, doc, now) {
+  if (!doc || !doc.done) return;
+  await scheduleXDrop(db, s, i, xDropAt(doc, now));
+  try { await grantMarchCore(db, s, i, doc); } catch (e) { /* 다음 step/expire 에서 pay 누락분 재시도 */ }
 }
 function xDue(doc, now) {
   if (doc && doc.wait && typeof doc.wait.Wd === "number") return doc.wait.Wd + X_VOTE_GRACE;
@@ -250,7 +258,7 @@ async function startExpeditionFromSeats(db, ref, info, s, i, now) {
   await db.ref("live/xdrop/" + s + "_" + i).set(null);
   await ref.set(plain(doc));
   await armXDue(db, s, i, doc, now);
-  if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+  if (doc.done) await afterExpeditionDone(db, s, i, doc, now);
   return true;
 }
 
@@ -277,7 +285,7 @@ async function stepOneExpedition(db, s, i, now) {
   if (!cur.wait) {
     if (cur.done) {
       await db.ref("live/x/" + s + "_" + i).set(null);
-      await scheduleXDrop(db, s, i, xDropAt(cur, now));
+      await afterExpeditionDone(db, s, i, cur, now);
     } else {
       const picks = normPicks(cur.picks);
       const doc = sim.replayExpedition(info, cur.r.pl, picks, now, pc0, null);
@@ -287,7 +295,7 @@ async function stepOneExpedition(db, s, i, now) {
       doc.picks = picksForStore(picks);
       await writeExpeditionPatch(ref, cur, doc);
       await armXDue(db, s, i, doc, now);
-      if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+      if (doc.done) await afterExpeditionDone(db, s, i, doc, now);
     }
     if (cur.calc === 1) await ref.child("calc").set(0);
     return;
@@ -302,7 +310,7 @@ async function stepOneExpedition(db, s, i, now) {
     doc.picks = picksForStore(picks);
     await writeExpeditionPatch(ref, cur, doc);
     await armXDue(db, s, i, doc, now);
-    if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+    if (doc.done) await afterExpeditionDone(db, s, i, doc, now);
     if (cur.calc === 1) await ref.child("calc").set(0);
     return;
   }
@@ -327,7 +335,7 @@ async function stepOneExpedition(db, s, i, now) {
   }
   await writeExpeditionPatch(ref, cur, doc);
   await armXDue(db, s, i, doc, now);
-  if (doc.done) await scheduleXDrop(db, s, i, xDropAt(doc, now));
+  if (doc.done) await afterExpeditionDone(db, s, i, doc, now);
 }
 
 async function runLiveMarch(db, now) {
