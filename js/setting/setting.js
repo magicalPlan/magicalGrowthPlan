@@ -24,9 +24,9 @@ async function mailNote(){const n=$("#set-em");if(!n||!AUTH.uid){pwShow("");retu
  if(id&&DB){try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")linked=s.data()}catch(e){}}
  try{const u=(await idt("lookup",{idToken:AUTH.tok})).users[0];AUTH.mail=u&&u.email||AUTH.mail||"";if(!mailId()&&u&&/^[A-Za-z0-9_]{3,20}$/.test(u.displayName||"")){AUTH.name=String(u.displayName).toLowerCase();keep("mgr_id",AUTH.name)}}catch(e){}
  const box=$("#set-mail-idbox");if(box)box.hidden=!!mailId();
- if(linked&&!mailDummy(linked))n.textContent="연동된 이메일: "+linked+". 아이디로도, 이 이메일로도 로그인할 수 있다.";
- else if(AUTH.mail&&!mailDummy(AUTH.mail))n.textContent="계정 주소가 이메일로 바뀌어 아이디 로그인이 막혀 있다. 아래에서 다시 연동하면 아이디 로그인이 돌아온다.";
- else n.textContent="아이디로 로그인한다. 이메일을 연동하면 그 주소로도 들어올 수 있고, 아이디 로그인은 그대로다.";
+ if(linked&&!mailDummy(linked))n.textContent="연동된 이메일: "+linked+". 아이디로도, 이 이메일로도 로그인할 수 있고, 비밀번호를 잊으면 이 주소로 초기화할 수 있다.";
+ else if(AUTH.mail&&!mailDummy(AUTH.mail))n.textContent="계정 주소는 "+AUTH.mail+" 이다. 아래에서 연동을 마치면 아이디 로그인과 비밀번호 찾기도 이 주소를 쓴다.";
+ else n.textContent="아이디로 로그인한다. 이메일을 연동하면 그 주소로도 들어올 수 있고, 비밀번호를 잊었을 때 초기화 메일을 받을 수 있다.";
  pwShow((linked&&!mailDummy(linked)&&linked)||(AUTH.mail&&!mailDummy(AUTH.mail)&&AUTH.mail)||"")}
 function drawSetting(){
  const lt=document.documentElement.dataset.theme==="light",on=!!AUTH.uid;
