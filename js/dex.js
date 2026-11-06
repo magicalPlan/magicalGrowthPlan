@@ -5,6 +5,9 @@
 const evVil=id=>Object.keys(VEV).find(v=>VEV[v].some(x=>x.id===id));
 const evName=(x,v)=>{const t=String(x.t||x.q).replace(/\{v\}/g,VL[v]?VL[v].n:"마을").replace(/\{f\}/g,"누군가"),i=t.indexOf(":");return i>0?[t.slice(0,i),t.slice(i+1).trim()]:[t,""]};
 function dexAdd(k,id,val){if(!C)return false;val=val||1;C.dex=C.dex||{};C.dex[k]=C.dex[k]||{};if((C.dex[k][id]||0)>=val)return false;C.dex[k][id]=val;return true}
+/* 속성 마법 도감: 속성을 얻거나 프리즘으로 바꾸면 기록한다(쓰지 않아도). */
+function dexSkAttr(a){const k=typeof SK!=="undefined"&&SK[a];return !!(k&&dexAdd("sk",k.id))}
+function dexSkOwn(){if(!C)return;(C.a||[]).forEach(a=>dexSkAttr(a))}
 const dexHas=(c,k,id)=>k==="wp"?(c.wps||[]).includes(Number(String(id).slice(1))):!!(c.dex&&c.dex[k]&&c.dex[k][id]);
 const DEX_ITEMS={};
 function dexItems(k){if(DEX_ITEMS[k])return DEX_ITEMS[k];const d=DEX.find(x=>x.k===k);return DEX_ITEMS[k]=d?d.items():[]}
@@ -23,7 +26,7 @@ async function readDex(){if(!C||!AUTH.uid||LOCAL||!DB||dexBusy)return;dexBusy=tr
  if(JSON.stringify(d)===stamp)return;C.dex=d;redraw=true;
  if(typeof accBase!=="undefined"&&accBase){try{accBase.dex=JSON.parse(JSON.stringify(d))}catch(e){}}}
  finally{dexBusy=false}if(redraw&&!$("#v-titles").hidden&&recTab==="dex")dex(undefined,1)}
-function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="dex");show("titles");setRec("dex");titleState();C.dex=C.dex||{};C.dex.rw=C.dex.rw||{};ITM.forEach(x=>{if(((C.inv||{})[x[0]]||0)>0)dexAdd("it",x[0])});
+function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="dex");show("titles");setRec("dex");titleState();C.dex=C.dex||{};C.dex.rw=C.dex.rw||{};ITM.forEach(x=>{if(((C.inv||{})[x[0]]||0)>0)dexAdd("it",x[0])});dexSkOwn();
  let got=0,all=0;DEX.forEach(d=>{got+=dexN(C,d.k);all+=dexTot(d.k)});
  const sm=$("#dex-sum");sm.innerHTML="";const bar=elT("div","bar"),fi=elT("i");fi.style.width=(got/all*100)+"%";bar.appendChild(fi);
  sm.append(elT("h2","","마법소녀 도감"), elT("p","hint","출정, 보스, 상점, 마법에서 만난 것들이 기록된다. 분류마다 절반과 전부를 모으면 보상을 받는다."),bar,elT("p","hint","전체 수집률 " + Math.floor(got/all*100)+"% ("+got+" / "+all+")"));

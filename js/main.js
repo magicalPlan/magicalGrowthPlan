@@ -52,7 +52,7 @@ function checkGrant(){if(!C||!UID)return;C.cmp=C.cmp||{};const got=GRANT.filter(
   const o8=x[8]||{},ex8=[];
   if(o8.lv>0&&(C.lv||1)<o8.lv){C.ex=Math.max(C.ex||0,xpAt(o8.lv));C.lv=lvOf(C.ex);ex8.push("레벨 "+C.lv)}
   if(o8.g&&GL.indexOf(o8.g)>GL.indexOf(C.g)){C.g=o8.g;ex8.push(o8.g+"등급")}
-  if(Array.isArray(o8.a)&&o8.a.length&&o8.a.every(z=>AT.some(t=>t[0]===z))&&o8.a.join()!==(C.a||[]).join()){C.a=o8.a.slice();ex8.push("속성 "+C.a.join("·"))}
+  if(Array.isArray(o8.a)&&o8.a.length&&o8.a.every(z=>AT.some(t=>t[0]===z))&&o8.a.join()!==(C.a||[]).join()){C.a=o8.a.slice();try{if(typeof dexSkOwn==="function")dexSkOwn()}catch(e){}ex8.push("속성 "+C.a.join("·"))}
   if(o8.rn>0){C.rn=C.rn||{};let ch=false;["pow","calm","wis","luck"].forEach(k=>{if((C.rn[k]||0)<o8.rn){C.rn[k]=Math.min(RN_MAX,o8.rn);ch=true}});if(ch)ex8.push("마력 각인 전부 "+Math.min(RN_MAX,o8.rn)+"단계")}
   if(o8.eggs>0){C.eggs=(Number(C.eggs)||0)+(o8.eggs|0);ex8.push("사역마의 알 +"+(o8.eggs|0))}
   if(o8.pet&&PETS[o8.pet]){C.pets=Array.isArray(C.pets)?C.pets:[];if(!C.pets.some(q=>q&&q.sp===o8.pet)){const q={id:"p"+Date.now().toString(36)+"g",sp:o8.pet,nm:PETS[o8.pet][1],xp:0,born:Date.now()};C.pets.push(q);if(!C.pet)C.pet=q.id;C.petSeen=C.petSeen||{};C.petSeen[o8.pet]=1;if(PETS[o8.pet][3]===3)C.stats.petLeg=1}ex8.push("사역마 "+PETS[o8.pet][2]+" "+PETS[o8.pet][1])}

@@ -234,7 +234,7 @@
    {k:"bs",nm:"보스",half:{g:80},full:{g:200,m:3},items:()=>DBOSS.map(b=>({id:b[0],nm:b[0],ds:b[1]+" 약점: "+b[2]+" 속성.",tag:"오전·오후 보스",hint:"오전·오후 보스로 나타난다. 한 번 공격하면 기록된다."})).concat(WBOSS.map(b=>({id:b[0],nm:b[0],ds:b[1]+" 약점: "+b[2]+" 속성.",tag:"주간 보스",hint:"주간 보스로 나타난다. 한 번 공격하면 기록된다."})))},
    {k:"wp",nm:"무기",half:{g:50},full:{g:150,m:2},items:()=>WP.map((w,i)=>({id:"w"+i,nm:w[0],ds:w[1]+" 전투력 +"+w[3]+".",tag:"무기",hint:"상점에서 살 수 있다."}))},
    {k:"it",nm:"아이템",half:{g:40},full:{g:100,m:1},items:()=>ITM.map(x=>({id:x[0],nm:x[1],ds:x[2],tag:PET_ONLY[x[0]]?"특수":GV[x[0]]!=null?"선물":USE[x[0]]||x[0]==="hope"||x[0]==="prism"||x[0]==="license"?"소모품":"재료",hint:CRAFT_ONLY[x[0]]?"공방에서 한 번 만들면 기록된다.":PET_ONLY[x[0]]?"사역마를 한 번 보내 주면 기록된다.":"상점에서 한 번 사면 기록된다."}))},
-   {k:"sk",nm:"마법",half:{m:2},full:{m:5},items:()=>Object.keys(SK).map(a=>({id:SK[a].id,nm:SK[a].nm,ds:SK[a].d,tag:a+" 속성",hint:a+" 속성을 얻어 한 번 쓰면 기록된다."}))}];
+   {k:"sk",nm:"마법",half:{m:2},full:{m:5},items:()=>Object.keys(SK).map(a=>({id:SK[a].id,nm:SK[a].nm,ds:SK[a].d,tag:a+" 속성",hint:a+" 속성을 얻거나 프리즘으로 바꾸면 기록된다."}))}];
 
 
    /* 알림함: C.nt에 최근 60개까지 저장한다. 종류마다 최근 30개다. [k: 종류, t: 내용, u: 관련된 사람, ts: 시각, r: 읽음] */
