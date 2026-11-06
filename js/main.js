@@ -157,6 +157,19 @@ function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.in
 /* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
    재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
 function pickTrip(local,remote){if(local==null||local===undefined)return null;if(remote==null||remote===undefined)return null;return(Number(local.t0)||0)>=(Number(remote.t0)||0)?local:remote}
+/* 서버 회귀 번호(c.rsv · players/rr)가 이 탭보다 크면, 회귀 전 캐릭터로 PATCH/set 하지 말고 서버본을 받는다.
+   ts 레이스로 accSync 를 놓친 옛 탭이 레벨·골드·가방만 되돌리는 것을 막는다. */
+async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
+ try{const sn=await DB.doc("accounts/"+AUTH.uid+"/c/rsv").get();if(sn.exists)due=Math.max(due,Number(sn.data())||0)}catch(e){}
+ try{const sn=await DB.doc("players/"+AUTH.uid+"/rr").get();if(sn.exists)due=Math.max(due,Number(sn.data())||0)}catch(e){}
+ return due}
+async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=await rstDueRemote();if(!(due>(Number(C.rsv)||0)))return false;
+ try{clearPend()}catch(e){}
+ try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return true;const d=full.data()||{},ch=d.c;
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accMark(ch);accReady=true;
+   try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
+ }catch(e){}
+ return true}
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행·더 큰 골드/경험을 합친다. */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
  let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
@@ -165,18 +178,21 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  const mine=JSON.parse(JSON.stringify(C));C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
  /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭의 더 큰 골드·경험으로 회귀를 되돌리지 않는다. */
- if(!((Number(rem.rsv)||0)>(Number(mine.rsv)||0))){
+ const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
+ if(rstNewer){try{clearPend()}catch(e){}}
+ if(!rstNewer){
   if((Number(mine.gd)||0)>(Number(C.gd)||0))C.gd=mine.gd;
   if((Number(mine.ex)||0)>(Number(C.ex)||0)){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계)을 서버 옛값으로 되돌리지 않는다. */
- if((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object")){
+ if(!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"))){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
- accSeen=Number(d.ts)||remoteTs;accMark(rem);accReady=true;
+ /* 회귀 직후면 서버본을 기준으로 두고, 옛 탭 keepMerge 잔여로 다시 PATCH 하지 않게 accBase 를 맞춘다. */
+ accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
  try{if(typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
@@ -215,6 +231,8 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
 async function syncAdopt(){return false}
 async function syncPeek(){return "same"}
 async function saveRescue(){if(saveFix)return false;saveFix=true;try{
+ /* 회귀 직후 옛 탭이 권한 오류 복구로 계정 통째 set 하지 않게 한다. */
+ try{if(await rstAbortStaleSave()){saveDiag="";return true}}catch(e){}
  let tok=true;try{if(AUTH.rt&&AUTH.key)await refresh()}catch(e){tok=false}
  const order=AUTH.jc?(AUTH.nojc?[false,true]:[true,false]):[false];
  for(const jc of order){try{await DB.doc("accounts/"+AUTH.uid).set(savePayload(jc));accSeen=lastPut;if(AUTH.jc&&!jc)AUTH.nojc=1;if(jc)AUTH.nojc=0;saveDiag="";return true}catch(e){}}
@@ -231,6 +249,11 @@ function saveCloud(now){
   const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;wakeSave(false);return}
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
+   const finishNoWrite=()=>{const st=JSON.stringify(C);accBase=JSON.parse(st);accReady=true;saveSoft=0;
+    if(saveAgain||JSON.stringify(C)!==st){savePending=true;saveAgain=false;return go()}
+    savePending=false;saveBusy=false;clearPend();wakeSave(true)};
+   /* 회귀가 이 탭보다 새로우면 이번 저장(옛 PATCH/set)을 버리고 서버본만 맞춘다. */
+   try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
    const done=()=>{accBase=JSON.parse(stamp);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveAgain=false;return go()}
@@ -240,11 +263,15 @@ function saveCloud(now){
     /* 네트워크·20초 제한은 한 번은 조용히 다시 시도한다. 마을에 실시간 연결이 많을 때 잠깐 막히는 경우가 있다. */
     const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
     saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
-   if(!accReady||!accBase)return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail);
+   if(!accReady||!accBase){
+    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
+    return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)}
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
    const body=accDiff(sent);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
    try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
+   /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
+   try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
   if(now)go();else sct=setTimeout(()=>go(),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
@@ -289,9 +316,10 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||""
   try{if(typeof rstFresh==="function")await rstFresh()}catch(e){}
   /* 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다.
      서버 ts 가 pend 시각보다 더 새롭면(다른 기기·탭이 이미 저장) 낡은 pend 로 되돌리지 않는다.
-     붙인 뒤에도 골드·경험은 서버와 pend 중 큰 쪽을 남긴다. */
+     회귀(rr) 시각보다 오래된 pend 도 버린다. 붙인 뒤에도 골드·경험은 서버와 pend 중 큰 쪽을 남긴다. */
   try{const pend=pendRead();if(pend&&pend.fields&&Object.keys(pend.fields).length){const srvTs=Number(accSeen)||0;
-   if(pend.t&&srvTs&&pend.t<srvTs)clearPend();
+   let rr=0;try{rr=await rstDueRemote()}catch(e){}
+   if((rr&&pend.t&&pend.t<rr)||(rr>(Number(C.rsv)||0))||(pend.t&&srvTs&&pend.t<srvTs))clearPend();
    else{const before=JSON.parse(JSON.stringify(C));applyPend(C,pend.fields);
     if(pend.fields["prog/ex"]!=null){C.ex=pend.fields["prog/ex"];if(pend.fields["prog/xv"]!=null)C.xv=pend.fields["prog/xv"]}
     if((Number(before.gd)||0)>(Number(C.gd)||0))C.gd=before.gd;
