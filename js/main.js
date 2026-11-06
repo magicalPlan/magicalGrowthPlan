@@ -632,7 +632,7 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
                  giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
                gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
-   [소모] rgUse: ginbox 삭제 성공 → gs 기록 → gift 칸 삭제(재시도). 효과는 성공분만.
+   [소모] rgUse: ginbox 삭제 성공 직후 효과·화면. gs·gift 칸 삭제는 백그라운드(효과 대기 안 함).
    [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
        COMPAT_GIFT_PULL(ginPullGift·giftBellWatch), 보내기의 gift/ 쓰기,
        rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
@@ -699,24 +699,23 @@ function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
-/* 열기: ginbox 삭제 성공분만 효과. 그다음 gs·gift 삭제(호환 잔여 방지). 후일 gift 삭제·gs 칸 키는 선택. */
+/* 열기: ginbox 삭제 성공 직후 효과·화면. gift/ 잔여 삭제는 백그라운드. 후일 gift 삭제·gs 칸 키는 선택. */
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
- C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];
- if(DB&&AUTH.uid){for(const x of list){if(!(await giftDbDel(ginPath(x.id))))continue;
-  const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
-  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);await giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
-  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);await giftDbDel("gift/"+UID+"/"+x.u)}
-  opened.push(x)}}
- else opened.push(...list);
+ C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
+ const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML=""};
+ const takeOne=x=>{opened.push(x);ginList=ginList.filter(y=>y&&y.id!==x.id);ginIds=ginList.map(y=>y.id).join("|");
+  const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
+ const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
+  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
+  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
+ if(DB&&AUTH.uid){for(const x of list){if(!(await giftDbDel(ginPath(x.id))))continue;giftSweep(x);takeOne(x)}}
+ else list.forEach(takeOne);
  if(!opened.length){bag("선물을 열지 못했다. 잠시 뒤 다시 시도해 보자.");if(m)m.style.color="var(--bad)";return}
- const b0=C.dz;let sum=0,xs=0;opened.forEach(x=>{sum+=rgVal(x.g);xs+=GIFT_EX[x.g]||0});
- const ids=new Set(opened.map(x=>x.id));ginList=ginList.filter(x=>!ids.has(x.id));ginIds=ginList.map(x=>x.id).join("|");
- titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+opened.length;gain(xs,-sum);updNav();
- if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}
- const nm=ITM.find(x=>x[0]===opened[0].g),fail=list.length-opened.length;
- note("gift",(opened.length>1?"선물 "+opened.length+"개":(nm?nm[1]:"선물"))+"을(를) 열었다. 절망도가 "+(b0-C.dz)+" 내려갔다.");
- bag((opened.length>1?"선물 "+opened.length+"개를 열었다. ":(nm?nm[1]:"선물")+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+(b0-C.dz)+" 내려갔다."+(xs?" 경험치 +"+xs+".":"")+(fail?" (일부 "+fail+"개는 열지 못했다.)":""))}
+ const nm=ITM.find(x=>x[0]===opened[0].g),fail=list.length-opened.length,drop=b0-(C.dz||0);
+ note("gift",(opened.length>1?"선물 "+opened.length+"개":(nm?nm[1]:"선물"))+"을(를) 열었다. 절망도가 "+drop+" 내려갔다.");
+ bag((opened.length>1?"선물 "+opened.length+"개를 열었다. ":(nm?nm[1]:"선물")+"을(를) 열었다. ")+"마음이 따뜻해진다. 절망도가 "+drop+" 내려갔다."+(xs?" 경험치 +"+xs+".":"")+(fail?" (일부 "+fail+"개는 열지 못했다.)":""));
+ if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,1500)}catch(e){}}}
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=ginList,gr=rgGroups();
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!gr.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
