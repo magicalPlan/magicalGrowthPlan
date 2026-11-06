@@ -2,18 +2,34 @@
    목록은 매지컬 마치 화면(v-rooms)에서만 본다. 목록 칸이 펼쳐져 보일 때만 참가 자리(rooms/xm)를 연결로 지킨다.
    묶음(xm{s}_) 전체를 live 한 줄로 받고, 화면에는 정렬된 앞쪽부터 5개씩(최대 15)만 그린다.
    접히거나 화면을 벗어나면 끊는다. 마을에는 목록을 두지 않는다. 끝난 방은 서버 함수가 지운다. */
-const isAbyss=(s,i)=>i===((s%XN)+XN)%XN||(s%2===0&&i===((s+5)%XN+XN)%XN);
-// 정기 출정 기록 위치: 서버 규칙에 이미 열려 있는 rooms 아래에 둔다(별도 규칙 추가가 필요 없다).
+const isAbyss = (s,i) => i === ( (s % XN) + XN) % XN || (s % 2 === 0 && i === ( (s + 5) % XN + XN) % XN);
+
+// 정기 출정 기록 위치: 서버 규칙에 이미 열려 있는 rooms 아래에 둔다
 // 자리: rooms/xm{묶음}_e{번호}/{나}(이름·전투 정보 포함), 투표: rooms/xv{출정}_c{번호}/{나}.
 // 예전 이름 목록(xn)과 자리 ts 는 쓰지 않는다. 서버 만료 함수만 남은 xn 을 지운다.
-const xSeat=(s,i)=>"rooms/xm"+s+"_e"+i,xVote=(id,c)=>"rooms/xv"+id+"_c"+c;
+const xSeat = (s, i) => "rooms/xm" + s + "_e" + i, xVote = (id, c) => "rooms/xv" + id + "_c" + c;
+
 /* 출정 시각·마감·연출·drop 은 서버 보정 시각(srvNow)을 쓴다. 시계 동기 전에는 Date.now 로 둔다.
    목록·틱·참가 전에 clockSync 를 불러 SKEW 를 채워 둔다(포탈 pTick 과 같음). */
-const xNow=()=>typeof srvNow==="function"?srvNow():Date.now();
-const xGrace=()=>typeof X_JOIN_GRACE==="number"?X_JOIN_GRACE:5000;
-const xCloseAt=x=>Number(x.close)+xGrace();
-const xClock=()=>{if(typeof clockSync==="function")clockSync()};
-const xClockWait=force=>typeof apiClockSync==="function"?apiClockSync(!!force):Promise.resolve();
+// 서버 시간 보정 함수 1. 게임에서 쓰는 지금 시간. (srvNow는 서버 보정 시간, 없으면 Date.now)
+const xNow = () => typeof srvNow === "function" ? srvNow() : Date.now();
+// 서버 시간 보정 함수 2. 참가 마감 뒤 유예 시간. 클라이언트에서 마감 된 후라도 5초 정도 더
+const xGrace = () => typeof X_JOIN_GRACE === "number" ? X_JOIN_GRACE : 5000;
+// 서버 시간 보정 함수 3. 그 출정의 실질 참가 인정 마감 (x.close + xGrace(). 화면 마감은 2분 전, 하지만 2분 5초 정도 더 받음을 알림)
+const xCloseAt = x => Number(x.close) + xGrace();
+// 서버 시간 보정 함수 4. 가능하다면 clockSync()를 바로 호춣해 기기/서버 시각 차이를 맞춤. 왜 쓰는 거지?
+const xClock = () => { 
+   if (typeof clockSync === "function") clockSync()
+   };
+// 서버 시간 보정 함수 5. apiClockSync가 있으면 동기화 Promise를 돌려줌. force면 강제.  없으면 즉시 resolve. 참가 시 백그라운드에서 맞춤.
+// 백그라운드에서도 잘 돌아가는지 확인 필요. 
+const xClockWait = force => typeof apiClockSync === "function" ? apiClockSync(!!force) : Promise.resolve();
+// 출정의 고정 정보를 계산. (저장 없이 id 시드로 결정..? 이걸 왜 서버에서 처리하지 않죠?)
+/*
+   id :: x{s}_{i}  / v :: 마을 / d :: 위험도(심연은 4) / nm :: 이름 / total :: 전투 횟수 / T0 :: 출발 시각 (s+1)*XS / close :: 화면 참가 마감 T0 - XCLOSE
+   같은 (s, i)면 모든 플레이어에게 같은 출정이 보임
+   이 함수가 왜 서버 사이드에서가 아니라 클라이언트에서 돌지
+*/
 function xInfo(s,i){const id="x"+s+"_"+i,g=rng(hs32(id)),p=n=>Math.floor(g()*n),v="ABCD"[p(4)],ab=isAbyss(s,i),d=ab?4:1+p(3);const pl=XPL[p(XPL.length)],t=3+p(3);return{id,s,i,v,d,nm:ab?ABYSS_PL[((s+(i===((s%XN)+XN)%XN?0:2))%ABYSS_PL.length+ABYSS_PL.length)%ABYSS_PL.length]:VL[v].n+" "+pl,total:ab?5:t,T0:(s+1)*XS,close:(s+1)*XS-XCLOSE}}
 const xSlot=()=>Math.floor(xNow()/XS);
 // 지금 참가할 수 있는 출정 묶음(마감이 지나면 다음 묶음). 유예는 서버 집계·미반영 쓰기용.

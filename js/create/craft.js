@@ -78,5 +78,6 @@ function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.in
  if((C.inv.prism||0)<1)return;if(C.fall){bag("타락한 동안에는 프리즘이 빛을 굴절시키지 못한다.");$("#bgm").style.color="var(--bad)";return}
  if(!confirm("속성 「"+p.from+"」을(를) 「"+p.to+"」(으)로 바꿀까?\n\n· 「"+p.from+"」의 효과와 마법은 사라진다\n· 되돌릴 수 없다 (다시 바꾸려면 프리즘이 하나 더 필요하다)\n· 절망도가 "+PRISM_DZ+" 오른다"))return;
  C.inv.prism--;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
+ try{if(typeof dexSkAttr==="function"&&dexSkAttr(p.to))note("dex","도감에 새 마법이 기록되었다: "+((SK[p.to]||{}).nm||p.to))}catch(e){}
  const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}

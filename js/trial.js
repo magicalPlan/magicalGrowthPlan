@@ -34,7 +34,7 @@ $("#tg").onclick=()=>{if(T.end)return;trStart();const v=VL[C.v],last=T.f+1===T.n
   if(T.fails>TRIAL_LIVES&&!C.fall){T.l.push("시련에 "+T.fails+"번 밀려났다. 여왕님이 조용히 고개를 저으며 시험을 끝냈다. "+trCdTxt()+" 뒤에 다시 도전할 수 있다.");note("quest","재계약 시험에서 탈락했다. "+trCdTxt()+" 뒤에 다시 도전할 수 있다.");T.end=1}}
  if(C.fall){T.l.push("절망이 한계를 넘었다. 시련의 문 앞에서 타락이 시작되었다.");T.end=1}
  else if(T.f>=T.n){titleState();C.stats.trialWins=(C.stats.trialWins||0)+1;const old=C.g;C.g=GL[gi()+1];C.cl=0;let r;const miss=AT.filter(a=>!C.a.includes(a[0]));
-  if(miss.length&&Math.random()<.15){const mx=miss[R(miss.length)],a=mx[0];C.a.push(a);r="새로운 속성 '"+a+"'을 손에 넣었다! ("+mx[2]+")"}else{C.b=(C.b||0)+5;r="능력이 개화했다. 전투력이 올랐다."}
+  if(miss.length&&Math.random()<.15){const mx=miss[R(miss.length)],a=mx[0];C.a.push(a);try{if(typeof dexSkAttr==="function"&&dexSkAttr(a))note("dex","도감에 새 마법이 기록되었다: "+((typeof SK!=="undefined"&&SK[a])?SK[a].nm:a))}catch(e){}r="새로운 속성 '"+a+"'을 손에 넣었다! ("+mx[2]+")"}else{C.b=(C.b||0)+5;r="능력이 개화했다. 전투력이 올랐다."}
   if(C.t==="각성자"){C.b=(C.b||0)+3;r+=" 한계를 넘어 각성했다. 전투력이 3 더 올랐다."}
   /* 등급·속성은 로컬에 바로 반영(낙관적). 서버는 saveNow 로 즉시 PATCH. 실패 시 백그라운드 재시도. UI·나가기는 기다리지 않는다. */
   if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,2000)}catch(e){}}else save();

@@ -1,0 +1,13 @@
+// ginbox 만 교체해 붙일 때 쓰는 조각.
+// 받는 사람이 gift/ → ginbox 호환 이관할 때 u 는 보낸 사람 uid 이므로,
+// validate 에서 auth.uid === $to 도 허용해야 한다. (u === auth.uid 만 있으면 이관이 403)
+    "ginbox": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$id": {
+          ".write": "auth != null && (auth.uid === $to || (newData.exists() && newData.child('u').val() === auth.uid) || (!newData.exists() && data.exists() && (auth.uid === $to || data.child('u').val() === auth.uid)))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['g', 'n', 'u', 'ts']) && newData.child('g').isString() && newData.child('n').isString() && newData.child('n').val().length <= 20 && newData.child('u').isString() && newData.child('ts').isNumber() && (auth.uid === $to || newData.child('u').val() === auth.uid))"
+        }
+      }
+    },
