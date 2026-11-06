@@ -198,9 +198,9 @@ function xMarkDone(s,i,endAt){if(!XON()||!Number.isFinite(Number(s))||!Number.is
  DB.doc(xSeat(s,i)+"/done").transact(c=>{if(typeof c==="number"&&c>0)return;return now}).catch(()=>{});
  DB.doc("live/xdrop/"+s+"_"+i).transact(c=>{if(typeof c==="number"&&c>0){if(c>=want)return;return want}return want}).catch(()=>{})}
 /* 끝난 뒤 1분이 지났거나, 출발 후 5분이 지났으면 수동으로 나갈 수 있다. 서버가 방을 못 지워도 화면에서 풀려난다.
-   계정 보상은 서버 지급이라 나가기와 무관. 결과 문구·통계만 클라 settle. */
+   나가기는 화면·자리만 정리한다. 골드·경험·절망·가방은 Functions 가 이미 계정에 썼거나, xGrant(serverPay) 가 다시 쓰지 않는다. */
 function xQuitOpen(x){if(!C||!x)return false;const now=xNow(),mine=C.mj&&C.mj.id===x.id,done=XR&&XR.id===x.id&&XR.fin;if(!mine&&!done)return false;const end=XR&&XR.id===x.id&&XR.res&&Number(XR.res.endAt);if(end&&now>=end+X_QUIT)return true;if(done)return true;return now>=Number(x.T0)+X_STUCK}
-/* 나가기: 확인·보상 포기 문구 없음. 결과 settle 가능하면 넣고, 화면만 정기 토벌(매지컬 마치) 목록으로 돌린다. */
+/* 나가기: 확인·보상 포기 문구 없음. 미정산이면 xGrant(serverPay) 로 문구·통계만 넣고, 목록으로 돌린다. */
 function xQuit(){if(XR&&!XR.fin){const j=C&&C.mj,x=j&&XR.id===j.id?xInfo(j.s,j.i):(XR.x||null);if(x&&XR.id===x.id)xGrant(x)}
  const j=C&&C.mj,done=XR&&XR.fin&&(!j||XR.id===j.id);if(!j&&!done)return;
  const id=j?j.id:(XR&&XR.id);if(j){if(xPend&&xPend.id===j.id)xPend=null;C.mj=null}if(id)C.ms=id;XR=null;stopXr();save();drawXAll();
@@ -239,10 +239,18 @@ function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;st
 function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc:0,fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=xNormPicks(doc.picks);XR.pc=typeof doc.pc==="number"?doc.pc:XR.picks.filter(v=>v!=null).length;XR.res=doc;const j=C&&C.mj;
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}
-/* 결과 기록은 끝나는 시각보다 먼저 도착한다. 그 시각이 지나면 기록을 다시 받지 않아도 보상을 넣는다. */
+/* 매지컬 마치 결과 반영(방어).
+   · 권한: 골드·경험·절망·재료·소모·펫은 Functions 만 계정에 쓴다(afterExpeditionDone → grantMarchCore → applyMarchPay).
+   · 클라: settle(…, {serverPay:true}) 로 통계·칭호·결과 문구만. gain()/절망 산식은 돌리지 않는다.
+   · 왜: 결과 기록(xr)은 endAt 보다 먼저 오고, 서버는 done 직후 이미 지급한다. serverPay 없이 settle 하면
+     연출 중 동기화로 한 번, 종료 settle 로 또 한 번 절망이 오른다.
+   · pay: rooms/xr…/pay/{uid} 영수증. 있으면 문구에 서버가 준 양을 그대로 적는다(클라 재계산 금지).
+   · accSyncIfNewer: 서버 ts 가 앞서 있으면 저장 전에 맞춘다. 옛 절망도로 PATCH 해 서버 지급을 덮지 않게. */
 function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||xNow()<Number(doc.endAt))return;
- let h="";try{h=settle(doc.r)}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
- if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose")}
+ const pay=doc.pay&&UID&&doc.pay[UID]?doc.pay[UID]:null;
+ let h="";try{h=settle(doc.r,{serverPay:true,pay})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
+ if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose");
+ if(typeof accSyncIfNewer==="function")accSyncIfNewer().catch(()=>{})}
 function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
  if(XR&&XR.id===j.id&&XR.fin){stopXr();return}
  const x=xInfo(j.s,j.i),late=xNow()-x.T0;

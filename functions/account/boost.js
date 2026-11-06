@@ -1,4 +1,5 @@
-/* 마치 서버 지급 배율. 클라 settle 의 시설·펫·재해·각인·등대·완드·경험 gain 보너스와 맞춤.
+/* 마치 서버 지급 배율·부가(절망 포함). 클라 settle 산식과 맞추되, 실행은 서버 applyMarchPay 만.
+   클라가 같은 식으로 gain 하면 이중 반영이므로 js/march xGrant 는 serverPay 로 산식을 끈다.
    시설: vfac/{v}/{k}.lv 또는 sum→FAC_LV. 펫: accounts/.../c/pet+pets. 재해: 슬롯 시드+tally/dr. */
 "use strict";
 

@@ -100,8 +100,10 @@ async function scheduleXDrop(db, s, i, at) {
 function xDropAt(doc, now) {
   return (doc && typeof doc.endAt === "number" ? doc.endAt : now) + X_DROP;
 }
-/* 출정 done 직후·이미 done 재방문: 서버 지급(경제·fx·소모·펫·배율 전부, functions/account) + xdrop.
-   배포는 신클라(pay 있으면 해당 칸 skip) 먼저, 그다음 Functions. */
+/* 출정 done 직후·이미 done 재방문.
+   · 여기서만 계정 보상(골드·경험·절망·재료·소모·펫)을 쓴다 → grantMarchCore.
+   · 클라는 settle(serverPay) 로 문구·통계만. 클라가 gain/절망 산식을 돌리면 이중 반영.
+   · xdrop 예약과 지급은 같이. 배포: 신클라(serverPay) 먼저 → Functions. */
 async function afterExpeditionDone(db, s, i, doc, now) {
   if (!doc || !doc.done) return;
   await scheduleXDrop(db, s, i, xDropAt(doc, now));
