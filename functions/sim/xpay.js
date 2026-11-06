@@ -1,7 +1,10 @@
-/* 매지컬 마치 서버 지급 훅.
-   계정 PATCH 는 functions/account. 산식·원장·호출만.
-   지급: 경제·재료·단서·절망·전 fx·깃발/지도/스킬 소모·펫 XP·알·수집가/까마귀/고독 마력석.
-   배율: boost.js. 원장 rooms/xr…/pay/{uid}. 배포: 신클라 먼저 → Functions. */
+/* 매지컬 마치 서버 지급 훅(계정 수치의 유일한 권한).
+   · 호출: index.afterExpeditionDone → grantMarchCore.
+   · 산식: corePay + account/boost.marchSide(절망 raw·보정 포함).
+   · 기록: rooms/xr…/pay/{uid} 영수증 → account.applyMarchPay(accounts/{uid}).
+   · 클라: js/march.js xGrant 가 settle(serverPay:true, pay) 만 호출. gain·절망 재계산 금지.
+   · 멱등: pay.ok + accounts/…/xpay/{grantKey}. 같은 출정을 두 번 올리지 않는다.
+   배포: 신클라(serverPay) 먼저 → Functions. */
 const acc = require("../account");
 
 const SOLO_M = 1, SOLO_RW_G = 40;
@@ -78,6 +81,7 @@ function payHas(amt) {
   return !!(amt.inv && Object.keys(amt.inv).some(k => amt.inv[k] > 0));
 }
 
+/* 출정 1회·참가자마다 계정 지급 1회. 절망(pay.dz)도 여기서만 accounts/c/dz 에 반영한다. */
 async function grantMarchCore(db, s, i, doc) {
   if (!doc || !doc.done || doc.empty || !doc.r || !doc.r.pl) return;
   const ids = Object.keys(doc.r.pl).filter(u => u && !String(u).startsWith("bot"));

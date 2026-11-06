@@ -152,21 +152,26 @@ function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(
  $("#rd").hidden=r.st!=="lobby";$("#rd").textContent=r.rd[UID]?"준비 취소":"준비 완료";
  $("#st").hidden=!(r.st==="lobby"&&r.host===UID);$("#st").disabled=!all;$("#bt").hidden=!(LOCAL&&r.st==="lobby"&&ids.length<3);
  if(r.st!=="lobby"){$("#rx").textContent="마을로 돌아가기";paintRun()}else{choiceK="";$("#chv").hidden=true}armChoice()}
-/* 출정 결과를 내 캐릭터에 반영하고, 기록 창에 붙일 HTML을 돌려준다. 같은 출정은 한 번만 반영된다.
-   opt.serverPay: 정기 출정 서버 지급(rooms/xr…/pay + accounts)이 있으면 true.
-   true 이면 경제·절망·전 fx·부적/깃발/지도/스킬 소모·펫 XP·알·수집가/까마귀/고독 마력석은 올리지 않는다(Functions/account).
-   opt.pay 로 서버가 준 양을 결과·노트에 다시 알려 준다.
-   통계·칭호·UI·도감 알림 등만 클라 유지. */
+/* 출정 결과 반영. 같은 출정(code+seq.length)은 한 번만.
+   호출 구분
+   · 매지컬 마치(js/march.js xGrant): 반드시 {serverPay:true, pay}. 계정 수치 권한은 서버만.
+   · 로비/로컬 방(paintRun 등): serverPay 없음. 예전처럼 클라가 gain·소모까지 한다.
+   serverPay===true (방어)
+   · 하지 않음: gain(경험·절망), 골드/토벌/재료/펫/알 가산, 부적·깃발·지도·스킬 소모.
+     → Functions applyMarchPay 가 이미 accounts 에 썼다. 여기서 다시 돌리면 절망이 두 번 오른다.
+   · 함: 통계·칭호·도감·결과 HTML·노트. pay 가 있으면 서버 영수증 숫자를 문구에만 옮긴다(재계산 금지).
+   opt.pay: rooms/xr…/pay/{uid}. 없으면 "서버에서 반영" 안내만. */
 function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||null;if(C.last===r.code+r.seq.length)return "";C.last=r.code+r.seq.length;let out="";const v=VL[C.v],m=(Object.keys(r.pl).length===1&&r.solo?SOLO_M:([0,.6,.7,.8,.87,.93,.97,1][Object.keys(r.pl).length]||1))*(r.rw||1);
    const mine=r.pl[UID]||{},used=[],msk=mine.sk||[],dkz=msk.includes("dark")?6:0,wtz=r.wsk?5:0;
+   /* 소모 표시: 서버 지급이면 영수증 이름만. 클라가 useSk/useItem 으로 인벤을 깎지 않는다. */
    if(serverPay){(pay&&pay.skNm||[]).forEach(nm=>{if(nm)used.push(nm)});if(pay&&pay.flag)used.push("용기의 깃발");if(pay&&pay.map)used.push("마수 사냥 지도")}
    else{msk.forEach(id=>{if(useSk(id))used.push(SKID[id].nm)});if(mine.f&&useItem("flag"))used.push("용기의 깃발");if(mine.m&&useItem("map"))used.push("마수 사냥 지도")}
-   /* 결계 부적: 서버 지급이면 Functions 가 소모. 아니면 클라. */
+   /* 결계 부적: serverPay 면 서버가 이미 소모. 클라 useItem 금지(이중 소모). */
    const ch=serverPay?(pay&&pay.charm?1:0):useItem("charm");if(ch)used.push("결계 부적");
    const cut=d=>ch&&d>0?d*(C.a.includes("물")?2/3:.5):d,base=r.rt||r.total;
-   /* 서버 지급분(pay.g)에 이벤트 골드가 이미 포함되어 있어 serverPay 때는 따로 적지 않는다. */
+   /* 이벤트 골드(r.gx): 서버 pay.g 에 포함됨. serverPay 때 C.gd 에 다시 더하지 않는다. */
    if(r.gx){if(!serverPay)C.gd=Math.max(0,(C.gd||0)+r.gx)}const tn=(!serverPay&&r.gx)?["이벤트 골드 "+(r.gx>0?"+":"")+r.gx]:[],gd=C.t==="수호"?4:0,sc=eq(2)?SCY_DZ:0,wx=(eq(5)?1+WAND_EX:1)*(1+.03*facLv("drill"))*(wfLv()>=1?1+WF_EXP:1)*(1+petEff("ex"))*(disMine()==="storm"?.8:1);if(gd)tn.push("수호: 절망도 상승 4 감소");if(sc)tn.push("낫: 절망도 "+SCY_DZ+" 추가");if(eq(5))tn.push("완드: 경험치 "+Math.round(WAND_EX*100)+"% 증가");if(eq(3)&&!r.ok)tn.push("방패: 실패로 오르는 절망도가 줄었다");
-   /* 서버가 올린 pay 숫자로 보상 안내. 계정에는 이미 반영됐으니 여기선 문구만. */
+   /* 서버 영수증 → 안내 문구만. C.dz/C.gd/C.ex 는 건드리지 않는다. */
    if(serverPay&&pay){const pg=Math.max(0,Math.floor(Number(pay.g)||0)),pex=Math.max(0,Math.floor(Number(pay.ex)||0)),pcl=Math.max(0,Math.floor(Number(pay.cl)||0)),pdz=Math.round(Number(pay.dz)||0);
     if(pg)tn.push("골드 +"+pg);if(pex)tn.push("경험치 +"+pex);if(pcl)tn.push("토벌 횟수 +"+pcl);
     if(pdz)tn.push("절망도 "+(pdz>0?"+":"")+pdz);
@@ -183,6 +188,7 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
     if(pay.eggEv&&typeof PET_EV!=="undefined")tn.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!");
     if(pay.petXp)tn.push("사역마 친밀도 +"+pay.petXp)}
    else if(serverPay)tn.push("출정 보상·소모·펫은 서버에서 반영");
+   /* 아래 !serverPay 블록·gain 호출: 로컬/옛 방 전용. 마치(serverPay)는 전부 건너뛴다. */
    const fx=r.fx||{};let xe=0,xz=0;C.inv=C.inv||{};
    if(!serverPay&&fx.mm){C.inv.mana=(C.inv.mana||0)+fx.mm;tn.push("마력석 +"+fx.mm)}
    if(!serverPay&&fx.gi){C.inv.g1=(C.inv.g1||0)+fx.gi;dexAdd("it","g1");tn.push("작은 꽃다발 +"+fx.gi)}
@@ -196,10 +202,12 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
     if((C.dz||0)>=90)C.stats.clutch=1;if(new Date(Date.now()+9*3600000).getUTCHours()===3)C.stats.dawnWin=1;if(r.solo){const sg=SOLO_RW.g;if(!serverPay){const sm=Math.random()<SOLO_RW.mp?1:0;C.gd=(C.gd||0)+sg;if(sm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+sm}tn.push("고독의 보상: 골드 +"+sg+(sm?", 마력석 +1":""))}else tn.push("고독의 보상"+(pay&&pay.soloM?", 마력석 +1":""));C.stats.soloWins=(C.stats.soloWins||0)+1;if(r.ab)C.stats.soloAbyss=1}
    if(r.ab){C.stats.abyssWins=(C.stats.abyssWins||0)+1;if(!(C.wp>=0))C.stats.abyssBare=1;tn.push("심연을 끝까지 걸어 나왔다")}
     if(!serverPay){C.gd=(C.gd||0)+Math.round((30+10*base)*m*(C.t==="행운"?1.1:1)*(1+.05*facLv("workshop"))*(disMine()==="eclipse"?.7:1)*(1+.05*rnLv("luck"))*(wfLv()>=2?1+WF_GOLD:1)*(1+petEff("gd")));if(C.t==="행운")tn.push("행운: 골드 10% 증가");if(C.t==="수집가"&&Math.random()<.3){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("수집가: 마력석 1개를 주웠다")}if(petEff("mana")&&Math.random()<petEff("mana")){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("밤까마귀가 마력석 1개를 물어 왔다")}}
+    /* 절망·경험: serverPay 이면 인자 0. 산식은 서버 marchSide/corePay 와 같되 클라에서 돌리면 이중 반영. */
     {const dzAmt=serverPay?0:cut(Math.max(0,r.ev+v.dz+r.total*3-gd+sc-wtz+dkz));gain(serverPay?0:((30+10*base)*v.x*m+(r.ex||0))*wx,dzAmt)}}
    else{titleState();C.stats.huntsLost=(C.stats.huntsLost||0)+1;
     if(!serverPay){const mt=matGain(["x_fail"]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:0});if(cp)tn.push(cp)}}
     if(!serverPay)C.gd=(C.gd||0)+5;{const dzAmt=serverPay?0:cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
+   /* xe/xz 는 !serverPay 의 fx.wp·dh 에서만 채워진다. serverPay 면 여기 gain 도 no-op. */
    if(xe||xz)gain(xe,xz);checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}
    {const payBits=serverPay&&pay?[pay.g>0?"골드 +"+Math.floor(Number(pay.g)||0):"",pay.ex>0?"경험치 +"+Math.floor(Number(pay.ex)||0):"",pay.dz?("절망도 "+(Number(pay.dz)>0?"+":"")+Math.round(Number(pay.dz)||0)):""].filter(Boolean).join(" · "):"";
     note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+(payBits?" · "+payBits:(r.gx?" · 이벤트 골드 +"+r.gx:"")))}

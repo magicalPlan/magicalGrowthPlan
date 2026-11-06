@@ -53,18 +53,20 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  Object.entries(r.mat||{}).forEach(([id,k])=>b.push((typeof cfName==="function"?cfName(id):id)+" "+k));
  if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
 
-/* 잠긴 이야기. data/story/lock.js 의 storyFlag 가 true 인 것만 '스토리 보기'로 연다.
-   글은 STORY_URL 을 이 브라우저에서 한 번만 읽는다. 합계는 이미 받아 둔 CLPN 을 쓰고, 여기서 서버에 다시 묻지 않는다. */
+/* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜)가 true 일 때만 '스토리 보기'로 연다.
+   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_URL 을 한 번만 읽고, 합계는 CLPN 을 쓴다. */
 let storyBook=null,storyBookP=null,clpStoryGen=0;
 function storyLoad(){if(typeof STORY_URL==="undefined")return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
  storyBookP=fetch(STORY_URL).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
-function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyFlag!=="function")return;
- const open=STORY_LOCK.filter(lock=>storyFlag(lock,CLPN,Date.now()));if(!open.length)return;
+function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyReachN!=="function")return;
+ const now=Date.now(),rows=STORY_LOCK.filter(lock=>storyReachN(lock,CLPN));if(!rows.length)return;
  const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);
  storyLoad().then(book=>{if(gen!==clpStoryGen||!slot.isConnected)return;const list=Array.isArray(book&&book.shards)?book.shards:[];
-  open.forEach(lock=>{const story=list.find(s=>s&&s.id===lock.id);if(!story||!story.start)return;const row=elT("div","clp-story");
-   row.appendChild(elT("span","clp-story-name",story.title||"이야기"));const b=elT("button","chip","스토리 보기");b.type="button";
-   b.onclick=()=>{if(!storyFlag(lock,CLPN,Date.now()))return;if(typeof vnOpen==="function")vnOpen(story)};row.appendChild(b);slot.appendChild(row)});
+  rows.forEach(lock=>{const story=list.find(s=>s&&s.id===lock.id);if(!story||!story.start)return;const ready=typeof storyFlag==="function"&&storyFlag(lock,CLPN,now);const row=elT("div","clp-story"+(ready?"":" wait"));
+   row.appendChild(elT("span","clp-story-name",story.title||"이야기"));
+   if(ready){const b=elT("button","chip","스토리 보기");b.type="button";b.onclick=()=>{if(!storyFlag(lock,CLPN,Date.now()))return;if(typeof vnOpen==="function")vnOpen(story)};row.appendChild(b)}
+   else{const at=lock.at!=null&&typeof storyAtTxt==="function"?storyAtTxt(lock.at):"";row.appendChild(elT("span","clp-story-wait",at?"🔒 "+at+"에 열림":"🔒 아직 잠겨 있다"))}
+   slot.appendChild(row)});
   if(!slot.childNodes.length)slot.remove()}).catch(()=>{if(gen===clpStoryGen&&slot.isConnected)slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
 
 /* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.

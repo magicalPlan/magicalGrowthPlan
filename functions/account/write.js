@@ -26,7 +26,10 @@ function xpayKey(grantKey) {
   return k || "";
 }
 
-/* pay 필드 → 계정. dz 상승분(음수 가능). grantKey 있으면 멱등. */
+/* pay 필드 → 계정(매지컬 마치 서버 지급의 최종 쓰기).
+   · 절망: pay.dz 를 읽어 c/dz 만 서버가 올린다. 클라는 settle(serverPay) 에서 gain(…, dz) 금지.
+   · grantKey: accounts/{uid}/xpay/{key}=1 과 보상을 같은 update 에 넣어 재시도·이중 호출에도 한 번만.
+   · sid:"xpay": 클라 accSync 가 '다른 기기' 토스트를 생략하고 서버본을 받게 한다. */
 async function applyMarchPay(db, uid, pay, grantKey) {
   if (!pay || !(await accountExists(db, uid))) return false;
   const root = db.ref("accounts/" + uid);
@@ -63,6 +66,7 @@ async function applyMarchPay(db, uid, pay, grantKey) {
   if (pay.egg > 0) { bump["c/eggs"] = ServerValue.increment(pay.egg); any = true; }
   if (pay.eggEv > 0) { bump["c/eggsEv"] = ServerValue.increment(pay.eggEv); any = true; }
 
+  /* 절망은 increment 가 아니라 읽은 뒤 절대값으로 쓴다(0~100 클램프). 클라 gain 과 병행하면 안 된다. */
   const dzAdd = Math.round(Number(pay.dz) || 0);
   const tc = Math.max(0, Math.floor(Number(pay.tc) || 0));
   const day = String(pay.day || todayStr()).slice(0, 12);
