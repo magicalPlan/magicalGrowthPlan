@@ -16,6 +16,10 @@ const STORY_LOCK=[
 ];
 /* true 면 장기 의뢰 칸에서 그 이야기를 열 수 있다. n 은 단서 조각 합계, now 는 밀리초 시각. */
 function storyFlag(lock,n,now){if(!lock)return false;if((Number(n)||0)<(Number(lock.n)||0))return false;if(lock.at!=null&&(Number(now)||Date.now())<lock.at)return false;return true}
+/* 합계만 충족했는지. 날짜 잠금이면 행은 보여 주고 열림 시각만 안내한다. */
+function storyReachN(lock,n){return !!lock&&(Number(n)||0)>=(Number(lock.n)||0)}
+/* lock.at(UTC ms)을 한국 시각 기준 'M월 D일 0시' 문구로. */
+function storyAtTxt(at){const t=Number(at);if(!Number.isFinite(t))return "";const k=new Date(t+9*3600000);return (k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일 0시"}
 
 /* 세계관 > 이벤트 탭 전용. open 을 true 로 바꾸면 그 이야기가 탭에 보인다. CLPN·STORY_LOCK 과 별개다.
    예: 이벤트 종료 뒤 보관용으로 shard-1·2 만 켠다. */
