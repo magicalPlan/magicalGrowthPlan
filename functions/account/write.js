@@ -26,11 +26,29 @@ function xpayKey(grantKey) {
   return k || "";
 }
 
+/* 알림함 c/nt 앞에 한 줄. 매지컬 마치 보상 알림은 서버만 넣는다(클라 note("march") 금지).
+   RTDB 배열이 객체로 굳은 경우도 맞춘다. 길이는 클라 NT_MAX(60)에 맞춤. */
+function normalizeNt(cur) {
+  if (Array.isArray(cur)) return cur.filter(n => n && typeof n === "object");
+  if (cur && typeof cur === "object") {
+    return Object.keys(cur).sort((a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b)))
+      .map(k => cur[k]).filter(n => n && typeof n === "object");
+  }
+  return [];
+}
+async function pushMarchNote(root, text) {
+  const t = String(text || "").slice(0, 160);
+  if (!t) return;
+  const entry = {k: "march", t, u: "", ts: Date.now(), r: false};
+  await root.child("c/nt").transaction(cur => [entry].concat(normalizeNt(cur)).slice(0, 60));
+}
+
 /* pay 필드 → 계정(매지컬 마치 서버 지급의 최종 쓰기).
    · 절망: pay.dz 를 읽어 c/dz 만 서버가 올린다. 클라는 settle(serverPay) 에서 gain(…, dz) 금지.
    · grantKey: accounts/{uid}/xpay/{key}=1 과 보상을 같은 update 에 넣어 재시도·이중 호출에도 한 번만.
-   · sid:"xpay": 클라 accSync 가 '다른 기기' 토스트를 생략하고 서버본을 받게 한다. */
-async function applyMarchPay(db, uid, pay, grantKey) {
+   · sid:"xpay": 클라 accSync 가 '다른 기기' 토스트를 생략하고 서버본을 받게 한다.
+   · noteText: 지급 성공 시에만 c/nt 에 march 알림(이미 xpay 된 재시도에서는 넣지 않음). */
+async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   if (!pay || !(await accountExists(db, uid))) return false;
   const root = db.ref("accounts/" + uid);
   const gk = xpayKey(grantKey);
@@ -145,6 +163,13 @@ async function applyMarchPay(db, uid, pay, grantKey) {
       if (meN > st) await root.update({"c/stats/clpN": meN, ts: Date.now(), sid: "xpay"});
       await addClueTally(db, uid, pay.clp);
     } catch (e) { /* 계정 조각은 이미 반영 */ }
+  }
+
+  if (noteText) {
+    try {
+      await pushMarchNote(root, noteText);
+      await root.update({ts: Date.now(), sid: "xpay"});
+    } catch (e) { /* 보상은 이미 반영. 알림만 실패해도 지급은 유지 */ }
   }
   return true;
 }
