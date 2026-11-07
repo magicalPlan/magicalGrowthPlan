@@ -1,14 +1,20 @@
 /* 상점. main.js 다음에 불러야 한다. 구매 수량과 아이템 구매.
    가격은 js/common/formula.js 의 pr 을, 무기 칸은 shopWeapons 를 그대로 부른다.
-   시장 할인과 산불 할증은 상점 탭을 열 때 한 번만 읽는다. 열어 둔 동안에는 다시 묻지 않고, 구매할 때만 바뀐 칸을 저장한다. */
+   시장 할인과 산불 할증은 상점 탭을 열 때 한 번만 읽는다. 열어 둔 동안에는 다시 묻지 않고, 구매할 때만 바뀐 칸을 저장한다.
+   무기 칸은 접을 수 있다(기본 접힘). shopWpFold / #wptog · #wpbox. */
 let shopQ=1,shopBusy=false;
 function shopWrite(fields){return apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}})}
 async function shopRead(){if(shopBusy||!C||!XON()||typeof loadFac!=="function")return;shopBusy=true;try{await loadFac()}catch(e){}finally{shopBusy=false}if(!$("#v-shop").hidden)shop()}
 function itemMax(id){C.inv=C.inv||{};if(id==="charm")return Math.max(0,CHARM_MAX-charmToday());if(id==="candle")return (C.inv.candle||0)>=1?0:1;return 99}
+/* 상점 무기 접기. open=true 면 #wpbox 를 보이고 목록을 채운다. 기본·기억 없음이면 접힌다(mgr_shop_wp). */
+function shopWpOpen(){try{return localStorage.getItem("mgr_shop_wp")==="1"}catch(e){return false}}
+function shopWpFold(open){const b=$("#wptog"),box=$("#wpbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_wp",open?"1":"0")}catch(e){}
+ if(open&&typeof shopWeapons==="function")shopWeapons()}
 function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
  $("#sg").textContent="보유 골드 "+(C.gd||0)+". 골드는 토벌과 시련에서 얻는다."+(C.v==="A"?" A마을 주민은 10% 할인을 받는다.":"");
  const sm=$("#sm");sm.style.color="var(--mu)";sm.textContent=msg||"";if(msg&&again)toast(msg);
- shopWeapons();
+ /* 무기 목록: 펼쳐져 있을 때만 채운다. 열 개수는 css #v-shop #wl (좁음 1 · 넓음 2). */
+ shopWpFold(shopWpOpen());
  // 구매 수량 고르기
  const qb=$("#shopq");qb.innerHTML="";const qlab=elT("span","shopq-l","구매 수량");qb.appendChild(qlab);
  const set=n=>{shopQ=Math.max(1,Math.min(99,n|0||1));shop()};
@@ -26,3 +32,4 @@ function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,
    const fields={gd:C.gd,["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
    shopWrite(fields);checkTitles();
    shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)});if(fresh)shopRead()}
+{const t=$("#wptog");if(t&&!t._shopFold){t._shopFold=1;t.onclick=()=>shopWpFold(!!$("#wpbox")&&!!$("#wpbox").hidden)}}

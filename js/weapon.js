@@ -31,6 +31,8 @@ function bagWeapons(rowEl){const wp=$("#bgw");wp.innerHTML="";bagUpHint();
      else t="마력석 "+cost+"개가 사라졌다.";
      save();bag("강화 실패. "+WP[i][0]+"은(는) +"+L+" 그대로다. "+t);$("#bgm").style.color="var(--bad)"}},mx||have<cost]]))})}
 
+/* 상점 무기 칸(#wl). WP 전체를 chip 버튼으로 채운다(구매·장착·해제).
+   가로 몇 칸인지는 CSS(#v-shop #wl)가 정한다 — 좁으면 1열, 넓으면 2열. 이 함수는 칸 수만 채운다. */
 function shopWeapons(){const w=$("#wl");w.innerHTML="";C.wps=C.wps||[];WP.forEach((it,i)=>{const own=C.wps.includes(i),on=C.wp===i,pc=pr(it[2]),st=on?"장착 중":own?"장착하기":pc+"골드";const b=document.createElement("button");b.type="button";b.className="chip sq";
   b.innerHTML="<b></b><small class='item-feature'></small><small></small>";b.querySelector("b").textContent=it[0]+(wlv(i)?" +"+wlv(i):"");b.querySelector(".item-feature").textContent=it[1]+" 전투력 +"+it[3]+".";b.querySelectorAll("small")[1].textContent=st;
   b.title=it[1]+" 전투력 +"+it[3];b.setAttribute("aria-label",it[0]+", "+st+". 전투력 +"+it[3]);
