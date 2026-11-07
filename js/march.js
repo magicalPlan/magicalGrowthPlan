@@ -119,7 +119,9 @@ function drawX(el){el.innerHTML="";if(!C)return;
   const b=elT("button","chip",quit?"나가기":inI?(late?"마감":"참가 취소"):full?"정원 마감":lock?"참가 불가":weak?"전투력 부족":mj?"이쪽으로 변경":"참가");b.type="button";b.disabled=quit?false:inI?late:full||lock||weak;b.onclick=()=>{if(quit){xQuit();return}if(inI){if(late)return;if(!(C.mj&&C.mj.id===x.id))C.mj={id:x.id,s:x.s,i:x.i,T0:x.T0};xLeave()}else xJoin(ls,i)};w.append(cp,b);el.appendChild(w)}
  if(n<XN){const more=elT("button","btn g","참가 자리 "+Math.min(X_PAGE,XN-n)+"개 더 열기 ("+n+"/"+XN+")");more.type="button";more.onclick=xMore;el.appendChild(more)}
  else el.appendChild(elT("p","hint","참가 자리 "+XN+"개를 모두 열고 있다."))}
-/* 서버 타임스탬프로 자리를 쓴다. set 이 예외 없이 끝나면 성공(재쓰기 안 함).
+/* 자리 쓰기: rooms/xm{묶음}_e{번호}/{uid} ← me() 본문 + jt 서버 시각.
+   권장 전투력 자체는 올리지 않는다. 개인 전투력 p(및 깃발·특성·무기…)만 올리고,
+   출발 시 서버가 파티 p 로 권장·기준치(battleT)를 계산한다(functions/sim/engine.js).
    flush 는 set 실패로 pend 가 남은 경우에만 다시 올린다. */
 async function xSeatWrite(s,i,body){await DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET)}
 async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("장기 토벌을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}
@@ -130,6 +132,7 @@ async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo
  const party=xParty(x,xFace(x));
  if(party.includes(UID)){C.mj={id:x.id,s,i,T0:x.T0};if(C.ms===x.id)delete C.ms;xPh="";save();drawXAll();xSay(x.nm+" 출정에 이미 참가해 있다. "+xHM(x.T0)+"에 출발한다.");return}
  if(party.length>=XMAX)return xSay("정원이 찼다.",1);
+ /* me0.p = 참가 순간 pw(). 이후 강화·레벨업은 이 자리 기록에 자동 반영되지 않는다. */
  const job=++xJob,me0=me(),body=Object.assign({},me0,{jt:{".sv":"timestamp"}});C.mj={id:x.id,s,i,T0:x.T0,pend:1};if(C.ms===x.id)delete C.ms;xGone=mj?{s:mj.s,i:mj.i,till:Date.now()+X_NET}:null;
  xPend={s,i,id:x.id,body,prev:mj?{s:mj.s,i:mj.i}:null,prevGone:!mj};
  if(xS===s){if(mj&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];(xSnap["e"+i]=xSnap["e"+i]||{})[UID]=Object.assign({},me0,{jt:Math.min(xNow(),xCloseAt(x))});xTake.k=""}

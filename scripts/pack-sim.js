@@ -1,8 +1,10 @@
 /* 배포 직전에 서버 계산용 표를 만든다. firebase deploy 가 이 스크립트를 실행한다.
    사건 글·효과: data/events/common.js, village.js, solo.js 를 고친다. 이 스크립트가 그 파일 전체를 복사한다.
-   판정 문장·경험치·절망도(BJ), 대성공 폭(BJ_SOFT·BJ_LOW·BJ_HARD), 권장 전투력(BT_*), 땅 보정(EARTH_P), 낫(SCY_CRIT),
+   판정 문장·경험치·절망도(BJ), 대성공 폭(BJ_SOFT·BJ_LOW·BJ_HARD), 권장 전투력(BT_BASE·BT_STEP·BT_K), 땅 보정(EARTH_P), 낫(SCY_CRIT),
    고독 배율(SOLO_*), 선택 시간(CHOICE_MS), 문장 간격(XSTEP), 출정 간격(XS·XN·XCLOSE·XMAX), 위험도(XDF), 마을 이름(VLN):
-   아래 상수 묶음을 고친다. data/game.js 의 같은 숫자는 화면용이라, 출정 결과를 바꾸려면 여기도 같이 고친다.
+   아래 상수 묶음을 고친다. data/game.js·js/room.js 의 같은 숫자는 화면·클라 미리보기용이라, 출정 결과를 바꾸려면 여기도 같이 고친다.
+   권장 식(2026-11): round(57×i×(df×(0.95−0.1×i))+15×df×(randbetween(7,17)×0.1)). 구식 (BT_BASE+BT_STEP×i)×df.
+   기준치 T=round(50+BT_K×(파티P/권장−1)) → functions/sim/engine.js battleT.
    불굴·번뜩임·예민함처럼 계산 중간의 특성 규칙은 functions/sim/engine.js.
    functions/sim/tables.js 는 결과물이므로 직접 고치지 않는다. */
 const fs = require("fs");
