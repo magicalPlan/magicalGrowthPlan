@@ -172,7 +172,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -614,7 +614,8 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
   if(typeof relSection==="function")relSection(b,p,uid);
   // 운영자에게만: 이 사람의 계정 아이디(uid)를 보여 주고 복사할 수 있게 한다(복구·지급 작업용).
   if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사");cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp);b.appendChild(ub)}
-  frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}},
+  /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
+  Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
   e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
 $("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null};
 $("#pfo").onclick=e=>{if(e.target===$("#pfo"))$("#pfc").click()};
