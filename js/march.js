@@ -1,6 +1,7 @@
 /* 정기 출정. main.js 다음에 불러야 한다. 5분마다 열리는 출정, 참가, 자동 출발, 선택, 결과.
    목록은 매지컬 마치 화면(v-rooms)에서만 본다. 목록 칸이 펼쳐져 보일 때만 참가 자리(rooms/xm)를 연결로 지킨다.
-   묶음(xm{s}_) 전체를 live 한 줄로 받고, 화면에는 정렬된 앞쪽부터 5개씩(최대 15)만 그린다.
+   화면·구독 모두 정렬(기본=인덱스 / 높은 등급 / 낮은 등급) 앞쪽 xShowN(기본 5)칸만.
+   구독은 자리 doc live 여러 개(보이는 칸 + 내가 참가한 칸). 묶음 prefix 전체 live 는 쓰지 않는다.
    접히거나 화면을 벗어나면 끊는다. 마을에는 목록을 두지 않는다. 끝난 방은 서버 함수가 지운다. */
 const isAbyss = (s,i) => i === ( (s % XN) + XN) % XN || (s % 2 === 0 && i === ( (s + 5) % XN + XN) % XN);
 
@@ -56,11 +57,10 @@ const xCdTxt = () => {
    const x = xInfo(xLs(), 0);
    return "다음 출발 " + xHM(x.T0) + " · 참가 마감까지 " + xFmt(x.close-xNow())
 };
-let xSnap = {}, xS = -1, unX = null, xPoll = null, XR = null, xAuto = "", xPh = "", xChK = "", xMyV = null, xJob = 0, xGone = null, xPend = null, xMine = null, xShowN = 5, xSort = "def", xWatchKey = "";
+let xSnap = {}, xS = -1, unX = null, xPoll = null, xPolls = null, XR = null, xAuto = "", xPh = "", xChK = "", xMyV = null, xJob = 0, xGone = null, xPend = null, xMine = null, xShowN = 5, xSort = "def", xWatchKey = "";
 
 /* 목록 칸(#xbox)이 펼쳐져 보일 때만 참가 자리 xm 을 연결로 지킨다.
-   묶음 prefix(xm{s}_) 한 live 로 모든 자리 인원을 받는다(자리마다 EventSource 를 열지 않는다).
-   live 가 거절되면 같은 묶음을 POLL_FAST 간격으로 묻고, 연결이 되면 다시 푸시로 돌아온다.
+   보이는 자리(정렬 앞 xShowN)와 내 참가 자리만 doc live. live 거절 시 그 칸만 POLL_FAST.
    접히거나 매지컬 마치를 벗어나면 끊는다. 참가·취소는 서버 응답을 기다리지 않고 화면부터 고친다.
    xGone 은 방금 빠진 자리다. 서버 목록이 아직 나를 안고 있어도 화면에서는 뺀다. */
 const X_PAGE = 5;
@@ -88,19 +88,17 @@ function xWatchSlot () {
    return !$("#v-xm").hidden && C && C.mj && !(XR && XR.id === C.mj.id && XR.pl) ? C.mj.s : xLs()
 }
 
-// xPoll() 변수를 함수 처럼 호출. xPoll에는 구독 해제 함수가 들어감. 에러가 나도 정리 계속. watchX가 구독을 엶
-/**
- * xPoll()로 EventSource/폴링 연결 종료, 지금 감시 중 표시 제거.
- */
-function stopX () {
-   if (xPoll) {
-      try {
-         xPoll()
-      } catch (e) { } xPoll = null
-   }
-   unX = null;
-   xWatchKey = ""
-}
+/* 자리 live 구독 전부 끊기. xPolls 에 해제 함수가 들어 있다. */
+function stopX(){
+ if(xPolls){xPolls.forEach(u=>{try{u()}catch(e){}});xPolls=null}
+ if(xPoll){try{xPoll()}catch(e){}xPoll=null}
+ unX=null;xWatchKey=""}
+/* 지금 화면에 그릴·구독할 자리 번호. xOrdered(기본·높은·낮은) 앞 xShowN개 + 같은 묶음에 내가 참가한 칸. */
+function xVisibleIdx(ls){
+ const n=Math.min(XN,Math.max(X_PAGE,xShowN)),seen={},out=[];
+ xOrdered(ls).slice(0,n).forEach(i=>{if(seen[i])return;seen[i]=1;out.push(i)});
+ if(C&&C.mj&&Number(C.mj.s)===Number(ls)){const i=Number(C.mj.i);if(Number.isFinite(i)&&i>=0&&i<XN&&!seen[i])out.push(i)}
+ return out}
 
 function xOrdered (ls) {
    const a = Array.from({ length : XN}, ( _ , i) => i );
@@ -115,14 +113,19 @@ function xOrdered (ls) {
 }
 
 function xSetSort(k){if(k!=="def"&&k!=="hi"&&k!=="lo")return;if(xSort===k)return;xSort=k;xShowN=X_PAGE;try{localStorage.setItem("mgr_xsort",k)}catch(e){}if(xListOpen())watchX();drawXAll()}
-function xMore(){if(xShowN>=XN)return;xShowN=Math.min(XN,xShowN+X_PAGE);drawXAll()}
+function xMore(){if(xShowN>=XN)return;xShowN=Math.min(XN,xShowN+X_PAGE);if(xListOpen())watchX();drawXAll()}
 /* 매지컬 마치 목록 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다. 펼칠 때만 참가 자리를 지킨다. */
 function xFold(open){const b=$("#xtog"),box=$("#xbox");if(!b||!box)return;if(open)xClock();box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_xopen",open?"1":"0")}catch(e){}
  if(open){xShowN=X_PAGE;xWatchKey="";if(!$("#v-rooms").hidden)watchX();drawXAll()}else{stopX();xS=-1}}
+/* 한 번 읽기(재참가 등)용. 구독 경로가 아닌 grab 결과를 xSnap 에 반영한다. */
 function xTake(s,docs){const o={};(docs||[]).forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});
  if(xGone){const seat=o["e"+xGone.i];if(!seat||!seat[UID]||Date.now()>xGone.till)xGone=null}
  if(!unX||xS===s){xS=s;xSnap={};Object.keys(o).forEach(k=>xSnap[k]=o[k])}xBindFrom(s,xSnap);
  const k=s+"|"+JSON.stringify(xSnap);if(xTake.k===k)return;xTake.k=k;drawXAll();if(!$("#v-xm").hidden)xRender()}
+/* 자리 live 한 칸이 바뀌면 xSnap 만 고치고 목록을 다시 그린다(다른 칸은 유지). */
+function xSnapPaint(s){
+ if(xGone){const seat=xSnap["e"+xGone.i];if(!seat||!seat[UID]||Date.now()>xGone.till)xGone=null}
+ xBindFrom(s,xSnap);const k=s+"|"+JSON.stringify(xSnap);if(xTake.k===k)return;xTake.k=k;drawXAll();if(!$("#v-xm").hidden)xRender()}
 async function xGrab(s){try{return await DB.collection("rooms").prefix("xm"+s+"_").grab()}catch(e){const docs=[];
  await Promise.all(Array.from({length:XN},(_,i)=>DB.doc(xSeat(s,i)).get().then(sn=>{if(sn.exists&&sn.data())docs.push({id:"xm"+s+"_e"+i,data:()=>sn.data()})}).catch(()=>{})));return {docs}}}
 async function xPull(s){if(!XON())return;if(s==null)s=xLs();try{const sn=await xGrab(s);if(xS===s||!unX)xTake(s,sn.docs)}catch(e){}}
@@ -130,11 +133,18 @@ function xRemember(id,m){const k=id+"|"+JSON.stringify(m||{});if(xRemember.k===k
 async function xMinePull(){const j=C&&C.mj;if(!j||!XON()||(XR&&XR.id===j.id&&XR.pl)){xMine=null;xRemember.k="";return}
  if(xS===j.s){xMine={id:j.id,m:xSnap["e"+j.i]||{}};return}
  try{const sn=await DB.doc(xSeat(j.s,j.i)).get();if(!C||!C.mj||C.mj.id!==j.id)return;xRemember(j.id,sn.exists?sn.data()||{}:{})}catch(e){}}
-/* 묶음 한 live. 인원 변동은 put/patch 로 바로 오고, 거절 시에만 POLL_FAST 묻기로 내려간다. */
-function watchX(s){if(s==null)s=xLs();if(!XON())return;xClock();const key=String(s);if(unX&&xWatchKey===key)return;
- const prev=xS;stopX();if(prev!==s){xSnap={};xTake.k=""}xS=s;xWatchKey=key;
- const apply=sn=>{if(xS!==s)return;xTake(s,sn.docs||[]);if(C&&C.mj&&C.mj.s!==s)xMinePull()};
- xPoll=DB.collection("rooms").prefix("xm"+s+"_").live().onSnapshot(apply,()=>{},POLL_FAST);unX=()=>{stopX()}}
+/* 보이는 자리(+내 참가)만 doc live. 정렬·더 보기가 바뀌면 xWatchKey 가 달라져 다시 연다. */
+function watchX(s){if(s==null)s=xLs();if(!XON())return;xClock();
+ const idxs=xVisibleIdx(s),key=s+"|"+xSort+"|"+xShowN+"|"+idxs.join(",");
+ if(unX&&xWatchKey===key)return;
+ const prev=xS;stopX();
+ if(prev!==s){xSnap={};xTake.k=""}
+ else{const keep={};idxs.forEach(i=>keep["e"+i]=1);Object.keys(xSnap).forEach(k=>{if(!keep[k])delete xSnap[k]})}
+ xS=s;xWatchKey=key;
+ xPolls=idxs.map(i=>DB.doc(xSeat(s,i)).live().onSnapshot(sn=>{
+  if(xS!==s)return;xSnap["e"+i]=sn.exists&&sn.data()&&typeof sn.data()==="object"?sn.data():{};
+  xSnapPaint(s);if(C&&C.mj&&C.mj.s!==s)xMinePull()},()=>{},POLL_FAST));
+ unX=()=>{stopX()}}
 /* 서버 자리에 내가 있으면 창을 닫았다가 켜도 그 출정으로 다시 묶는다. 정원 7명 안에 든 사람만 묶는다. */
 function xBindFrom(s,o){if(!C||C.mj||!o||!UID)return false;const now=xNow();
  for(let i=0;i<XN;i++){const x=xInfo(s,i);if(C.ms===x.id)continue;if(XR&&XR.id===x.id&&(XR.fin||XR.gone))continue;if(xGone&&xGone.s===s&&xGone.i===i&&now<xGone.till)continue;if(now>=x.T0+X_RUN_MAX)continue;
