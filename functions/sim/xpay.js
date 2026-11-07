@@ -2,9 +2,10 @@
    · 호출: index.afterExpeditionDone → grantMarchCore.
    · 산식: corePay + account/boost.marchSide(절망 raw·보정 포함).
    · 기록: rooms/xr…/pay/{uid} 영수증 → account.applyMarchPay(accounts/{uid}).
-   · 클라: js/march.js xGrant 가 settle(serverPay:true, pay) 만 호출. gain·절망 재계산 금지.
+   · 클라: js/march.js xGrant 가 settle(serverPay:true, pay) 만 호출. gain·절망·note("march") 재기록 금지.
+   · 알림: 지급 성공 시 applyMarchPay 가 accounts/…/c/nt 에 march 한 줄(서버 권위).
    · 멱등: pay.ok + accounts/…/xpay/{grantKey}. 같은 출정을 두 번 올리지 않는다.
-   배포: 신클라(serverPay) 먼저 → Functions. */
+   배포: 신클라(serverPay·클라 march note 제거) 먼저 → Functions. */
 const acc = require("../account");
 
 const SOLO_M = 1, SOLO_RW_G = 40;
@@ -112,9 +113,17 @@ async function grantMarchCore(db, s, i, doc) {
     } catch (e) { continue; }
     if (!claimed) continue;
     /* 계정 지급이 성공한 뒤에는 pay 를 지우지 않는다(영수증 xpay 로 이중 지급 방지, ok:1 만 재시도). */
+    const payBits = [
+      amt.g > 0 ? "골드 +" + Math.floor(amt.g) : "",
+      amt.ex > 0 ? "경험치 +" + Math.floor(amt.ex) : "",
+      amt.dz ? ("절망도 " + (Number(amt.dz) > 0 ? "+" : "") + Math.round(Number(amt.dz) || 0)) : ""
+    ].filter(Boolean).join(" · ");
+    const noteText = (doc.r.ok ? "토벌 성공" : "토벌 실패")
+      + " · 전투 " + (Number(doc.r.total) || 0) + "번 · 파티 " + ids.length + "명"
+      + (payBits ? " · " + payBits : "");
     let applied = false;
     try {
-      applied = !!(await acc.applyMarchPay(db, uid, amt, grantKey));
+      applied = !!(await acc.applyMarchPay(db, uid, amt, grantKey, noteText));
       if (!applied) { await payRef.set(null); continue; }
       await payRef.update({ok: 1});
     } catch (e) {

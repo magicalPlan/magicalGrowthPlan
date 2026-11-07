@@ -173,7 +173,7 @@
       전투 기록은 각자 자기 자리만 rooms/xm{묶음}_e{번호}/{나}에 남긴다. 마을 목록은 rooms/xn{묶음}_e{번호}/{나}에 이름과 참가 시각만 두고, 그 가벼운 기록만 연결한다.
       화면 참가·취소는 마감(출발 2분 전)까지다. 서버만 마감 후 X_JOIN_GRACE(5초)까지 찍힌 jt 를 파티에 넣어, 시계·전송 지연으로 마감 직후 찍힌 참가를 빈 파티로 버리지 않는다.
       전투와 이벤트는 서버 함수가 출정 번호를 씨앗으로 계산해 rooms/xr{묶음}_{번호}에 남긴다.
-      서버 지급(Functions/account + sim/xpay): done 시 아래를 accounts 작은 경로 PATCH + rooms/xr…/pay/{uid} 원장 1회.
+      서버 지급(Functions/account + sim/xpay): done 시 accounts 작은 경로 PATCH + rooms/xr…/pay/{uid} 원장 1회 + c/nt 보상 알림(클라 note 금지).
         · 경제: gd/ex/cl/prog · 재료·단서 · 절망(dz)
         · fx: mm/gi/tc/rb/wa/wp/dh
         · 소모: 부적·깃발·지도·출정 스킬(arm 해제·sk.used)

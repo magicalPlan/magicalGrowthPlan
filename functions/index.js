@@ -102,8 +102,9 @@ function xDropAt(doc, now) {
 }
 /* 출정 done 직후·이미 done 재방문.
    · 여기서만 계정 보상(골드·경험·절망·재료·소모·펫)을 쓴다 → grantMarchCore.
-   · 클라는 settle(serverPay) 로 문구·통계만. 클라가 gain/절망 산식을 돌리면 이중 반영.
-   · xdrop 예약과 지급은 같이. 배포: 신클라(serverPay) 먼저 → Functions. */
+   · 클라는 settle(serverPay) 로 결과 HTML·통계만. gain/절망/note("march") 금지(이중·가짜 오류 알림).
+   · 보상 알림은 applyMarchPay → c/nt. xdrop 예약과 지급은 같이.
+   · 배포: 신클라(클라 march note 제거) 먼저 → Functions. */
 async function afterExpeditionDone(db, s, i, doc, now) {
   if (!doc || !doc.done) return;
   await scheduleXDrop(db, s, i, xDropAt(doc, now));

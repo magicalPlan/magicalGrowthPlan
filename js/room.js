@@ -170,7 +170,8 @@ function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(
    serverPay===true (방어)
    · 하지 않음: gain(경험·절망), 골드/토벌/재료/펫/알 가산, 부적·깃발·지도·스킬 소모.
      → Functions applyMarchPay 가 이미 accounts 에 썼다. 여기서 다시 돌리면 절망이 두 번 오른다.
-   · 함: 통계·칭호·도감·결과 HTML·노트. pay 가 있으면 서버 영수증 숫자를 문구에만 옮긴다(재계산 금지).
+   · 함: 통계·칭호·도감·결과 HTML. pay 가 있으면 서버 영수증 숫자를 문구에만 옮긴다(재계산 금지).
+   · note("march"): serverPay 면 넣지 않음. 보상 알림은 Functions applyMarchPay → c/nt.
    opt.pay: rooms/xr…/pay/{uid}. 없으면 "서버에서 반영" 안내만. */
 function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||null;if(C.last===r.code+r.seq.length)return "";C.last=r.code+r.seq.length;let out="";const v=VL[C.v],m=(Object.keys(r.pl).length===1&&r.solo?SOLO_M:([0,.6,.7,.8,.87,.93,.97,1][Object.keys(r.pl).length]||1))*(r.rw||1);
    const mine=r.pl[UID]||{},used=[],msk=mine.sk||[],dkz=msk.includes("dark")?6:0,wtz=r.wsk?5:0;
@@ -220,7 +221,7 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
     if(!serverPay)C.gd=(C.gd||0)+5;{const dzAmt=serverPay?0:cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
    /* xe/xz 는 !serverPay 의 fx.wp·dh 에서만 채워진다. serverPay 면 여기 gain 도 no-op. */
    if(xe||xz)gain(xe,xz);checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}
-   {const payBits=serverPay&&pay?[pay.g>0?"골드 +"+Math.floor(Number(pay.g)||0):"",pay.ex>0?"경험치 +"+Math.floor(Number(pay.ex)||0):"",pay.dz?("절망도 "+(Number(pay.dz)>0?"+":"")+Math.round(Number(pay.dz)||0)):""].filter(Boolean).join(" · "):"";
-    note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+(payBits?" · "+payBits:(r.gx?" · 이벤트 골드 +"+r.gx:"")))}
+   /* 로비/로컬 방만 클라가 march 알림. 매지컬 마치(serverPay)는 서버 c/nt. */
+   if(!serverPay){const payBits=r.gx?" · 이벤트 골드 +"+r.gx:"";note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+payBits)}
    guardAdd(r.ok?Math.round(10*(r.rw||1)):2);out+="<p><strong>"+(r.ok?"토벌 횟수가 늘었다.":"절망도가 올랐다.")+"</strong></p>"+(used.length?"<p>사용한 아이템·마법: "+used.join(", ")+(ch?" (절망도 상승이 절반으로 줄었다)":"")+"</p>":"");return out}
 

@@ -177,10 +177,13 @@ function xReplay(X){const x=X.x,r={code:x.id,pl:{},total:x.total,seq:[],evs:[],d
  const lineAt=j=>x.T0+(j+1)*XSTEP+CHOICE_MS*L.filter(l=>l<=j).length;
  return{r,wait,lineAt,done:!!r.fin&&!wait,endAt:lineAt(Math.max(0,r.seq.length-1))+800}}
 /* lock=true(기본): 의도 퇴장·확정 실패. C.ms·XR.gone 으로 같은 출정 재바인딩을 막는다.
-   lock=false: 일시 실패(xr 미수신·한도 초과). C.ms 를 남기지 않고 XR 을 비워, 서버 자리가 있으면 다시 묶이게 한다. */
+   lock=false: 일시 실패(xr 미수신·한도 초과). C.ms 를 남기지 않고 XR 을 비워, 서버 자리가 있으면 다시 묶이게 한다.
+   알림함 note("march") 는 쓰지 않는다. 보상 알림은 서버 지급(c/nt)만. 미수신은 화면만 접고 재연결. */
 function xAbandon(why,lock){if(!C)return;const hold=lock!==false,j=C.mj;if(j&&xPend&&xPend.id===j.id)xPend=null;C.mj=null;
  if(hold){if(j)C.ms=j.id;if(XR){XR.gone=1;XR.why=why}}else XR=null;
- stopXr();save();note("march",why);drawXAll();xSay(why,1);
+ stopXr();save();drawXAll();
+ /* 확정 실패(빈 파티·자리 누락)만 화면 문구. 미수신·한도는 알림·오류 문구 없이 재연결. */
+ if(hold)xSay(why,1);
  if(j){xAuto=j.id;if(hold&&XON()&&xNow()<Number(j.T0))DB.doc(xSeat(j.s,j.i)+"/"+UID).delete().catch(()=>{});if(!hold){try{xRejoin()}catch(e){}}}}
 function xWhyFetch(x,late){const waitM=Math.max(1,Math.round(X_FETCH_GIVEUP/60000)),lateS=Math.max(0,Math.round((late||0)/1000));
  return x.nm+" 출정 결과 방(xr)을 출발 후 "+waitM+"분 안에 받지 못했다(원인: 서버 기록 미생성 또는 수신 실패, 대기 "+lateS+"초). 서버 자리는 유지되니 마을·목록에 다시 들어오면 묶일 수 있다."}
@@ -243,12 +246,12 @@ function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc
  if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
  xGrant(x)}
 /* 매지컬 마치 결과 반영(방어).
-   · 권한: 골드·경험·절망·재료·소모·펫은 Functions 만 계정에 쓴다(afterExpeditionDone → grantMarchCore → applyMarchPay).
-   · 클라: settle(…, {serverPay:true}) 로 통계·칭호·결과 문구만. gain()/절망 산식은 돌리지 않는다.
+   · 권한: 골드·경험·절망·재료·소모·펫·보상 알림(c/nt)은 Functions 만(afterExpeditionDone → grantMarchCore → applyMarchPay).
+   · 클라: settle(…, {serverPay:true}) 로 통계·칭호·결과 HTML만. gain()/절망/note("march") 금지.
    · 왜: 결과 기록(xr)은 endAt 보다 먼저 오고, 서버는 done 직후 이미 지급한다. serverPay 없이 settle 하면
      연출 중 동기화로 한 번, 종료 settle 로 또 한 번 절망이 오른다.
    · pay: rooms/xr…/pay/{uid} 영수증. 있으면 문구에 서버가 준 양을 그대로 적는다(클라 재계산 금지).
-   · accSyncIfNewer: 서버 ts 가 앞서 있으면 저장 전에 맞춘다. 옛 절망도로 PATCH 해 서버 지급을 덮지 않게. */
+   · accSyncIfNewer: 서버 ts 가 앞서면 저장 전에 맞춘다(알림함·수치). */
 function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||xNow()<Number(doc.endAt))return;
  const pay=doc.pay&&UID&&doc.pay[UID]?doc.pay[UID]:null;
  let h="";try{h=settle(doc.r,{serverPay:true,pay})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
