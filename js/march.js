@@ -145,14 +145,21 @@ async function xRejoin(){if(!C||C.mj||!XON()||!UID)return;const now=xNow(),base=
 function xMsClear(){if(!C||!C.ms)return;const m=String(C.ms).match(/^x(\d+)_\d+$/);if(m&&xNow()<(Number(m[1])+1)*XS+X_RUN_MAX)return;delete C.ms;save()}
 function xSig(){return (xTake.k||"")+"|"+(xRemember.k||"")+"|"+(xPh||"")+"|"+xSort+"|"+xShowN}
 
-// drawX / drawXAll #rl에 elt로 행/버튼 붙임
-function drawXAll () {
-   const sig = xSig(), el = $("#rl");
-   if (!el || el.closest("[hidden]")) return;
-   if (el.dataset.xs === sig && el.childElementCount) return;
-   el.dataset.xs = sig;
-   drawX(el)
+/* 정기 출정 목록 HTML.
+   drawXAll: #rl 이 보이면 서명(xSig)이 바뀌었을 때만 drawX 를 다시 부른다.
+   drawX: #rl 안을 비우고 카운트다운·정렬·참가 중 카드·자리 행·더 보기를 elT 로 붙인다.
+   자리 데이터(me)와 무관 — 화면만 그린다. */
+function drawXAll(){
+ const sig=xSig(),el=$("#rl");
+ if(!el||el.closest("[hidden]"))return;
+ if(el.dataset.xs===sig&&el.childElementCount)return;
+ el.dataset.xs=sig;
+ drawX(el)
 }
+/* 목록 행 제목 옆 권장 전투력 하한. 성급 d=1~4(심연). 실제 판정 기준치는 파티 평균·battleT. */
+function xRecLo(d){d=Number(d)||1;return d>=4?(typeof ABYSS_MIN==="number"?ABYSS_MIN:450):d===3?300:d===2?150:0}
+function xRecTxt(d){return "권장 전투력 ( "+xRecLo(d)+" ~ )"}
+function xTitle(x){const ab=x.d===4,b=elT("b","xm-title");b.append(document.createTextNode((ab?"🜏 ":"")+x.nm+" "),elT("small","xm-rec",xRecTxt(x.d)));return b}
 
 function xSeatMap(x){if(xS===x.s)return xSnap["e"+x.i]||{};if(xMine&&xMine.id===x.id&&xMine.m)return xMine.m;return null}
 function xFace(x){return xOverlay(x,xSeatMap(x)||{})}
@@ -165,16 +172,19 @@ function xErrKind(e){const name=e&&e.name,m=String(e&&e.message||"");if(m==="tim
 const xDown=e=>{const c=xErrKind(e);return c==="timeout"||c==="offline"};
 function xNetWhy(e,ms){const c=xErrKind(e);if(c==="timeout")return "서버 응답이 "+Math.round((ms||20000)/1000)+"초 안에 오지 않았다.";if(c==="offline")return "네트워크에 연결되지 않았다.";if(c==="401")return "로그인이 만료되었다. 새로고침한 뒤 다시 로그인해 보자.";if(c==="403")return "서버가 기록을 거절했다. 위쪽 로그인 경고가 있으면 그 안내를 먼저 해결해야 한다.";if(c==="400")return "서버가 기록 형식을 거절했다.";if(c==="404")return "서버에서 출정 자리 주소를 찾지 못했다.";if(c==="412")return "다른 기록과 겹쳐 서버가 저장을 거절했다.";if(c==="413")return "참가 기록이 너무 커서 서버가 거절했다.";if(/^\d{3}$/.test(c))return "서버가 오류 코드 "+c+"로 응답했다.";const raw=String(e&&e.message||"").replace(/\s+/g," ").slice(0,80);return raw?raw:"원인을 확인하지 못했다."}
 function xJoinWhy(e,dropped){const lost=dropped?"이전 출정 자리는 지워졌고, ":"";return lost+"참가하지 못했다. "+xNetWhy(e,X_NET)+(xErrKind(e)==="401"?"":" 잠시 뒤에 다시 시도해 보자.")}
+/* 매지컬 마치 #rl 목록 DOM. 인자 el 은 보통 #rl.
+   위: 마감 안내·정렬 칩. 있으면 내가 참가 중인 카드. 아래: 지금 묶음 자리 행(제목+권장 전투력·별·인원·참가 버튼). */
 function drawX(el){el.innerHTML="";if(!C)return;
  if(!XON()){el.innerHTML="<p class='hint'>서버에 연결되어야 정기 출정에 참가할 수 있다.</p>";return}
  const now=xNow(),ls=xLs(),mj=C.mj,ord=xOrdered(ls),n=Math.min(XN,Math.max(X_PAGE,xShowN));
  el.appendChild(elT("p","x-cd",xCdTxt()));
  {const row=elT("div","row x-sort");[["def","기본"],["hi","높은 등급"],["lo","낮은 등급"]].forEach(([k,lab])=>{const b=elT("button","chip",lab);b.type="button";b.setAttribute("aria-pressed",xSort===k?"true":"false");b.onclick=()=>xSetSort(k);row.appendChild(b)});el.appendChild(row)}
  if(mj){const x=xInfo(mj.s,mj.i),m=xFace(x),ids=xParty(x,m),pend=!!(mj.pend||(xPend&&xPend.id===mj.id)),w=elT("div","xm on"),cp=elT("div","xm-copy"),b=elT("button","chip","보기");
-  cp.append(elT("b","","참가한 출정: "+x.nm),elT("small","",(now<x.T0?"출발 "+xHM(x.T0)+" · ":"")+xWho(ids,m)+(pend?" · 서버에 자리를 남기는 중":now<x.T0?" · 출발 시각에 자동으로 출발한다.":" · 출정 중이다.")));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
+  const tit=elT("b","xm-title");tit.append(document.createTextNode("참가한 출정: "+x.nm+" "),elT("small","xm-rec",xRecTxt(x.d)));
+  cp.append(tit,elT("small","",(now<x.T0?"출발 "+xHM(x.T0)+" · ":"")+xWho(ids,m)+(pend?" · 서버에 자리를 남기는 중":now<x.T0?" · 출발 시각에 자동으로 출발한다.":" · 출정 중이다.")));b.type="button";b.onclick=xView;w.append(cp,b);if(xQuitOpen(x)){const q=elT("button","chip","나가기");q.type="button";q.onclick=xQuit;w.appendChild(q)}el.appendChild(w)}
  for(let t=0;t<n;t++){const i=ord[t],x=xInfo(ls,i),m=xFace(x),ids=xParty(x,m),onSrv=ids.includes(UID)&&(!mj||mj.id===x.id),inI=!!(mj&&mj.id===x.id)||onSrv,full=ids.length>=XMAX&&!inI,lock=!!mj&&!inI&&mj.s!==ls;
   const ab=x.d===4,weak=ab&&pw()<ABYSS_MIN&&!inI,quit=inI&&xQuitOpen(x),late=now>=x.close,w=elT("div","xm"+(inI?" on":"")+(ab?" abyss":"")),cp=elT("div","xm-copy");
-  cp.append(elT("b","",(ab?"🜏 ":"")+x.nm),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · "+xWho(ids,m)));
+  cp.append(xTitle(x),elT("small","",XDF[x.d].n+(ab?" · 보상 2배 · 전투력 "+ABYSS_MIN+" 이상":"")+" · 전투 "+x.total+"번 · "+xWho(ids,m)));
   const b=elT("button","chip",quit?"나가기":inI?(late?"마감":"참가 취소"):full?"정원 마감":lock?"참가 불가":weak?"전투력 부족":mj?"이쪽으로 변경":"참가");b.type="button";b.disabled=quit?false:inI?late:full||lock||weak;b.onclick=()=>{if(quit){xQuit();return}if(inI){if(late)return;if(!(C.mj&&C.mj.id===x.id))C.mj={id:x.id,s:x.s,i:x.i,T0:x.T0};xLeave()}else xJoin(ls,i)};w.append(cp,b);el.appendChild(w)}
  if(n<XN){const more=elT("button","btn g","참가 자리 "+Math.min(X_PAGE,XN-n)+"개 더 열기 ("+n+"/"+XN+")");more.type="button";more.onclick=xMore;el.appendChild(more)}
  else el.appendChild(elT("p","hint","참가 자리 "+XN+"개를 모두 열고 있다."))}
