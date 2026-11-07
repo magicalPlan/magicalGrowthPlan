@@ -121,8 +121,12 @@ textarea::placeholder{color:#6f6785}
 @media (min-width:700px){main.xwide{max-width:1180px}}
 #v-shop .card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px}
 #v-shop .card h2{margin:0}
+/* 상점 아이템(#il): 가로로 칸이 늘어난다. 무기(#wl)는 아래 전용 규칙. */
 #v-shop .wgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-@media (min-width:1000px){#v-shop .wgrid{grid-template-columns:repeat(7,minmax(0,1fr))}#v-shop #il{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* 상점 무기(#wl): 좁으면 1열, 넓으면 2열. 칸 수는 JS가 아니라 CSS만으로 정한다. */
+#v-shop #wl{grid-template-columns:1fr;gap:10px}
+@media (min-width:700px){#v-shop #wl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1000px){#v-shop #il{grid-template-columns:repeat(5,minmax(0,1fr))}}
 #v-shop .chip.sq{min-height:118px}
 
 /* 마법 */
@@ -346,6 +350,8 @@ textarea::placeholder{color:#6f6785}
 .xm{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#1d1730,#151126);border:1px solid var(--ln);border-radius:10px;padding:9px 10px}
 .xm.on{border-color:#b89b5e;box-shadow:inset 3px 0 0 #b89b5e}
 .xm-copy{flex:1;min-width:0}.xm-copy b{display:block;font-size:.95rem}
+.xm-copy b.xm-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin-bottom:2px}
+.xm-copy .xm-rec{display:inline;font-weight:400;font-size:.56rem;color:var(--mu);letter-spacing:0}
 .xm-copy small{display:block;color:var(--mu);font-size:.76rem;overflow-wrap:anywhere}
 .xm button{flex:0 0 auto;min-width:76px;padding:8px 10px}
 .title-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;text-align:left}.title-card .title-copy{flex:1;min-width:0}.title-card strong{display:block;color:#e6d9b5}
