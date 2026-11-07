@@ -95,7 +95,7 @@ function arena(){show("arena");$("#dum").textContent="";devDraw();duDraw();duPol
 let duQ="",duFoc=false,duRulesOpen=false,duSig="";
 // 검색 결과만 다시 그린다(입력칸은 그대로 두어 글자를 치는 중에 끊기지 않게).
 function duFind(){const gl=$("#dusr");if(!gl||!C)return;gl.innerHTML="";const q=duQ.trim().toLowerCase();
- if(!q){gl.appendChild(elT("p","hint","찾고 싶은 마법소녀의 이름을 입력하자. 프로필 창의 '대련 신청'으로도 신청할 수 있다."));return}
+ if(!q){gl.appendChild(elT("p","hint","찾고 싶은 마법소녀의 이름을 입력하자."));return}
  if(!DUP.length){gl.appendChild(elT("p","hint","플레이어 목록을 불러오는 중…"));return}
  const hit=DUP.filter(p=>p.u!==UID&&String(p.n||"").toLowerCase().includes(q)).sort((a,b)=>(isOn(b)-isOn(a))||String(a.n||"").localeCompare(String(b.n||""),"ko")).slice(0,20);
  if(!hit.length){gl.appendChild(elT("p","hint","'"+duQ.trim()+"'(이)라는 이름을 찾지 못했다."));return}
