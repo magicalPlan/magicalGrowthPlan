@@ -5,21 +5,90 @@
 let room=null,code=null,unR=null,unL=null,tick=null;
 /* 자리 기록(참가 때 rooms/xm…/{uid} 에 set). p 는 개인 전투력(js/common/formula.js pw).
    서버 startExpeditionFromSeats 가 이 칸을 그대로 r.pl 에 넣고, 권장·판정은 p 평균으로 계산한다. */
-const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:(Array.isArray(C.a)?C.a:C.a?[C.a]:[]).join(""),g:C.g,t:C.t,p:pw(),v:C.v,f:armed("flag")?1:0,m:armed("map")?1:0,w:C.wp,sk:["water","wind","dark"].filter(armedSk),dz:C.dz||0});
-const rref=c=>DB.doc("rooms/"+c);
-const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.color="var(--bad)";$("#hm").textContent=t}};
+
+// 참가 자리 본문을 만드는 함수
+const me = () => ({
+   tw : facLv("tower"),
+   tn : tiName(C.ti),
+   n : C.n,
+   a : (Array.isArray(C.a) ? C.a : C.a ? [C.a] : []).join(""),
+   g : C.g,
+   t : C.t,
+   p : pw(),
+   v : C.v,
+   f : armed("flag") ? 1 : 0,
+   m : armed("map") ? 1 : 0,
+   w : C.wp,
+   sk : ["water", "wind", "dark"].filter(armedSk),
+   dz : C.dz || 0
+});
+
+const rref = c => DB.doc("rooms/" + c);
+const rmsg = t => {
+   $("#rm").textContent = t;
+   if (!$("#v-hub").hidden) {
+      $("#hm").style.color = "var(--bad)";
+      $("#hm").textContent=t
+   }
+};
+
 // 매지컬 마치(정기 출정) 화면. 마을 메뉴에서만 들어온다. 목록 칸이 펼쳐져 있을 때만 참가 자리를 지켜본다.
-const openRooms=()=>{if(C.fall)return($("#hm").style.color="var(--bad)",$("#hm").textContent="타락한 동안에는 출정할 수 없다.");if(C.dz>=90)return($("#hm").style.color="var(--bad)",$("#hm").textContent="절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");if(typeof clockSync==="function")clockSync();show("rooms");watchList()};
-$("#rb").onclick=()=>{unL&&unL();unL=null;if(typeof stopX==="function")stopX();hub()};
-function watchList(){rmsg("");if(!DB){rmsg("이 화면에서는 출정 목록을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");return}
- if(typeof xListOpen==="function"&&!xListOpen()){if(typeof stopX==="function")stopX();return}
- if(typeof xShowN==="number")xShowN=typeof X_PAGE==="number"?X_PAGE:5;if(typeof xWatchKey!=="undefined")xWatchKey="";
- if(typeof watchX==="function")watchX();if(typeof drawXAll==="function")drawXAll()}
+const openRooms = () => {
+   if (C.fall) return($("#hm").style.color = "var(--bad)", $("#hm").textContent = "타락한 동안에는 출정할 수 없다.");
+   if (C.dz >= 90) return($("#hm").style.color = "var(--bad)", $("#hm").textContent = "절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.");
+   if (typeof clockSync === "function") clockSync();
+   show("rooms");
+   watchList()
+};
+$("#rb").onclick = () => {
+   unL && unL();
+   unL = null;
+   if (typeof stopX === "function") stopX();
+   hub()
+};
+
+function watchList () {
+   rmsg("");
+   if (!DB) {
+      rmsg("이 화면에서는 출정 목록을 쓸 수 없다. 서버에 연결해 로그인해야 한다.");
+      return
+   }
+   if (typeof xListOpen === "function" && !xListOpen()) {
+      if (typeof stopX === "function") stopX();
+      return
+   }
+   if (typeof xShowN === "number") xShowN = typeof X_PAGE === "number" ? X_PAGE : 5;
+   if (typeof xWatchKey !== "undefined") xWatchKey = "";
+   if (typeof watchX === "function") watchX();
+   if (typeof drawXAll === "function") drawXAll()
+}
+
 /* 죽은 경로(화면에서 안 부름). html/march/rooms.html 에서 4글자 방 만들기·코드 입장 칸을 뺀 뒤로는
    mk·join 을 누르는 버튼이 없다. enter 이하는 예전에 만든 방이 아직 있을 때만 이어질 수 있다. */
-async function mk(pub){if(!DB)return rmsg("방 기능을 쓸 수 없다.");const c=Math.random().toString(36).slice(2,6).toUpperCase();
- const r={code:c,pub,host:UID,st:"lobby",pl:{[UID]:me()},rd:{[UID]:true},seq:[],step:0,ok:true,ev:0,total:3+R(3),ts:Date.now()};
- try{await rref(c).set(r);enter(c)}catch(e){rmsg("방을 만들지 못했다.")}}
+async function mk (pub) {
+   if (!DB) return rmsg("방 기능을 쓸 수 없다.");
+   const c = Math.random().toString(36).slice(2,6).toUpperCase();
+   const r = {
+      code : c,
+      pub,host : UID,
+      st : "lobby",
+      pl : {[UID] : me()},
+      rd : {[UID]:true},
+      seq : [],
+      step : 0, 
+      ok : true, 
+      ev : 0, 
+      total : 3 + R(3), 
+      ts : Date.now()
+   };
+   try {
+      await rref(c).set(r);
+      enter(c)
+   } catch (e) {
+      rmsg("방을 만들지 못했다.")
+   }
+}
+
 async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");c=String(c||"").trim().toUpperCase();if(c.length!==4)return rmsg("코드는 4자다.");
  try{const s=await rref(c).get();if(!s.exists)return rmsg("그런 방이 없다.");const r=s.data()||{};r.seq=r.seq||[];r.rd=r.rd||{};r.pl=r.pl||{};
   if((r.st==="done"||r.st==="run")&&roomStale(r,Date.now())){await rref(c).delete().catch(()=>{});return rmsg("끝난 출정 방이라 정리했다. 다시 참가할 수 있다.")}

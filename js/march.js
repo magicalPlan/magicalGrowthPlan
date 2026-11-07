@@ -37,33 +37,83 @@ function xInfo (s, i) {
    return{id, s, i, v, d, nm : ab ? ABYSS_PL[((s + (i === ((s % XN) + XN) % XN ? 0 : 2)) % ABYSS_PL.length + ABYSS_PL.length) % ABYSS_PL.length] : VL[v].n + " " + pl, total : ab ? 5 : t, T0 : (s + 1) * XS, close : (s+1) * XS - XCLOSE
    }
 }
-const xSlot=()=>Math.floor(xNow()/XS);
+const xSlot = () => Math.floor(xNow() /XS);
 // 지금 참가할 수 있는 출정 묶음(마감이 지나면 다음 묶음). 유예는 서버 집계·미반영 쓰기용.
-const xLs=()=>{const s=xSlot();return xNow()>=(s+1)*XS-XCLOSE?s+1:s};
-const jtOf=v=>typeof(v&&v.jt)==="number"?v.jt:0;
-const xParty=(x,m)=>Object.keys(m||{}).filter(u=>m[u]&&typeof m[u]==="object"&&jtOf(m[u])<=xCloseAt(x)).sort((a,b)=>jtOf(m[a])-jtOf(m[b])||(a<b?-1:1)).slice(0,XMAX);
-const xFmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
-const xHM=d=>{const t=new Date(d);return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
-const xCdTxt=()=>{const x=xInfo(xLs(),0);return "다음 출발 "+xHM(x.T0)+" · 참가 마감까지 "+xFmt(x.close-xNow())};
-let xSnap={},xS=-1,unX=null,xPoll=null,XR=null,xAuto="",xPh="",xChK="",xMyV=null,xJob=0,xGone=null,xPend=null,xMine=null,xShowN=5,xSort="def",xWatchKey="";
+const xLs = () => {
+   const s = xSlot();
+   return xNow() >= (s + 1) * XS-XCLOSE ? s+1 : s};
+const jtOf = v => typeof(v && v.jt) === "number" ? v.jt : 0;
+const xParty = (x, m) => Object.keys(m || {}).filter(u => m[u] && typeof m[u] === "object" && jtOf(m[u]) <= xCloseAt(x)).sort((a, b) => jtOf(m[a]) - jtOf(m[b]) || (a< b ? -1 : 1)).slice(0, XMAX);
+const xFmt = ms => {
+   const t = Math.max(0, Math.ceil(ms / 1000));
+   return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0")
+};
+const xHM = d => {
+   const t = new Date(d);
+   return String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0")
+};
+const xCdTxt = () => {
+   const x = xInfo(xLs(), 0);
+   return "다음 출발 " + xHM(x.T0) + " · 참가 마감까지 " + xFmt(x.close-xNow())
+};
+let xSnap = {}, xS = -1, unX = null, xPoll = null, XR = null, xAuto = "", xPh = "", xChK = "", xMyV = null, xJob = 0, xGone = null, xPend = null, xMine = null, xShowN = 5, xSort = "def", xWatchKey = "";
+
 /* 목록 칸(#xbox)이 펼쳐져 보일 때만 참가 자리 xm 을 연결로 지킨다.
    묶음 prefix(xm{s}_) 한 live 로 모든 자리 인원을 받는다(자리마다 EventSource 를 열지 않는다).
    live 가 거절되면 같은 묶음을 POLL_FAST 간격으로 묻고, 연결이 되면 다시 푸시로 돌아온다.
    접히거나 매지컬 마치를 벗어나면 끊는다. 참가·취소는 서버 응답을 기다리지 않고 화면부터 고친다.
    xGone 은 방금 빠진 자리다. 서버 목록이 아직 나를 안고 있어도 화면에서는 뺀다. */
-const X_PAGE=5;
-function xOverlay(x,raw){const m=Object.assign({},raw||{});
- if(xGone&&xGone.s===x.s&&xGone.i===x.i&&!(C&&C.mj&&C.mj.id===x.id))delete m[UID];
- if(C&&C.mj&&C.mj.id===x.id&&(!m[UID]||typeof m[UID]!=="object"))m[UID]=Object.assign({},me(),{jt:Math.min(xNow(),xCloseAt(x))});
- return m}
-function xListOpen(){const box=$("#xbox");return !!(!$("#v-rooms").hidden&&box&&!box.hidden)}
-function xWatchOn(){if(!XON())return false;if(xListOpen())return true;if($("#v-xm").hidden||!(C&&C.mj))return false;return !(XR&&XR.id===C.mj.id&&XR.pl)}
-function xWatchSlot(){return !$("#v-xm").hidden&&C&&C.mj&&!(XR&&XR.id===C.mj.id&&XR.pl)?C.mj.s:xLs()}
-function stopX(){if(xPoll){try{xPoll()}catch(e){}xPoll=null}unX=null;xWatchKey=""}
-function xOrdered(ls){const a=Array.from({length:XN},(_,i)=>i);
- if(xSort==="hi")a.sort((i,j)=>{const di=xInfo(ls,i).d,dj=xInfo(ls,j).d;return dj-di||i-j});
- else if(xSort==="lo")a.sort((i,j)=>{const di=xInfo(ls,i).d,dj=xInfo(ls,j).d;return di-dj||i-j});
- return a}
+const X_PAGE = 5;
+
+function xOverlay (x, raw) {
+   const m = Object.assign({}, raw || {});
+   if (xGone && xGone.s === x.s && xGone.i === x.i && !(C && C.mj && C.mj.id === x.id) )delete m[UID];
+   if (C && C.mj && C.mj.id === x.id && (!m[UID] || typeof m[UID] !== "object")) m[UID] = Object.assign({}, me(), {jt : Math.min(xNow(), xCloseAt(x))});
+   return m
+}
+
+function xListOpen () {
+   const box = $("#xbox");
+   return !!(!$("#v-rooms").hidden && box && !box.hidden)
+}
+
+function xWatchOn () {
+   if (!XON()) return false;
+   if (xListOpen()) return true;
+   if ($("#v-xm").hidden || !(C && C.mj)) return false;
+   return !(XR && XR.id === C.mj.id && XR.pl)
+}
+
+function xWatchSlot () {
+   return !$("#v-xm").hidden && C && C.mj && !(XR && XR.id === C.mj.id && XR.pl) ? C.mj.s : xLs()
+}
+
+// xPoll() 변수를 함수 처럼 호출. xPoll에는 구독 해제 함수가 들어감. 에러가 나도 정리 계속. watchX가 구독을 엶
+/**
+ * xPoll()로 EventSource/폴링 연결 종료, 지금 감시 중 표시 제거.
+ */
+function stopX () {
+   if (xPoll) {
+      try {
+         xPoll()
+      } catch (e) { } xPoll = null
+   }
+   unX = null;
+   xWatchKey = ""
+}
+
+function xOrdered (ls) {
+   const a = Array.from({ length : XN}, ( _ , i) => i );
+   if (xSort === "hi") a.sort((i, j) => {
+      const di = xInfo(ls, i).d,dj = xInfo(ls, j).d;
+      return dj - di || i - j
+   });
+   else if (xSort === "lo") a.sort( (i, j) => {
+      const di = xInfo(ls, i).d,dj = xInfo(ls, j).d;
+      return di - dj || i - j});
+   return a
+}
+
 function xSetSort(k){if(k!=="def"&&k!=="hi"&&k!=="lo")return;if(xSort===k)return;xSort=k;xShowN=X_PAGE;try{localStorage.setItem("mgr_xsort",k)}catch(e){}if(xListOpen())watchX();drawXAll()}
 function xMore(){if(xShowN>=XN)return;xShowN=Math.min(XN,xShowN+X_PAGE);drawXAll()}
 /* 매지컬 마치 목록 칸 열고 닫기. 이 기기에서 마지막 상태를 기억한다. 펼칠 때만 참가 자리를 지킨다. */
@@ -94,7 +144,16 @@ async function xRejoin(){if(!C||C.mj||!XON()||!UID)return;const now=xNow(),base=
  for(const s of ss){if(C.mj)return;try{const sn=await xGrab(s);const o={};(sn.docs||[]).forEach(d=>{const m=String(d.id).match(/_e(\d+)$/);if(m)o["e"+m[1]]=d.data()||{}});if(xBindFrom(s,o)&&!$("#v-rooms").hidden)drawXAll()}catch(e){}}}
 function xMsClear(){if(!C||!C.ms)return;const m=String(C.ms).match(/^x(\d+)_\d+$/);if(m&&xNow()<(Number(m[1])+1)*XS+X_RUN_MAX)return;delete C.ms;save()}
 function xSig(){return (xTake.k||"")+"|"+(xRemember.k||"")+"|"+(xPh||"")+"|"+xSort+"|"+xShowN}
-function drawXAll(){const sig=xSig(),el=$("#rl");if(!el||el.closest("[hidden]"))return;if(el.dataset.xs===sig&&el.childElementCount)return;el.dataset.xs=sig;drawX(el)}
+
+// drawX / drawXAll #rl에 elt로 행/버튼 붙임
+function drawXAll () {
+   const sig = xSig(), el = $("#rl");
+   if (!el || el.closest("[hidden]")) return;
+   if (el.dataset.xs === sig && el.childElementCount) return;
+   el.dataset.xs = sig;
+   drawX(el)
+}
+
 function xSeatMap(x){if(xS===x.s)return xSnap["e"+x.i]||{};if(xMine&&xMine.id===x.id&&xMine.m)return xMine.m;return null}
 function xFace(x){return xOverlay(x,xSeatMap(x)||{})}
 function xWho(ids,pl){const who=ids.map(u=>cn(u,(pl[u]||{}).n)).filter(Boolean).join(", ");return "파티 "+ids.length+"/"+XMAX+(who?" · "+who:"")}
