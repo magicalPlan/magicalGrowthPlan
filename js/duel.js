@@ -162,4 +162,3 @@ function duLog(R){const lg=elT("div","log du-log");R.log.slice().reverse().forEa
 setInterval(()=>{if(C&&C.du&&!C.du.fin&&!$("#v-arena").hidden&&!duBusy)duDraw()},15000);
 $("#fb3").onclick=()=>hub();
 $("#dub").onclick=()=>hub();
-$("#pfdu").onclick=()=>{const u=pfU,h=$("#pfb h2"),p=(ONL.find(x=>x.u===u)||{});$("#pfo").hidden=true;duChallenge(u,p.n||(h?h.textContent:"상대"))};
