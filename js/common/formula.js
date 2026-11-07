@@ -34,7 +34,9 @@ const wup=i=>wlv(i)*(i===0?2:1);
    + 어둠 속성이고 절망도가 50 이상이면 6
    + 힘의 각인 단계 × 4
    + 희망의 등대 5단계면 WF_PW
-   + 함께하는 사역마의 전투력 */
+   + 함께하는 사역마의 전투력
+   매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
+   권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다. */
 const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");
 
 // 각인 비용. 지금 단계 L 에서 다음 단계로 가는 마력석은 L+2 개다. 0단계면 2개, 1단계면 3개.

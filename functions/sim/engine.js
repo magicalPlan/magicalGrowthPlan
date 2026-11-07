@@ -14,10 +14,20 @@ const R = n => Math.floor(Math.random() * n);
 const vtx = (t, v) => String(t).replace(/\{v\}/g, VLN[v] || "마을");
 const fxTxt = x => { const a = []; if (x.ex) a.push("경험치 +" + x.ex); if (x.gd) a.push("골드 " + (x.gd > 0 ? "+" : "") + x.gd); if (x.mm) a.push("마력석 +" + x.mm); if (x.gi) a.push("작은 꽃다발 +" + x.gi); if (x.pw) a.push("이번 출정 전투력 " + (x.pw > 0 ? "+" : "") + x.pw); if (x.bt) a.push(x.bt > 0 ? "전투 +" + x.bt : "전투 " + x.bt); if (x.tc) a.push("다음 재계약 시험 판정 +" + x.tc); if (x.rb) a.push("다음 공명 효과 증가"); if (x.wa) a.push("오늘 하루 무기 +1"); if (x.dh) a.push("절망도 70 이상인 사람만 절망도 " + (x.dh > 0 ? "+" : "") + x.dh); if (x.dz > 0) a.push("절망도 +" + x.dz); if (x.dz < 0) a.push("절망도 " + x.dz); return a.length ? " (" + a.join(", ") + ")" : ""; };
 const evCtx = r => { const ps = Object.values(r.pl || {}); return { ps, n: ps.length, at: a => ps.some(p => String(p.a || "").includes(a)), tr: t => ps.some(p => p.t === t), hiDz: ps.some(p => (Number(p.dz) || 0) >= 70) }; };
-const battleT = (P, i, df) => Math.max(15, Math.min(85, Math.round(50 + BT_K * (P / ((BT_BASE + BT_STEP * i) * df) - 1))));
+/* 적정(권장) 전투력·성공 기준치(클라 js/room.js 와 동일).
+   권장_i (2026-11 갱신, 반올림) =
+     57×i×(df×(0.95−0.1×i)) + 15×df×(randbetween(7,17)×0.1)
+   구 권장: (BT_BASE + BT_STEP×i) × df
+   T = clamp(15…85, round(50 + BT_K×(P/권장_i − 1)))  ← 유지
+   상수 BT_K·BJ_*·XDF.df 는 tables.js(원본 scripts/pack-sim.js). 랜덤은 replay 시드 RNG. */
+const recPw = (i, df) => Math.round(57 * i * (df * (0.95 - 0.1 * i)) + 15 * df * ((7 + Math.floor(Math.random() * 11)) * 0.1));
+// 구: const battleT = (P, i, df) => Math.max(15, Math.min(85, Math.round(50 + BT_K * (P / ((BT_BASE + BT_STEP * i) * df) - 1))));
+const battleT = (P, i, df) => Math.max(15, Math.min(85, Math.round(50 + BT_K * (P / Math.max(1, recPw(i, df)) - 1))));
 const battleJ = (n, Th, cd) => n >= BJ_HARD ? 0 : n <= Math.max(1, Math.floor(Th / (cd || 5))) ? 3 : n <= Th ? 2 : n <= Math.min(BJ_HARD - 1, Math.max(BJ_LOW, Th + BJ_SOFT)) ? 1 : 0;
 
 function startSim(room) {
+  /* room.pl[uid].p ← 클라 me().p(참가 때 xm 자리). 서버는 전투력을 다시 계산하지 않고 이 값을 쓴다.
+     sim.avg = 파티 p 평균(+깃발·협력·스태프). battleT(avg+ab, i, df) 의 P. */
   const ps = Object.values(room.pl), has = t => ps.some(p => p.t === t), solo = ps.length === 1, sum = ps.reduce((a, p) => a + p.p + (solo && p.t === "고독" ? 8 : 0), 0), fl = ps.some(p => p.f), mp = ps.some(p => p.m), co = ps.length >= 2 && has("협력자"), stf = ps.some(p => p.w === 6);
   room.seq = [];
   room.rt = room.rt || room.total;

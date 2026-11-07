@@ -239,7 +239,9 @@ async function holdEmpty(db, ref, s, i, info, now, all) {
   await db.ref("live/x/" + s + "_" + i).set(null);
   await scheduleXDrop(db, s, i, now + X_DROP);
 }
-/* xm 자리를 읽어 첫 xr 를 만든다. 인원이 있으면 true. empty 면 holdEmpty 후 false. */
+/* xm 자리를 읽어 첫 xr 를 만든다. 인원이 있으면 true. empty 면 holdEmpty 후 false.
+   자리 본문(클라 me(): p=전투력, t·a·w·f·m·sk…)을 pl 에 그대로 넣는다.
+   권장 전투력 숫자는 DB 에 저장하지 않고, engine.startSim 이 pl.*.p 로 그 자리에서 계산한다. */
 async function startExpeditionFromSeats(db, ref, info, s, i, now) {
   const seat = (await db.ref("rooms/xm" + s + "_e" + i).get()).val() || {};
   const all = {};

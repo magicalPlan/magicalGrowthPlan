@@ -3,6 +3,8 @@
    문장은 출발 시각부터 2.2초마다 드러난다. 방장 화면이 꺼지거나 탭이 뒤로 가도 시각은 흐르고, 선택 마감과 결과 기록은 방에 있는 누구든 이어 쓴다. */
 /* 매지컬 마치: 방 */
 let room=null,code=null,unR=null,unL=null,tick=null;
+/* 자리 기록(참가 때 rooms/xm…/{uid} 에 set). p 는 개인 전투력(js/common/formula.js pw).
+   서버 startExpeditionFromSeats 가 이 칸을 그대로 r.pl 에 넣고, 권장·판정은 p 평균으로 계산한다. */
 const me=()=>({tw:facLv("tower"),tn:tiName(C.ti),n:C.n,a:(Array.isArray(C.a)?C.a:C.a?[C.a]:[]).join(""),g:C.g,t:C.t,p:pw(),v:C.v,f:armed("flag")?1:0,m:armed("map")?1:0,w:C.wp,sk:["water","wind","dark"].filter(armedSk),dz:C.dz||0});
 const rref=c=>DB.doc("rooms/"+c);
 const rmsg=t=>{$("#rm").textContent=t;if(!$("#v-hub").hidden){$("#hm").style.color="var(--bad)";$("#hm").textContent=t}};
@@ -56,11 +58,20 @@ function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===
  room.sim={scy:ps.some(p=>p.w===2),i:1,ok:true,ev:0,ex:0,gx:0,ab:dk?8:0,tw:twb,lucky:wd,rev:false,avg:sum/ps.length+(fl?5:0)+(co?3:0)+(stf?2:0)};room.pend=null;room.ch=null;room.fin=false;simStep(room)}
 const vtx=(t,v)=>String(t).replace(/\{v\}/g,VL[v]?VL[v].n:"마을");
 const fxTxt=x=>{const a=[];if(x.ex)a.push("경험치 +"+x.ex);if(x.gd)a.push("골드 "+(x.gd>0?"+":"")+x.gd);if(x.mm)a.push("마력석 +"+x.mm);if(x.gi)a.push("작은 꽃다발 +"+x.gi);if(x.pw)a.push("이번 출정 전투력 "+(x.pw>0?"+":"")+x.pw);if(x.bt)a.push(x.bt>0?"전투 +"+x.bt:"전투 "+x.bt);if(x.tc)a.push("다음 재계약 시험 판정 +"+x.tc);if(x.rb)a.push("다음 공명 효과 증가");if(x.wa)a.push("오늘 하루 무기 +1");if(x.dh)a.push("절망도 70 이상인 사람만 절망도 "+(x.dh>0?"+":"")+x.dh);if(x.dz>0)a.push("절망도 +"+x.dz);if(x.dz<0)a.push("절망도 "+x.dz);return a.length?" ("+a.join(", ")+")":""};
-// 권장 전투력 = (BT_BASE + BT_STEP × 몇 번째 전투) × 위험도. 기준치 = 50 + BT_K × (파티 전투력 ÷ 권장 전투력 − 1), 15~85 사이.
-let BT_BASE=300,BT_STEP=60,BT_K=60;
+/* 매지컬 마치 · 적정(권장) 전투력·성공 기준치.
+   · 권장_i (2026-11 갱신, 반올림) =
+       57×i×(df×(0.95−0.1×i)) + 15×df×(randbetween(7,17)×0.1)
+     구식(주석): (BT_BASE + BT_STEP × i) × df
+   · 기준치 T = clamp(15…85, round(50 + BT_K × (파티전투력 P ÷ 권장_i − 1)))  ← 유지
+   · P 는 startSim 의 sim.avg(+ab). 자리 me().p 평균에 깃발·협력·스태프 등을 더한 값.
+   클라 미리보기·옛 로컬 방용. 실제 정기 출정 판정은 functions/sim/engine.js 의 같은 식
+   (BT_K·BJ_* 상수는 scripts/pack-sim.js → functions/sim/tables.js). 숫자를 바꾸면 양쪽에 맞춘다. */
+let BT_BASE=300,BT_STEP=60,BT_K=60; // BT_BASE·BT_STEP 은 구 권장식용으로 남김. T 에는 BT_K 만 사용.
 // 실패 여유는 T+BJ_SOFT. 그 위는 대실패인데, BJ_LOW 아래로는 내려가지 않아 대실패가 20%를 넘지 않는다. BJ_HARD 이상은 항상 대실패(5%).
 const BJ_SOFT=40,BJ_HARD=96,BJ_LOW=80;
-const battleT=(P,i,df)=>Math.max(15,Math.min(85,Math.round(50+BT_K*(P/((BT_BASE+BT_STEP*i)*df)-1))));
+const recPw=(i,df)=>Math.round(57*i*(df*(.95-.1*i))+15*df*((7+Math.floor(Math.random()*11))*.1));
+// 구 battleT: (P,i,df)=>Math.max(15,Math.min(85,Math.round(50+BT_K*(P/((BT_BASE+BT_STEP*i)*df)-1))))
+const battleT=(P,i,df)=>Math.max(15,Math.min(85,Math.round(50+BT_K*(P/Math.max(1,recPw(i,df))-1))));
 const battleJ=(n,T,cd)=>n>=BJ_HARD?0:n<=Math.max(1,Math.floor(T/(cd||5)))?3:n<=T?2:n<=Math.min(BJ_HARD-1,Math.max(BJ_LOW,T+BJ_SOFT))?1:0;
 function simStep(r){const ps=Object.values(r.pl),has=t=>ps.some(p=>p.t===t),S=r.sim,fight=()=>(S.avg+S.ab)*3*(.75+Math.random()*.6);
  while(S.i<=r.total&&S.ok){const i=S.i,T=Math.min(90,battleT(S.avg+S.ab,i,r.df||1)+(S.tw||0)),J0=()=>battleJ(1+R(100),T,S.scy?SCY_CRIT:5);let j=J0();
