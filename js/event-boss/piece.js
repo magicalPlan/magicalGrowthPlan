@@ -3,12 +3,14 @@
    출정(js/room.js 의 settle), 장기 토벌(js/main.js 의 lhClaim), 단서 탐색(js/event-boss/clue.js 의 clueClaim), 이벤트 보스 토벌 보상(js/event-boss/boss.js 의 ebGrant)은 clpGain 을 그대로 부른다.
    내 기록은 C.clp = {id, n: 찾은 개수, got: {단계 번호: 1}}.
    서버 합계는 tally/clue/{CLP.id} = {n: 합계, top: [{u, n: 이름, pt: 그 사람이 찾은 개수}]} 한 칸이다(희망의 등대 tally/wf 와 같은 방식).
-   그 칸에 쓸 수 없으면 재해 진압 합계와 같은 tally/dr/{CLP.id} 에 대신 쓴다. 읽을 때는 두 칸 중 큰 값을 쓴다.
-   장기 의뢰의 이벤트 보스 합계를 읽은 뒤에만 두 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다. */
-let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0;
+   장기 의뢰 화면을 연 동안만 그 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다.
+   TODO(다음 이벤트): 예전 규칙 우회로로 tally/dr/{지난 CLP.id} 에만 쌓였던 칸을 콘솔에서 지운다. 이번 이벤트는 아래 clpMigrateAlt 로 clue 로만 옮긴다. */
+let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0,clpMigBusy=false,clpMigDone=false;
 const clpOn=()=>{const t=Date.now();return t>=CLP.from&&t<CLP.to};
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
-const clpPath=()=>"tally/clue/"+CLP.id,clpAlt=()=>"tally/dr/"+CLP.id;
+const clpPath=()=>"tally/clue/"+CLP.id;
+/* COMPAT: 예전 우회로 칸. 이관(clpMigrateAlt)에만 읽고, 새로 쓰지 않는다. */
+const clpAlt=()=>"tally/dr/"+CLP.id;
 
 /* 조각 발견. src: "x"(출정) · "lh"(장기 토벌) · "clue"(단서 탐색) · "eb"(이벤트 보스 토벌 보상). o: {ok: 성공, done: 끝까지 마쳤는지, hr: 시간}.
    이벤트 기간이 아니면 아무것도 하지 않는다. 찾았으면 안내 문구를 돌려준다. 저장은 부른 쪽이 한다. */
@@ -25,18 +27,26 @@ function clpGain(src,o){if(!C||!clpOn())return "";o=o||{};const D=CLP.drop;let n
 // 서버 합계에 더한다. 실패해도 게임은 그대로 이어진다.
 function clpAdd(n){if(!DB||!UID||!n||typeof XON==="function"&&!XON())return;const me=clpMine(),nm=String(typeof nmOf==="function"?nmOf():C.n||"").slice(0,20);
  const step=cur=>{const b=cur&&typeof cur.n==="number"?cur:{n:0,top:[]},o={n:Math.min(1e8,(Number(b.n)||0)+n),top:(Array.isArray(b.top)?b.top:[]).filter(t=>t&&t.u!==UID)};
-  if(typeof b.pts==="number")o.pts=o.n;o.top.push({u:UID,n:nm,pt:me.n});o.top=o.top.sort((a,x)=>x.pt-a.pt).slice(0,5);return o};
- CLPN+=n;DB.doc(clpPath()).transact(step).then(v=>{if(v)clpTake(v)}).catch(()=>DB.doc(clpAlt()).transact(cur=>{const o=step(cur);o.pts=o.n;return o}).then(v=>{if(v)clpTake(v)}).catch(()=>{}))}
+  o.top.push({u:UID,n:nm,pt:me.n});o.top=o.top.sort((a,x)=>x.pt-a.pt).slice(0,5);return o};
+ CLPN+=n;DB.doc(clpPath()).transact(step).then(v=>{if(v)clpTake(v)}).catch(()=>{})}
 function clpTake(v){if(!v)return false;const k=Math.max(Number(v.n)||0,Number(v.pts)||0);if(k<CLPN)return false;CLPN=k;if(Array.isArray(v.top))CLPTOP=v.top;return true}
-/* 장기 의뢰를 보고 있는 동안에만 합계 두 칸을 연결로 본다. 처음 한 번 받고, 이후에는 더 커진 합계만 반영한다.
+/* 예전 우회로(tally/dr/{CLP.id})에만 쌓인 합계를 tally/clue 로 옮긴다. 이미 clue 가 같거나 더 크면 그대로 둔다.
+   TODO(다음 이벤트): 이관이 끝난 뒤 tally/dr/{지난 CLP.id} 잔여 칸을 콘솔에서 삭제하고, clpAlt·clpMigrateAlt 를 제거한다. */
+async function clpMigrateAlt(){if(!DB||clpMigDone||clpMigBusy||typeof XON==="function"&&!XON())return;clpMigBusy=true;
+ try{const a=(await DB.doc(clpAlt()).get().catch(()=>null)),av=a&&a.exists?a.data():null,an=Math.max(Number(av&&av.n)||0,Number(av&&av.pts)||0);
+  if(an<=0){clpMigDone=true;return}
+  await DB.doc(clpPath()).transact(cur=>{const cn=Math.max(Number(cur&&cur.n)||0,Number(cur&&cur.pts)||0);if(an<=cn)return;
+   const top=Array.isArray(av&&av.top)&&av.top.length?av.top.slice(0,5):(Array.isArray(cur&&cur.top)?cur.top:[]);return{n:an,top}}).catch(()=>{});
+  clpMigDone=true}catch(e){}finally{clpMigBusy=false}}
+/* 장기 의뢰를 보고 있는 동안에만 합계 칸을 연결로 본다. 처음 한 번 받고, 이후에는 더 커진 합계만 반영한다.
    연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. */
 let unClp=null,clpGen=0;
-function clpWatchStop(){if(!unClp)return;clpGen++;unClp.forEach(u=>{try{u()}catch(e){}});unClp=null}
+function clpWatchStop(){if(!unClp)return;clpGen++;try{unClp()}catch(e){}unClp=null}
 function clpWatchStart(){if(!DB||typeof XON!=="function"||!XON()||unClp)return;const now=Date.now();if(now<CLP.from||now>=CLP.to)return;const gen=++clpGen;
  const take=v=>{if(gen!==clpGen||!clpTake(v))return;if(typeof $==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clpDraw(true)};
- unClp=[clpPath(),clpAlt()].map(p=>DB.doc(p).live().onSnapshot(sn=>take(sn.exists?sn.data():null),()=>{},POLL_HUB))}
-async function clpLoad(){if(!DB||clpBusy)return;clpBusy=true;try{const rs=await Promise.all([clpPath(),clpAlt()].map(p=>DB.doc(p).get().then(s=>s.exists?s.data():null).catch(()=>null)));
-  let n=0,top=[];rs.forEach(v=>{if(!v)return;const k=Math.max(Number(v.n)||0,Number(v.pts)||0);if(k>=n){n=k;if(Array.isArray(v.top))top=v.top}});if(n>=CLPN){CLPN=n;CLPTOP=top}clpAt=Date.now()}finally{clpBusy=false}
+ unClp=DB.doc(clpPath()).live().onSnapshot(sn=>take(sn.exists?sn.data():null),()=>{},POLL_HUB)}
+async function clpLoad(){if(!DB||clpBusy)return;clpBusy=true;try{await clpMigrateAlt();const s=await DB.doc(clpPath()).get(),v=s.exists?s.data():null;
+  if(v){const n=Math.max(Number(v.n)||0,Number(v.pts)||0);if(n>=CLPN){CLPN=n;if(Array.isArray(v.top))CLPTOP=v.top}}clpAt=Date.now()}catch(e){}finally{clpBusy=false}
  if($("#v-ord")&&!$("#v-ord").hidden)clpDraw(true)}
 
 // 단계 보상 받기: 합계가 그 단계에 닿았고, 조각을 1개 이상 찾았고, 아직 안 받았을 때만.
