@@ -97,3 +97,8 @@ const upr=L=>Math.min(100,UPR[L]+(C.t==="행운"?5:0)+2*_facLv("forge")+((VL[C.v
 /* 장기 토벌 성공 확률. 전투력÷권장 전투력 × 0.85 에 사역마 lh 를 더한다.
    30% 보다 낮아지지 않고, 95% 보다 높아지지 않는다. */
 const lhChance=(pwv,req)=>Math.max(.3,Math.min(.95,pwv/req*.85+_petEff("lh")));
+/* 장기 토벌 골드·경험치 % 구간. 단계 1 → 95~100, 2 → 90~95, … (양끝 포함). */
+const lhPctRange=st=>{const s=Math.max(1,Number(st)||1),lo=95-5*(s-1),hi=100-5*(s-1);return[lo,hi]};
+const lhRollPct=(st,rand)=>{const[lo,hi]=lhPctRange(st);return lo+Math.floor(rand()*(hi-lo+1))};
+/* 목록 '약' 표시용. 구간 중앙 % 로 노브×시간×0.01. */
+const lhEst=(knob,hr,st)=>{const[lo,hi]=lhPctRange(st);return Math.round(Number(knob)*Number(hr)*((lo+hi)/2)*0.01)};

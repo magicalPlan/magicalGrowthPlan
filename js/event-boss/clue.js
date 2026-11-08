@@ -4,26 +4,25 @@
    기록은 캐릭터의 C.clue 에만 남는다. */
 const clueOf=id=>(CLUE||[]).find(x=>x.id===id);
 const clueOn=()=>!!(C&&C.clue&&clueOf(C.clue.k));
-const clueBonus=hr=>1+.1*Math.max(0,hr-1)/1.67;
 function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==="function")setTimeout(ordMarks,0);if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();
  if(clueOn()){const h=C.clue,L=clueOf(h.k),done=now>=h.t1,w=elT("div","dq clue-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
   f.style.width=Math.min(100,(now-h.t0)/Math.max(1,h.t1-h.t0)*100)+"%";bar.appendChild(f);
-  cp.append(elT("b","","🔍 "+L.nm+(done?" · 귀환!":" · 탐색 중")),elT("small","",done?"탐색을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L.pw)*100)+"%"),bar);
+  cp.append(elT("b","","🔍 "+L.nm+(done?" · 귀환!":" · 탐색 중")),elT("small","",done?"탐색을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L.pw||1)*100)+"%"),bar);
   const b=elT("button","chip",done?"보상 받기":"돌아가기");b.type="button";b.onclick=()=>clueClaim(!done);w.append(cp,b);box.appendChild(w);
   if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 장기 토벌과 정기 출정에는 참가할 수 없다."));return}
  if(typeof lhOn==="function"&&lhOn())box.appendChild(elT("p","hint","장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다."));
  else if(C.mj&&Date.now()<C.mj.T0)box.appendChild(elT("p","hint","정기 출정에 참가 신청한 동안에는 떠날 수 없다."));
  // 탐색 고르기: 카드 격자. 위에 이름과 시간, 가운데 설명, 아래에 성공 확률과 보상을 작은 칩으로 보여 준다.
- const pv=pw(),grid=elT("div","clue-grid");CLUE.forEach(L=>{const c=lhChance(pv,L.pw),bonus=clueBonus(L.hr),w=elT("div","clue-card"+(c<.4?" hard":""));
+ const pv=pw(),grid=elT("div","clue-grid");CLUE.forEach(L=>{const req=L.pw||1,c=lhChance(pv,req),st=L.st||1,w=elT("div","clue-card"+(c<.4?" hard":""));
   const top=elT("div","clue-top");top.append(elT("b","",L.nm),elT("span","clue-hr",L.hr+"시간"));w.append(top,elT("p","clue-ds",L.ds));
   const chips=elT("div","clue-chips"),chip=(t,cls)=>chips.appendChild(elT("span","clue-chip"+(cls?" "+cls:""),t));
-  chip("성공 "+Math.round(c*100)+"%",c<.4?"bad":c>=.7?"good":"");chip("권장 "+L.pw);chip("💰 "+Math.round(L.g*L.hr*bonus));chip("✨ "+Math.round(L.ex*L.hr*bonus));if(L.m)chip("💎 "+L.m+"+");chip("절망 +"+L.dz*L.hr,"dz");
-  if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn()){const sp=elT("span","clue-chip clp");if(typeof clpImg==="function")sp.appendChild(clpImg());sp.appendChild(document.createTextNode(" 약 "+Math.round(L.hr*(CLP.drop.clue.base+CLP.drop.clue.extra))));chips.appendChild(sp)}w.appendChild(chips);
+  chip("성공 "+Math.round(c*100)+"%",c<.4?"bad":c>=.7?"good":"");chip("권장 "+(L.pw||0));chip("💰 "+lhEst(L.g,L.hr,st));chip("✨ "+lhEst(L.ex,L.hr,st));if(L.m)chip("💎 "+L.m+"+");chip("절망 +"+L.dz,"dz");
+  if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn()&&L.clp){const sp=elT("span","clue-chip clp");if(typeof clpImg==="function")sp.appendChild(clpImg());sp.appendChild(document.createTextNode(" "+L.clp));chips.appendChild(sp)}w.appendChild(chips);
   const b=elT("button","btn g clue-go","출발");b.type="button";b.disabled=!!C.fall||(typeof lhOn==="function"&&lhOn())||!!(C.mj&&Date.now()<C.mj.T0);b.onclick=()=>clueStart(L.id);w.appendChild(b);grid.appendChild(w)});box.appendChild(grid)}
 function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toast("타락한 동안에는 탐색을 떠날 수 없다.");return}
  if(typeof lhOn==="function"&&lhOn()){toast("장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다.");return}
  if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
- if(!confirm(L.nm+"("+L.hr+"시간)을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw)*100)+"%"))return;
+ if(!confirm(L.nm+"("+L.hr+"시간)을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw||1)*100)+"%"))return;
  const t0=Date.now();C.clue={k:id,t0,t1:t0+L.hr*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();
  note("quest",L.nm+"을(를) 떠났다. "+L.hr+"시간 뒤에 돌아온다.");toast("🔍 "+L.nm+" 출발! "+L.hr+"시간 뒤에 돌아온다.");clueDraw()}
 function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.hr):1;
@@ -32,14 +31,14 @@ function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.
 async function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 돌아갈까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
  if(typeof tripGot==="function"&&tripGot("clueGot",h.sd)){C.clue=null;clueDraw();toast("이미 받은 탐색이다.");if(typeof saveNowRetry==="function")void saveNowRetry(4,1500);return}
- const g=rng(hs32("clue"+h.sd)),hrs=done?L.hr:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L.pw),mul=done?(ok?1:.5)*clueBonus(L.hr):CLUE_EARLY;
- const gd=Math.round(L.g*hrs*mul),ex=Math.round(L.ex*hrs*mul),dz=Math.round(L.dz*hrs+(done&&!ok?CLUE_FAIL_DZ:0)),mm=done&&ok?L.m+(g()<.3?1:0):0,pick=cluePick(g,L,done);
+ const g=rng(hs32("clue"+h.sd)),hrs=done?L.hr:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L.pw||1),mul=done?(ok?1:.5):CLUE_EARLY,st=L.st||1;
+ const gd=Math.round(L.g*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L.ex*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L.dz*(L.hr?hrs/L.hr:0)+(done&&!ok?CLUE_FAIL_DZ:0)),mm=done&&ok?L.m+(g()<.3?1:0):0,pick=cluePick(g,L,done);
  C.clue=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done)C.stats.clueDone=(C.stats.clueDone||0)+1;
  if(pick.found.length)C.stats.clueFound=(C.stats.clueFound||0)+pick.found.length;
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));
  if(done&&ok){const pe=petDrop("lh");if(pe)pick.evs.push(pe)}
  if(done){const mt=ok?matGain([CLUE_DROP.ok],L.hr):matGain([CLUE_DROP.fail]);if(mt)pick.evs.push(mt)}
- if(typeof clpGain==="function"){const cp=clpGain("clue",{ok,done,hr:hrs});if(cp)pick.evs.push(cp)}
+ if(typeof clpGain==="function"){const cp=clpGain("clue",{ok,done,hr:hrs,hrMax:L.hr,fix:L.clp});if(cp)pick.evs.push(cp)}
  const head=!done?"중간에 돌아왔다.":ok?"탐색 성공!":"단서는 놓쳤지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  const lines=pick.evs.map(e=>"· "+e).concat(pick.found.map(x=>"· 추가 조사 — "+x[1]+"\n  "+x[2]));
  /* 낙관적: 결과 팝업 먼저, PATCH 는 뒤에서 재시도. 실패해도 로컬 보상은 되돌리지 않는다. */
