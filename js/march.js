@@ -2,7 +2,12 @@
    목록은 매지컬 마치 화면(v-rooms)에서만 본다. 목록 칸이 펼쳐져 보일 때만 참가 자리(rooms/xm)를 연결로 지킨다.
    화면·구독 모두 정렬(기본=인덱스 / 높은 등급 / 낮은 등급) 앞쪽 xShowN(기본 5)칸만.
    구독은 자리 doc live 여러 개(보이는 칸 + 내가 참가한 칸). 묶음 prefix 전체 live 는 쓰지 않는다.
-   접히거나 화면을 벗어나면 끊는다. 마을에는 목록을 두지 않는다. 끝난 방은 서버 함수가 지운다. */
+   접히거나 화면을 벗어나면 끊는다. 마을에는 목록을 두지 않는다. 끝난 방은 서버 함수가 지운다.
+   방 메타(성급·심연)는 X_STARS 셔플이 아니라 아래 isAbyss + xInfo 시드 식(서버 expeditionInfo 와 동일). */
+/* 심연 자리: 묶음 s, 칸 i(0…XN-1).
+   · 항상: i === (s % XN)  → 심연 1칸
+   · s 가 짝수일 때만 추가: i === ((s+5) % XN)  → 심연 최대 2칸
+   XN=10 이면 예: s=0 → i=0 과 i=5. s=1 → i=1 만. */
 const isAbyss = (s,i) => i === ( (s % XN) + XN) % XN || (s % 2 === 0 && i === ( (s + 5) % XN + XN) % XN);
 
 // 정기 출정 기록 위치: 서버 규칙에 이미 열려 있는 rooms 아래에 둔다
@@ -26,12 +31,10 @@ const xClock = () => {
 // 백그라운드에서도 잘 돌아가는지 확인 필요. 
 const xClockWait = force => typeof apiClockSync === "function" ? apiClockSync(!!force) : Promise.resolve();
 
-// 출정의 고정 정보를 계산. (저장 없이 id 시드로 결정..? 이걸 왜 서버에서 처리하지 않죠?)
-/*
-   id :: x{s}_{i}  / v :: 마을 / d :: 위험도(심연은 4) / nm :: 이름 / total :: 전투 횟수 / T0 :: 출발 시각 (s+1)*XS / close :: 화면 참가 마감 T0 - XCLOSE
-   같은 (s, i)면 모든 플레이어에게 같은 출정이 보임
-   이 함수가 왜 서버 사이드에서가 아니라 클라이언트에서 돌지
-*/
+/* 출정 고정 정보. DB에 방을 미리 만들지 않고 id 시드(x{s}_{i})로 계산한다. 서버 expeditionInfo 와 같은 식.
+   · id, s, i, T0=(s+1)*XS, close=T0-XCLOSE
+   · 심연이면 d=4·total=5·ABYSS_PL 이름. 아니면 d=1+floor(rng*3)(★1~3), total=3+floor(rng*3), 마을+지명
+   · 시드에서 마을·지명 굴림 순서는 서버와 맞춰 두어 같은 (s,i)면 전원·서버가 같은 메타를 본다. */
 function xInfo (s, i) {
    const id = "x" + s + "_" + i, g = rng(hs32(id)), p = n => Math.floor(g() * n), v = "ABCD"[p(4)], ab = isAbyss(s, i), d = ab ? 4 : 1 + p(3);
    const pl = XPL[p(XPL.length)], t = 3 + p(3);

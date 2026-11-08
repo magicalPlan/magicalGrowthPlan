@@ -302,10 +302,10 @@ const BJ=[
 {n: "대성공", ex:15, dz:-2, t:["완벽한 연계로 마수를 한순간에 쓸어버렸다!", "마력이 폭발하며 마수 무리를 단숨에 소멸시켰다!", "빈틈 하나 없는 움직임으로 마수를 압도했다!"]}];
 
 const EARTH_P=.3,SCY_CRIT=3.5,SOLO_DF=1.15,SOLO_DZ=1.2,SOLO_EVP=.55,CHOICE_MS=15000,XSTEP=2200;
-const XS=300000,XN=10,X_STARS=[1,1,2,2,2,3,3,3,4,4],XCLOSE=120000,X_JOIN_GRACE=5000,X_EMPTY_RETRY=60000,XMAX=7;
+const XS=300000,XN=10,XCLOSE=120000,X_JOIN_GRACE=5000,X_EMPTY_RETRY=60000,XMAX=7;
 const XPL=["외곽","폐허","숲길","지하수로","옛 성채","묘지","포탈 흔적","버려진 광산","안개 골짜기","무너진 다리"];
 const ABYSS_PL=["심연의 입구","심연 · 잊힌 제단","심연 · 무저갱","심연 · 검은 왕좌","심연 · 끝없는 회랑"];
 const XDF=[null,{n:"위험도 ★",df:.85,rw:.8},{n:"위험도 ★★",df:1,rw:1},{n:"위험도 ★★★",df:1.2,rw:1.4},{n:"위험도 ★★★★ 심연",df:1.45,rw:2,dz:1.5}];
 const VLN={A:"A마을",B:"B마을",C:"C마을",D:"D마을"};
 const BJ_SOFT=40,BJ_HARD=96,BJ_LOW=80,BT_BASE=300,BT_STEP=60,BT_K=60;
-module.exports={EV,VEV,SOLO_EV,BJ,EARTH_P,SCY_CRIT,SOLO_DF,SOLO_DZ,SOLO_EVP,CHOICE_MS,XSTEP,XS,XN,X_STARS,XCLOSE,X_JOIN_GRACE,X_EMPTY_RETRY,XMAX,XPL,ABYSS_PL,XDF,VLN,BJ_SOFT,BJ_HARD,BJ_LOW,BT_BASE,BT_STEP,BT_K};
+module.exports={EV,VEV,SOLO_EV,BJ,EARTH_P,SCY_CRIT,SOLO_DF,SOLO_DZ,SOLO_EVP,CHOICE_MS,XSTEP,XS,XN,XCLOSE,X_JOIN_GRACE,X_EMPTY_RETRY,XMAX,XPL,ABYSS_PL,XDF,VLN,BJ_SOFT,BJ_HARD,BJ_LOW,BT_BASE,BT_STEP,BT_K};
