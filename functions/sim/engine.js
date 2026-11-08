@@ -2,7 +2,7 @@
    사건 글은 data/events, 판정 숫자는 scripts/pack-sim.js, 특성으로 갈라지는 규칙(불굴·번뜩임·예민함·속성)은 이 파일이다. */
 "use strict";
 const T = require("./tables");
-const {EV, VEV, SOLO_EV, BJ, EARTH_P, SCY_CRIT, SOLO_DF, SOLO_DZ, SOLO_EVP, CHOICE_MS, XSTEP, XS, XN, XCLOSE, X_JOIN_GRACE, XMAX, XPL, ABYSS_PL, XDF, VLN} = T;
+const {EV, VEV, SOLO_EV, BJ, EARTH_P, SCY_CRIT, SOLO_DF, SOLO_DZ, SOLO_EVP, CHOICE_MS, XSTEP, XS, XN, X_STARS, XCLOSE, X_JOIN_GRACE, XMAX, XPL, ABYSS_PL, XDF, VLN} = T;
 const {BJ_SOFT, BJ_HARD, BJ_LOW, BT_BASE, BT_STEP, BT_K} = T;
 const EVM = {};
 EV.concat(SOLO_EV, ...Object.values(VEV)).forEach(x => { EVM[x.id] = x; });
@@ -164,9 +164,15 @@ function stepMarch(room, picks, now) {
   return catchUp(room, picks, (room.seq || []).length, now);
 }
 
-function isAbyss(s, i) { return i === ((s % XN) + XN) % XN || (s % 2 === 0 && i === ((s + 5) % XN + XN) % XN); }
+function xGrades(s) {
+  const base = Array.isArray(X_STARS) && X_STARS.length === XN ? X_STARS : [1, 1, 2, 2, 2, 3, 3, 3, 4, 4];
+  const a = base.slice(), g = rng(hs32("xg" + s));
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(g() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+function isAbyss(s, i) { return xGrades(s)[i] === 4; }
 function expeditionInfo(s, i) {
-  const id = "x" + s + "_" + i, g = rng(hs32(id)), p = n => Math.floor(g() * n), v = "ABCD"[p(4)], ab = isAbyss(s, i), d = ab ? 4 : 1 + p(3);
+  const id = "x" + s + "_" + i, g = rng(hs32(id)), p = n => Math.floor(g() * n), v = "ABCD"[p(4)], d = xGrades(s)[i], ab = d === 4;
   p(XPL.length); const t = 3 + p(3);
   return { id, s, i, v, d, total: ab ? 5 : t, T0: (s + 1) * XS, close: (s + 1) * XS - XCLOSE };
 }

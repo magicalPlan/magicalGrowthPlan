@@ -19,7 +19,9 @@ function clpGain(src,o){if(!C||!clpOn())return "";o=o||{};const D=CLP.drop;let n
  else if(src==="lh"){if(o.done&&o.ok)for(let i=0;i<(o.hr||0);i++)if(Math.random()<D.lh)n++}
  else if(src==="eb")n=Math.max(0,Number(D.eb)||0);
  else if(src==="clue"){const c=D.clue,hr=Math.max(0,o.hr||0);
-  if(o.done){let k=0;for(let i=0;i<hr;i++){k+=c.base;if(Math.random()<c.extra)k++}n=o.ok?k:Math.round(k*c.fail)}
+  if(o.fix!=null){const full=Math.max(0,Number(o.fix)||0),max=Math.max(1,Number(o.hrMax)||1);
+   if(o.done)n=o.ok?full:Math.round(full*(c.fail||.5));else n=Math.round(full*(hr/max)*(c.early||.5))}
+  else if(o.done){let k=0;for(let i=0;i<hr;i++){k+=c.base;if(Math.random()<c.extra)k++}n=o.ok?k:Math.round(k*c.fail)}
   else for(let i=0;i<Math.floor(hr);i++)if(Math.random()<c.early)n++}
  if(n<=0)return "";const me=clpMine();me.n+=n;C.stats=C.stats||{};C.stats.clpN=Math.max(C.stats.clpN||0,me.n);clpAdd(n);
  return CLP.ic+" "+CLP.nm+" +"+n+" (내가 찾은 조각 "+me.n+"개)"}

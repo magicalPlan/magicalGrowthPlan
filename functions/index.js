@@ -17,7 +17,7 @@ initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1
 /* 친구: fmsg req|ok|del → accounts c/fr·fq·fo PATCH. 공명 rok/rno 제외. */
 exports.fmsgFriend = createFmsgFriend(getDatabase);
 
-const XS = 300000, XN = 15, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
+const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
 const X_EMPTY_RETRY = 60000;
 /* 투표 마감 Wd 뒤 집계 여유. readXVotes 가 Wd+1000 초과 표를 버리므로 집계도 1초면 충분하다(옛 3초). */

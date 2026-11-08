@@ -31,6 +31,7 @@ function petIncubate(){eggFix();if(!(C.eggs>0)||C.egg)return;if((C.pets||[]).len
  const t0=Date.now();C.eggs-=1;C.egg={t0,t1:t0+PET_HATCH};save();growth("알을 품기 시작했다. 1시간 뒤에 깨어난다.")}
 function petHatch(){const e=C.egg;if(!e||Date.now()<e.t1)return;const sp=e.ev?petRollEv():petRoll(),P=PETS[sp],nm=(prompt(P[2]+" "+P[1]+"이(가) 깨어났다!\n이름을 지어 주자. (최대 10자)",P[1])||P[1]).trim().slice(0,10)||P[1];
  const q={id:"p"+Date.now().toString(36),sp,nm,xp:0,born:Date.now()};C.pets=Array.isArray(C.pets)?C.pets:[];C.pets.push(q);C.egg=null;if(!C.pet)C.pet=q.id;titleState();C.stats.hatched=(C.stats.hatched||0)+1;if(PETS[sp][3]===3)C.stats.petLeg=1;if(PETS[sp][3]===4)C.stats.petEv=(C.stats.petEv||0)+1;C.petSeen=C.petSeen||{};C.petSeen[sp]=1;
- note("quest","알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다!");save();regPlayer();checkTitles();
+ /* save() 가 pubSync 로 공개 카드 펫 칸을 이미 고친다. 여기서 regPlayer 를 또 부르면 players/who 가 연달아 나간다. */
+ note("quest","알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다!");save();checkTitles();
  alertBox(P[2]+" 부화!",(P[3]===4?"❄ 기간 한정 사역마 ❄\n":P[3]===3?"★ 전설의 사역마 ★\n":P[3]===2?"희귀한 사역마!\n":"")+"알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다.\n\n"+P[4]+"\n\n함께하면: "+P[5](1)+" (친밀도 1단계)\n친밀도가 오를수록 효과가 커진다.");growth()}
 setInterval(()=>{if(C&&C.egg&&!C.egg.nt&&Date.now()>=C.egg.t1){C.egg.nt=1;save();note("quest","사역마의 알이 흔들린다! 성장 기록에서 부화시키자.");toast("🥚 알이 흔들린다! 성장 기록에서 부화시키자.");try{ding()}catch(e){}}if(C&&C.egg&&!$("#v-growth").hidden)drawPets()},30000);

@@ -5,7 +5,7 @@ const TITLE_RECORD=[
 ["du_30","대련장의 패왕","대련장에서 30번 이겼다.",c=>(c.stats?.duW||0)>=30],
 ["lh_1","긴 여정","장기 토벌을 처음 끝마쳤다.",c=>(c.stats?.lhDone||0)>=1],
 ["lh_10","끝없는 순찰","장기 토벌을 10번 끝마쳤다.",c=>(c.stats?.lhDone||0)>=10],
-["lh_abyss","심연 변두리의 생환자","6시간 장기 토벌에 성공했다.",c=>!!c.stats?.lhAbyss],
+["lh_abyss","심연 변두리의 생환자","12시간 장기 토벌에 성공했다.",c=>!!c.stats?.lhAbyss],
 ["solo_1","홀로 선 마법소녀","고독한 출정에서 처음으로 이겼다.",c=>(c.stats?.soloWins||0)>=1],
 ["solo_10","고독한 개척자","고독한 출정에서 10번 이겼다.",c=>(c.stats?.soloWins||0)>=10],
 ["solo_abyss","심연의 독주","혼자서 심연 출정에 성공했다.",c=>!!c.stats?.soloAbyss],
