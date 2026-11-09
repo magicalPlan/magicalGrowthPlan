@@ -105,7 +105,7 @@ function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
  const title=elT("b",""),body=elT("span","");
  const say=(h,t)=>{title.textContent="⚠ "+h;body.textContent=t};
  if(why.id==="project")say("로그인 키와 데이터베이스가 서로 다른 프로젝트다.","웹 API 키는 '"+why.tp+"' 프로젝트이고, 데이터베이스는 '"+why.dp+"' 프로젝트다. 둘을 같은 프로젝트로 맞춘 뒤 다시 저장해야 한다.");
- else if(why.id==="timeout")say("서버가 20초 안에 응답하지 않아 캐릭터를 저장하지 못했다.","잠시 뒤에 자동으로 다시 시도한다. 그때까지 바뀐 내용은 이 브라우저에 남아 있다.");
+ else if(why.id==="timeout")say("서버 응답이 늦어 캐릭터를 아직 저장하지 못했다.","잠시 뒤에 자동으로 다시 시도한다. 그때까지 바뀐 내용은 이 브라우저에 남아 있다.");
  else if(why.id==="offline")say("네트워크에 연결되지 않아 캐릭터를 저장하지 못했다.","연결되면 자동으로 다시 저장한다. 그때까지 바뀐 내용은 이 브라우저에 남아 있다.");
  else if(why.id==="gone")say("데이터베이스 주소를 찾지 못해 캐릭터를 저장하지 못했다.","서버 주소가 맞는지 확인해야 한다.");
  else if(why.id==="format")say("서버가 캐릭터 기록의 형식을 거절했다.",(why.msg?"서버가 알린 이유: "+why.msg.slice(0,140)+". ":"")+(why.kb?why.kb+"KB. ":"")+"이름이나 설정에 서버가 받지 않는 문자가 있을 수 있다.");
@@ -137,6 +137,9 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    경험·골드는 더 새 ts 본문에, 이 탭이 accBase 이후로 쌓은 미저장 증감(delta)만 더한다. 옛 절대값으로 덮지 않는다. */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
 let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
+/* 네트워크·타임아웃은 배너 전에 이 횟수만큼 조용히 다시 시도한다.
+   탭을 오래 켜 둔 채 방치하면 한두 번 끊기는 일이 많아, 1회만 보면 ⚠ 이 너무 자주 떴다. */
+const SAVE_SOFT_MAX=3;
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
 function wakeSave(ok){const w=saveWait;saveWait=[];w.forEach(r=>{try{r(!!ok)}catch(e){}})}
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
@@ -256,9 +259,17 @@ function saveCloud(now){
  return new Promise(resolve=>{saveWait.push(resolve);
   if(saveBusy){saveAgain=true;savePending=true;return}
   clearTimeout(sct);if(now)clearTimeout(saveRetryT);
+  /* 탭이 안 보이면 계정 저장 HTTP 를 시작하지 않는다.
+     언제: PC에 켜 둔 채 방치·다른 창 포커스(document.hidden)일 때.
+     왜: 백그라운드에서는 요청이 늦거나 끊겨 abort → ⚠ 저장 실패 배너가 출정과 무관하게 자주 떴다.
+     바뀐 칸은 이미 pend(local)에 있고, 다시 보이면 visibility→accSoftSync / 아래 go 가 올린다.
+     saveWait 는 풀지 않아, 보이는 뒤 저장이 끝날 때까지 saveNow 호출자가 기다린다. */
+  if(document.hidden){savePending=true;return}
   const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;wakeSave(false);return}
+   if(document.hidden){savePending=true;saveBusy=false;return}
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
+   if(document.hidden){savePending=true;saveBusy=false;return}
    const finishNoWrite=()=>{const st=JSON.stringify(C);accBase=JSON.parse(st);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==st){savePending=true;saveAgain=false;return go()}
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
@@ -270,8 +281,8 @@ function saveCloud(now){
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
    const fail=async e=>{const c=String(e&&e.message||e);
     if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
-    /* 네트워크·20초 제한은 한 번은 조용히 다시 시도한다. 마을에 실시간 연결이 많을 때 잠깐 막히는 경우가 있다. */
-    const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
+    /* 네트워크·응답 지연은 배너 전에 SAVE_SOFT_MAX 번 조용히 재시도. soft 중에는 saveWait 를 풀지 않는다. */
+    const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<SAVE_SOFT_MAX){saveSoft++;saveBusy=false;savePending=true;clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
     saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
    if(!accReady||!accBase){
     try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
