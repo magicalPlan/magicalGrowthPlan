@@ -97,8 +97,13 @@ function saveCause(c){const raw=String(c||""),msg=String(lastSaveErr&&lastSaveEr
   return {id:"denied",code:raw,msg}}
  if(/^\d{3}$/.test(raw))return {id:"http",code:raw,msg};
  return {id:"unknown",code:raw,msg}}
+/* 저장 경고. 탭이 숨겨진 동안(document.hidden)에는 바로 띄우지 않고 붙잡아 두었다가,
+   다시 보일 때만 표시한다. 그사이 저장이 성공하면(saveWarn("")) 붙잡은 경고도 버린다. */
+let saveWarnHold=null;
 function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
- if(!c){if(w)w.remove();saveErr="";lastSaveErr=null;return}
+ if(!c){saveWarnHold=null;if(w)w.remove();saveErr="";lastSaveErr=null;return}
+ if(typeof document!=="undefined"&&document.hidden){saveWarnHold=c;return}
+ saveWarnHold=null;
  const why=saveCause(c),key=why.id+"|"+(why.code||"")+"|"+(why.kb||"")+"|"+String(why.msg||"").slice(0,80);
  if(saveErr===key&&w)return;saveErr=key;if(!w){w=elT("div","fallbar");w.id="savewarn";w.style.cssText="margin:6px 0 0;text-align:left";m.after(w)}
  w.innerHTML="";
@@ -124,6 +129,7 @@ function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
  const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};row.appendChild(rb);
  if(why.id==="login"||why.id==="denied"||why.id==="rule"||why.id==="body"){const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.appendChild(lb)}
  w.appendChild(row)}
+document.addEventListener("visibilitychange",()=>{if(document.hidden||!saveWarnHold)return;const hold=saveWarnHold;saveWarnHold=null;saveWarn(hold)});
 // 로그인 토큰이 어느 Firebase 프로젝트 것인지 읽는다(점검용).
 function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));return p.aud||""}catch(e){return ""}}
 /* 저장이 401/403(권한 없음)으로 막히면 바로 포기하지 않고 차례로 다시 시도한다.
