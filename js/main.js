@@ -152,9 +152,11 @@ function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1
    · 전송은 한 번에 하나만(saveBusy). 막히면 mgr_pend_{계정} 에 칸만 남김.
    필드별 병합:
    · 펫·칭호 목록 = 합집합 keepMerge (사라지지 않게).
+   · 영구 전투력 가산 C.b = keepPwBonus(max). 회귀(rsv 더 새) 때는 서버본만(옛 가산 되살리지 않음).
    · 설정·장비 = C.eqv(버전) last-write-wins (더 새 eqv 쪽 칸을 통째로).
    · 재화 gd·inv.mana = PATCH 시 (로컬−accBase) delta 를 {".sv":{"increment":n}} 으로 보냄(절대값 덮어쓰기 아님).
-   · 카운터·그 외 inv 칸 = 절대 PATCH 유지. xpay 등 서버 sid sync 때는 로컬 경제 delta 를 얹지 않아 두 번 + 하지 않음. */
+   · 카운터·그 외 inv 칸 = 절대 PATCH 유지. xpay 등 서버 sid sync 때는 로컬 경제 delta 를 얹지 않아 두 번 + 하지 않음.
+   · PATCH 의 c/b 는 accBase 보다 낮추지 않는다(accPwBonusPatch). */
 const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0,accLastSid="";
 let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
 /* 서버(Functions·관리자)가 쓴 sid. sync 때 ‘다른 기기’ 토스트·경제 클라 덮어쓰기 생략. */
@@ -208,6 +210,8 @@ function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.in
   /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다.
      반대로, 서버에 이미 정산(없음)인데 낡은 pend 가 옛 출정을 되살리는 것도 막는다. */
   if(last==="lh"||last==="clue"){if(fields[path]==null&&o[last]&&typeof o[last]==="object")return;if(fields[path]&&typeof fields[path]==="object"&&!o[last])return}
+  /* 영구 전투력 가산: 낡은 pend 가 더 작은 b 로 깎지 않게 max. */
+  if(last==="b"){if(fields[path]==null)return;o.b=Math.max(Number(o.b)||0,Number(fields[path])||0);return}
   if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
 /* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
    재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
@@ -225,18 +229,25 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
  }catch(e){}
  return true}
+/* 영구 전투력 가산 C.b: 양쪽 max. 코드는 올리기만 하므로, sync 가 미저장 가산을 지우지 않게 한다.
+   회귀(rsv 더 새) 때는 호출하지 않는다 — 리셋 전 가산을 되살리면 안 된다. */
+function keepPwBonus(dst,src){if(!dst||!src)return dst;const a=Math.max(0,Number(dst.b)||0),b=Math.max(0,Number(src.b)||0);if(b>a)dst.b=b;return dst}
+/* PATCH body 의 c/b 가 accBase 보다 작거나 null 이면 보내지 않는다(영구분 하향 쓰기 금지). */
+function accPwBonusPatch(body,base){if(!body||!Object.prototype.hasOwnProperty.call(body,"c/b"))return body;
+ const bb=Math.max(0,Number(base&&base.b)||0),nb=body["c/b"]==null?NaN:Number(body["c/b"]);
+ if(!(nb>bb))delete body["c/b"];return body}
 /* 서버 ts > accSeen 이면 서버본으로 C 를 맞춘다.
    ACC_SID_SERVER·회귀: 경제는 서버만(로컬 delta 생략·pend 폐기) → xpay 와 클라 + 가 두 번 안 쌓임.
    일반: 표시는 서버+미저장 delta, accBase 경제는 서버(rem) → 다음 PATCH 가 increment 한 번만.
-   keepMerge(펫·칭호) + accEqLww(설정·장비). */
+   keepMerge(펫·칭호) + keepPwBonus(C.b) + accEqLww(설정·장비). */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
  const remoteTs=await accReadTs();
  if(!(remoteTs>Number(accSeen)))return false;
  const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;accLastSid=String(d.sid||"");return false}
  const mine=JSON.parse(JSON.stringify(C)),base=accBase,quiet=!!ACC_SID_SERVER[String(d.sid||"")];
- C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);accEqLww(C,mine,rem);
- C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
  const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
+ C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);accEqLww(C,mine,rem);if(!rstNewer)keepPwBonus(C,mine);
+ C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
  if(rstNewer||quiet){try{clearPend()}catch(e){}}
  const claimed=!quiet&&!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
  if(claimed){
@@ -247,8 +258,10 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else accSyncEconomy(mine,base,rem,quiet,rstNewer);
  try{giftBoxMerge(C,mine)}catch(e){}
- /* quiet·회귀: accBase=C(서버·표시 일치). 그 외: 경제 기준은 rem, 표시 C 는 rem+delta → increment 한 번. */
+ /* quiet·회귀: accBase=C(서버·표시 일치). 그 외: 경제 기준은 rem, 표시 C 는 rem+delta → increment 한 번.
+    keepPwBonus 로 C.b 만 서버보다 높으면 accBase.b 는 rem 기준으로 남겨, 다음 PATCH 가 영구분을 서버에 되살린다. */
  accSeen=Number(d.ts)||remoteTs;accLastSid=String(d.sid||"");accMark(rstNewer||quiet?C:rem);accReady=true;
+ if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
@@ -296,12 +309,12 @@ async function saveRescue(){if(saveFix)return false;saveFix=true;try{
  let accEx=true;try{accEx=!!(await DB.doc("accounts/"+AUTH.uid).peek())}catch(e){}
  if(accEx){
   try{await accSyncIfNewer()}catch(e){}
-  if(!accReady||!accBase){try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){C=JSON.parse(JSON.stringify(d.c));accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(d.c);accReady=true}}}catch(e){}}
+  if(!accReady||!accBase){try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){const mine=C?JSON.parse(JSON.stringify(C)):null,rstNewer=!!(mine&&(Number(d.c.rsv)||0)>(Number(mine.rsv)||0));C=JSON.parse(JSON.stringify(d.c));if(mine){keepMerge(C,mine);if(!rstNewer)keepPwBonus(C,mine)}accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(d.c);accReady=true;if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(d.c.b)||0))accBase.b=Math.max(0,Number(d.c.b)||0)}}}catch(e){}}
   /* 기존 계정: 통째 set 대신 diff PATCH. 직전 ts 가 앞서면 서버본만 맞추고 성공으로 본다. */
   const seen0=Number(accSeen)||0,remoteTs=await accReadTs();
   if(remoteTs>seen0){try{clearPend()}catch(e){}try{await accSyncIfNewer()}catch(e){}saveDiag="";return true}
   let body=accEqBump(accDiff(C),C);
-  body=accEconomyPatch(body,accBase,C);
+  body=accEconomyPatch(body,accBase,C);body=accPwBonusPatch(body,accBase);
   if(!Object.keys(body).length){saveDiag="";return true}
   body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
   try{await DB.doc("accounts/"+AUTH.uid).patch(body);accSeen=lastPut;accLastSid=MY_SID;saveDiag="";return true}catch(e){}
@@ -332,10 +345,11 @@ function saveCloud(now){
    if(!accReady||!accBase){
     try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
     let existed=false;
-    try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){existed=true;const mine=JSON.parse(JSON.stringify(C)),quiet=!!ACC_SID_SERVER[String(d.sid||"")];C=JSON.parse(JSON.stringify(d.c));keepMerge(C,mine);accEqLww(C,mine,d.c);C.lh=pickTrip(mine.lh,d.c.lh);C.clue=pickTrip(mine.clue,d.c.clue);
-     accSyncEconomy(mine,accBase,d.c,quiet,false);
-     if(quiet){try{clearPend()}catch(e){}}
-     accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(quiet?C:d.c);accReady=true}}}catch(e){}
+    try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){existed=true;const mine=JSON.parse(JSON.stringify(C)),quiet=!!ACC_SID_SERVER[String(d.sid||"")],rstNewer=(Number(d.c.rsv)||0)>(Number(mine.rsv)||0);C=JSON.parse(JSON.stringify(d.c));keepMerge(C,mine);accEqLww(C,mine,d.c);if(!rstNewer)keepPwBonus(C,mine);C.lh=pickTrip(mine.lh,d.c.lh);C.clue=pickTrip(mine.clue,d.c.clue);
+     accSyncEconomy(mine,accBase,d.c,quiet,rstNewer);
+     if(quiet||rstNewer){try{clearPend()}catch(e){}}
+     accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(quiet||rstNewer?C:d.c);accReady=true;
+     if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(d.c.b)||0)){accBase.b=Math.max(0,Number(d.c.b)||0);savePending=true}}}}catch(e){}
     if(!existed){
      const failNew=async e=>{const c=String(e&&e.message||e);
       if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");return finishNoWrite()}
@@ -362,7 +376,7 @@ function saveCloud(now){
    const seen0=Number(accSeen)||0,remoteTs=await accReadTs();
    if(remoteTs>seen0){try{clearPend()}catch(e){}try{await accSyncIfNewer()}catch(e){}
     if(!(Number(accSeen)>=remoteTs))accSeen=remoteTs;saveAgain=true;return go()}
-   body=accEconomyPatch(body,accBase,sent);
+   body=accEconomyPatch(body,accBase,sent);body=accPwBonusPatch(body,accBase);
    if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;accLastSid=MY_SID;saveWarn("");done()}).catch(fail)};
@@ -371,7 +385,7 @@ function saveCloud(now){
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
  const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
-  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML=""}
+  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
@@ -654,8 +668,11 @@ async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
 /* 공개 카드는 사진과 통째로 다시 쓰지 않는다. 이번 접속에서 바뀐 칸만 고친다.
    절망도는 10분마다 실제로 내려갔을 때 dz 만, 출정·기여·타락처럼 값이 바뀔 때는 그 칸만 고친다.
-   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
-let pubLast=null;
+   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다.
+   players.pw / who.pw 는 표시용 캐시. 값이 같으면 그 칸은 안 쓰고, who 전체 set 은 WHO_MS 디바운스.
+   허브·출정 자리 p 는 캐시를 쓰지 않는다(pw()·참가 스냅샷). */
+let pubLast=null,whoT=null,whoLastSent=null;
+const WHO_MS=3000;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
 function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
  const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
@@ -663,19 +680,27 @@ function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="func
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
+ /* pw 동일하면 표시 캐시 칸을 다시 쓰지 않는다(이미 위 비교로 빠지지만, 명시). */
+ if(Object.prototype.hasOwnProperty.call(patch,"pw")&&Number(patch.pw)===Number(pubLast.pw))delete patch.pw;
  if(!C.fall&&Object.prototype.hasOwnProperty.call(patch,"fl"))patch.fl=null;
  if(!Object.keys(patch).length)return;
  if(patch.dz!=null||patch.hf!=null){patch.dz=body.dz;patch.ts=Date.now()}
  const prev=pubLast,next=pubCopy(Object.assign({},pubLast,patch));if(!C.fall)next.fl=0;pubLast=next;
  DB.doc("players/"+UID).patch(patch).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}
-/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다. */
+/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다.
+   whoPut(): 디바운스. whoPut(true): 타락·프로필·접속 등 바로 flush.
+   직전 전송본과 본문이 같으면 set 생략(pw 포함). */
 function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
-function whoPut(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;DB.doc("who/"+UID).set(b).catch(()=>{})}
+function whoFlush(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;
+ const s=JSON.stringify(b);if(s===whoLastSent)return;whoLastSent=s;
+ DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null})}
+function whoPut(now){if(!DB||!C||!UID)return;if(now){if(whoT){clearTimeout(whoT);whoT=null}whoFlush();return}
+ if(whoT)return;whoT=setTimeout(()=>{whoT=null;whoFlush()},WHO_MS)}
 /* 친구 창과 프로필은 계정 기록이 아니라 공개 카드 players/{나}.fl 을 본다.
    공개 카드는 이번 접속에서 바뀐 칸만 고치므로, 타락 표시를 지우는 저장이 한 번 빠지면 다음 접속은 이미 지워진 것으로 기억하고 다시 쓰지 않는다.
    그래서 타락이 아닐 때는 fl 칸을 지우고, 타락 중일 때는 1로 다시 적는다. null 은 그 칸을 지운다. */
-function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut()}
-function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}catch(e){}})}
+function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut(true)}
+function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut(true)}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -823,7 +848,7 @@ function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=nul
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
- const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML=""};
+ const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}};
  const takeOne=x=>{const z0=C.dz||0,e0=C.ex||0;ginPendDel.add(x.id);ginList=ginList.filter(y=>y&&y.id!==x.id);ginIds=ginList.map(y=>y.id).join("|");
   const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));
   opened.push({x,dDz:(C.dz||0)-z0,dEx:(C.ex||0)-e0});paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
@@ -966,7 +991,7 @@ let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut(true)}
 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
