@@ -1,8 +1,7 @@
 /* 마을 화면. main.js 와 js/trial.js 다음에 불러야 한다. 다른 화면이 hub, pmCleanup 을 그대로 부른다.
    마을을 그릴 때는 공개 카드(players)를 다시 쓰지 않는다. 카드는 프로필·기여·타락처럼 내용이 바뀔 때 쓴다.
    로그인한 뒤 마을을 열 때와, 출정·장기 토벌에서 마을로 돌아올 때 계정 ts·본문을 맞춘 뒤 prog 를 본문에 맞춘다.
-   경험치는 큰 값이 아니라 더 새 계정 ts 의 본문을 따른다.
-   서버 권위(2026-11): readProg 의 prog 거울 PATCH 는 ts/sid 를 올리지 않는다(예전엔 올려 타 기기 롤백·‘다른 기기’ sync 를 키웠음). */
+   경험치는 큰 값이 아니라 더 새 계정 ts 의 본문을 따른다. */
 function hubLv(){return C&&C.xv>=2?lvOf(C.ex||0):(C&&C.lv)||1}
 function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
  const a=$("#hclv");if(a)a.textContent=String(lv);const bar=$("#hcxb");if(bar)bar.style.width=Math.min(100,into/nx*100)+"%";const tx=$("#hcxt");if(tx)tx.textContent=into+" / "+nx;
@@ -17,8 +16,7 @@ async function readProg(){if(!C||!AUTH.uid||LOCAL||!DB)return;if(progBusy){progA
   const ex0=C.ex,lv0=C.lv,xv0=C.xv;xpMigrate();C.lv=lvOf(C.ex||0);C.xv=3;
   const needProg=!p||p.ex==null||Number(p.ex)!==Number(C.ex)||(Number(p.lv)||0)!==(C.lv||1)||(Number(p.xv)||0)!==3;
   if(C.ex!==ex0||C.lv!==lv0||C.xv!==xv0)save();
-  /* prog 만 PATCH. 예전: ts·sid 동시 갱신 → 계정 권위 ts 가 불필요하게 앞섬. 지금은 prog 칸만. */
-  else if(needProg){try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":3})}catch(e){}}}while(progAgain)}
+  else if(needProg){try{await DB.doc("accounts/"+UID).patch({"prog/lv":C.lv||1,"prog/ex":C.ex||0,"prog/xv":3,ts:Date.now(),sid:MY_SID})}catch(e){}}}while(progAgain)}
  finally{progBusy=false}if(!$("#v-hub").hidden){pmCleanup();paintLv()}}
 function pmCleanup(){if(!C)return;xpMigrate();if(C.pl==null&&!C.pmx)return;if(C.pmx>0){C.ex=(C.ex||0)+C.pmx;C.lv=lvOf(C.ex)}["pl","plt","pmk","pmc","pmx"].forEach(k=>delete C[k]);save()}
 function hub(){if(C)xpMigrate();const fresh=$("#v-hub").hidden,online=!!(C&&AUTH.uid&&!LOCAL&&DB);show("hub");if(!fresh||!online)pmCleanup();setTimeout(checkComp,800);setTimeout(checkGrant,900);titleProgress();const v=VL[C.v],ac=AT.find(a=>a[0]===C.a[0])[1];$("#hc").style.setProperty("--c",ac);
