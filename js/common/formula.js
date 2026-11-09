@@ -95,8 +95,8 @@ const pr=p=>Math.ceil(p*(C.v==="A"?.9:1)*(1-.02*_facLv("market"))*(1-_petEff("sh
 const upr=L=>Math.min(100,UPR[L]+(C.t==="행운"?5:0)+2*_facLv("forge")+((VL[C.v]||{}).up||0)+_petEff("up"));
 
 /* 장기 토벌 성공 확률. 전투력÷권장 전투력 × 0.85 에 사역마 lh 를 더한다.
-   30% 보다 낮아지지 않고, 95% 보다 높아지지 않는다. */
-const lhChance=(pwv,req)=>Math.max(.3,Math.min(.95,pwv/req*.85+_petEff("lh")));
+   최저 30%. 상한은 사역마 lh 가 있으면 100%, 없으면 95%. */
+const lhChance=(pwv,req)=>{const pet=_petEff("lh");return Math.max(.3,Math.min(pet>0?1:.95,pwv/req*.85+pet))};
 /* 장기 토벌 골드·경험치 % 구간. 단계 1 → 95~100, 2 → 90~95, … (양끝 포함). */
 const lhPctRange=st=>{const s=Math.max(1,Number(st)||1),lo=95-5*(s-1),hi=100-5*(s-1);return[lo,hi]};
 const lhRollPct=(st,rand)=>{const[lo,hi]=lhPctRange(st);return lo+Math.floor(rand()*(hi-lo+1))};
