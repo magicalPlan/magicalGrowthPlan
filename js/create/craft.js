@@ -37,7 +37,7 @@ function craft(msg){if(!C)return;C.inv=C.inv||{};const fresh=$("#v-craft").hidde
  const ml=$("#cfm");ml.innerHTML="";MAT.forEach(m=>{const c=elT("button","chip cf-mat");c.type="button";c.title=m[3]+" 얻는 곳: "+m[4];c.onclick=()=>{mm.style.color="var(--mu)";mm.textContent=m[2]+" "+m[1]+": "+m[3]+" 얻는 곳: "+m[4]+"."};
   c.append(itIc(m[0],"sm")||elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});
  /* 제작 카드의 이름 위 그림. 아이템 id 파일(license.png 등)이 아니라 이 주소를 쓴다. */
-const CF_ART={license:"assets/items/they_look_very_polite.png",g4:"assets/items/dream_music_box.png",prism:"assets/items/elemental_prism.png"};
+const CF_ART={license:"assets/items/they_look_very_polite.png",g4:"assets/items/dream_music_box.png",prism:"assets/items/elemental_prism.png",vtown:"assets/items/move_to_other_town.png"};
 function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.createElement("img");i.src=src;i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic lg";return i}
 // 만들 수량
  const qb=$("#cfq");qb.innerHTML="";qb.appendChild(elT("span","shopq-l","만들 수량"));
@@ -81,3 +81,20 @@ function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.in
  try{if(typeof dexSkAttr==="function"&&dexSkAttr(p.to))note("dex","도감에 새 마법이 기록되었다: "+((SK[p.to]||{}).nm||p.to))}catch(e){}
  const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}
+
+/* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 만 바뀐다.
+   시설 기여·이용 기록 등은 그대로 둔다. 타락 중에는 쓸 수 없다. */
+let vtownOn=false,vtownPick=null;
+function vtownBox(){const box=elT("div","card prism-box"),cur=C.v,opts=Object.keys(VL).filter(k=>k!==cur);
+ box.appendChild(elT("p","hint","지금 마을: "+((VL[cur]||{}).n||cur||"없음")));
+ box.appendChild(elT("p","hint","옮길 마을"));
+ const row=elT("div","row");opts.forEach(k=>{const v=VL[k],b=elT("button","chip",v?v.n:k);b.type="button";b.title=v?v.d:k;b.setAttribute("aria-pressed",vtownPick===k?"true":"false");b.onclick=()=>{vtownPick=k;bag()};row.appendChild(b)});box.appendChild(row);
+ if(vtownPick&&VL[vtownPick])box.appendChild(elT("p","hint",VL[vtownPick].n+": "+VL[vtownPick].d));
+ const ok=!!vtownPick&&!!VL[vtownPick]&&vtownPick!==cur,b=elT("button","btn"+(ok?"":" g"),ok?(VL[cur]?VL[cur].n:cur)+" → "+VL[vtownPick].n:"옮길 마을을 골라야 한다");b.type="button";b.disabled=!ok;b.onclick=vtownUse;box.appendChild(b);return box}
+function vtownUse(){const to=vtownPick,from=C.v;if(!to||!VL[to]||to===from)return;
+ if((C.inv.vtown||0)<1)return;if(C.fall){bag("타락한 동안에는 마을을 떠날 수 없다.");$("#bgm").style.color="var(--bad)";return}
+ if(!confirm((VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮길까?\n\n· 소속 마을만 바뀐다\n· 되돌리려면 이동권이 하나 더 필요하다"))return;
+ C.inv.vtown--;C.v=to;C.stats=C.stats||{};C.stats.townMoves=(C.stats.townMoves||0)+1;C.stats.vSeen=C.stats.vSeen&&typeof C.stats.vSeen==="object"?C.stats.vSeen:{};if(from&&VL[from])C.stats.vSeen[from]=1;C.stats.vSeen[to]=1;vtownOn=false;vtownPick=null;titleState();
+ note("quest","마을 이동권: "+(VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮겼다.");save();regPlayer();checkTitles();
+ alertBox("🏘 마을 이동권","잉크가 마르고 각오가 굳었다.\n\n"+(VL[from]?VL[from].n:from)+" → "+VL[to].n+"\n"+VL[to].d+"\n\n당신은 떠났다.");
+ if(typeof hub==="function")hub();else bag()}
