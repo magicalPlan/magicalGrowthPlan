@@ -6,12 +6,12 @@ const echoName=r=>{const ids=Object.keys((C&&C.fr)||{}).filter(u=>!r.pl[u]&&C.fr
 const EVM={};EV.concat(SOLO_EV,...Object.values(VEV)).forEach(x=>EVM[x.id]=x);
 let C=null,DB=null,UID="나",LOCAL=false;
 try{C=JSON.parse(localStorage.getItem("mgr"))}catch(e){}
-/* save: 로그인 중이면 바뀐 칸을 pend 에 남기고 saveCloud(디바운스)로 올린다. 캐릭터 전체를 mgr 에 쓰지 않는다(혼자 하기만 mgr).
-   서버 권위 전환 후에도 save 호출 빈도는 같다. 달라진 것은 saveCloud 안(직전 ts 재검증·기존 계정 set 금지). */
+// 로그인 중이면 서버에 바뀐 칸만 올린다. 캐릭터 전체를 이 브라우저에 다시 쓰지 않는다.
+// 혼자 하기만 이 브라우저의 mgr 에 캐릭터를 남긴다.
 const save=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)pendWrite(body)}}catch(e){}saveCloud();return}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}};
-/* 출발·정산처럼 유실이 아쉬운 변경은 600ms 없이 바로 saveCloud(true). 권위는 여전히 서버(직전 ts 재검증). */
+/* 출발·정산처럼 덮어쓰기·유실이 아쉬운 변경은 600ms 대기 없이 바로 올린다. */
 const saveNow=()=>{try{updNav()}catch(e){}if(AUTH.uid){savePending=true;try{pubSync()}catch(e){}try{if(C&&accBase){const body=accDiff(C);if(body&&Object.keys(body).length)pendWrite(body)}}catch(e){}return saveCloud(true)}try{localStorage.setItem("mgr",JSON.stringify(C))}catch(e){}return Promise.resolve(true)};
-/* 서버 PATCH가 끝날 때까지 기다린다. 성공 true. (예전: 실패 복구가 전체 set 일 수 있었음 → 지금은 기존 계정 PATCH만) */
+/* 서버 PATCH(또는 전체 set)가 끝날 때까지 기다린다. 성공 true, 실패·미로그인 로컬만이면 로컬은 true. */
 async function saveNowOk(){if(!AUTH.uid||!DB){await saveNow();return true}const r=await saveNow();return r===true}
 /* 잠깐 실패해도 몇 번 다시 올린다. 장기 토벌처럼 알림을 저장 성공 뒤에 두려면 이걸 쓴다. */
 async function saveNowRetry(n,gap){n=n||4;gap=gap||2500;for(let i=0;i<n;i++){if(await saveNowOk())return true;if(i<n-1)await new Promise(r=>setTimeout(r,gap*(i+1)))}return false}
@@ -97,13 +97,8 @@ function saveCause(c){const raw=String(c||""),msg=String(lastSaveErr&&lastSaveEr
   return {id:"denied",code:raw,msg}}
  if(/^\d{3}$/.test(raw))return {id:"http",code:raw,msg};
  return {id:"unknown",code:raw,msg}}
-/* 저장 경고. 탭이 숨겨진 동안(document.hidden)에는 바로 띄우지 않고 붙잡아 두었다가,
-   다시 보일 때만 표시한다. 그사이 저장이 성공하면(saveWarn("")) 붙잡은 경고도 버린다. */
-let saveWarnHold=null;
 function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
- if(!c){saveWarnHold=null;if(w)w.remove();saveErr="";lastSaveErr=null;return}
- if(typeof document!=="undefined"&&document.hidden){saveWarnHold=c;return}
- saveWarnHold=null;
+ if(!c){if(w)w.remove();saveErr="";lastSaveErr=null;return}
  const why=saveCause(c),key=why.id+"|"+(why.code||"")+"|"+(why.kb||"")+"|"+String(why.msg||"").slice(0,80);
  if(saveErr===key&&w)return;saveErr=key;if(!w){w=elT("div","fallbar");w.id="savewarn";w.style.cssText="margin:6px 0 0;text-align:left";m.after(w)}
  w.innerHTML="";
@@ -129,44 +124,22 @@ function saveWarn(c){const m=$("#mode");if(!m)return;let w=$("#savewarn");
  const row=elT("div","row");row.style.marginTop="8px";const rb=elT("button","chip","다시 저장해 보기");rb.type="button";rb.onclick=()=>{saveErr="";saveCloud(true)};row.appendChild(rb);
  if(why.id==="login"||why.id==="denied"||why.id==="rule"||why.id==="body"){const lb=elT("button","chip","다시 로그인");lb.type="button";lb.onclick=()=>logOut();row.appendChild(lb)}
  w.appendChild(row)}
-document.addEventListener("visibilitychange",()=>{if(document.hidden||!saveWarnHold)return;const hold=saveWarnHold;saveWarnHold=null;saveWarn(hold)});
 // 로그인 토큰이 어느 Firebase 프로젝트 것인지 읽는다(점검용).
 function tokProj(){try{const p=JSON.parse(atob(String(AUTH.tok||"").split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));return p.aud||""}catch(e){return ""}}
 /* 저장이 401/403(권한 없음)으로 막히면 바로 포기하지 않고 차례로 다시 시도한다.
    ① 로그인 토큰이 만료됐을 수 있으니 새 토큰을 받아 다시 저장 ② 비밀 코드(jc)를 빼고 저장(이미 있는 계정) ③ 비밀 코드를 넣고 저장(처음 만드는 계정).
    그래도 안 되면 작은 값 하나만 저장해 보고, 결과를 경고에 함께 적어 원인(토큰·규칙·내용)을 짐작할 수 있게 한다. */
-/* ── 계정 동기화(서버 권위, 2026-11) ─────────────────────────────────
-   예전(클라 낙관적 권위):
-   · saveCloud 가 시작 때 ts 만 보고 PATCH. 직전 재검증 없음 → 타 기기·xpay 가 끼면 옛 절대값이 서버를 되돌림(롤백).
-   · accReady/accBase 없거나 saveRescue(401/403) 때 계정 통째 set → 다른 기기 진행분 통째 덮어쓰기.
-   · 로그인 시 pend.t >= srvTs 이면 applyPend 후 즉시 saveCloud(true) → 낡은 로컬이 최신 서버를 덮을 여지.
-   · readProg 가 prog 맞추며 ts·sid 까지 PATCH → 불필요한 ‘다른 기기’ sync·레이스.
-   · xpay 등 서버 sid 여도 gd/ex delta·claimed 로 클라 경제값을 다시 올릴 수 있음.
-
-   지금(서버 권위):
-   · 권위 = accounts/{uid}. 클라는 미러. 바뀐 칸만 PATCH(accDiff).
-   · PATCH 직전 ts 재검증: 서버가 더 새면 이번 쓰기·pend 폐기 → sync 만 하고 재시도.
-   · 기존 계정은 통째 set 금지(신규 생성·복구로 서버에 c 가 없을 때만 set). saveRescue 도 PATCH.
-   · 로그인 pend: pend.t > srvTs 일 때만 C 에 붙임. 즉시 강제 업로드 없음(save/boot 가 재검증 PATCH).
-   · 서버 sid(xpay·admin-*)면 sync 시 경제 delta/claimed·pend 생략(토스트도 생략).
-   · 전송은 한 번에 하나만(saveBusy). 막히면 mgr_pend_{계정} 에 칸만 남김.
-   필드별 병합:
-   · 펫·칭호 목록 = 합집합 keepMerge (사라지지 않게).
-   · 영구 전투력 가산 C.b = keepPwBonus(max). 회귀(rsv 더 새) 때는 서버본만(옛 가산 되살리지 않음).
-   · 설정·장비 = C.eqv(버전) last-write-wins (더 새 eqv 쪽 칸을 통째로).
-   · 재화 gd·inv.mana = PATCH 시 (로컬−accBase) delta 를 {".sv":{"increment":n}} 으로 보냄(절대값 덮어쓰기 아님).
-   · 카운터·그 외 inv 칸 = 절대 PATCH 유지. xpay 등 서버 sid sync 때는 로컬 경제 delta 를 얹지 않아 두 번 + 하지 않음.
-   · PATCH 의 c/b 는 accBase 보다 낮추지 않는다(accPwBonusPatch). */
-const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0,accLastSid="";
+/* 저장은 계정 문서를 통째로 바꾸지 않는다. 마지막으로 서버에 반영된 캐릭터(accBase)와 지금 캐릭터를 견주어, 바뀐 칸만 PATCH 한다.
+   레벨·경험치는 accounts/{계정}/prog 에도 같이 적어, 마을을 열 때와 출정에서 돌아올 때 읽는다. 계정 ts 가 더 새면 본문(경험·골드 포함)을 따르고 prog 를 맞춘다.
+   보내기 전에 막히면 바뀐 칸만 mgr_pend_{계정} 에 남긴다. 캐릭터 전체 백업은 쓰지 않는다.
+   전송은 한 번에 하나만(saveBusy). 겹치면 saveAgain 만 남기고, 끝난 뒤 최신 C 로 다시 diff 한다 → 같은 칸은 마지막 값만 나간다.
+   PATCH 전에 accounts/.../ts 를 읽어, 내가 아는 accSeen 보다 크면 다른 기기·탭이 쓴 것으로 보고 서버본을 받은 뒤 합친다.
+   경험·골드는 더 새 ts 본문에, 이 탭이 accBase 이후로 쌓은 미저장 증감(delta)만 더한다. 옛 절대값으로 덮지 않는다. */
+const MY_SID=Math.random().toString(36).slice(2,10)+Date.now().toString(36);let saveDiag="",saveFix=false;let accSeen=null,lastPut=0;
 let accBase=null,accReady=false,savePending=false,saveBusy=false,saveAgain=false,saveRetryT=null,saveWait=[],saveSoft=0;
-/* 서버(Functions·관리자)가 쓴 sid. sync 때 ‘다른 기기’ 토스트·경제 클라 덮어쓰기 생략. */
-const ACC_SID_SERVER={xpay:1,frsync:1,"admin-grant":1,"admin-rst":1};
-/* 장비·설정 LWW 대상. inv(가방 개수)는 재화라 제외. ti 는 장착 칭호(설정), titles[] 목록은 keepMerge. */
-const ACC_GEAR_KEYS=["wp","wps","wl","arm","sk"],ACC_SET_KEYS=["ti","healOff","pf"],ACC_EQ_KEYS=ACC_GEAR_KEYS.concat(ACC_SET_KEYS);
 const savePayload=jc=>{const p={c:C,ts:Date.now(),sid:MY_SID,prog:{lv:C.lv||1,ex:C.ex||0,xv:C.xv||2}};if(jc)p.jc=AUTH.jc;lastPut=p.ts;return p};
 function wakeSave(ok){const w=saveWait;saveWait=[];w.forEach(r=>{try{r(!!ok)}catch(e){}})}
 function accMark(sent){try{accBase=JSON.parse(JSON.stringify(sent||C))}catch(e){accBase=null}}
-async function accReadTs(){if(!AUTH.uid||!DB)return 0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();return sn.exists?Number(sn.data())||0:0}catch(e){return 0}}
 function diffFlat(a,b,path,out){if(a===b)return;const ao=a&&typeof a==="object",bo=b&&typeof b==="object";
  if(!ao||!bo||Array.isArray(a)||Array.isArray(b)){if(JSON.stringify(a)!==JSON.stringify(b))out[path]=b===undefined?null:b;return}
  const keys={};Object.keys(a).forEach(k=>{keys[k]=1});Object.keys(b).forEach(k=>{keys[k]=1});
@@ -174,34 +147,6 @@ function diffFlat(a,b,path,out){if(a===b)return;const ao=a&&typeof a==="object",
 function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
  return out}
-const accInc=n=>({".sv":{"increment":Math.trunc(Number(n)||0)}});
-/* gd·mana 절대값을 (sent−base) increment 로 바꾼다. pend 에는 절대값을 남기고, 나가기 직전에만 호출. */
-function accEconomyPatch(body,base,sent){if(!body)return body;
- const bg=Number(base&&base.gd)||0,sg=Number(sent&&sent.gd)||0,dg=sg-bg;
- if(Object.prototype.hasOwnProperty.call(body,"c/gd")||dg){if(dg)body["c/gd"]=accInc(dg);else delete body["c/gd"]}
- const bm=Number(base&&base.inv&&base.inv.mana)||0,sm=Number(sent&&sent.inv&&sent.inv.mana)||0,dm=sm-bm;
- if(Object.prototype.hasOwnProperty.call(body,"c/inv/mana")||dm){if(dm)body["c/inv/mana"]=accInc(dm);else delete body["c/inv/mana"]}
- return body}
-/* sync 직후: 화면에 보이는 C(서버+미저장 delta)와, 다음 increment 기준 accBase(서버 경제)를 맞춘다.
-   quiet(xpay 등)면 delta 없음 → C 와 accBase 모두 서버본(두 번 + 방지). */
-function accSyncEconomy(mine,base,rem,quiet,rstNewer){
- if(quiet||rstNewer||!rem)return;
- const b=base||rem;
- const dGd=(Number(mine.gd)||0)-(Number(b.gd)||0);
- const dEx=(Number(mine.ex)||0)-(Number(b.ex)||0);
- const dMn=(Number(mine.inv&&mine.inv.mana)||0)-(Number(b.inv&&b.inv.mana)||0);
- if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd);
- if(dEx){C.ex=Math.max(0,(Number(C.ex)||0)+dEx);C.lv=typeof lvOf==="function"?lvOf(C.ex):(mine.lv||C.lv);if(mine.xv!=null)C.xv=mine.xv}
- if(dMn){C.inv=C.inv&&typeof C.inv==="object"?C.inv:{};C.inv.mana=Math.max(0,(Number(C.inv.mana)||0)+dMn)}}
-function accEqAt(ch){return Math.max(0,Number(ch&&ch.eqv)||0)}
-function accEqTouched(body){if(!body)return false;return Object.keys(body).some(k=>ACC_EQ_KEYS.some(f=>k==="c/"+f||k.indexOf("c/"+f+"/")===0))}
-/* mine.eqv 가 rem 보다 크면 설정·장비 칸만 mine 으로 덮는다(LWW). 같거나 rem 이 크면 dst(보통 서버본) 유지. */
-function accEqLww(dst,mine,rem){if(!dst||!mine)return dst;if(!(accEqAt(mine)>accEqAt(rem)))return dst;
- ACC_EQ_KEYS.forEach(k=>{if(!Object.prototype.hasOwnProperty.call(mine,k)){delete dst[k];return}
-  try{dst[k]=JSON.parse(JSON.stringify(mine[k]))}catch(e){dst[k]=mine[k]}});
- dst.eqv=accEqAt(mine);return dst}
-/* 장비·설정 diff 가 있으면 eqv 를 올리고 body 에 넣는다. sync LWW 가 이 숫자를 본다. */
-function accEqBump(body,ch){if(!body||!ch||!accEqTouched(body))return body;ch.eqv=Date.now();body["c/eqv"]=ch.eqv;return body}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
 function pendWrite(slim){if(!AUTH.uid||!slim||!Object.keys(slim).length)return;try{localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(Object.assign({_t:Date.now()},slim)))}catch(e){}}
 function pendRead(){if(!AUTH.uid)return null;try{const raw=localStorage.getItem("mgr_pend_"+AUTH.uid);if(!raw)return null;const f=JSON.parse(raw);if(!f||typeof f!=="object")return null;const t=Number(f._t)||0;const fields={};Object.keys(f).forEach(k=>{if(k==="_t")return;if(k.indexOf("c/")===0||k.indexOf("prog/")===0)fields[k]=f[k]});
@@ -210,8 +155,6 @@ function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.in
   /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다.
      반대로, 서버에 이미 정산(없음)인데 낡은 pend 가 옛 출정을 되살리는 것도 막는다. */
   if(last==="lh"||last==="clue"){if(fields[path]==null&&o[last]&&typeof o[last]==="object")return;if(fields[path]&&typeof fields[path]==="object"&&!o[last])return}
-  /* 영구 전투력 가산: 낡은 pend 가 더 작은 b 로 깎지 않게 max. */
-  if(last==="b"){if(fields[path]==null)return;o.b=Math.max(Number(o.b)||0,Number(fields[path])||0);return}
   if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
 /* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
    재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
@@ -225,50 +168,47 @@ async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
 async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=await rstDueRemote();if(!(due>(Number(C.rsv)||0)))return false;
  try{clearPend()}catch(e){}
  try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return true;const d=full.data()||{},ch=d.c;
-  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(ch);accReady=true;
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accMark(ch);accReady=true;
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
  }catch(e){}
  return true}
-/* 영구 전투력 가산 C.b: 양쪽 max. 코드는 올리기만 하므로, sync 가 미저장 가산을 지우지 않게 한다.
-   회귀(rsv 더 새) 때는 호출하지 않는다 — 리셋 전 가산을 되살리면 안 된다. */
-function keepPwBonus(dst,src){if(!dst||!src)return dst;const a=Math.max(0,Number(dst.b)||0),b=Math.max(0,Number(src.b)||0);if(b>a)dst.b=b;return dst}
-/* PATCH body 의 c/b 가 accBase 보다 작거나 null 이면 보내지 않는다(영구분 하향 쓰기 금지). */
-function accPwBonusPatch(body,base){if(!body||!Object.prototype.hasOwnProperty.call(body,"c/b"))return body;
- const bb=Math.max(0,Number(base&&base.b)||0),nb=body["c/b"]==null?NaN:Number(body["c/b"]);
- if(!(nb>bb))delete body["c/b"];return body}
-/* 서버 ts > accSeen 이면 서버본으로 C 를 맞춘다.
-   ACC_SID_SERVER·회귀: 경제는 서버만(로컬 delta 생략·pend 폐기) → xpay 와 클라 + 가 두 번 안 쌓임.
-   일반: 표시는 서버+미저장 delta, accBase 경제는 서버(rem) → 다음 PATCH 가 increment 한 번만.
-   keepMerge(펫·칭호) + keepPwBonus(C.b) + accEqLww(설정·장비). */
+/* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
+const ACC_SID_SERVER={xpay:1,frsync:1,"admin-grant":1,"admin-rst":1};
+/* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
+   경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
+   sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
- const remoteTs=await accReadTs();
+ let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
  if(!(remoteTs>Number(accSeen)))return false;
- const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;accLastSid=String(d.sid||"");return false}
- const mine=JSON.parse(JSON.stringify(C)),base=accBase,quiet=!!ACC_SID_SERVER[String(d.sid||"")];
- const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
- C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);accEqLww(C,mine,rem);if(!rstNewer)keepPwBonus(C,mine);
+ const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;return false}
+ const mine=JSON.parse(JSON.stringify(C)),base=accBase;C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
- if(rstNewer||quiet){try{clearPend()}catch(e){}}
- const claimed=!quiet&&!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
+ /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭으로 회귀를 되돌리지 않는다. */
+ const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
+ if(rstNewer){try{clearPend()}catch(e){}}
+ /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계·경험·골드)을 서버 옛값으로 되돌리지 않는다. */
+ const claimed=!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
  if(claimed){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
- else accSyncEconomy(mine,base,rem,quiet,rstNewer);
+ else if(!rstNewer&&base){
+  const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0);
+  if(dEx){C.ex=Math.max(0,(Number(C.ex)||0)+dEx);C.lv=typeof lvOf==="function"?lvOf(C.ex):(mine.lv||C.lv);if(mine.xv!=null)C.xv=mine.xv}
+  if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd)}
+ /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
- /* quiet·회귀: accBase=C(서버·표시 일치). 그 외: 경제 기준은 rem, 표시 C 는 rem+delta → increment 한 번.
-    keepPwBonus 로 C.b 만 서버보다 높으면 accBase.b 는 rem 기준으로 남겨, 다음 PATCH 가 영구분을 서버에 되살린다. */
- accSeen=Number(d.ts)||remoteTs;accLastSid=String(d.sid||"");accMark(rstNewer||quiet?C:rem);accReady=true;
- if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
+ /* 회귀 직후면 서버본 기준. 그 외는 accBase=rem 으로 두어 미저장 delta 가 이어지는 PATCH 에 나가게 한다. */
+ accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
+ const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  return true}
-/* 합집합 merge(펫·칭호): 사역마·품고 있는 알·칭호 목록·도감·petGone 은 양쪽을 합친다.
-   설정·장비(wp/arm/ti 등)는 여기 넣지 않는다 → accEqLww(C.eqv). 재화·카운터도 여기 없음.
-   예전에는 다른 창 기록으로 바뀔 때 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
+/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 도감)은 양쪽을 합친다.
+   예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
 /* 옛 계정 rg/gs 정리. ginbox 이전 후에는 목록을 계정에 두지 않는다. */
 function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  const v=Math.max(Number(dst.ginboxV)||0,Number(src.ginboxV)||0);
@@ -288,7 +228,6 @@ function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  if((Array.isArray(src.rg)?src.rg.length:0)<(Array.isArray(dst.rg)?dst.rg.length:0)&&(Number(src.dz)||0)<=(Number(dst.dz)||0))dst.dz=src.dz;
  return dst}
 function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
- /* titles·pets·petSeen·petGone·petMax·egg·dml·chats: 합집합/max. ti(장착 칭호)는 LWW. */
  const gone=Object.assign({},src.petGone||{},dst.petGone||{});dst.petGone=gone;
  const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else if((Number(q.xp)||0)>(Number(L[i].xp)||0))L[i]=Object.assign({},L[i],{xp:q.xp})});dst.pets=L;
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
@@ -302,33 +241,17 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
 async function syncAdopt(){return false}
 async function syncPeek(){return "same"}
 async function saveRescue(){if(saveFix)return false;saveFix=true;try{
- /* 예전: 401/403 복구가 accounts 통째 set → 타 기기 롤백의 큰 원인.
-    지금: 기존 계정이면 토큰 갱신 후 diff PATCH(+직전 ts 검사)만. 서버에 c 가 없을 때만 신규 set. */
+ /* 회귀 직후 옛 탭이 권한 오류 복구로 계정 통째 set 하지 않게 한다. */
  try{if(await rstAbortStaleSave()){saveDiag="";return true}}catch(e){}
  let tok=true;try{if(AUTH.rt&&AUTH.key)await refresh()}catch(e){tok=false}
- let accEx=true;try{accEx=!!(await DB.doc("accounts/"+AUTH.uid).peek())}catch(e){}
- if(accEx){
-  try{await accSyncIfNewer()}catch(e){}
-  if(!accReady||!accBase){try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){const mine=C?JSON.parse(JSON.stringify(C)):null,rstNewer=!!(mine&&(Number(d.c.rsv)||0)>(Number(mine.rsv)||0));C=JSON.parse(JSON.stringify(d.c));if(mine){keepMerge(C,mine);if(!rstNewer)keepPwBonus(C,mine)}accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(d.c);accReady=true;if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(d.c.b)||0))accBase.b=Math.max(0,Number(d.c.b)||0)}}}catch(e){}}
-  /* 기존 계정: 통째 set 대신 diff PATCH. 직전 ts 가 앞서면 서버본만 맞추고 성공으로 본다. */
-  const seen0=Number(accSeen)||0,remoteTs=await accReadTs();
-  if(remoteTs>seen0){try{clearPend()}catch(e){}try{await accSyncIfNewer()}catch(e){}saveDiag="";return true}
-  let body=accEqBump(accDiff(C),C);
-  body=accEconomyPatch(body,accBase,C);body=accPwBonusPatch(body,accBase);
-  if(!Object.keys(body).length){saveDiag="";return true}
-  body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-  try{await DB.doc("accounts/"+AUTH.uid).patch(body);accSeen=lastPut;accLastSid=MY_SID;saveDiag="";return true}catch(e){}
-  let small=false;try{await DB.doc("accounts/"+AUTH.uid+"/ts").set(Date.now());small=true}catch(e){}
-  saveDiag=" [진단: 토큰 "+(tok?"정상":"갱신 실패")+" · 기존 계정 PATCH 실패 · 작은 저장 "+(small?"성공":"실패")+"]";return false}
  const order=AUTH.jc?(AUTH.nojc?[false,true]:[true,false]):[false];
- for(const jc of order){try{await DB.doc("accounts/"+AUTH.uid).set(savePayload(jc));accSeen=lastPut;accLastSid=MY_SID;if(AUTH.jc&&!jc)AUTH.nojc=1;if(jc)AUTH.nojc=0;saveDiag="";return true}catch(e){}}
- if(AUTH.jc){AUTH.jc="";AUTH.nojc=0;try{localStorage.removeItem("mgr_jc_"+AUTH.uid)}catch(e){}}
+ for(const jc of order){try{await DB.doc("accounts/"+AUTH.uid).set(savePayload(jc));accSeen=lastPut;if(AUTH.jc&&!jc)AUTH.nojc=1;if(jc)AUTH.nojc=0;saveDiag="";return true}catch(e){}}
+ /* 코드를 넣어도, 빼도 저장이 안 되면 기억된 코드가 틀린 것일 수 있다. 코드를 비워 화면에 코드 입력칸이 나오게 한다. */
+ let accEx=true;try{accEx=!!(await DB.doc("accounts/"+AUTH.uid).peek())}catch(e){}
+ if(AUTH.jc&&!accEx){AUTH.jc="";AUTH.nojc=0;try{localStorage.removeItem("mgr_jc_"+AUTH.uid)}catch(e){}}
  let small=false;try{await DB.doc("accounts/"+AUTH.uid+"/ts").set(Date.now());small=true}catch(e){}
  const kb=Math.round(JSON.stringify(savePayload(false)).length/1024);
  saveDiag=" [진단: 토큰 "+(tok?"정상":"갱신 실패")+" · 작은 저장 "+(small?"성공 → 저장 내용("+kb+"KB)이 규칙에 걸림":"실패 → 계정 쓰기 권한 자체가 막힘")+"]";return false}finally{saveFix=false}}
-/* saveCloud: 서버에 바뀐 칸을 올린다.
-   예전: sync(시작 ts) → (기준 없으면 set) → diff PATCH. PATCH 직전 ts 없음.
-   지금: sync → 기준 없으면 서버 GET(있으면 PATCH 경로, 없을 때만 set) → diff → 회귀·직전 ts 재검증 → PATCH. */
 function saveCloud(now){
  return new Promise(resolve=>{saveWait.push(resolve);
   if(saveBusy){saveAgain=true;savePending=true;return}
@@ -339,53 +262,33 @@ function saveCloud(now){
    const finishNoWrite=()=>{const st=JSON.stringify(C);accBase=JSON.parse(st);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==st){savePending=true;saveAgain=false;return go()}
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
-   /* 회귀가 이 탭보다 새로우면 이번 저장(옛 PATCH)을 버리고 서버본만 맞춘다. */
+   /* 회귀가 이 탭보다 새로우면 이번 저장(옛 PATCH/set)을 버리고 서버본만 맞춘다. */
    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
-   /* 기준점이 없으면 서버를 읽어 맞춘다. 예전엔 여기서 통째 set → 지금은 기존 계정이면 set 금지. */
-   if(!accReady||!accBase){
-    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
-    let existed=false;
-    try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(full.exists){const d=full.data()||{};if(d.c&&typeof d.c==="object"){existed=true;const mine=JSON.parse(JSON.stringify(C)),quiet=!!ACC_SID_SERVER[String(d.sid||"")],rstNewer=(Number(d.c.rsv)||0)>(Number(mine.rsv)||0);C=JSON.parse(JSON.stringify(d.c));keepMerge(C,mine);accEqLww(C,mine,d.c);if(!rstNewer)keepPwBonus(C,mine);C.lh=pickTrip(mine.lh,d.c.lh);C.clue=pickTrip(mine.clue,d.c.clue);
-     accSyncEconomy(mine,accBase,d.c,quiet,rstNewer);
-     if(quiet||rstNewer){try{clearPend()}catch(e){}}
-     accSeen=Number(d.ts)||Date.now();accLastSid=String(d.sid||"");accMark(quiet||rstNewer?C:d.c);accReady=true;
-     if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(d.c.b)||0)){accBase.b=Math.max(0,Number(d.c.b)||0);savePending=true}}}}catch(e){}
-    if(!existed){
-     const failNew=async e=>{const c=String(e&&e.message||e);
-      if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");return finishNoWrite()}
-      const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
-      saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
-     return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;accLastSid=MY_SID;saveWarn("");const stamp=JSON.stringify(C);accBase=JSON.parse(stamp);accReady=true;saveSoft=0;savePending=false;saveBusy=false;clearPend();wakeSave(true)}).catch(failNew)}
-   }
-   const sent=JSON.parse(JSON.stringify(C));let stamp=JSON.stringify(sent);
+   const sent=JSON.parse(JSON.stringify(C)),stamp=JSON.stringify(sent);
    const done=()=>{accBase=JSON.parse(stamp);accReady=true;saveSoft=0;
     if(saveAgain||JSON.stringify(C)!==stamp){savePending=true;saveAgain=false;return go()}
     savePending=false;saveBusy=false;clearPend();wakeSave(true)};
    const fail=async e=>{const c=String(e&&e.message||e);
     if((c==="401"||c==="403")&&await saveRescue()){saveWarn("");done();return}
+    /* 네트워크·20초 제한은 한 번은 조용히 다시 시도한다. 마을에 실시간 연결이 많을 때 잠깐 막히는 경우가 있다. */
     const soft=saveCause(c);if((soft.id==="timeout"||soft.id==="offline")&&saveSoft<1){saveSoft++;saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},3000);return}
     saveWarn(c);saveBusy=false;wakeSave(false);clearTimeout(saveRetryT);saveRetryT=setTimeout(()=>{saveAgain=true;saveCloud(true)},15000)};
-   let body=accDiff(sent);if(!Object.keys(body).length){done();return}
-   /* 설정·장비 칸이 바뀌면 eqv 를 올려 LWW 기준으로 삼는다. */
-   accEqBump(body,C);sent.eqv=C.eqv;stamp=JSON.stringify(sent);
-   /* pend 에는 절대값(화면과 동일). 서버로 나가기 직전에만 gd·mana 를 increment 로 바꾼다. */
-   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
-   try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
-   /* PATCH 직전 ts 재검증(서버 권위의 핵심). 예전엔 시작 sync 만 하고 여기 검사가 없어 롤백이 났음.
-      서버가 더 새면 이번 body·pend 를 버리고 sync 후 루프. sync 실패 시 accSeen 만 맞춰 무한 재시도 방지. */
-   const seen0=Number(accSeen)||0,remoteTs=await accReadTs();
-   if(remoteTs>seen0){try{clearPend()}catch(e){}try{await accSyncIfNewer()}catch(e){}
-    if(!(Number(accSeen)>=remoteTs))accSeen=remoteTs;saveAgain=true;return go()}
-   body=accEconomyPatch(body,accBase,sent);body=accPwBonusPatch(body,accBase);
-   if(!Object.keys(body).length){done();return}
+   if(!accReady||!accBase){
+    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
+    return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)}
+   /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
+   const body=accDiff(sent);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-   return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;accLastSid=MY_SID;saveWarn("");done()}).catch(fail)};
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
+   /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
+   try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
+   return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
   if(now)go();else sct=setTimeout(()=>go(),600)})}
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
  const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
-  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
+  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML=""}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
@@ -418,25 +321,23 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||""
  /* 이 브라우저에 기억된 비밀 코드가 지금 코드와 다르면(예전 코드) 버린다. 틀린 코드를 계속 보내면 첫 저장이 영원히 막힌다. */
  if(AUTH.jc){let ok=false;try{ok=await codeOk(AUTH.jc)}catch(e){ok=true}if(!ok){AUTH.jc="";try{localStorage.removeItem("mgr_jc_"+UID)}catch(e){}}}DB=fbdb(FBU);LOCAL=false;let d=null;
  try{const s=await DB.doc("accounts/"+UID).get();d=s.exists?s.data():null;accSeen=d?Number(d.ts)||null:null}catch(e){const c=String(e.message||e);throw new Error("서버에서 계정 정보를 읽지 못했다. "+(c==="401"||c==="403"?"데이터베이스 규칙에서 읽기가 막혀 있다. 규칙을 게시했는지 확인해야 한다.":c==="404"?"데이터베이스를 찾지 못했다. 데이터베이스를 만들었는지, 주소가 맞는지 확인해야 한다.":"서버에 접속하지 못했다. 주소와 인터넷 연결을 확인해야 한다.")+" (오류: "+c+", 주소: "+FBU+")")}
- C=null;accLastSid="";if(d&&d.c){C=d.c;accLastSid=String(d.sid||"");accMark();accReady=true;
+ C=null;if(d&&d.c){C=d.c;accMark();accReady=true;
   // 개인 회귀가 이 브라우저보다 새로우면, 회귀 전에 남긴 바뀐 칸은 붙이지 않는다.
   try{if(typeof rstFresh==="function")await rstFresh()}catch(e){}
-  /* 미전송 pend (서버 권위 전환 후):
-     예전: pend.t >= srvTs 이면 applyPend + 즉시 saveCloud(true) → 로컬이 서버를 덮을 수 있음.
-     지금: pend.t > srvTs 일 때만 C 에 붙임. 강제 즉시 업로드 없음(save/boot → 직전 ts 재검증 PATCH).
-     서버 지급 sid·회귀·pend.t<=srvTs 는 버린다. */
+  /* 서버 저장이 끝나기 전에 닫힌 바뀐 칸만 이어 붙인다.
+     서버 ts 가 pend 시각보다 더 새롭면(다른 기기·탭이 이미 저장) 낡은 pend 로 되돌리지 않는다.
+     회귀(rr) 시각보다 오래된 pend 도 버린다. pend 가 더 새면 그 칸(경험·골드 포함)을 그대로 쓴다. */
   try{const pend=pendRead();if(pend&&pend.fields&&Object.keys(pend.fields).length){const srvTs=Number(accSeen)||0;
    let rr=0;try{rr=await rstDueRemote()}catch(e){}
-   const srvPay=!!ACC_SID_SERVER[String(accLastSid||"")];
-   if(srvPay||(rr&&pend.t&&pend.t<=rr)||(rr>(Number(C.rsv)||0))||!pend.t||!srvTs||pend.t<=srvTs)clearPend();
+   if((rr&&pend.t&&pend.t<rr)||(rr>(Number(C.rsv)||0))||(pend.t&&srvTs&&pend.t<srvTs))clearPend();
    else{applyPend(C,pend.fields);
     if(pend.fields["prog/ex"]!=null){C.ex=pend.fields["prog/ex"];if(pend.fields["prog/xv"]!=null)C.xv=pend.fields["prog/xv"];if(pend.fields["prog/lv"]!=null)C.lv=pend.fields["prog/lv"]}
-    if(typeof xpMigrate==="function")xpMigrate();save()}}}catch(e){}}
+    if(typeof xpMigrate==="function")xpMigrate();saveCloud(true)}}}catch(e){}}
  else{let bk=null;try{bk=JSON.parse(localStorage.getItem("mgr_bk_"+UID))}catch(e){}
-  // 서버에 캐릭터가 없는데 이 브라우저에 이 계정의 백업이 있으면 그걸로 되살리고 서버에 다시 올린다(신규 set 경로).
-  if(bk&&bk.n){C=bk;accReady=false;accBase=null;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;accReady=false;accBase=null;saveCloud(true)}}
+  // 서버에 캐릭터가 없는데 이 브라우저에 이 계정의 백업이 있으면 그걸로 되살리고 서버에 다시 올린다.
+  if(bk&&bk.n){C=bk;saveCloud(true)}else{let old=null;try{old=JSON.parse(localStorage.getItem("mgr"))}catch(e){}if(old&&old.n&&confirm("이 브라우저에 저장된 캐릭터 '"+old.n+"'을(를) 이 계정으로 가져올까?")){C=old;saveCloud(true)}}
   // 서버 기록도 백업도 없지만 예전에 캐릭터가 있었던 계정이면(players에 흔적이 남아 있으면) 바로 새로 만들지 않고 복구 방법을 고르게 한다.
-  if(!C&&!RESTORE_FULL.some(r=>r[1]===UID)){let pp=null;try{pp=(await DB.doc("players/"+UID).get()).data()}catch(e){}if(pp&&pp.n){const r=await rescueAsk(pp);if(r==="out"){AUTH.uid=null;try{localStorage.removeItem("mgr_rt")}catch(e){}location.reload();return}if(r==="base"){C=rescueBuild(pp);accReady=false;accBase=null;saveCloud(true);setTimeout(()=>alertBox("기본 정보로 복구","이름·등급·레벨·속성·특성·마을·프로필·장착 무기·전투력을 되살렸다.\n골드·아이템·친구 목록·일부 칭호는 돌아오지 않았다.\n\n평소 쓰던 기기에 백업이 남아 있다면 운영자에게 알려 주자."),800)}}}}
+  if(!C&&!RESTORE_FULL.some(r=>r[1]===UID)){let pp=null;try{pp=(await DB.doc("players/"+UID).get()).data()}catch(e){}if(pp&&pp.n){const r=await rescueAsk(pp);if(r==="out"){AUTH.uid=null;try{localStorage.removeItem("mgr_rt")}catch(e){}location.reload();return}if(r==="base"){C=rescueBuild(pp);saveCloud(true);setTimeout(()=>alertBox("기본 정보로 복구","이름·등급·레벨·속성·특성·마을·프로필·장착 무기·전투력을 되살렸다.\n골드·아이템·친구 목록·일부 칭호는 돌아오지 않았다.\n\n평소 쓰던 기기에 백업이 남아 있다면 운영자에게 알려 주자."),800)}}}}
  try{const s=await DB.doc("admins").get();admApply(s.exists?s.data():null)}catch(e){}
  try{await rstCheck(true)}catch(e){}
  const frx=fullRestore();
@@ -668,11 +569,8 @@ async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
 /* 공개 카드는 사진과 통째로 다시 쓰지 않는다. 이번 접속에서 바뀐 칸만 고친다.
    절망도는 10분마다 실제로 내려갔을 때 dz 만, 출정·기여·타락처럼 값이 바뀔 때는 그 칸만 고친다.
-   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다.
-   players.pw / who.pw 는 표시용 캐시. 값이 같으면 그 칸은 안 쓰고, who 전체 set 은 WHO_MS 디바운스.
-   허브·출정 자리 p 는 캐시를 쓰지 않는다(pw()·참가 스냅샷). */
-let pubLast=null,whoT=null,whoLastSent=null;
-const WHO_MS=3000;
+   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
+let pubLast=null;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
 function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
  const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
@@ -680,27 +578,19 @@ function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="func
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
- /* pw 동일하면 표시 캐시 칸을 다시 쓰지 않는다(이미 위 비교로 빠지지만, 명시). */
- if(Object.prototype.hasOwnProperty.call(patch,"pw")&&Number(patch.pw)===Number(pubLast.pw))delete patch.pw;
  if(!C.fall&&Object.prototype.hasOwnProperty.call(patch,"fl"))patch.fl=null;
  if(!Object.keys(patch).length)return;
  if(patch.dz!=null||patch.hf!=null){patch.dz=body.dz;patch.ts=Date.now()}
  const prev=pubLast,next=pubCopy(Object.assign({},pubLast,patch));if(!C.fall)next.fl=0;pubLast=next;
  DB.doc("players/"+UID).patch(patch).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}
-/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다.
-   whoPut(): 디바운스. whoPut(true): 타락·프로필·접속 등 바로 flush.
-   직전 전송본과 본문이 같으면 set 생략(pw 포함). */
+/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다. */
 function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
-function whoFlush(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;
- const s=JSON.stringify(b);if(s===whoLastSent)return;whoLastSent=s;
- DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null})}
-function whoPut(now){if(!DB||!C||!UID)return;if(now){if(whoT){clearTimeout(whoT);whoT=null}whoFlush();return}
- if(whoT)return;whoT=setTimeout(()=>{whoT=null;whoFlush()},WHO_MS)}
+function whoPut(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;DB.doc("who/"+UID).set(b).catch(()=>{})}
 /* 친구 창과 프로필은 계정 기록이 아니라 공개 카드 players/{나}.fl 을 본다.
    공개 카드는 이번 접속에서 바뀐 칸만 고치므로, 타락 표시를 지우는 저장이 한 번 빠지면 다음 접속은 이미 지워진 것으로 기억하고 다시 쓰지 않는다.
    그래서 타락이 아닐 때는 fl 칸을 지우고, 타락 중일 때는 1로 다시 적는다. null 은 그 칸을 지운다. */
-function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut(true)}
-function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut(true)}catch(e){}})}
+function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut()}
+function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}catch(e){}})}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -848,7 +738,7 @@ function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=nul
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
- const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}};
+ const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML=""};
  const takeOne=x=>{const z0=C.dz||0,e0=C.ex||0;ginPendDel.add(x.id);ginList=ginList.filter(y=>y&&y.id!==x.id);ginIds=ginList.map(y=>y.id).join("|");
   const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));
   opened.push({x,dDz:(C.dz||0)-z0,dEx:(C.ex||0)-e0});paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
@@ -991,7 +881,7 @@ let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut(true)}
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}
