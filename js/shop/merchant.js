@@ -36,8 +36,8 @@ function shadyPaintBtns(){const b=$("#shd10");if(!b||!C)return;const g=C.gd||0;
  b.textContent=shadyBusy?"여는 중...":"10회 열기 ("+SHADY_COST+"골드)"}
 function shadyPaintGrid(list){const grid=$("#shdgrid");if(!grid)return;
  const cells=grid.children;for(let i=0;i<SHADY_N;i++){const cell=cells[i];if(!cell)continue;const r=list&&list[i];
-  cell.className="shady-cell"+(r?" t"+r.tier:"");cell.innerHTML="";
-  if(!r){cell.appendChild(elT("small","","—"));continue}
+  cell.className="shady-cell"+(r?" t"+r.tier:" empty");cell.innerHTML="";
+  if(!r){cell.appendChild(elT("span","shady-q","?"));continue}
   if(r.k==="inv"&&typeof itIc==="function"){const ic=itIc(r.id,"sm");if(ic)cell.appendChild(ic)}
   else if(r.k==="eggs"||r.k==="eggsEv")cell.appendChild(elT("span","shady-ic",r.k==="eggsEv"&&typeof PET_EV!=="undefined"?PET_EV.ic:"🥚"));
   else if(r.k==="gd")cell.appendChild(elT("span","shady-ic","💰"));
@@ -72,7 +72,7 @@ async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
  finally{shadyBusy=false;shadyPaintBtns()}}
 function shopShady(){if(!C)return;const box=$("#shdbox");if(!box||box.hidden)return;
  if(!shadyBuilt||!$("#shdgrid")||!$("#shdgrid").children.length){
-  const grid=$("#shdgrid");if(grid){grid.innerHTML="";for(let i=0;i<SHADY_N;i++)grid.appendChild(elT("div","shady-cell",""));shadyBuilt=true}
+  const grid=$("#shdgrid");if(grid){grid.innerHTML="";for(let i=0;i<SHADY_N;i++)grid.appendChild(elT("div","shady-cell",""));shadyBuilt=true;shadyPaintGrid(null)}
   const b10=$("#shd10");if(b10&&!b10._shady){b10._shady=1;b10.onclick=()=>shadyPull()}
   const tog=$("#shdtog");if(tog&&!tog._shady){tog._shady=1;tog.onclick=()=>shadyFold(!!$("#shdbox")&&!!$("#shdbox").hidden)}}
  /* 안내 문구: 기획 변경 시 html #shdlead 또는 아래 한 줄만 고친다.

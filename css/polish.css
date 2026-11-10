@@ -522,12 +522,19 @@ html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .c
 #v-shop .shady-out{display:flex;flex-direction:column;gap:10px;min-width:0}
 #v-shop .shady-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(2,minmax(72px,auto));gap:8px}
 #v-shop .shady-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border-radius:12px;border:1px solid var(--ln);background:var(--pn);text-align:center;min-height:72px}
+/* .it-ic.sm 의 margin-right(인라인용)가 세로 스택에서 아이콘을 왼쪽으로 민다 → 가챠 칸에서는 제거 */
+#v-shop .shady-cell .it-ic{display:block;margin:0;vertical-align:unset}
 #v-shop .shady-cell b{font-size:.78rem;line-height:1.2;font-weight:700}
 #v-shop .shady-cell small{color:var(--mu);font-size:.72rem}
+#v-shop .shady-cell.empty .shady-q{font-size:1.35rem;line-height:1;color:var(--mu);opacity:.65;font-weight:600}
+/* 결과 이름 색: t1 기본, t2 초록(28%), t3 보라, t4 노랑+번짐 */
 #v-shop .shady-cell.t1{border-color:color-mix(in srgb,var(--ln) 70%,#8ab)}
-#v-shop .shady-cell.t2{border-color:color-mix(in srgb,#5a8 55%,var(--ln))}
-#v-shop .shady-cell.t3{border-color:color-mix(in srgb,#c8a035 70%,var(--ln))}
-#v-shop .shady-cell.t4{border-color:color-mix(in srgb,#c45 75%,var(--ln));box-shadow:0 0 0 1px color-mix(in srgb,#c45 35%,transparent)}
+#v-shop .shady-cell.t2{border-color:color-mix(in srgb,#3d9a5f 55%,var(--ln))}
+#v-shop .shady-cell.t2 b{color:#3d9a5f}
+#v-shop .shady-cell.t3{border-color:color-mix(in srgb,#8b5cf6 55%,var(--ln))}
+#v-shop .shady-cell.t3 b{color:#8b5cf6}
+#v-shop .shady-cell.t4{border-color:color-mix(in srgb,#e8c84a 70%,var(--ln));box-shadow:0 0 0 1px color-mix(in srgb,#e8c84a 30%,transparent)}
+#v-shop .shady-cell.t4 b{color:#e8c84a;text-shadow:0 0 4px color-mix(in srgb,#e8c84a 75%,transparent),0 0 12px color-mix(in srgb,#e8c84a 50%,transparent),0 0 22px color-mix(in srgb,#e8c84a 28%,transparent)}
 #v-shop .shady-ic{font-size:1.1rem;line-height:1}
 #v-shop .shady-note{margin:12px 0 0;color:var(--mu);font-size:.78rem;opacity:.85}
 #dex-mat>h2{margin:0 0 4px}
