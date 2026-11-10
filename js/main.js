@@ -258,7 +258,7 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
  const tm=Math.max(Number(dst.stats.townMoves)||0,Number(src.stats&&src.stats.townMoves)||0);if(tm)dst.stats.townMoves=tm;
  dst.stats.vSeen=Object.assign({},src.stats&&src.stats.vSeen||{},dst.stats.vSeen||{});
- dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t};
+ dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t});
  /* 공명·친구 소식 워터마크는 숫자 max 로만 합친다. 작은 쪽으로 덮이면 옛 알림이 되살아난다. */
  const maxTs=(a,b)=>{const o=Object.assign({},a&&typeof a==="object"?a:{});Object.keys(b&&typeof b==="object"?b:{}).forEach(k=>{const t=Number(b[k])||0;if(t>(Number(o[k])||0))o[k]=t});return o};
  dst.rss=maxTs(dst.rss,src.rss);dst.fs=maxTs(dst.fs,src.fs);dst.rkT=maxTs(dst.rkT,src.rkT);

@@ -510,6 +510,22 @@ html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .c
 /* 도감 아이템 아래 재료. 얻었는지와 관계없이 획득 방법을 펼친다. */
 #dex-mat{margin-top:6px}
 #dex-mat .dex-rule{border:0;border-top:1px solid var(--ln);margin:18px 0 14px}
+/* 수상한 상인: 좁으면 상자↑결과↓(2×1), 넓으면 상자|결과(1×2). 결과 칸은 2×5. */
+#v-shop .shady-layout{display:grid;gap:14px;align-items:stretch;grid-template-columns:1fr}
+@media (min-width:720px){#v-shop .shady-layout{grid-template-columns:minmax(140px,1fr) minmax(0,2fr);align-items:start}}
+#v-shop .shady-chest-wrap{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+#v-shop .shady-chest{width:100%;aspect-ratio:1/1;max-width:280px;margin:0 auto;border-radius:16px;border:1px dashed var(--ln);background:color-mix(in srgb,var(--pn) 80%,#0000)}
+#v-shop .shady-out{display:flex;flex-direction:column;gap:10px;min-width:0}
+#v-shop .shady-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(2,minmax(72px,auto));gap:8px}
+#v-shop .shady-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border-radius:12px;border:1px solid var(--ln);background:var(--pn);text-align:center;min-height:72px}
+#v-shop .shady-cell b{font-size:.78rem;line-height:1.2;font-weight:700}
+#v-shop .shady-cell small{color:var(--mu);font-size:.72rem}
+#v-shop .shady-cell.t1{border-color:color-mix(in srgb,var(--ln) 70%,#8ab)}
+#v-shop .shady-cell.t2{border-color:color-mix(in srgb,#5a8 55%,var(--ln))}
+#v-shop .shady-cell.t3{border-color:color-mix(in srgb,#c8a035 70%,var(--ln))}
+#v-shop .shady-cell.t4{border-color:color-mix(in srgb,#c45 75%,var(--ln));box-shadow:0 0 0 1px color-mix(in srgb,#c45 35%,transparent)}
+#v-shop .shady-ic{font-size:1.1rem;line-height:1}
+#v-shop .shady-note{margin:12px 0 0;color:var(--mu);font-size:.78rem;opacity:.85}
 #dex-mat>h2{margin:0 0 4px}
 #dex-mat>.hint{margin:0 0 12px}
 .mat-card{margin:0 0 10px;padding:12px 14px}
