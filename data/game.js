@@ -380,7 +380,7 @@
    /* 시설 이용: 1단계 이상 지어진 시설은 하루에 한 번씩 이용할 수 있다(매일 밤 12시 초기화). [설명, 실행]. 숫자만 고치면 바뀐다. */
    const FAC_USE={
    spring:[l=>"샘물 마시기: 절망도 -"+(4+2*l),l=>{const b=C.dz;gain(0,-(4+2*l));return "맑은 샘물을 마셨다. 절망도가 "+(b-C.dz)+" 내려갔다."}],
-   forge:[l=>"무기 손질: 오늘 하루 무기 전투력 +"+3*l,l=>{C.wtmp={day:today(),v:3*l};return "대장장이가 무기를 손봐 주었다. 오늘 하루 무기 전투력 +"+3*l+"."}],
+   forge:[l=>"무기 손질: 오늘 하루 무기 전투력 +"+3*l,l=>{const d=today(),add=3*l,base=C.wtmp&&C.wtmp.day===d?Math.max(0,Number(C.wtmp.v)||0):0;C.wtmp={day:d,v:base+add};return "대장장이가 무기를 손봐 주었다. 오늘 하루 무기 전투력 +"+add+(base?" (합 "+C.wtmp.v+")":"")+"."}],
    drill:[l=>"훈련: 경험치 +"+(10+5*l),l=>{gain(10+5*l,0);return "땀 흘려 훈련했다. 경험치 +"+(10+5*l)+"."}],
    tower:[l=>"정찰: 골드 +"+(20+15*l),l=>{C.gd=(C.gd||0)+20+15*l;return "감시탑에서 정찰을 돕고 골드 "+(20+15*l)+"을(를) 받았다."}],
    market:[l=>"특가 상품: "+(l>=3?"별빛 쿠키":"작은 꽃다발")+" 1개",l=>{const id=l>=3?"g2":"g1";C.inv=C.inv||{};C.inv[id]=(C.inv[id]||0)+1;dexAdd("it",id);return "시장의 특가 상품으로 "+ITM.find(x=>x[0]===id)[1]+" 1개를 얻었다."}],
