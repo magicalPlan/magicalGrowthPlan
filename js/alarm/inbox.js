@@ -1,14 +1,18 @@
 /* 알림함. main.js 다음에 불러야 한다. 알림을 쌓고, 종류별로 보고, 누르면 관련 화면으로 간다.
    한 번에 10개만 보여주고, 더 보기로 이전 10개를 이어서 본다.
-   출정·마을·친구·공지는 note 를, 하단 메뉴는 inbox 를 그대로 부른다. */
-function note (k, t, u) {
-   if (!C) return;
-   C.nt = Array.isArray(C.nt) ? C.nt : [];
-   C.nt.unshift({k, t : String(t).slice(0,160), u : u || "", ts : Date.now(), r : false});
-   ntTrim();
-   save();
-   if( !$("#v-inbox").hidden ) inbox(true)
-   }
+   출정·마을·친구·공지는 note 를, 하단 메뉴는 inbox 를 그대로 부른다.
+   중복: id(사건 키)가 있으면 같은 id 는 한 번만. 없으면 맨 앞과 k·t·u 가 같고 5초 안이면 건너뛴다.
+   (공명 rqRetry·다기기 재처리로 같은 알림이 여러 번 쌓이던 것을 막는다. 서버 부하는 늘지 않는다.) */
+function note(k,t,u,id){
+ if(!C)return false;
+ C.nt=Array.isArray(C.nt)?C.nt:[];
+ const tx=String(t).slice(0,160),uu=u||"",now=Date.now(),sid=id!=null&&id!==""?String(id):"";
+ if(sid){if(C.nt.some(n=>n&&n.id===sid))return false}
+ else{const h=C.nt[0];if(h&&h.k===k&&h.t===tx&&(h.u||"")===uu&&now-(Number(h.ts)||0)<5000)return false}
+ C.nt.unshift(sid?{k,t:tx,u:uu,ts:now,r:false,id:sid}:{k,t:tx,u:uu,ts:now,r:false});
+ ntTrim();save();
+ if(!$("#v-inbox").hidden)inbox(true);
+ return true}
 
 function ntGo (n) { 
    const u = n.u;

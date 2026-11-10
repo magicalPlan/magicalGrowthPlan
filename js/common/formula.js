@@ -38,6 +38,11 @@ const wup=i=>wlv(i)*(i===0?2:1);
    매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
    권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다. */
 const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");
+/* 허브 프로필용 표시 조각. 합산 pw() 는 그대로.
+   조건: 어둠(절망 50+)·폭주(절망 60+). 임시: 오늘만 붙는 무기 손질(C.wtmp). */
+function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
+function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}
+function pwExtraTxt(){const a=[],c=pwCond(),t=pwTmp();if(c)a.push("조건 +"+c);if(t)a.push("임시 +"+t);return a.join(" · ")}
 
 // 각인 비용. 지금 단계 L 에서 다음 단계로 가는 마력석은 L+2 개다. 0단계면 2개, 1단계면 3개.
 const rnCost=L=>L+2;

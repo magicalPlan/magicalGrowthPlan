@@ -1,27 +1,29 @@
 /* 상점. main.js 다음에 불러야 한다. 구매 수량과 아이템 구매.
    가격은 js/common/formula.js 의 pr 을, 무기 칸은 shopWeapons 를 그대로 부른다.
    시장 할인과 산불 할증은 상점 탭을 열 때 한 번만 읽는다. 열어 둔 동안에는 다시 묻지 않고, 구매할 때만 바뀐 칸을 저장한다.
-   무기 칸은 접을 수 있다(기본 접힘). shopWpFold / #wptog · #wpbox. */
+   무기·아이템 칸은 접을 수 있다. 무기 shopWpFold / #wptog · #wpbox (기본 접힘).
+   아이템 shopItFold / #ittog · #itbox (기본 펼침, mgr_shop_it).
+   하단 '수상한 상인'(#shdbox)은 js/shop/merchant.js 의 shadyFold · shopShady. */
 let shopQ=1,shopBusy=false;
-function shopWrite(fields){return apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}})}
+/* fields 절대 칸 + inc 증감(골드 등). 골드는 절대 덮어쓰지 않고 increment 로 보낸다. */
+function shopWrite(fields,inc){return apiAccountWrite(fields,inc).catch(()=>{try{save()}catch(e){}})}
 async function shopRead(){if(shopBusy||!C||!XON()||typeof loadFac!=="function")return;shopBusy=true;try{await loadFac()}catch(e){}finally{shopBusy=false}if(!$("#v-shop").hidden)shop()}
 function itemMax(id){C.inv=C.inv||{};if(id==="charm")return Math.max(0,CHARM_MAX-charmToday());if(id==="candle")return (C.inv.candle||0)>=1?0:1;return 99}
 /* 상점 무기 접기. open=true 면 #wpbox 를 보이고 목록을 채운다. 기본·기억 없음이면 접힌다(mgr_shop_wp). */
 function shopWpOpen(){try{return localStorage.getItem("mgr_shop_wp")==="1"}catch(e){return false}}
 function shopWpFold(open){const b=$("#wptog"),box=$("#wpbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_wp",open?"1":"0")}catch(e){}
  if(open&&typeof shopWeapons==="function")shopWeapons()}
-function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
- $("#sg").textContent="보유 골드 "+(C.gd||0)+". 골드는 토벌과 시련에서 얻는다."+(C.v==="A"?" A마을 주민은 10% 할인을 받는다.":"");
- const sm=$("#sm");sm.style.color="var(--mu)";sm.textContent=msg||"";if(msg&&again)toast(msg);
- /* 무기 목록: 펼쳐져 있을 때만 채운다. 열 개수는 css #v-shop #wl (좁음 1 · 넓음 2). */
- shopWpFold(shopWpOpen());
- // 구매 수량 고르기
- const qb=$("#shopq");qb.innerHTML="";const qlab=elT("span","shopq-l","구매 수량");qb.appendChild(qlab);
+/* 상점 아이템 접기. 기본은 펼침. "0" 으로 기억하면 접힌다(mgr_shop_it). */
+function shopItOpen(){try{return localStorage.getItem("mgr_shop_it")!=="0"}catch(e){return true}}
+function shopItFold(open){const b=$("#ittog"),box=$("#itbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_it",open?"1":"0")}catch(e){}
+ if(open)shopItems()}
+function shopItems(){const qb=$("#shopq"),il=$("#il");if(!qb||!il||!C)return;
+ qb.innerHTML="";const qlab=elT("span","shopq-l","구매 수량");qb.appendChild(qlab);
  const set=n=>{shopQ=Math.max(1,Math.min(99,n|0||1));shop()};
  const mkB=(t,f,lab)=>{const b=elT("button","chip",t);b.type="button";if(lab)b.setAttribute("aria-label",lab);b.onclick=f;return b};
  const inp=elT("input");inp.type="number";inp.min="1";inp.max="99";inp.value=shopQ;inp.id="shopqn";inp.setAttribute("aria-label","구매 수량");inp.onchange=()=>set(Number(inp.value));
  qb.append(mkB("−",()=>set(shopQ-1),"하나 줄이기"),inp,mkB("+",()=>set(shopQ+1),"하나 늘리기"));[1,5,10].forEach(n=>{const b=mkB(n+"개",()=>set(n));b.setAttribute("aria-pressed",shopQ===n?"true":"false");qb.appendChild(b)});
- const il=$("#il");il.innerHTML="";C.inv=C.inv||{};ITM.filter(x=>!CRAFT_ONLY[x[0]]&&!(typeof PET_ONLY!=="undefined"&&PET_ONLY[x[0]])).forEach(x=>{const id=x[0],pc=pr(x[3]),b=document.createElement("button");b.type="button";b.className="chip sq";
+ il.innerHTML="";C.inv=C.inv||{};ITM.filter(x=>!CRAFT_ONLY[x[0]]&&!(typeof PET_ONLY!=="undefined"&&PET_ONLY[x[0]])).forEach(x=>{const id=x[0],pc=pr(x[3]),b=document.createElement("button");b.type="button";b.className="chip sq";
   const mx=itemMax(id),n=Math.min(shopQ,mx),cost=pc*n,lim=id==="charm",ct2=lim?charmToday():0;
   const cnt="보유 "+(C.inv[id]||0)+(lim?" · 오늘 "+ct2+"/"+CHARM_MAX:"")+(id==="candle"?" · 최대 1개":"");
   const st=mx<=0?(id==="candle"?"이미 가지고 있다":"오늘은 품절"):n>1?pc+"골드 × "+n+" = "+cost+"골드":pc+"골드"+(shopQ>1&&n<shopQ?" (1개만 살 수 있다)":"");
@@ -29,7 +31,17 @@ function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,
   {const ic=itIc(id,"lg");if(ic)b.prepend(ic)}b.title=x[2];b.setAttribute("aria-label",x[1]+", "+st+", "+cnt+". "+x[2]);b.disabled=mx<=0||(C.gd||0)<cost;
   b.onclick=()=>{const k=Math.min(shopQ,itemMax(id)),c=pc*k;if(k<=0||(C.gd||0)<c)return;if(lim)C.daily={d:today(),charm:charmToday()+k};
    C.gd-=c;C.inv[id]=(C.inv[id]||0)+k;const dexNew=dexAdd("it",id);titleState();C.stats.purchases=(C.stats.purchases||0)+k;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);
-   const fields={gd:C.gd,["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
-   shopWrite(fields);checkTitles();
-   shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)});if(fresh)shopRead()}
+   const fields={["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
+   shopWrite(fields,{gd:-c});checkTitles();
+   shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)})}
+function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
+ $("#sg").textContent="보유 골드 "+(C.gd||0)+". 골드는 토벌과 시련에서 얻는다."+(C.v==="A"?" A마을 주민은 10% 할인을 받는다.":"");
+ const sm=$("#sm");sm.style.color="var(--mu)";sm.textContent=msg||"";if(msg&&again)toast(msg);
+ /* 무기·아이템: 펼쳐져 있을 때만 목록을 채운다. */
+ shopWpFold(shopWpOpen());
+ shopItFold(shopItOpen());
+ if(typeof shadyFold==="function")shadyFold(typeof shadyOpen==="function"?shadyOpen():true);
+ else if(typeof shopShady==="function")shopShady();
+ if(fresh)shopRead()}
 {const t=$("#wptog");if(t&&!t._shopFold){t._shopFold=1;t.onclick=()=>shopWpFold(!!$("#wpbox")&&!!$("#wpbox").hidden)}}
+{const t=$("#ittog");if(t&&!t._shopFold){t._shopFold=1;t.onclick=()=>shopItFold(!!$("#itbox")&&!!$("#itbox").hidden)}}

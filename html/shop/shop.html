@@ -1,1 +1,27 @@
-<div id="v-shop" hidden><div class="card"><h2>상점</h2><p class="hint" style="margin:0" id="sg"></p></div><h2 class="fold-h">무기<button class="chip fold-btn" id="wptog" type="button" aria-expanded="false" aria-controls="wpbox">펼치기 ▼</button></h2><div id="wpbox" hidden><div class="wgrid" id="wl"></div></div><h2>아이템</h2><div class="row shopq" id="shopq"></div><div class="wgrid" id="il"></div><p class="msg" id="sm"></p></div>
+<div id="v-shop" hidden>
+ <div class="card"><h2>상점</h2><p class="hint" style="margin:0" id="sg"></p></div>
+ <h2 class="fold-h">무기<button class="chip fold-btn" id="wptog" type="button" aria-expanded="false" aria-controls="wpbox">펼치기 ▼</button></h2>
+ <div id="wpbox" hidden><div class="wgrid" id="wl"></div></div>
+ <h2 class="fold-h">아이템<button class="chip fold-btn" id="ittog" type="button" aria-expanded="true" aria-controls="itbox">접기 ▲</button></h2>
+ <div id="itbox">
+  <div class="row shopq" id="shopq"></div>
+  <div class="wgrid" id="il"></div>
+ </div>
+ <h2 class="fold-h">수상한 상인<button class="chip fold-btn" id="shdtog" type="button" aria-expanded="true" aria-controls="shdbox">접기 ▲</button></h2>
+ <div id="shdbox">
+  <!-- 안내 문구는 기획에 따라 바뀔 수 있다. 수정 시 #shdlead 텍스트만 바꾸면 된다. -->
+  <p class="hint" id="shdlead">수상한 상인이 상자를 판다. 상자 안에는 상상 이상으로 좋은 상품도, 꽝도 있다.</p>
+  <div class="shady-layout">
+   <div class="shady-chest-wrap">
+    <div class="shady-chest" id="shdchest" aria-hidden="true"></div>
+    <button type="button" class="btn" id="shd1">10회 열기 (2000골드)</button>
+   </div>
+   <div class="shady-out">
+    <div class="shady-grid" id="shdgrid" aria-live="polite"></div>
+    <button type="button" class="btn g" id="shd10">10번 열기 (20000골드)</button>
+   </div>
+  </div>
+  <p class="shady-note">*모든 아이템은 등급 별 동일한 확률로 제공됩니다.</p>
+ </div>
+ <p class="msg" id="sm"></p>
+</div>
