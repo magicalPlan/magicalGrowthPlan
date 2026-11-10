@@ -19,12 +19,14 @@ $("#pff").onclick=async()=>{const u=pfU,b=$("#pff"),a=b.dataset.a,nm=b.dataset.n
  try{await frDo(a,u,nm);m.style.color="var(--mu)";m.textContent=a==="req"?"친구 신청을 보냈다.":a==="ok"?"친구가 되었다.":"친구를 삭제했다."}
  catch(e){m.style.color="var(--bad)";m.textContent="지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다."}
  frBtn(u,nm)};
-// 나에게 온 친구 신청, 수락, 삭제를 확인해서 목록에 반영한다.
+/* 나에게 온 친구·공명 소식을 확인한다. 친구 화면을 열 때만 한 번 GET(실시간 감시 없음).
+   C.fs[보낸이]=마지막 처리 ts. 같은 칸이 rqRetry 로 다시 써져 ts 만 커지면 다시 들어오지만,
+   공명 rok/rno 는 resHeard 가 이미 처리한 건 알림을 만들지 않는다. */
 async function syncFr(){if(!AUTH.uid||!C||!DB)return;try{rqRetry();const s=await once(DB.collection("fmsg/"+UID));if(!C)return;C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};C.fs=C.fs||{};const notes=[];let ch=false;
- s.docs.map(d=>[d.id,d.data()]).filter(([f,v])=>v&&v.ts>(C.fs[f]||0)).sort((a,b)=>a[1].ts-b[1].ts).forEach(([f,v])=>{C.fs[f]=v.ts;ch=true;const n=String(v.n||"누군가");
-  if(v.t==="req"){if(C.fr[f])sendF(f,"ok").catch(()=>{});else if(C.fo[f]){C.fr[f]=n;delete C.fo[f];sendF(f,"ok").catch(()=>{});(notes.push(n+"님과 친구가 되었다"),note("fr",n+"님과 친구가 되었다"+".",f))}else{C.fq[f]=n;(notes.push(n+"님이 친구 신청을 보냈다"),note("fr",n+"님이 친구 신청을 보냈다"+".",f))}}
-  else if(v.t==="ok"){C.fr[f]=n;delete C.fo[f];delete C.fq[f];(notes.push(n+"님이 친구 신청을 수락했다"),note("fr",n+"님이 친구 신청을 수락했다"+".",f))}
-  else if(v.t==="del"){delete C.fr[f];delete C.fq[f];delete C.fo[f];(notes.push(n+"님과 친구가 끊어졌다"),note("fr",n+"님과 친구가 끊어졌다"+".",f))}
+ s.docs.map(d=>[d.id,d.data()]).filter(([f,v])=>v&&v.ts>(C.fs[f]||0)).sort((a,b)=>a[1].ts-b[1].ts).forEach(([f,v])=>{C.fs[f]=v.ts;ch=true;const n=String(v.n||"누군가"),fts=Number(v.ts)||0;
+  if(v.t==="req"){if(C.fr[f])sendF(f,"ok").catch(()=>{});else if(C.fo[f]){C.fr[f]=n;delete C.fo[f];sendF(f,"ok").catch(()=>{});(notes.push(n+"님과 친구가 되었다"),note("fr",n+"님과 친구가 되었다.",f,"fr:okpair:"+f+":"+fts))}else{C.fq[f]=n;(notes.push(n+"님이 친구 신청을 보냈다"),note("fr",n+"님이 친구 신청을 보냈다.",f,"fr:req:"+f+":"+fts))}}
+  else if(v.t==="ok"){C.fr[f]=n;delete C.fo[f];delete C.fq[f];(notes.push(n+"님이 친구 신청을 수락했다"),note("fr",n+"님이 친구 신청을 수락했다.",f,"fr:ok:"+f+":"+fts))}
+  else if(v.t==="del"){delete C.fr[f];delete C.fq[f];delete C.fo[f];(notes.push(n+"님과 친구가 끊어졌다"),note("fr",n+"님과 친구가 끊어졌다.",f,"fr:del:"+f+":"+fts))}
   else if(v.t==="rok"||v.t==="rno")resHeard(f,v,n,notes)});
  if(!ch)return;save();updNav();checkTitles();
  if($("#v-friends").hidden&&!$("#v-hub").hidden&&notes.length){const h=$("#hm");h.style.color="var(--mu)";h.textContent=notes.join(", ")+"."}}catch(e){}}
