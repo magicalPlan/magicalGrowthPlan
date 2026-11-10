@@ -237,6 +237,7 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
  dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
+ dst.scf=Object.assign({},src.scf||{},dst.scf||{});
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
  dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
  const tm=Math.max(Number(dst.stats.townMoves)||0,Number(src.stats&&src.stats.townMoves)||0);if(tm)dst.stats.townMoves=tm;

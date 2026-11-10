@@ -40,6 +40,10 @@ const MAT_WHERE={
    C마을은 오래 전 여왕과의 약속대로 제작할 때 CRAFT_C_BONUS 확률로 하나를 더 만든다. A마을은 제작 골드가 상점처럼 10% 싸다. */
 const MAT_VIL={B:"m_herb",D:"m_ash"},CRAFT_C_BONUS=.15;
 
+/* 시즌(회귀)당 1회만 제작할 수 있는 결과물 id.
+   만들면 C.scf[id]=1 로 남기고, 회귀(rstShape) 때 C.scf 는 RST_KEEP 밖이라 지워진다. 나중에 같은 제한을 쓰는 아이템은 여기만 추가하면 된다. */
+const CRAFT_SEASON={vtown:1};
+
 /* 제작법: [id, 만드는 것(아이템 또는 재료 id), 개수, 필요한 재료 {id: 개수}, 골드, 필요한 마을 공방 단계, 한 줄 설명]
    마을 공방 단계는 마을 시설의 '공방'(data/game.js 의 FAC) 단계다. 마을 사람들이 함께 지을수록 제작법이 늘어난다. */
 const RCP=[
@@ -49,7 +53,7 @@ const RCP=[
 ["r_g2","g2",1,{m_herb:1,m_dew:1},0,0,"이슬을 머금은 반죽을 별 모양으로 굽는다."],
 ["r_g4","g4",1,{m_dew:2,m_herb:2,m_ore:1},20,0,"철광석 태엽에 꿈의 이슬을 담아 자장가를 새긴다."],
 ["r_prism","prism",1,{m_shard:50,m_dew:30,m_ash:30,m_ore:20,m_herb:20},5000,0,"희망의 이슬과 절망의 재를 한 점에 가두어, 계약의 빛을 다른 색으로 굴절시킨다."],
-["r_vtown","vtown",1,{m_ash:50,m_shard:30,m_herb:20,m_crown:5},0,0,"공방에서만 제작할 수 있다."],
+["r_vtown","vtown",1,{m_ash:50,m_shard:30,m_herb:20,m_crown:5},0,0,"시즌마다 한 번만 만들 수 있다."],
 ["r_license","license",1,{bond:5,m_shard:60,m_herb:40,m_ore:40,m_dew:30,m_ash:20},3000,0,"보내 준 사역마들이 남긴 유대의 증거를 엮어, 더 많은 마수와 계약할 수 있다는 여왕의 허가를 새긴다."],
 ["r_purify","m_dew",1,{m_ash:3},10,0,"절망의 재를 정화해 꿈의 이슬로 되돌린다."],
 ["r_whet","whet",1,{m_ore:3,m_shard:2},0,1,"철광석을 갈아 강화를 지켜 줄 숫돌을 만든다."],

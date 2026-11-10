@@ -21,9 +21,11 @@ function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonu
  ks.forEach(id=>{C.inv[id]=(C.inv[id]||0)+got[id]});C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+ks.reduce((s,id)=>s+got[id],0);
  return "공방 재료: "+ks.map(id=>cfName(id)+" +"+got[id]).join(", ")}
 
-// 이 제작법으로 지금 몇 개까지 만들 수 있는지. 재료, 골드, 들고 있을 수 있는 수(계약의 촛불은 1개)를 모두 본다.
+// 이 제작법으로 지금 몇 개까지 만들 수 있는지. 재료, 골드, 들고 있을 수 있는 수(계약의 촛불은 1개), 시즌 1회 제한을 모두 본다.
 const cfGold=r=>r[4]?pr(r[4]):0;
-const cfCap=r=>r[1]==="candle"?Math.max(0,1-cfHave("candle")):99;
+const cfSeason=r=>!!(typeof CRAFT_SEASON!=="undefined"&&CRAFT_SEASON[r[1]]);
+const cfSeasonDone=r=>cfSeason(r)&&!!((C.scf||{})[r[1]]);
+const cfCap=r=>{if(cfSeason(r))return cfSeasonDone(r)?0:1;return r[1]==="candle"?Math.max(0,1-cfHave("candle")):99};
 function cfMax(r){let n=cfCap(r);Object.entries(r[3]).forEach(([id,k])=>{n=Math.min(n,Math.floor(cfHave(id)/k))});const g=cfGold(r);if(g)n=Math.min(n,Math.floor((C.gd||0)/g));return Math.max(0,n)}
 
 // 마을 공방 단계를 읽어 온 뒤 다시 그린다. 상점과 같은 방식으로 탭을 열 때 한 번만 묻는다.
@@ -47,22 +49,24 @@ function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.cre
   const it=ITM.find(t=>t[0]===r[1]),ds=it?it[2]:(MATM[r[1]]||[])[3]||"";
   {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
   const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfNm(id)+" "+cfHave(id)+"/"+n);{const ic=itIc(id,"xs");if(ic)s.prepend(ic)}need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
-  const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":"");
+  const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":cfSeasonDone(r)?"이번 시즌에는 이미 만들었다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):(cfSeason(r)?"시즌마다 1개 · 지금 만들 수 있다":"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":""));
   b.appendChild(elT("small",null,st));b.appendChild(elT("small",null,"보유 "+cfHave(r[1])));
   b.setAttribute("aria-label",cfName(r[1])+" 만들기. "+st+". "+r[6]);b.disabled=lock||mx<=0;b.onclick=()=>doCraft(r[0]);rl.appendChild(b)});
  if(fresh)craftRead()}
 
 // 만들기: 재료와 골드를 쓰고 결과물을 가방에 넣는다. 바뀐 칸만 저장한다.
-function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv("workshop")<r[5])return;const k=Math.min(craftQ,cfMax(r));if(k<=0)return;
+// CRAFT_SEASON 아이템은 C.scf 에 시즌 제작 여부를 남긴다(회귀 때 지워짐).
+function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv("workshop")<r[5])return;if(cfSeasonDone(r))return;const k=Math.min(craftQ,cfMax(r));if(k<=0)return;
  C.inv=C.inv||{};C.stats=C.stats||{};const g=cfGold(r)*k,fields={};
  Object.entries(r[3]).forEach(([id,n])=>{C.inv[id]=cfHave(id)-n*k;fields["inv/"+id]=C.inv[id]});
  if(g){C.gd=(C.gd||0)-g;fields.gd=C.gd}
- let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle")extra=0;out+=extra;
+ let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle"||cfSeason(r))extra=0;out+=extra;
  C.inv[r[1]]=cfHave(r[1])+out;fields["inv/"+r[1]]=C.inv[r[1]];
+ if(cfSeason(r)){C.scf=C.scf&&typeof C.scf==="object"?C.scf:{};C.scf[r[1]]=1;fields["scf/"+r[1]]=1}
  if(ITM.some(t=>t[0]===r[1])&&dexAdd("it",r[1]))fields["dex/it/"+r[1]]=C.dex.it[r[1]];
  C.stats.crafts=(C.stats.crafts||0)+k;fields["stats/crafts"]=C.stats.crafts;
  apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});titleState();checkTitles();
- craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":""))}
+ craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
 
 /* 속성의 프리즘: 가방에서 '사용'을 누르면 아래 상자가 열린다. 바꿀 속성(가진 것)과 새 속성(아직 없는 것)을 고르고 확인하면 바뀐다.
    준비해 둔 마법은 속성이 맞을 때만 쓰이므로(armedSk), 사라진 속성의 마법은 저절로 쓰이지 않는다. 숫자는 data/game.js 의 PRISM_DZ. */

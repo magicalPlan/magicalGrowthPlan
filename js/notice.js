@@ -95,6 +95,7 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망·친구 등. 시즌 때 공용 채팅·선물·마을·보스·타락은 함께 지운다. */
 let RST=null;
 /* lh·clue: 장기 진행은 남긴다. lv·ex·xv·gd 는 KEEP에 넣지 않아 레벨 1·경험 0·골드 100으로 돌아간다. rstn 도 KEEP에 넣지 않는다(회귀마다 알림을 다시 띄우려고). */
+/* scf(시즌 제작 1회 기록)는 KEEP에 넣지 않는다. 회귀하면 다시 만들 수 있다. */
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
