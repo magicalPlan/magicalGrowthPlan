@@ -26,6 +26,6 @@ function storyAtTxt(at){const t=Number(at);if(!Number.isFinite(t))return "";cons
 const WORLD_STORY_OPEN=[
  {id:"shard-1",open:true},
  {id:"shard-2",open:true},
- {id:"shard-3",open:false},
- {id:"shard-4",open:false}
+ {id:"shard-3",open:true},
+ {id:"shard-4",open:true}
 ];
