@@ -46,23 +46,23 @@ function shadySnap(){const inv={};C.inv=C.inv||{};Object.keys(C.inv).forEach(k=>
  return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,inv,mats:(C.stats&&C.stats.mats)||0}}
 function shadyRestore(s){if(!s||!C)return;C.gd=s.gd;C.eggs=s.eggs;C.eggsEv=s.eggsEv;C.inv=Object.assign({},s.inv);
  C.stats=C.stats||{};C.stats.mats=s.mats}
-function shadyApplyOne(r,fields){if(!r||!C)return;
- if(r.k==="gd"){C.gd=(C.gd||0)+r.n;fields.gd=C.gd;return}
+function shadyApplyOne(r,fields,inc){if(!r||!C)return;
+ if(r.k==="gd"){C.gd=(C.gd||0)+r.n;inc.gd=(Number(inc.gd)||0)+r.n;return}
  if(r.k==="eggs"){C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
  if(r.k==="eggsEv"){C.eggsEv=(C.eggsEv||0)+r.n;fields.eggsEv=C.eggsEv;return}
  if(r.k==="inv"&&r.id){C.inv=C.inv||{};C.inv[r.id]=(C.inv[r.id]||0)+r.n;fields["inv/"+r.id]=C.inv[r.id];
   try{if(typeof dexAdd==="function"){if(typeof MATM!=="undefined"&&MATM[r.id])dexAdd("mat",r.id);else dexAdd("it",r.id)}}catch(e){}
   if(typeof MATM!=="undefined"&&MATM[r.id]){C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+r.n;fields["stats/mats"]=C.stats.mats}}}
-/* 10회 열기 = 보상 10칸을 한 번에. 비용 SHADY_COST(2000, 칸당 SHADY_UNIT). */
+/* 10회 열기 = 보상 10칸을 한 번에. 비용 SHADY_COST(2000, 칸당 SHADY_UNIT).
+   골드는 순증감(비용−보상골드)만 increment. 가방 등은 절대 PATCH. */
 async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
  if((C.gd||0)<cost){const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent="골드가 부족하다. 10회 열기에 "+cost+"골드가 필요하다."}shadyPaintBtns();return}
- shadyBusy=true;shadyPaintBtns();const snap=shadySnap(),fields={};
- try{C.gd=(C.gd||0)-cost;fields.gd=C.gd;C.stats=C.stats||{};
-  const show=shadyRollPack();show.forEach(r=>shadyApplyOne(r,fields));
+ shadyBusy=true;shadyPaintBtns();const snap=shadySnap(),fields={},inc={gd:-cost};
+ try{C.gd=(C.gd||0)-cost;C.stats=C.stats||{};
+  const show=shadyRollPack();show.forEach(r=>shadyApplyOne(r,fields,inc));
   C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);fields["stats/maxGold"]=C.stats.maxGold;
   shadyPaintGrid(show);shadyPaintGold();shadyPaintBtns();
-  /* 한 번의 PATCH 로 골드·보상 칸을 같이 남긴다. 실패 시 스냅샷으로 되돌린 뒤 저장해 서버와 맞춘다. */
-  if(typeof apiAccountWrite==="function")await apiAccountWrite(fields);
+  if(typeof apiAccountWrite==="function")await apiAccountWrite(fields,inc);
   else if(typeof save==="function")save();
   const sm=$("#sm");if(sm){sm.style.color="var(--mu)";sm.textContent="상자를 10회 열었다. (-"+cost+"골드)"}
   try{if(typeof checkTitles==="function")checkTitles()}catch(e){}}

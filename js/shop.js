@@ -5,7 +5,8 @@
    아이템 shopItFold / #ittog · #itbox (기본 펼침, mgr_shop_it).
    하단 '수상한 상인'(#shdbox)은 js/shop/merchant.js 의 shadyFold · shopShady. */
 let shopQ=1,shopBusy=false;
-function shopWrite(fields){return apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}})}
+/* fields 절대 칸 + inc 증감(골드 등). 골드는 절대 덮어쓰지 않고 increment 로 보낸다. */
+function shopWrite(fields,inc){return apiAccountWrite(fields,inc).catch(()=>{try{save()}catch(e){}})}
 async function shopRead(){if(shopBusy||!C||!XON()||typeof loadFac!=="function")return;shopBusy=true;try{await loadFac()}catch(e){}finally{shopBusy=false}if(!$("#v-shop").hidden)shop()}
 function itemMax(id){C.inv=C.inv||{};if(id==="charm")return Math.max(0,CHARM_MAX-charmToday());if(id==="candle")return (C.inv.candle||0)>=1?0:1;return 99}
 /* 상점 무기 접기. open=true 면 #wpbox 를 보이고 목록을 채운다. 기본·기억 없음이면 접힌다(mgr_shop_wp). */
@@ -30,8 +31,8 @@ function shopItems(){const qb=$("#shopq"),il=$("#il");if(!qb||!il||!C)return;
   {const ic=itIc(id,"lg");if(ic)b.prepend(ic)}b.title=x[2];b.setAttribute("aria-label",x[1]+", "+st+", "+cnt+". "+x[2]);b.disabled=mx<=0||(C.gd||0)<cost;
   b.onclick=()=>{const k=Math.min(shopQ,itemMax(id)),c=pc*k;if(k<=0||(C.gd||0)<c)return;if(lim)C.daily={d:today(),charm:charmToday()+k};
    C.gd-=c;C.inv[id]=(C.inv[id]||0)+k;const dexNew=dexAdd("it",id);titleState();C.stats.purchases=(C.stats.purchases||0)+k;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);
-   const fields={gd:C.gd,["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
-   shopWrite(fields);checkTitles();
+   const fields={["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
+   shopWrite(fields,{gd:-c});checkTitles();
    shop(x[1]+(k>1?" "+k+"개를":"을(를)")+" 샀다. ("+c+"골드)")};il.appendChild(b)})}
 function shop(msg){C.wps=C.wps||[];const fresh=$("#v-shop").hidden,again=!fresh,y=window.scrollY;show("shop");if(again)window.scrollTo(0,y);
  $("#sg").textContent="보유 골드 "+(C.gd||0)+". 골드는 토벌과 시련에서 얻는다."+(C.v==="A"?" A마을 주민은 10% 할인을 받는다.":"");
