@@ -132,7 +132,7 @@
    const PET_ONLY={bond:1};
    /* 속성의 프리즘: 사용하면 속성 하나를 바꾸고 절망도가 PRISM_DZ 오른다. 동작은 js/create/craft.js 의 prism… */
    const PRISM_DZ=10;
-   /* 마을 이동권: 가방에서 쓰면 C.v 만 A·B·C·D 중 다른 마을로 바꾼다. 동작은 js/create/craft.js 의 vtown… */
+   /* 마을 이동권: 가방에서 쓰면 C.v 를 A·B·C·D 중 다른 마을로 바꾸고, 시설 기여(vfac/vfactop)는 즉시 이관한다. 이용 기록(fu)은 유지. js/create/craft.js vtown… */
    // 소모품: 가방에서 '사용 준비'를 눌러 두면 다음 출정이나 시험에서 쓰인다.
    const USE={charm:"출정",map:"출정",flag:"출정",seal:"시험",candle:"시험",whet:"강화"},CHARM_MAX=3;
    // 강화 성공 확률(%): 현재 단계 0→+1, +1→+2 ... +4→+5 순서. 숫자만 고치면 바뀐다. 실패하면 마력석만 사라지고 단계는 그대로다(보호의 숫돌을 준비하면 마력석도 지켜 준다).

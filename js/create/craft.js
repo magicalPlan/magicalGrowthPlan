@@ -86,19 +86,28 @@ function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.in
  const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}
 
-/* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 만 바뀐다.
-   시설 기여·이용 기록 등은 그대로 둔다. 타락 중에는 쓸 수 없다. */
-let vtownOn=false,vtownPick=null;
+/* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 를 바꾼다.
+   시설 기여(C.fc → vfac/vfactop)는 사용 즉시 옛 마을에서 빼고 새 마을로 이관한다. 이용 기록(C.fu)은 그대로 둔다.
+   타락 중에는 쓸 수 없다. */
+let vtownOn=false,vtownPick=null,vtownBusy=false;
 function vtownBox(){const box=elT("div","card prism-box"),cur=C.v,opts=Object.keys(VL).filter(k=>k!==cur);
  box.appendChild(elT("p","hint","지금 마을: "+((VL[cur]||{}).n||cur||"없음")));
  box.appendChild(elT("p","hint","옮길 마을"));
  const row=elT("div","row");opts.forEach(k=>{const v=VL[k],b=elT("button","chip",v?v.n:k);b.type="button";b.title=v?v.d:k;b.setAttribute("aria-pressed",vtownPick===k?"true":"false");b.onclick=()=>{vtownPick=k;bag()};row.appendChild(b)});box.appendChild(row);
  if(vtownPick&&VL[vtownPick])box.appendChild(elT("p","hint",VL[vtownPick].n+": "+VL[vtownPick].d));
- const ok=!!vtownPick&&!!VL[vtownPick]&&vtownPick!==cur,b=elT("button","btn"+(ok?"":" g"),ok?(VL[cur]?VL[cur].n:cur)+" → "+VL[vtownPick].n:"옮길 마을을 골라야 한다");b.type="button";b.disabled=!ok;b.onclick=vtownUse;box.appendChild(b);return box}
-function vtownUse(){const to=vtownPick,from=C.v;if(!to||!VL[to]||to===from)return;
+ const ok=!!vtownPick&&!!VL[vtownPick]&&vtownPick!==cur&&!vtownBusy,b=elT("button","btn"+(ok?"":" g"),vtownBusy?"옮기는 중…":ok?(VL[cur]?VL[cur].n:cur)+" → "+VL[vtownPick].n:"옮길 마을을 골라야 한다");b.type="button";b.disabled=!ok;b.onclick=()=>vtownUse();box.appendChild(b);return box}
+async function vtownUse(){const to=vtownPick,from=C.v;if(vtownBusy||!to||!VL[to]||to===from)return;
  if((C.inv.vtown||0)<1)return;if(C.fall){bag("타락한 동안에는 마을을 떠날 수 없다.");$("#bgm").style.color="var(--bad)";return}
- if(!confirm((VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮길까?\n\n· 소속 마을만 바뀐다\n· 되돌리려면 이동권이 하나 더 필요하다"))return;
+ if(!confirm((VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮길까?\n\n· 소속이 바뀐다\n· 시설 기여는 새 마을로 옮긴다(옛 마을 합계에서는 뺀다)\n· 오늘 시설 이용 기록은 그대로다\n· 되돌리려면 이동권이 하나 더 필요하다"))return;
+ vtownBusy=true;try{if(typeof bag==="function")bag()}catch(e){}
+ const fc=C.fc&&typeof C.fc==="object"?Object.assign({},C.fc):{};
  C.inv.vtown--;C.v=to;C.stats=C.stats||{};C.stats.townMoves=(C.stats.townMoves||0)+1;C.stats.vSeen=C.stats.vSeen&&typeof C.stats.vSeen==="object"?C.stats.vSeen:{};if(from&&VL[from])C.stats.vSeen[from]=1;C.stats.vSeen[to]=1;vtownOn=false;vtownPick=null;titleState();
+ /* 화면 캐시: 옛 마을에 붙어 있던 내 기여 보정분을 지운다. 이용 기록(fu)은 손대지 않는다. */
+ try{if(typeof facFly==="object"&&facFly)Object.keys(FAC_KEY||{}).forEach(k=>{delete facFly[from+"/"+k];delete facFly[to+"/"+k]});if(typeof facSrv==="object"&&facSrv)Object.keys(FAC_KEY||{}).forEach(k=>{delete facSrv[from+"/"+k]});if(typeof facVill!=="undefined")facVill="";if(typeof vfacReady==="object"&&vfacReady){delete vfacReady[from];delete vfacReady[to]}}catch(e){}
  note("quest","마을 이동권: "+(VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮겼다.");save();regPlayer();checkTitles();
- alertBox("🏘 마을 이동권","잉크가 마르고 각오가 굳었다.\n\n"+(VL[from]?VL[from].n:from)+" → "+VL[to].n+"\n"+VL[to].d+"\n\n당신은 떠났다.");
+ let moved="";if(XON()&&typeof apiVfacTransfer==="function"&&Object.keys(fc).some(k=>(Number(fc[k])||0)>0)){
+  try{const w=await apiVfacTransfer(from,to,fc,typeof nmOf==="function"?nmOf():C.n);moved=w.ok?"\n\n시설 기여 "+w.ok+"곳을 새 마을로 옮겼다."+(w.fail?" (실패 "+w.fail+"곳)":""):w.fail?"\n\n시설 기여를 옮기지 못한 칸이 있다. 시설 탭에서 다시 열면 맞춰 볼 수 있다.":""}catch(e){moved="\n\n시설 기여 이관에 실패했다. 시설 탭을 열어 다시 맞춰 보자."}}
+ vtownBusy=false;
+ alertBox("🏘 마을 이동권","잉크가 마르고 각오가 굳었다.\n\n"+(VL[from]?VL[from].n:from)+" → "+VL[to].n+"\n"+VL[to].d+moved+"\n\n당신은 떠났다.");
+ if(typeof loadFac==="function")loadFac(true).catch(()=>{});
  if(typeof hub==="function")hub();else bag()}
