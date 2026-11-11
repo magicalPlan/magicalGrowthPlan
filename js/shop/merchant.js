@@ -43,9 +43,9 @@ function shadyPaintGrid(list){const grid=$("#shdgrid");if(!grid)return;
   else if(r.k==="gd")cell.appendChild(elT("span","shady-ic","💰"));
   cell.appendChild(elT("b","",shadyName(r)));cell.appendChild(elT("small","","×"+r.n))}}
 function shadySnap(){const inv={};C.inv=C.inv||{};Object.keys(C.inv).forEach(k=>{inv[k]=C.inv[k]});
- return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,inv,mats:(C.stats&&C.stats.mats)||0}}
+ return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,inv,mats:(C.stats&&C.stats.mats)||0,shadyBoxes:(C.stats&&C.stats.shadyBoxes)||0,shadyT4:(C.stats&&C.stats.shadyT4)||0}}
 function shadyRestore(s){if(!s||!C)return;C.gd=s.gd;C.eggs=s.eggs;C.eggsEv=s.eggsEv;C.inv=Object.assign({},s.inv);
- C.stats=C.stats||{};C.stats.mats=s.mats}
+ C.stats=C.stats||{};C.stats.mats=s.mats;C.stats.shadyBoxes=s.shadyBoxes;C.stats.shadyT4=s.shadyT4}
 function shadyApplyOne(r,fields,inc){if(!r||!C)return;
  if(r.k==="gd"){C.gd=(C.gd||0)+r.n;inc.gd=(Number(inc.gd)||0)+r.n;return}
  if(r.k==="eggs"){C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
@@ -60,6 +60,9 @@ async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
  shadyBusy=true;shadyPaintBtns();const snap=shadySnap(),fields={},inc={gd:-cost};
  try{C.gd=(C.gd||0)-cost;C.stats=C.stats||{};
   const show=shadyRollPack();show.forEach(r=>shadyApplyOne(r,fields,inc));
+  /* 칭호용: 연 상자 수(칸)·4등급 횟수. 우수 고객·동전을 땅에 버린. */
+  C.stats.shadyBoxes=(C.stats.shadyBoxes||0)+show.length;fields["stats/shadyBoxes"]=C.stats.shadyBoxes;
+  const t4=show.filter(r=>r&&r.tier===4).length;if(t4){C.stats.shadyT4=(C.stats.shadyT4||0)+t4;fields["stats/shadyT4"]=C.stats.shadyT4}
   C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);fields["stats/maxGold"]=C.stats.maxGold;
   shadyPaintGrid(show);shadyPaintGold();shadyPaintBtns();
   if(typeof apiAccountWrite==="function")await apiAccountWrite(fields,inc);
