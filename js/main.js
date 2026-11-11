@@ -170,9 +170,16 @@ function keepPwBonus(dst,src){if(!dst||!src)return dst;const a=Math.max(0,Number
 function accPwBonusPatch(body,base){if(!body||!Object.prototype.hasOwnProperty.call(body,"c/b"))return body;
  const bb=Math.max(0,Number(base&&base.b)||0),nb=body["c/b"]==null?NaN:Number(body["c/b"]);
  if(!(nb>bb))delete body["c/b"];return body}
-/* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
-   재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
-function pickTrip(local,remote){if(local==null||local===undefined)return null;if(remote==null||remote===undefined)return null;return(Number(local.t0)||0)>=(Number(remote.t0)||0)?local:remote}
+/* 장기 토벌·단서(다기기 합침).
+   · 한쪽만 진행이면 그쪽을 지킨다(로컬 없음≠정산. 예전엔 null 을 반환해 서버 진행을 지웠다).
+   · 이 탭이 이미 그 시드를 정산(got[sd])했으면 null(보상 유지·서버 옛 진행 무시).
+   · 둘 다 진행이면 더 늦은 t0. pend 로 지우는 문제는 applyPend 에서 막는다. */
+function pickTrip(local,remote,got){
+ const L=local&&typeof local==="object"?local:null,R=remote&&typeof remote==="object"?remote:null;
+ if(R){const sd=String(R.sd||"");if(sd&&got&&got[sd])return null}
+ if(!L)return R;if(!R)return L;
+ return(Number(L.t0)||0)>=(Number(R.t0)||0)?L:R}
+function tripClaimed(local,remote,got){return!(local&&typeof local==="object")&&!!(remote&&typeof remote==="object")&&!!(got&&got[String(remote.sd||"")])}
 /* 서버 회귀 번호(c.rsv · players/rr)가 이 탭보다 크면, 회귀 전 캐릭터로 PATCH/set 하지 말고 서버본을 받는다.
    ts 레이스로 accSync 를 놓친 옛 탭이 레벨·골드·가방만 되돌리는 것을 막는다. */
 async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
@@ -203,15 +210,19 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  /* 일반: C.b max 보호. 회귀: 서버본 b 그대로(더 큰 로컬 b 되살리기 금지). */
  if(!rstNewer)keepPwBonus(C,mine);
- C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
+ /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
+ if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
+ if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
+ C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot);
  if(rstNewer){try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
- /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계·경험·골드)을 서버 옛값으로 되돌리지 않는다. */
- const claimed=!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
+ /* 이 탭이 그 시드를 이미 정산(got)했는데 서버만 옛 진행이면, 보상을 서버 옛값으로 되돌리지 않는다.
+    (진행 없음+서버만 있음은 정산이 아님 → pickTrip 이 서버 진행을 살림) */
+ const claimed=!rstNewer&&(tripClaimed(mine.lh,rem.lh,mine.lhGot)||tripClaimed(mine.clue,rem.clue,mine.clueGot));
  if(claimed){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
-  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot;
+  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){
   const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0);
@@ -548,9 +559,12 @@ async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy
   if(changed&&!$("#v-hub").hidden)hubLH()}finally{accSoftBusy=false}}
 async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
- /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다(클릭 경로에서 여러 번 기다리면 체감이 길어진다). */
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();lhBusy=true;hubLH();toast("서버에 남기는 중...");
- try{const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
+ /* 다른 기기 진행이 있으면 먼저 맞춘다. 맞춘 뒤에도 진행 중이면 새로 출발하지 않는다(덮어쓰기 방지). */
+ lhBusy=true;hubLH();
+ try{try{await accSyncIfNewer()}catch(e){}if(lhOn()){toast("다른 기기·탭에서 이미 장기 토벌 중이다. 그쪽 진행을 이어 받는다.");return}
+ /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다. */
+ const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
+ const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
   lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.")}
  finally{lhBusy=false;hubLH()}}
 /* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
