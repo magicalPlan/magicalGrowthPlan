@@ -698,7 +698,13 @@ const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
+/* 가방 소지품 접기. 기본 펼침. "0" 이면 접힘(mgr_bag_it). */
+const bagInvOpen=()=>{try{return localStorage.getItem("mgr_bag_it")!=="0"}catch(e){return true}};
+function bagInvFold(open){const b=$("#bgitog"),box=$("#bgibox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_bag_it",open?"1":"0")}catch(e){}}
 function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRG();
+ {const t=$("#bgitog");if(t&&!t._bagFold){t._bagFold=1;t.onclick=()=>bagInvFold(!!$("#bgibox")&&!!$("#bgibox").hidden)}}
+ /* 프리즘·이동권 사용 UI를 열 때는 소지품 칸을 펼친다. */
+ if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn))bagInvFold(true);else bagInvFold(bagInvOpen());
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
   if(ic){const t=document.createElement("div");t.style.minWidth="0";t.append(...i.childNodes);i.classList.add("it-row");i.append(ic,t)}w.appendChild(i);
