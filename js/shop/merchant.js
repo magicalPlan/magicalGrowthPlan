@@ -64,7 +64,9 @@ async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
   shadyPaintGrid(show);shadyPaintGold();shadyPaintBtns();
   if(typeof apiAccountWrite==="function")await apiAccountWrite(fields,inc);
   else if(typeof save==="function")save();
-  const sm=$("#sm");if(sm){sm.style.color="var(--mu)";sm.textContent="상자를 10회 열었다. (-"+cost+"골드)"}
+  const sm=$("#sm");if(sm){sm.style.color="var(--mu)";
+   const pool=typeof SHADY_SAY!=="undefined"&&SHADY_SAY.length?SHADY_SAY:["상자를 10회 열었다. (-{cost}골드)"];
+   sm.textContent=String(pool[Math.floor(Math.random()*pool.length)]||"").replace(/\{cost\}/g,String(cost))}
   try{if(typeof checkTitles==="function")checkTitles()}catch(e){}}
  catch(e){shadyRestore(snap);shadyPaintGrid(null);shadyPaintGold();
   try{if(typeof save==="function")save()}catch(_){}
