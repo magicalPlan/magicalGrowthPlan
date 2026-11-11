@@ -40,7 +40,7 @@ function shadyPaintGrid(list){const grid=$("#shdgrid");if(!grid)return;
   if(!r){cell.appendChild(elT("span","shady-q","?"));continue}
   if(r.k==="inv"&&typeof itIc==="function"){const ic=itIc(r.id,"sm");if(ic)cell.appendChild(ic)}
   else if(r.k==="eggs"||r.k==="eggsEv")cell.appendChild(elT("span","shady-ic",r.k==="eggsEv"&&typeof PET_EV!=="undefined"?PET_EV.ic:"🥚"));
-  else if(r.k==="gd")cell.appendChild(elT("span","shady-ic","💰"));
+  else if(r.k==="gd"){const i=document.createElement("img");i.src="assets/items/gold.png"+(typeof ITEM_IMG_V!=="undefined"?"?v="+ITEM_IMG_V:"");i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic sm";cell.appendChild(i)}
   cell.appendChild(elT("b","",shadyName(r)));cell.appendChild(elT("small","","×"+r.n))}}
 function shadySnap(){const inv={};C.inv=C.inv||{};Object.keys(C.inv).forEach(k=>{inv[k]=C.inv[k]});
  return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,inv,mats:(C.stats&&C.stats.mats)||0,shadyBoxes:(C.stats&&C.stats.shadyBoxes)||0,shadyT1:(C.stats&&C.stats.shadyT1)||0,shadyT4:(C.stats&&C.stats.shadyT4)||0}}
