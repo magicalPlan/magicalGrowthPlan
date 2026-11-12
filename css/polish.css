@@ -29,6 +29,7 @@ body:has(#nav:not([hidden])) .sub{margin:0 0 10px;font-size:.8rem;letter-spacing
 /* 4. 제목 정리: 입력칸 이름표(lbl)와 접기 제목(fold-h) */
 h2.lbl{font-family:inherit;font-size:.85rem;font-weight:700;color:var(--mu)!important;letter-spacing:.02em;margin:14px 0 6px;border:0!important;padding:0}
 h2.fold-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fold-title{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .fold-sum{font-family:inherit;font-size:.78rem;font-weight:400;color:var(--mu);letter-spacing:0}
 .fold-btn{flex:0 0 auto!important;min-width:0!important;padding:4px 11px!important;font-family:inherit!important;font-size:.76rem!important;border-radius:999px!important}
 
@@ -515,6 +516,12 @@ html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .c
 /* 도감 아이템 아래 재료. 얻었는지와 관계없이 획득 방법을 펼친다. */
 #dex-mat{margin-top:6px}
 #dex-mat .dex-rule{border:0;border-top:1px solid var(--ln);margin:18px 0 14px}
+/* 수상한 상인 제목 옆 스토리 재생. 아이콘은 검정 PNG → 금색 틴트. */
+#v-shop .shady-play{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:0;border:1px solid #b89b5e88;border-radius:999px;background:#120f2088;cursor:pointer;vertical-align:middle}
+#v-shop .shady-play img{display:block;width:16px;height:16px;/* 검정→금(#e6c56a) */filter:brightness(0) saturate(100%) invert(86%) sepia(28%) saturate(679%) hue-rotate(358deg) brightness(97%) contrast(92%)}
+#v-shop .shady-play:hover,#v-shop .shady-play:focus-visible{border-color:#e6c56a;background:#1c1730}
+html[data-theme="light"] #v-shop .shady-play{background:#fffaf0;border-color:#c4a15a}
+html[data-theme="light"] #v-shop .shady-play:hover,html[data-theme="light"] #v-shop .shady-play:focus-visible{border-color:#7a5f22}
 /* 수상한 상인: 좁으면 상자↑결과↓(2×1), 넓으면 상자|결과(1×2). 결과 칸은 2×5. */
 #v-shop .shady-layout{display:grid;gap:14px;align-items:stretch;grid-template-columns:1fr}
 /* 가로 병렬: 두 칸 높이를 맞춘 뒤, 결과(그리드+버튼)를 세로 가운데 두어 상자 기준 위·아래 여백이 같게. */

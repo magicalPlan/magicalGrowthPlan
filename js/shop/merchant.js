@@ -16,7 +16,7 @@ const SHADY_POOL=[
 let shadyBusy=false,shadyBuilt=false;
 function shadyOpen(){try{return localStorage.getItem("mgr_shop_shd")!=="0"}catch(e){return true}}
 function shadyFold(open){const b=$("#shdtog"),box=$("#shdbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_shd",open?"1":"0")}catch(e){}
- if(open)shopShady()}
+ shopShady()}
 function shadyRollOne(){let r=Math.random(),acc=0,ti=SHADY_TIER_P.length-1;
  for(let i=0;i<SHADY_TIER_P.length;i++){acc+=SHADY_TIER_P[i];if(r<acc){ti=i;break}}
  const pool=SHADY_POOL[ti]||SHADY_POOL[0],pick=pool[Math.floor(Math.random()*pool.length)];
@@ -76,11 +76,22 @@ async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
   try{if(typeof save==="function")save()}catch(_){}
   const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent="상자를 열지 못했다. 골드는 그대로다."}}
  finally{shadyBusy=false;shadyPaintBtns()}}
-function shopShady(){if(!C)return;const box=$("#shdbox");if(!box||box.hidden)return;
+function shadyStoryFail(msg){const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent=msg||"이야기를 열지 못했다."}else if(typeof toast==="function")toast(msg||"이야기를 열지 못했다.")}
+function shadyStoryPlay(){if(typeof storyLoad!=="function"||typeof vnOpen!=="function"){shadyStoryFail("이야기 기능을 불러오지 못했다.");return}
+ const play=$("#shdplay");if(play)play.disabled=true;
+ storyLoad().then(book=>{
+  const list=Array.isArray(book&&book.shards)?book.shards:[];
+  const story=list.find(s=>s&&s.id==="shady-merchant-1");
+  if(!story||!story.start){shadyStoryFail("수상한 상인 이야기가 아직 없다.");return}
+  vnOpen(story)}).catch(()=>shadyStoryFail("이야기를 불러오지 못했다.")).finally(()=>{if(play)play.disabled=false})}
+function shopShady(){if(!C)return;
+ /* 재생 버튼은 제목줄에 있어 칸이 접혀 있어도 연결한다. */
+ const play=$("#shdplay");if(play&&!play._shady){play._shady=1;play.onclick=()=>shadyStoryPlay()}
+ const tog=$("#shdtog");if(tog&&!tog._shady){tog._shady=1;tog.onclick=()=>shadyFold(!!$("#shdbox")&&!!$("#shdbox").hidden)}
+ const box=$("#shdbox");if(!box||box.hidden)return;
  if(!shadyBuilt||!$("#shdgrid")||!$("#shdgrid").children.length){
   const grid=$("#shdgrid");if(grid){grid.innerHTML="";for(let i=0;i<SHADY_N;i++)grid.appendChild(elT("div","shady-cell",""));shadyBuilt=true;shadyPaintGrid(null)}
-  const b10=$("#shd10");if(b10&&!b10._shady){b10._shady=1;b10.onclick=()=>shadyPull()}
-  const tog=$("#shdtog");if(tog&&!tog._shady){tog._shady=1;tog.onclick=()=>shadyFold(!!$("#shdbox")&&!!$("#shdbox").hidden)}}
+  const b10=$("#shd10");if(b10&&!b10._shady){b10._shady=1;b10.onclick=()=>shadyPull()}}
  /* 안내 문구: 기획 변경 시 html #shdlead 또는 아래 한 줄만 고친다.
     기본: "수상한 상인이 상자를 판다. 상자 안에는 상상 이상으로 좋은 상품도, 꽝도 있다." */
  shadyPaintBtns()}
