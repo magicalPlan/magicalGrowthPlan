@@ -46,8 +46,9 @@ function storyAtTxt (at) {
 /* 세계관 > 이벤트 탭 전용. open 을 true 로 바꾸면 그 에피소드가 탭에 보인다. CLPN·STORY_LOCK 과 별개다.
    챕터 묶음·소제목은 chapters/*.json 의 title·lead, 에피소드 제목은 shards[].title. */
 const WORLD_STORY_OPEN=[
- {id:"shard-1",open:true},
- {id:"shard-2",open:true},
- {id:"shard-3",open:true},
- {id:"shard-4",open:true}
+ {id: "shard-1",open:true},
+ {id: "shard-2",open:true},
+ {id: "shard-3",open:true},
+ {id: "shard-4",open:true},
+ {id: "shady-merchant-1", open:true}
 ];

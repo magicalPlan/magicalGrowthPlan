@@ -12,98 +12,121 @@
           "img": "assets/standing/shady_merchant_default.png",
           "side": "right"
         },
+        "mc_default_joy?": {
+          "name" : "???",
+          "img": "assets/standing/shady_merchant_joy.png"
+        },
+        "mc_default_doubt?": {
+          "name": "???",
+          "img": "assets/standing/shady_merchant_doubt.png"
+        },
         "mc_default_mc": {
           "name": "수상한 상인",
           "img": "assets/standing/shady_merchant_default.png"
+        },
+        "mc_default_joy": {
+          "name" :"수상한 상인",
+          "img": "assets/standing/shady_merchant_joy.png"
+        },
+        "mc_default_doubt": {
+          "name": "수상한 상인",
+          "img": "assets/standing/shady_merchant_doubt.png"
+        },
+        "mc_default_smile": {
+          "name": "수상한 상인",
+          "img": "assets/standing/shady_merchant_smile.png"
         }
       },
       "start": "meet",
       "nodes": {
-        "lines": [
-          {
-            "who": "mc_default_?",
-            "text": "어머나, 이게 누구실까?"
-          },
-          {
-            "who": "mc_default_?",
-            "text": "만나서 반가워. 이름이 뭐야?"
-          }
-        ],
-        "choose": [
-          {
-            "label": "나는...",
-            "next": "you_look_pretty"
-          },
-          {
-            "label": "당신 먼저 알려줘.",
-            "next": "you_look_brave"
-          }
-        ]
-      },
-      "you_look_pretty": {
-        "lines": [
-          {
-            "who": "mc_default_?",
-            "text": "후후, 예쁜 이름인 걸."
-          },
-          {
-            "who": "mc_default_?",
-            "text": "앞으로 잘 지낼 수 있을 것 같은 느낌이 들어."
-          }
-        ],
-        "next": "my_name_is_mc"
-      },
-      "you_look_brave": {
-        "lines": [
-          {
-            "who": "mc_default_?",
-            "text": "어머나, 당돌한 손님이네."
-          }
-        ]
-      },
-      "my_name_is_mc": {
-        "lines": [
-          {
-            "who": "mc_default_?",
-            "text": "내 이름은... 그래. 뭐라 불리면 좋을까?"
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "그냥 상인 누님이나 언니라고 불러."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "그 정도로 충분해."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "아니 글쎄, 세계를 구하기 위해 노력하고 있는 아이들이 있다 들어서 말이야."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "마침 내 귀중한 물건들이 도움이 될 것 같아서... 이렇게 발걸음했지."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "내가 파는 건 어디에나 있고, 어디에도 없어."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "어디에나 쓸 수 있고, 어디에도 쓸 데 없지."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "정하는 것은 언제나 운명..."
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "자아, 너는 무엇에게 선택받고 무엇을 선택할까?"
-          },
-          {
-            "who": "mc_default_mc",
-            "text": "오랜만에 날 기대되게 해주는 구나..."
-          }
-        ]
+        "meet": {
+          "lines": [
+            {
+              "who": "mc_default_?",
+              "text": "어머나, 이게 누구실까?"
+            },
+            {
+              "who": "mc_default_?",
+              "text": "만나서 반가워. 이름이 뭐야?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "나는...",
+              "next": "you_look_pretty"
+            },
+            {
+              "label": "당신 먼저 알려줘.",
+              "next": "you_look_brave"
+            }
+          ]
+        },
+        "you_look_pretty": {
+          "lines": [
+            {
+              "who": "mc_default_joy?",
+              "text": "후후, 예쁜 이름인 걸."
+            },
+            {
+              "who": "mc_default_joy?",
+              "text": "앞으로 잘 지낼 수 있을 것 같은 느낌이 들어."
+            }
+          ],
+          "next": "my_name_is_mc"
+        },
+        "you_look_brave": {
+          "lines": [
+            {
+              "who": "mc_default_doubt?",
+              "text": "어머나, 당돌한 손님이네."
+            }
+          ],
+          "next": "my_name_is_mc"
+        },
+        "my_name_is_mc": {
+          "lines": [
+            {
+              "who": "mc_default_?",
+              "text": "내 이름은... 그래. 뭐라 불리면 좋을까?"
+            },
+            {
+              "who": "mc_default_smile",
+              "text": "그냥 상인 누님이나 언니라고 불러."
+            },
+            {
+              "who": "mc_default_smile",
+              "text": "그 정도로 충분해."
+            },
+            {
+              "who": "mc_default_joy",
+              "text": "아니 글쎄, 세계를 구하기 위해 노력하고 있는 아이들이 있다 들어서 말이야."
+            },
+            {
+              "who": "mc_default_mc",
+              "text": "마침 내 귀중한 물건들이 도움이 될 것 같아서... 이렇게 발걸음했지."
+            },
+            {
+              "who": "mc_default_mc",
+              "text": "내가 파는 건 어디에나 있고, 어디에도 없어."
+            },
+            {
+              "who": "mc_default_mc",
+              "text": "어디에나 쓸 수 있고, 어디에도 쓸 데 없지."
+            },
+            {
+              "who": "mc_default_smile",
+              "text": "정하는 것은 언제나 운명..."
+            },
+            {
+              "who": "mc_default_mc",
+              "text": "자아, 너는 무엇에게 선택받고 무엇을 선택할까?"
+            },
+            {
+              "who": "mc_default_mc",
+              "text": "오랜만에 날 기대되게 해주는 구나..."
+            }
+          ]
+        }
       }
     }
   ]

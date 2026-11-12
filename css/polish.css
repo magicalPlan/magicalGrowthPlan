@@ -604,12 +604,13 @@ body.vn-open{overflow:hidden}
 /* 스탠딩·대화창을 한 열(.vn-col)에 두어 폭을 공유한다. 겹침·대화창 스크롤 없음. */
 .vn-col{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:calc(100% - 24px);max-width:100%;margin:0 auto max(18px,env(safe-area-inset-bottom));box-sizing:border-box}
 .vn-stage{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:flex-end;padding:24px 0 8px;width:100%;box-sizing:border-box}
-.vn-stand{width:min(42%,420px);max-width:100%;margin-left:auto}
+.vn-stand{width:min(50%,500px);max-width:100%;margin-left:auto}
 .vn-stand[data-side="left"]{margin-left:0;margin-right:auto}
 .vn-stand[hidden]{display:none}
 .vn-fig{width:100%}
-.vn-fig img{display:block;width:100%;max-height:min(58vh,520px);object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 24px #000a)}
-.vn-sil{height:min(48vh,420px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:18px;border-radius:160px 160px 28px 28px;background:
+/* 스탠딩 원본 비율 20:34. 가로는 칸 폭, 세로는 비율 유지(화면이 낮으면 max-height로만 줄임). */
+.vn-fig img{display:block;width:100%;height:auto;aspect-ratio:20/34;max-height:min(72vh,850px);object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 24px #000a)}
+.vn-sil{width:100%;aspect-ratio:20/34;height:auto;max-height:min(72vh,850px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:18px;border-radius:160px 160px 28px 28px;background:
  radial-gradient(circle at 50% 22%,#d8c79a 0 42px,transparent 44px),
  linear-gradient(#2a2340,#2a2340) center 78% / 68% 58% no-repeat,
  linear-gradient(180deg,#3a3158,#161222)}
@@ -636,7 +637,7 @@ html[data-theme="light"] .vn-sil{background:
  linear-gradient(#efe6d4,#efe6d4) center 78% / 68% 58% no-repeat,
  linear-gradient(180deg,#f3ead8,#e7dcc4)}
 html[data-theme="light"] .vn-sil-name{color:#5c4510}
-@media (max-width:640px){.vn-text{font-size:1rem;min-height:6em}.vn-sil{height:min(42vh,360px)}.world-shard{letter-spacing:.06em}}
+@media (max-width:640px){.vn-text{font-size:1rem;min-height:6em}.vn-fig img,.vn-sil{max-height:min(64vh,680px)}.world-shard{letter-spacing:.06em}}
 @media (prefers-reduced-motion:reduce){.vn-fig img{filter:none}}
 
 /* 마력 각인 도트(js/main.js 의 drawRunes). 아직 새기지 않은 각인은 흐리게 */
