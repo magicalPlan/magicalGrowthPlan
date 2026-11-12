@@ -1,9 +1,11 @@
-<!-- 세계관 · 이벤트. 이야기는 여기서 열지 않는다. js/world.js 의 worldEvent 가 잠긴 안내만 그린다.
-     열림 플래그는 data/story/lock.js 의 storyFlag. true 일 때만 장기 의뢰 단서 조각 칸의 '스토리 보기'가 이야기를 연다.
-     글과 선택지는 data/story/shards.json. 대사를 고치면 lock.js 의 STORY_URL v 숫자를 올린다. 서버에는 저장하지 않는다.
+<!-- 세계관 · 이벤트. js/world.js 의 worldEvent 가 챕터·에피소드 목록을 그린다.
+     목록: data/story/index.json → chapters/*.json (챕터 소제목·lead·에피소드).
+     탭에 보일 에피소드는 data/story/lock.js 의 WORLD_STORY_OPEN(open:true).
+     장기 의뢰 단서 조각 칸의 잠금은 STORY_LOCK·storyFlag(개수·날짜).
+     글·선택지는 서버에 저장하지 않는다. 대사를 고치면 해당 JSON ?v= 와 STORY_INDEX_URL v 를 올린다.
      개요는 html/world/overview.html, Q&A는 html/world/qa.html. 탭은 html/home/main.html. -->
 
-<!-- 넘기는 법과 이야기 객체 모양은 js/story/vn.js 앞머리 주석. 잠금 숫자와 날짜는 data/story/lock.js. -->
+<!-- 넘기는 법과 이야기 객체 모양은 js/story/vn.js 앞머리 주석. -->
 <div id="v-wev" hidden>
 <h2 class="world-page">이벤트</h2>
 </div>

@@ -99,55 +99,71 @@ function worldView () {
    })
 }
 
-/* 세계관 > 이벤트. 버튼은 data/story/lock.js 의 WORLD_STORY_OPEN(open:true) 만 본다.
-   장기 의뢰 단서 조각(STORY_LOCK·CLPN·clpStories)과 별개다. open 은 lock.js 에서 손으로 켠다. */
+/* 세계관 > 이벤트. 챕터는 data/story/index.json(+chapters/*.json), 에피소드 버튼은 WORLD_STORY_OPEN(open:true).
+   장기 의뢰 단서 조각(STORY_LOCK·CLPN·clpStories)과 별개다. 챕터 소제목·lead 는 JSON, open 은 lock.js 에서 켠다. */
 function worldEvent() {
    show("wev");
    const root = $("#v-wev");
-   
    if (!root) return;
-   
    root.replaceChildren();
-   
-   const open = (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).filter(r => r && r.open && r.id);
-   
-   if (!open.length) {
+
+   const openIds = {};
+   (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
+      if (r && r.open && r.id) openIds[r.id] = 1
+   });
+   if (!Object.keys(openIds).length) {
       root.append(elT("p","world-lead","이 기억은 아직 잠겨 있다."), elT("p", "hint", "장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."));
       return
    }
-   
-   root.appendChild(elT("p", "world-lead", "열린 이벤트 이야기"));
-   
-   const slot = elT("div", "clp-stories"), box = elT("div","card");
-   box.appendChild(slot);
-   root.appendChild(box);
 
-   if(typeof storyLoad !== "function") {
-      slot.appendChild(elT("p", "hint", "이야기를 불러올 수 없다."));
+   root.appendChild(elT("p", "world-lead", "열린 이벤트 이야기"));
+   if (typeof storyLoad !== "function") {
+      root.appendChild(elT("p", "hint", "이야기를 불러올 수 없다."));
       return
    }
 
+   const hold = elT("div", "wev-list");
+   root.appendChild(hold);
+   hold.appendChild(elT("p", "hint", "이야기를 불러오는 중…"));
+
    storyLoad().then(book => {
-      const list = Array.isArray(book && book.shards) ? book.shards : [];
-      open.forEach(row => {
-         const story = list.find(s => s && s.id === row.id);
-         if(!story || !story.start) return;
-         const line = elT("div", "clp-story");
-         line.appendChild(elT("span", "clp-story-name", story.title || "이야기"));
-         const b = elT("button", "chip", "스토리 보기");
-         b.type = "button";
-         b.onclick = () => {
-            if(typeof vnOpen === "function") vnOpen(story)
-         };
-            
-         line.appendChild(b);slot.appendChild(line)});
-         if(!slot.childNodes.length) {
-            root.replaceChildren(elT("p", "world-lead", "이 기억은 아직 잠겨 있다."), elT("p", "hint", "이야기 글을 찾지 못했다."));
-         }}
-      ).catch( () => {
-         slot.appendChild(elT("p", "hint", "이야기를 불러오지 못했다."))
+      if (!hold.isConnected) return;
+      hold.replaceChildren();
+      const chapters = Array.isArray(book && book.chapters) && book.chapters.length
+         ? book.chapters
+         : [{ id:"", title:"", lead:"", world:true, shards: Array.isArray(book && book.shards) ? book.shards : [] }];
+      let any = false;
+      chapters.forEach(ch => {
+         if (ch && ch.world === false) return;
+         const eps = (ch && ch.shards || []).filter(s => s && s.start && openIds[s.id]);
+         if (!eps.length) return;
+         any = true;
+         const box = elT("div", "card wev-chapter");
+         if (ch.title) box.appendChild(elT("h3", "wev-chapter-title", ch.title));
+         if (ch.lead) box.appendChild(elT("p", "hint wev-chapter-lead", ch.lead));
+         const slot = elT("div", "clp-stories");
+         eps.forEach(story => {
+            const line = elT("div", "clp-story");
+            line.appendChild(elT("span", "clp-story-name", story.title || "이야기"));
+            const b = elT("button", "chip", "스토리 보기");
+            b.type = "button";
+            b.onclick = () => { if (typeof vnOpen === "function") vnOpen(story) };
+            line.appendChild(b);
+            slot.appendChild(line)
+         });
+         box.appendChild(slot);
+         hold.appendChild(box)
+      });
+      if (!any) {
+         root.replaceChildren(
+            elT("p", "world-lead", "이 기억은 아직 잠겨 있다."),
+            elT("p", "hint", "이야기 글을 찾지 못했다.")
+         )
       }
-   )
+   }).catch(() => {
+      if (!hold.isConnected) return;
+      hold.replaceChildren(elT("p", "hint", "이야기를 불러오지 못했다."))
+   })
 }
 
 // ===================================

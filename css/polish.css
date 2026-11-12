@@ -253,6 +253,11 @@ html[data-theme="light"] .rst-card h2{color:#a8283f!important}
 
 /* 세계관: 화면을 열 때 그린 큰 제목. 제목을 누르면 본문이 펼쳐진다. */
 #v-world,#v-wev,#v-wqa{max-width:740px;margin:0 auto}
+#v-wev .wev-list{display:flex;flex-direction:column;gap:14px}
+#v-wev .wev-chapter{margin:0}
+#v-wev .wev-chapter-title{margin:0 0 6px;font-size:1.05rem;font-family:"Gowun Batang",serif;letter-spacing:.04em}
+#v-wev .wev-chapter-lead{margin:0 0 10px}
+#v-wev .wev-chapter .clp-stories{margin-top:0}
 .world-page{text-align:center;letter-spacing:.32em;font-size:1.85rem;color:#f6edd4;text-shadow:0 0 22px #e6c56a55,0 2px 0 #000}
 .world-page::before,.world-page::after{content:"";display:block;height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,#e6c56a,#fff6d2,#e6c56a,transparent)}
 .world-page::before{width:46%;margin-bottom:12px}.world-page::after{width:28%;margin-top:12px}
@@ -557,7 +562,8 @@ html[data-theme="light"] .dex-it.lock .it-ic{filter:brightness(0) opacity(.2)}
 /* 가방 무기 카드. 그림은 assets/equipments, 글·버튼은 js/weapon.js bagWeapons. */
 #bgw{display:flex;flex-direction:column;gap:10px}
 #bgw .bag-wp{display:grid;grid-template-columns:72px minmax(0,1fr);grid-template-rows:auto auto;gap:8px 12px;align-items:center;padding:12px 14px;border-radius:14px;border:1px solid var(--ln);background:color-mix(in srgb,var(--pn) 88%,#0000)}
-#bgw .bag-wp.on{border-color:color-mix(in srgb,#e8c84a 45%,var(--ln));box-shadow:inset 3px 0 0 #e8c84a}
+/* 장착 중: 왼쪽 굵은 줄 없이 테두리·은은한 배경만 */
+#bgw .bag-wp.on{border-color:color-mix(in srgb,var(--gold) 70%,var(--ln));background:color-mix(in srgb,var(--gold-soft) 55%,var(--pn));box-shadow:none}
 #bgw .wp-ic{grid-row:1 / span 2;width:64px;height:64px;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;filter:drop-shadow(0 2px 3px #0006)}
 #bgw .bag-wp-body{min-width:0}
 #bgw .bag-wp-body b{display:block;font-size:1.02rem;line-height:1.3}

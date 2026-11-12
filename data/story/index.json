@@ -1,0 +1,25 @@
+{
+  "chapters": [
+    {
+      "id": "snow-queen",
+      "title": "눈의 여왕",
+      "file": "chapters/snow-queen.json?v=1",
+      "order": 1,
+      "world": true
+    },
+    {
+      "id": "flanders",
+      "title": "플랜더스의 개",
+      "file": "chapters/flanders.json?v=1",
+      "order": 2,
+      "world": false
+    },
+    {
+      "id": "shady",
+      "title": "수상한 상인",
+      "file": "chapters/shady.json?v=1",
+      "order": 3,
+      "world": true
+    }
+  ]
+}
