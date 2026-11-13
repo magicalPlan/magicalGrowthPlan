@@ -93,6 +93,12 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  box.append(egg,ev);const sh=oddsShady();if(sh)box.appendChild(sh)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
+(function(){const bindDialog=(openId,dialogId)=>{const open=$("#"+openId),dialog=$("#"+dialogId);if(!open||!dialog)return;
+ open.onclick=()=>{if(!dialog.open)dialog.showModal()};
+ const close=dialog.querySelector(".set-dialog-close");if(close)close.onclick=()=>dialog.close();
+ dialog.addEventListener("click",e=>{if(e.target===dialog)dialog.close()})};
+ bindDialog("set-terms-open","set-terms-dialog");bindDialog("set-privacy-open","set-privacy-dialog");
+ const d=$("#set-license-fold");if(d){const m=d.querySelector(".set-fold-mark");d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})}})();
 {const b=$("#set-theme");if(b)b.onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()}}
 {const b=$("#set-srv");if(b)b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."}}
 {const b=$("#set-mail");if(b)b.onclick=()=>{const box=$("#set-mail-box");if(!box||!AUTH.uid)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-pw-box").hidden=true;const idb=$("#set-mail-idbox");if(idb)idb.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}}}
