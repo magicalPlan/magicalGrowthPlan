@@ -13,7 +13,7 @@ function eggFix(){if(!C)return false;let ch=false;if(C.eggs!=null&&C.eggs!==eggN
 function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
  if(Math.random()<p){C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 성장 기록에서 품을 수 있다.");out.push("🥚 사역마의 알을 주웠다!")}
  // 기간 한정: 서리 드래곤의 알은 따로 굴린다.
- if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;note("quest",PET_EV.nm+"을(를) 주웠다! 11월 14일까지만 얻을 수 있는 알이다.");try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
+ if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;note("quest",PET_EV.nm+"을(를) 주웠다! 11월 22일까지만 얻을 수 있는 알이다.");try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
  return out.join(" ")}
 // 이벤트 기간인지. 기간 한정 사역마와 서리 드래곤의 알은 이 안에서만 얻는다.
 const petEvOn=()=>{const t=Date.now();return t>=PET_EV.from&&t<PET_EV.to};

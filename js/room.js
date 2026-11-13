@@ -275,7 +275,7 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
    if(!serverPay&&fx.gi){C.inv.g1=(C.inv.g1||0)+fx.gi;dexAdd("it","g1");tn.push("작은 꽃다발 +"+fx.gi)}
    if(!serverPay&&fx.tc){C.tcb=Math.max(C.tcb||0,fx.tc);tn.push("여왕의 표식: 다음 재계약 시험 판정 +"+fx.tc)}
    if(!serverPay&&fx.rb){C.rsb=1;tn.push("요정의 축복: 다음 공명 효과 증가")}
-   if(!serverPay&&fx.wa){C.wtmp={day:today(),v:1};tn.push("요새 무기고: 오늘 하루 무기 +1")}
+   if(!serverPay&&fx.wa){const d=today(),base=C.wtmp&&C.wtmp.day===d?Math.max(0,Number(C.wtmp.v)||0):0;C.wtmp={day:d,v:base+1};tn.push("요새 무기고: 오늘 하루 무기 +1")}
    if(!serverPay&&fx.wp){const wr=[["칼",{ex:10}],["총",{gd:20}],["낫",{ex:15}],["방패",{dz:-8}],["오브",{dz:-5}],["완드",{ex:12}],["스태프",{mm:1}]][C.wp]||["맨손",{gd:10}],e=wr[1];xe+=e.ex||0;xz+=e.dz||0;if(e.gd)C.gd=(C.gd||0)+e.gd;if(e.mm)C.inv.mana=(C.inv.mana||0)+e.mm;tn.push("무기 더미("+wr[0]+")"+fxTxt(e))}
    if(!serverPay&&fx.dh&&(Number(mine.dz)||0)>=70){xz+=fx.dh;tn.push("절망의 거울: 절망도 "+(fx.dh>0?"+":"")+fx.dh)}
    if(r.ok){if(!serverPay)C.cl++;titleState();C.stats.huntsWon=(C.stats.huntsWon||0)+1;

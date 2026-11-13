@@ -66,10 +66,23 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
 
 /* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜)가 true 일 때만 '스토리 보기'로 연다.
-   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_URL 을 한 번만 읽고, 합계는 CLPN 을 쓴다. */
+   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_INDEX_URL(챕터 목록)→chapters/*.json 을 읽고, 합계는 CLPN 을 쓴다.
+   반환: { chapters:[{id,title,lead,world,shards}], shards:[...평탄...] }. 옛 단일 {shards} 파일도 받는다. */
 let storyBook=null,storyBookP=null,clpStoryGen=0;
-function storyLoad(){if(typeof STORY_URL==="undefined")return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
- storyBookP=fetch(STORY_URL).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
+function storyIndexBase(url){const bare=String(url||"").split("?")[0];const i=bare.lastIndexOf("/");return i>=0?bare.slice(0,i+1):"data/story/"}
+function storyFileUrl(file,base){if(!file)return"";if(/^(https?:)?\/\//.test(file)||file.charAt(0)==="/"||file.indexOf("data/")===0)return file;return(base||"data/story/")+file}
+function storyLoad(){const indexUrl=typeof STORY_INDEX_URL!=="undefined"?STORY_INDEX_URL:(typeof STORY_URL!=="undefined"?STORY_URL:"");if(!indexUrl)return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
+ storyBookP=fetch(indexUrl).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(idx=>{
+  /* 예전: 한 파일에 shards 만. */if(Array.isArray(idx&&idx.shards)&&!Array.isArray(idx.chapters)){storyBook={chapters:[{id:"",title:"",lead:"",world:true,order:0,shards:idx.shards}],shards:idx.shards.slice()};return storyBook}
+  const rows=Array.isArray(idx&&idx.chapters)?idx.chapters:[],base=storyIndexBase(indexUrl);
+  return Promise.all(rows.map((ch,i)=>{if(!ch||!ch.file)return Promise.resolve(null);
+   return fetch(storyFileUrl(ch.file,base)).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(body=>{
+    const shards=Array.isArray(body&&body.shards)?body.shards:(Array.isArray(body&&body.episodes)?body.episodes:[]);
+    return{id:String(body&&body.id||ch.id||""),title:String(body&&body.title||ch.title||""),lead:String(body&&body.lead||ch.lead||""),
+     order:ch.order!=null?Number(ch.order):i,world:ch.world!==false&&ch.open!==false,shards}}).catch(()=>null)})).then(loaded=>{
+   const chapters=loaded.filter(Boolean).sort((a,b)=>(a.order||0)-(b.order||0));const shards=[];
+   chapters.forEach(ch=>{(ch.shards||[]).forEach(s=>{if(!s||!s.id)return;shards.push(s)})});
+   storyBook={chapters,shards};return storyBook})}).catch(e=>{storyBookP=null;throw e});return storyBookP}
 function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyReachN!=="function")return;
  const now=Date.now(),rows=STORY_LOCK.filter(lock=>storyReachN(lock,CLPN));if(!rows.length)return;
  const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);

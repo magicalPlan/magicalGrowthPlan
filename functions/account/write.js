@@ -108,7 +108,14 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   if (pay.flag) { consumeGear(bump, "flag"); any = true; }
   if (pay.map) { consumeGear(bump, "map"); any = true; }
   if (pay.rb) { bump["c/rsb"] = 1; any = true; }
-  if (pay.wa && day) { bump["c/wtmp"] = {day, v: 1}; any = true; }
+  /* 요새 무기고(wa): 대장간 등 기존 임시 강화를 덮지 않고, 같은 날이면 v+1. */
+  if (pay.wa && day) {
+    const cur = (await root.child("c/wtmp").get()).val();
+    const base = cur && typeof cur === "object" && String(cur.day || "") === day
+      ? Math.max(0, Number(cur.v) || 0) : 0;
+    bump["c/wtmp"] = {day, v: base + 1};
+    any = true;
+  }
 
   if (sk.length) {
     const skDay = String((await root.child("c/sk/day").get()).val() || "");

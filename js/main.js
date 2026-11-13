@@ -158,10 +158,28 @@ function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.in
   /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다.
      반대로, 서버에 이미 정산(없음)인데 낡은 pend 가 옛 출정을 되살리는 것도 막는다. */
   if(last==="lh"||last==="clue"){if(fields[path]==null&&o[last]&&typeof o[last]==="object")return;if(fields[path]&&typeof fields[path]==="object"&&!o[last])return}
+  /* 영구 전투력 가산 C.b: 낡은 pend 가 더 작은 값으로 깎지 않게 max.
+     회귀 직후(서버 rsv 가 앞선 뒤)에는 pend 를 비우므로 여기로 옛 큰 b 가 안 들어온다. */
+  if(last==="b"){if(fields[path]==null)return;o.b=Math.max(Number(o.b)||0,Number(fields[path])||0);return}
   if(fields[path]==null)delete o[last];else o[last]=fields[path]})}
-/* 장기 토벌·단서(다기기 ts 합침): 이 탭이 정산(null) 중이면 null 유지. 둘 다 진행 중이면 더 늦은 t0.
-   재접속 pend 로 진행을 지우는 문제는 applyPend 에서 막는다. */
-function pickTrip(local,remote){if(local==null||local===undefined)return null;if(remote==null||remote===undefined)return null;return(Number(local.t0)||0)>=(Number(remote.t0)||0)?local:remote}
+/* 영구 전투력 가산 C.b: 일반 sync 때만 양쪽 max.
+   회귀(rsv 더 새)에서는 호출하지 않는다 — 리셋된 서버본(회귀)이 우선, 옛 큰 b 를 되살리지 않음. */
+function keepPwBonus(dst,src){if(!dst||!src)return dst;const a=Math.max(0,Number(dst.b)||0),b=Math.max(0,Number(src.b)||0);if(b>a)dst.b=b;return dst}
+/* PATCH 의 c/b 가 accBase 보다 작거나 null 이면 보내지 않는다(일반 하향 쓰기 금지).
+   회귀 직후 accBase 는 서버본으로 맞춰 두므로, 리셋된 낮은 b 는 그대로 유지된다. */
+function accPwBonusPatch(body,base){if(!body||!Object.prototype.hasOwnProperty.call(body,"c/b"))return body;
+ const bb=Math.max(0,Number(base&&base.b)||0),nb=body["c/b"]==null?NaN:Number(body["c/b"]);
+ if(!(nb>bb))delete body["c/b"];return body}
+/* 장기 토벌·단서(다기기 합침).
+   · 한쪽만 진행이면 그쪽을 지킨다(로컬 없음≠정산. 예전엔 null 을 반환해 서버 진행을 지웠다).
+   · 이 탭이 이미 그 시드를 정산(got[sd])했으면 null(보상 유지·서버 옛 진행 무시).
+   · 둘 다 진행이면 더 늦은 t0. pend 로 지우는 문제는 applyPend 에서 막는다. */
+function pickTrip(local,remote,got){
+ const L=local&&typeof local==="object"?local:null,R=remote&&typeof remote==="object"?remote:null;
+ if(R){const sd=String(R.sd||"");if(sd&&got&&got[sd])return null}
+ if(!L)return R;if(!R)return L;
+ return(Number(L.t0)||0)>=(Number(R.t0)||0)?L:R}
+function tripClaimed(local,remote,got){return!(local&&typeof local==="object")&&!!(remote&&typeof remote==="object")&&!!(got&&got[String(remote.sd||"")])}
 /* 서버 회귀 번호(c.rsv · players/rr)가 이 탭보다 크면, 회귀 전 캐릭터로 PATCH/set 하지 말고 서버본을 받는다.
    ts 레이스로 accSync 를 놓친 옛 탭이 레벨·골드·가방만 되돌리는 것을 막는다. */
 async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
@@ -171,8 +189,10 @@ async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
 async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=await rstDueRemote();if(!(due>(Number(C.rsv)||0)))return false;
  try{clearPend()}catch(e){}
  try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return true;const d=full.data()||{},ch=d.c;
+  /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선. */
   if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accMark(ch);accReady=true;
-   try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}}
+   try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}
+   try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
@@ -184,18 +204,25 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
  if(!(remoteTs>Number(accSeen)))return false;
  const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return false;const d=full.data()||{},rem=d.c;if(!rem||typeof rem!=="object"){accSeen=remoteTs;return false}
- const mine=JSON.parse(JSON.stringify(C)),base=accBase;C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
- C.lh=pickTrip(mine.lh,rem.lh);C.clue=pickTrip(mine.clue,rem.clue);
+ const mine=JSON.parse(JSON.stringify(C)),base=accBase;
  /* 서버 rsv 가 더 크면 시즌·개인 회귀다. 옛 탭으로 회귀를 되돌리지 않는다. */
  const rstNewer=(Number(rem.rsv)||0)>(Number(mine.rsv)||0);
- if(rstNewer){try{clearPend()}catch(e){}}
- /* 이 탭에서 이미 정산(lh/clue 비움)했는데 서버만 아직 옛 진행이면, 보상(가방·알·조각·절망·통계·경험·골드)을 서버 옛값으로 되돌리지 않는다. */
- const claimed=!rstNewer&&((mine.lh==null&&rem.lh&&typeof rem.lh==="object")||(mine.clue==null&&rem.clue&&typeof rem.clue==="object"));
+ C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
+ /* 일반: C.b max 보호. 회귀: 서버본 b 그대로(더 큰 로컬 b 되살리기 금지). */
+ if(!rstNewer)keepPwBonus(C,mine);
+ /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
+ if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
+ if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
+ C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot);
+ if(rstNewer){try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
+ /* 이 탭이 그 시드를 이미 정산(got)했는데 서버만 옛 진행이면, 보상을 서버 옛값으로 되돌리지 않는다.
+    (진행 없음+서버만 있음은 정산이 아님 → pickTrip 이 서버 진행을 살림) */
+ const claimed=!rstNewer&&(tripClaimed(mine.lh,rem.lh,mine.lhGot)||tripClaimed(mine.clue,rem.clue,mine.clueGot));
  if(claimed){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
-  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.lhGot)C.lhGot=mine.lhGot;if(mine.clueGot)C.clueGot=mine.clueGot;
+  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){
   const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0);
@@ -203,8 +230,9 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd)}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
- /* 회귀 직후면 서버본 기준. 그 외는 accBase=rem 으로 두어 미저장 delta 가 이어지는 PATCH 에 나가게 한다. */
+ /* 회귀: accBase=서버본(낮은 b 포함). 일반: accBase=rem, C.b 만 더 크면 rem.b 기준으로 PATCH 되살림. */
  accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
+ if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
  const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
@@ -237,9 +265,16 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
  dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
+ dst.scf=Object.assign({},src.scf||{},dst.scf||{});
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
  dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
- dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t})}catch(e){}return dst}
+ const tm=Math.max(Number(dst.stats.townMoves)||0,Number(src.stats&&src.stats.townMoves)||0);if(tm)dst.stats.townMoves=tm;
+ dst.stats.vSeen=Object.assign({},src.stats&&src.stats.vSeen||{},dst.stats.vSeen||{});
+ dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t});
+ /* 공명·친구 소식 워터마크는 숫자 max 로만 합친다. 작은 쪽으로 덮이면 옛 알림이 되살아난다. */
+ const maxTs=(a,b)=>{const o=Object.assign({},a&&typeof a==="object"?a:{});Object.keys(b&&typeof b==="object"?b:{}).forEach(k=>{const t=Number(b[k])||0;if(t>(Number(o[k])||0))o[k]=t});return o};
+ dst.rss=maxTs(dst.rss,src.rss);dst.fs=maxTs(dst.fs,src.fs);dst.rkT=maxTs(dst.rkT,src.rkT);
+ dst.rs=Math.max(Number(dst.rs)||0,Number(src.rs)||0)||dst.rs}catch(e){}return dst}
 // 예전에는 다른 창의 계정 문서를 통째로 가져와 이 창의 레벨까지 덮어썼다. 이제는 바뀐 칸만 저장하고, 계정 ts 가 더 새면 본문(경험·골드)을 따른다.
 async function syncAdopt(){return false}
 async function syncPeek(){return "same"}
@@ -288,7 +323,7 @@ function saveCloud(now){
     try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
     return DB.doc("accounts/"+AUTH.uid).set(savePayload(AUTH.jc&&!AUTH.nojc)).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)}
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
-   const body=accDiff(sent);if(!Object.keys(body).length){done();return}
+   let body=accDiff(sent);body=accPwBonusPatch(body,accBase);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
    try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
    /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
@@ -298,8 +333,8 @@ function saveCloud(now){
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
- const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
-  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML=""}
+ const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(dzFloorToday(),b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
+  if(!$("#v-hub").hidden){const bar=$("#hc .hc-dz .bar"),fill=bar&&bar.querySelector("i");if(bar)bar.style.setProperty("--dz-floor",dzFloorToday()+"%");if(fill)fill.style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
@@ -487,7 +522,7 @@ function show(id){const moved=curView!==id;curView=id;["login","create","hub","r
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
 // 칭호 이름: 칭호 번호(id)로 찾고, 없으면 서버에 같이 저장된 이름(tn)을 쓴다.
 const tiName=(id,fb)=>{const t=id&&titleById(id);return t?t[1]:typeof fb==="string"?fb.slice(0,20):""};
-function titleState(){if(!C)return;C.titles=Array.isArray(C.titles)?C.titles:[];C.stats=C.stats||{};C.stats.upgrades=C.stats.upgrades||0;C.stats.purchases=C.stats.purchases||0;C.stats.gifts=C.stats.gifts||0;C.stats.resonances=C.stats.resonances||0;C.stats.trialWins=C.stats.trialWins||0;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz||0);C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);C.stats.loginDays=C.stats.loginDays||1;C.stats.lastDay=C.stats.lastDay||new Date().toISOString().slice(0,10);C.stats.reachedZero=!!C.stats.reachedZero;C.ti=C.ti||"";}
+function titleState(){if(!C)return;C.titles=Array.isArray(C.titles)?C.titles:[];C.stats=C.stats||{};C.stats.upgrades=C.stats.upgrades||0;C.stats.purchases=C.stats.purchases||0;C.stats.gifts=C.stats.gifts||0;C.stats.resonances=C.stats.resonances||0;C.stats.trialWins=C.stats.trialWins||0;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz||0);C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);C.stats.loginDays=C.stats.loginDays||1;C.stats.lastDay=C.stats.lastDay||new Date().toISOString().slice(0,10);C.stats.reachedZero=!!C.stats.reachedZero;C.stats.vSeen=C.stats.vSeen&&typeof C.stats.vSeen==="object"?C.stats.vSeen:{};if(C.v&&typeof VL!=="undefined"&&VL[C.v])C.stats.vSeen[C.v]=1;C.ti=C.ti||"";}
 function checkTitles(){if(!C)return[];titleState();const fresh=[];TITLE_LIST.forEach(t=>{if(!C.titles.includes(t[0])){let ok=false;try{ok=!!t[3](C)}catch(e){}if(ok){C.titles.push(t[0]);fresh.push(t[0])}}});if(fresh.length){note("title","새 칭호를 얻었다: "+fresh.map(id=>titleById(id)[1]).join(", "));const sx=fresh.map(titleById).filter(t=>t&&t[4]==="secret");if(sx.length&&typeof alertBox==="function")setTimeout(()=>{alertBox("✧ 히든 칭호 발견","숨겨져 있던 칭호를 찾아냈다!\n\n"+sx.map(t=>"「"+t[1]+"」\n"+t[2]).join("\n\n")+"\n\n칭호 보관함에서 장착할 수 있다.");try{ding()}catch(e){}},300);save()}return fresh.map(titleById).filter(Boolean)}
 function titles(msg){show("titles");setRec("ttl");titleState();const fresh=checkTitles();const cur=titleById(C.ti);const cc=$("#title-current");cc.innerHTML="";const h=document.createElement("h2");h.textContent="현재 장착한 칭호";const p=document.createElement("p");p.className="hint";p.textContent=cur?"✦ "+cur[1]+" — "+cur[2]:"아직 장착한 칭호가 없다.";cc.append(h,p);const clear=document.createElement("button");clear.type="button";clear.className="btn g";clear.textContent="칭호 해제";clear.onclick=()=>{C.ti="";save();titles("칭호를 해제했다.")};cc.appendChild(clear);clear.disabled=!C.ti;
  const earned=$("#title-earned"),locked=$("#title-locked");earned.innerHTML="";locked.innerHTML="";TITLE_LIST.forEach((t,i)=>{const got=C.titles.includes(t[0]),w=document.createElement("div");w.className="chip title-card";const copy=document.createElement("div");copy.className="title-copy";const name=document.createElement("strong"),desc=document.createElement("small");const sc=t[4]==="secret";if(sc)w.classList.add("secret-ttl");name.textContent=got?(sc?"✧ ":"✦ ")+t[1]+(sc?" (히든)":""):sc?"🔒 ??? (히든 칭호)":"🔒 "+t[1];desc.textContent=got||!sc?t[2]:"힌트: "+t[5];copy.append(name,desc);w.appendChild(copy);if(got){const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=C.ti===t[0]?"장착 중":"장착";b.disabled=C.ti===t[0];b.onclick=()=>{C.ti=t[0];save();titles("'"+t[1]+"' 칭호를 장착했다.")};w.appendChild(b);earned.appendChild(w)}else if(!t[4]||t[4]==="secret")locked.appendChild(w)});const secN=TITLE_LIST.filter(t=>t[4]==="secret"),secGot=secN.filter(t=>C.titles.includes(t[0])).length;$("#title-msg").textContent=msg||(fresh.length?"새 칭호 획득: "+fresh.map(t=>t[1]).join(", "):"획득한 칭호 "+C.titles.length+" / "+TITLE_LIST.length+" · 히든 칭호 "+secGot+" / "+secN.length);regPlayer()}
@@ -524,9 +559,12 @@ async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy
   if(changed&&!$("#v-hub").hidden)hubLH()}finally{accSoftBusy=false}}
 async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
- /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다(클릭 경로에서 여러 번 기다리면 체감이 길어진다). */
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();lhBusy=true;hubLH();toast("서버에 남기는 중...");
- try{const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
+ /* 다른 기기 진행이 있으면 먼저 맞춘다. 맞춘 뒤에도 진행 중이면 새로 출발하지 않는다(덮어쓰기 방지). */
+ lhBusy=true;hubLH();
+ try{try{await accSyncIfNewer()}catch(e){}if(lhOn()){toast("다른 기기·탭에서 이미 장기 토벌 중이다. 그쪽 진행을 이어 받는다.");return}
+ /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다. */
+ const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
+ const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
   lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.")}
  finally{lhBusy=false;hubLH()}}
 /* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
@@ -580,8 +618,10 @@ async function picOpen(uid,small,cap){imgOpen(small,cap);const big=await bigPic(
 function thumb(src,cb){if(!src)return cb("");const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");cb(sq(im,AV_SMALL,.8))}catch(e){cb("")}};im.onerror=()=>cb("");im.src=src}
 /* 공개 카드는 사진과 통째로 다시 쓰지 않는다. 이번 접속에서 바뀐 칸만 고친다.
    절망도는 10분마다 실제로 내려갔을 때 dz 만, 출정·기여·타락처럼 값이 바뀔 때는 그 칸만 고친다.
-   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다. */
-let pubLast=null;
+   사진·이름·설정은 프로필을 저장할 때(regPlayer(true))만 올린다.
+   players.pw / who.pw 는 표시용 캐시. pw 동일 시 그 칸 생략, who 는 WHO_MS 디바운스. */
+let pubLast=null,whoT=null,whoLastSent=null;
+const WHO_MS=3000;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
 function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
  const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
@@ -589,19 +629,29 @@ function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="func
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
+ if(Object.prototype.hasOwnProperty.call(patch,"pw")&&Number(patch.pw)===Number(pubLast.pw))delete patch.pw;
  if(!C.fall&&Object.prototype.hasOwnProperty.call(patch,"fl"))patch.fl=null;
  if(!Object.keys(patch).length)return;
  if(patch.dz!=null||patch.hf!=null){patch.dz=body.dz;patch.ts=Date.now()}
  const prev=pubLast,next=pubCopy(Object.assign({},pubLast,patch));if(!C.fall)next.fl=0;pubLast=next;
  DB.doc("players/"+UID).patch(patch).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}
-/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다. */
+/* 사진 없는 명부. 목록·접속·보스는 이 칸만 읽고, 프로필 사진은 players/{나}/im 만 따로 받는다.
+   whoPut(): 일반 저장은 WHO_MS(3초) 모아 한 번. 본문(JSON)이 직전과 같으면 set 생략(pw 포함).
+   whoPut(true): 타락·프로필·접속·회귀 직후만 즉시 flush.
+   허브 전투력·출정 자리 p 는 여기와 무관(pw()·참가 스냅샷). */
 function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
-function whoPut(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;DB.doc("who/"+UID).set(b).catch(()=>{})}
+function whoFlush(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;
+ const s=JSON.stringify(b);if(s===whoLastSent)return;whoLastSent=s;
+ DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null})}
+function whoPut(now){if(!DB||!C||!UID)return;if(now){if(whoT){clearTimeout(whoT);whoT=null}whoFlush();return}
+ if(whoT)return;whoT=setTimeout(()=>{whoT=null;whoFlush()},WHO_MS)}
 /* 친구 창과 프로필은 계정 기록이 아니라 공개 카드 players/{나}.fl 을 본다.
    공개 카드는 이번 접속에서 바뀐 칸만 고치므로, 타락 표시를 지우는 저장이 한 번 빠지면 다음 접속은 이미 지워진 것으로 기억하고 다시 쓰지 않는다.
    그래서 타락이 아닐 때는 fl 칸을 지우고, 타락 중일 때는 1로 다시 적는다. null 은 그 칸을 지운다. */
-function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut()}
-function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut()}catch(e){}})}
+function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut(true)}
+function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut(true)}catch(e){}})}
+/* 운영자 프로필용. C.born(캐릭터 생성 ms)을 한국 시각 날짜 문구로. */
+function admBornTxt(ms){const t=Number(ms);if(!Number.isFinite(t)||!(t>0))return "";const k=new Date(t+9*3600000);return k.getUTCFullYear()+"년 "+(k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일"}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -622,8 +672,12 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
   section("외관",pf.ap);section("성격",pf.pe);section("마법",pf.mg);section("기타 / 과거",pf.et);
   if(!["ap","pe","mg","et"].some(k=>typeof pf[k]==="string"&&pf[k].trim())){const note=document.createElement("p");note.className="hint";note.style.marginTop="14px";note.textContent="아직 캐릭터의 상세 설정이 등록되지 않았다.";b.appendChild(note)}
   if(typeof relSection==="function")relSection(b,p,uid);
-  // 운영자에게만: 이 사람의 계정 아이디(uid)를 보여 주고 복사할 수 있게 한다(복구·지급 작업용).
-  if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사");cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp);b.appendChild(ub)}
+  // 운영자에게만: UID 복사 + 가입 일자(accounts/.../c/born = 캐릭터 생성 시각). 공개 카드에는 올리지 않는다.
+  if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사"),bornL=elT("small","pf-born","운영자 전용 · 가입 일자 확인 중…");
+   cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};
+   ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp,bornL);b.appendChild(ub);
+   DB.doc("accounts/"+uid+"/c/born").get().then(s=>{if(pfU!==uid||!bornL.isConnected)return;
+    const t=Number(s.exists?s.data():0);bornL.textContent=t>0?"운영자 전용 · 가입 "+admBornTxt(t):"운영자 전용 · 가입 일자 없음(옛 캐릭터일 수 있다)"}).catch(()=>{if(bornL.isConnected)bornL.textContent="운영자 전용 · 가입 일자를 읽지 못했다"})}
   /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
   Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
   e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
@@ -647,10 +701,21 @@ function updNav(){const cb=document.querySelector("#nav [data-g=chat]");if(cb&&C
  // "이름 (3)" 꼴의 숫자는 작은 배지로 바꿔서, 숫자가 생겨도 탭 글자가 잘리지 않게 한다.
  document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}});if(typeof vcMark==="function")vcMark()}
 const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
+const pfcandyToday=()=>C.daily&&C.daily.d===today()?Number(C.daily.pfcandy)||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
+/* 가방 소지품·무기 접기. 기본 펼침. "0" 이면 접힘(mgr_bag_it · mgr_bag_wp). */
+const bagInvOpen=()=>{try{return localStorage.getItem("mgr_bag_it")!=="0"}catch(e){return true}};
+const bagWpOpen=()=>{try{return localStorage.getItem("mgr_bag_wp")!=="0"}catch(e){return true}};
+function bagInvFold(open){const b=$("#bgitog"),box=$("#bgibox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_bag_it",open?"1":"0")}catch(e){}}
+function bagWpFold(open){const b=$("#bgwtog"),box=$("#bgwbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_bag_wp",open?"1":"0")}catch(e){}}
 function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRG();
+ {const t=$("#bgitog");if(t&&!t._bagFold){t._bagFold=1;t.onclick=()=>bagInvFold(!!$("#bgibox")&&!!$("#bgibox").hidden)}}
+ {const t=$("#bgwtog");if(t&&!t._bagWpFold){t._bagWpFold=1;t.onclick=()=>bagWpFold(!!$("#bgwbox")&&!!$("#bgwbox").hidden)}}
+ /* 프리즘·이동권 사용 UI를 열 때는 소지품 칸을 펼친다. */
+ if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn))bagInvFold(true);else bagInvFold(bagInvOpen());
+ bagWpFold(bagWpOpen());
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
   if(ic){const t=document.createElement("div");t.style.minWidth="0";t.append(...i.childNodes);i.classList.add("it-row");i.append(ic,t)}w.appendChild(i);
@@ -660,10 +725,12 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
  C.arm=C.arm||{};own.forEach(x=>{const id=x[0],on=armed(id);
   if(id==="license"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (지금 상한 "+petCap()+" / "+petCapMax()+"마리)",[["사용",petLicense,petCap()>=petCapMax()]],itIc(id)));return}
   if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]],itIc(id)));if(prismOn)it.appendChild(prismBox());return}
+  if(id==="vtown"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[vtownOn?"닫기":"사용",()=>{vtownOn=!vtownOn;vtownPick=null;bag()}]],itIc(id)));if(vtownOn)it.appendChild(vtownBox());return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
+  if(id==="pfcandy"){const used=pfcandyToday(),limit=used>=PFCANDY_MAX;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (오늘 "+used+"/"+PFCANDY_MAX+")",[["사용",()=>{const n=pfcandyToday();if(n>=PFCANDY_MAX)return bag("오늘은 보라 꽃 설탕 절임을 더 사용할 수 없다.");if((C.inv.pfcandy||0)<1)return;const day=today(),daily=Object.assign({},C.daily&&C.daily.d===day?C.daily:{},{d:day,pfcandy:n+1}),oldFloor=dzFloorToday(),floor=Math.min(100,oldFloor+10),base=C.pwtmp&&C.pwtmp.day===day?Math.max(0,Number(C.pwtmp.v)||0):0;C.daily=daily;C.inv.pfcandy--;C.dzFloor={day,v:floor};C.dz=Math.max(Number(C.dz)||0,floor);C.pwtmp={day,v:base+25};const dzBefore=C.dz;gain(0,10);const dzAdded=C.dz-dzBefore;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);dexAdd("it","pfcandy");titleState();save();bag("보라 꽃 설탕 절임을 먹었다. 절망도 +"+dzAdded+", 오늘 하한 +"+floor+", 전투력 +"+(base+25)+".")} ,limit]],itIc(id)));return}
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
- bagWeapons(rowEl);
+ bagWeapons();
  const bm=$("#bgm");if(bm){bm.style.color="var(--mu)";bm.textContent=msg||""}if(fresh)applyGift()}
 // 이 친구에게 쓸 수 있는 빈 칸 번호와, 다 찼다면 가장 빨리 비는 시각
 /* TODO(선물 한도→서버): 클라 추정용. 진짜 한도는 gift/ RTDB 규칙. 서버 이관 후 이 함수·C.gsl 재검토. */
@@ -749,12 +816,12 @@ function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=nul
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
- const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML=""};
+ const paintDz=()=>{const bar=$("#hc .hc-dz .bar i"),t=$("#hc .hc-dz b");if(bar&&C){bar.style.width=(C.dz||0)+"%";if(t)t.textContent=C.dz||0}const fb=$("#fbar");if(fb&&(C.dz||0)<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}};
  const takeOne=x=>{const z0=C.dz||0,e0=C.ex||0;ginPendDel.add(x.id);ginList=ginList.filter(y=>y&&y.id!==x.id);ginIds=ginList.map(y=>y.id).join("|");
   const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));
   opened.push({x,dDz:(C.dz||0)-z0,dEx:(C.ex||0)-e0});paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
  const undoOne=o=>{if(!o||!o.x)return;ginPendDel.delete(o.x.id);if(!ginList.some(y=>y&&y.id===o.x.id)){ginList.push(o.x);ginList.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));ginIds=ginList.map(y=>y.id).join("|")}
-  C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(0,Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
+  C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(dzFloorToday(),Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
   paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
  const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
   if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
@@ -892,7 +959,7 @@ let ONL=[],onAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
 /* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut()}
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut(true)}
 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}

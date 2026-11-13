@@ -68,17 +68,37 @@ async function leaveAccount(){const m=$("#setm");if(m)m.textContent="";
   location.reload()}
  catch(err){if(m)m.textContent=mailErr(err,"leave");if(btn)btn.disabled=false}}
 function oddsTxt(p){const n=Math.round(Number(p)*1e6)/10000;if(!isFinite(n))return "-";return n.toFixed(4).replace(/0+$/,"").replace(/\.$/,"")+"%"}
-function oddsRows(pairs){const ul=elT("ul","set-odd-list");pairs.forEach(([lab,p])=>{if(!(p>0))return;const li=elT("li","set-odd");li.append(elT("span","",lab),elT("b","",oddsTxt(p)));ul.appendChild(li)});return ul}
+/* 2열(항목|확률) × n행 표. pairs: [[라벨, 0~1 확률], ...] */
+function oddsTable(pairs,heads){const t=elT("table","set-odd-table"),thead=elT("thead"),hr=elT("tr"),tb=elT("tbody");
+ hr.append(elT("th","",(heads&&heads[0])||"항목"),elT("th","",(heads&&heads[1])||"확률"));thead.appendChild(hr);t.appendChild(thead);
+ (pairs||[]).forEach(([lab,p])=>{if(!(Number(p)>0))return;const tr=elT("tr");tr.append(elT("td","",lab),elT("td","",oddsTxt(p)));tb.appendChild(tr)});
+ t.appendChild(tb);return t}
+/* 수상한 상인: 등급 확률 + (등급×균등) 보상별 확률. merchant.js 의 SHADY_* 를 읽는다. */
+function oddsShady(){if(typeof SHADY_TIER_P==="undefined"||typeof SHADY_POOL==="undefined")return null;
+ const box=elT("div","set-odd-box"),cost=typeof SHADY_COST!=="undefined"?SHADY_COST:2000,n=typeof SHADY_N!=="undefined"?SHADY_N:10;
+ box.append(elT("p","set-odd-name","수상한 상인 상자"),elT("p","hint","상점 「수상한 상인」. "+n+"회 열기(총 "+cost+"골드). 칸마다 독립으로 등급을 뽑고, 같은 등급 안 보상은 균등하다."));
+ box.appendChild(elT("p","set-odd-sub","등급 확률"));
+ box.appendChild(oddsTable(SHADY_TIER_P.map((p,i)=>[(i+1)+"등급",p]),["등급","확률"]));
+ const items=[];SHADY_POOL.forEach((pool,ti)=>{const tp=Number(SHADY_TIER_P[ti])||0,len=(pool&&pool.length)||1;
+  (pool||[]).forEach(r=>{const nm=typeof shadyName==="function"?shadyName(r):(r&&r.id)||"?";items.push([nm+(r&&r.n?" ×"+r.n:"")+" · "+(ti+1)+"등급",tp/len])})});
+ box.appendChild(elT("p","set-odd-sub","보상별 확률"));
+ box.appendChild(oddsTable(items,["보상","확률"]));return box}
 function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"||typeof PET_RATE==="undefined"||typeof PET_EV==="undefined")return;box.innerHTML="";
  const rate={};PET_RATE.forEach(([k,p])=>{rate[k]=p});
- const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다."));
- egg.appendChild(oddsRows([[PET_RARE[1],rate[1]],[PET_RARE[2],rate[2]],[PET_RARE[3],rate[3]]]));
+ const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다. 같은 희귀도 안에서는 종마다 같다."));
+ egg.appendChild(oddsTable([[PET_RARE[1],rate[1]],[PET_RARE[2],rate[2]],[PET_RARE[3],rate[3]]],["희귀도","확률"]));
  const leg=PET_EV.leg||0,lim=PET_EV.lim||0,rare=PET_EV.rare||0,common=Math.max(0,1-leg-lim-rare),limN=Object.values(PETS).filter(x=>x[3]===4).length||1,ev=elT("div","set-odd-box");
  ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","기간 한정은 "+limN+"마리가 같은 확률(각 "+oddsTxt(lim/limN)+")이다. 그다음은 희귀, 나머지는 일반이다."));
- ev.appendChild(oddsRows([[PET_RARE[3],leg],[PET_RARE[4],lim],[PET_RARE[2],rare],[PET_RARE[1],common]]));
- box.append(egg,ev)}
+ ev.appendChild(oddsTable([[PET_RARE[3],leg],[PET_RARE[4],lim],[PET_RARE[2],rare],[PET_RARE[1],common]],["희귀도","확률"]));
+ box.append(egg,ev);const sh=oddsShady();if(sh)box.appendChild(sh)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
+(function(){const bindDialog=(openId,dialogId)=>{const open=$("#"+openId),dialog=$("#"+dialogId);if(!open||!dialog)return;
+ open.onclick=()=>{if(!dialog.open)dialog.showModal()};
+ const close=dialog.querySelector(".set-dialog-close");if(close)close.onclick=()=>dialog.close();
+ dialog.addEventListener("click",e=>{if(e.target===dialog)dialog.close()})};
+ bindDialog("set-terms-open","set-terms-dialog");bindDialog("set-privacy-open","set-privacy-dialog");
+ const d=$("#set-license-fold");if(d){const m=d.querySelector(".set-fold-mark");d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})}})();
 {const b=$("#set-theme");if(b)b.onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()}}
 {const b=$("#set-srv");if(b)b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."}}
 {const b=$("#set-mail");if(b)b.onclick=()=>{const box=$("#set-mail-box");if(!box||!AUTH.uid)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-pw-box").hidden=true;const idb=$("#set-mail-idbox");if(idb)idb.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}}}

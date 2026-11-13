@@ -46,6 +46,31 @@ function apiVfacAlign(v,k,tops){if(!DB||!vfacPathOk(v,k))return Promise.resolve(
    by 가 아직 없는 옛 합계에는 쓰지 않는다(mode "wait"). 그때는 apiVfacAlign 을 먼저 한다. */
 function apiVfacApply(v,k,mine){if(!DB||!UID||!vfacPathOk(v,k))return Promise.resolve({mode:"same",rec:null});const me=vfacClamp(mine,1e6);if(!me)return Promise.resolve({mode:"same",rec:null});
  let mode="same";return DB.doc("vfac/"+v+"/"+k).transact(cur=>{const next=vfacMerge(k,cur,null,me,UID);if(next===undefined){const prev=cur&&typeof cur==="object"?cur:null;if(!(prev&&prev.by&&typeof prev.by==="object")&&prev&&typeof prev.sum==="number")mode="wait";return}mode="wrote";return next}).then(rec=>({mode,rec}))}
+/* 마을 이동: 이 사람의 기여를 마을 합계·by 에서 뺀다. by[uid] 가 있으면 그 양(없으면 hint)만큼 sum 을 내린다.
+   by 없는 옛 합계만 있으면 합계는 건드리지 않는다(잘못된 삭제를 막음). */
+function apiVfacPull(v,k,hint){if(!DB||!UID||!vfacPathOk(v,k))return Promise.resolve({mode:"skip",rec:null,took:0});
+ const want=vfacClamp(hint,1e6);let mode="same",took=0;
+ return DB.doc("vfac/"+v+"/"+k).transact(cur=>{
+  const prev=cur&&typeof cur==="object"?cur:null;if(!prev||typeof prev.sum!=="number"){mode="empty";return}
+  const hadBy=!!(prev.by&&typeof prev.by==="object");if(!hadBy){mode="noby";return}
+  const by={};Object.keys(prev.by).forEach(u=>{const p=vfacClamp(prev.by[u],1e6);if(p)by[u]=p});
+  const mine=by[UID]!=null?vfacClamp(by[UID],1e6):want;if(!mine){mode="same";return}
+  took=Math.min(mine,vfacClamp(prev.sum,1e8));delete by[UID];
+  const sum=Math.max(0,vfacClamp(prev.sum,1e8)-took),pack=vfacPack(k,sum,by);
+  if(vfacSame(prev,pack)){mode="same";took=0;return}mode="wrote";return pack
+ }).then(rec=>({mode,rec,took}))}
+function apiVfacTopDel(v,k){if(!DB||!UID||!vfacPathOk(v,k))return Promise.resolve();
+ return DB.doc("vfactop/"+v+"/"+k+"/"+UID).delete().catch(()=>{})}
+/* 시설 기여만 옛 마을 → 새 마을로 이관. C.fc·이용 기록(fu)은 호출 쪽에서 그대로 둔다.
+   1) 옛 vfac by/sum 에서 빼고 vfactop 삭제  2) 새 마을에 apply+mine. */
+async function apiVfacTransfer(from,to,fc,name){if(!DB||!UID||!VL[from]||!VL[to]||from===to)return{ok:0,fail:0,keys:[]};
+ const nm=String(name||"").replace(/👑/g,"").slice(0,20),keys=Object.keys(FAC_KEY||{}),out={ok:0,fail:0,keys:[]};
+ for(const k of keys){const pt=vfacClamp(fc&&fc[k],1e6);if(!pt)continue;
+  try{await apiVfacPull(from,k,pt);await apiVfacTopDel(from,k);
+   let res=await apiVfacApply(to,k,pt);
+   if(res&&res.mode==="wait"){try{const tops=await apiVfacAll(to,k);await apiVfacAlign(to,k,tops);res=await apiVfacApply(to,k,pt)}catch(e){}}
+   await apiVfacMine(to,k,pt,nm);out.ok++;out.keys.push(k)}catch(e){out.fail++}}
+ return out}
 /* 예전 기여를 마을 단계 기록으로 다시 쓴다. 플레이어 카드의 시설 기여(fc)와 score 의 기여 중 큰 값을 쓰고, 사진은 받지 않는다.
    운영자만 다른 사람의 순위 칸을 고칠 수 있다. 여러 번 실행해도 합계를 더하지 않고 그 값으로 맞춘다. */
 async function apiVfacRecover(onStep){if(!DB||!ADM[UID])throw new Error("admin");
