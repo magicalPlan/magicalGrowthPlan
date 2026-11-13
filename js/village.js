@@ -3,7 +3,7 @@
    로그인한 뒤 마을을 열 때와, 출정·장기 토벌에서 마을로 돌아올 때 계정 ts·본문을 맞춘 뒤 prog 를 본문에 맞춘다.
    경험치는 큰 값이 아니라 더 새 계정 ts 의 본문을 따른다. */
 function hubLv(){return C&&C.xv>=2?lvOf(C.ex||0):(C&&C.lv)||1}
-/* 허브 전투력: 합계 pw(), 조건·임시만 작은 글씨로 오른쪽 분리(다른 화면은 합산만). */
+/* 허브 전투력: 합계 pw() 옆에 임시 전투력 증가량을 괄호로 표시한다. */
 function paintPw(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),keep=C.lv;if(C.xv>=2)C.lv=lv;const n=pw(),t=typeof pwExtraTxt==="function"?pwExtraTxt():"";C.lv=keep;
  const pwEl=$("#hcpw");if(pwEl)pwEl.textContent=String(n);const xEl=$("#hcpwx");if(xEl){xEl.textContent=t;xEl.hidden=!t}}
 function paintLv(){if(!C||$("#v-hub").hidden)return;const lv=hubLv(),into=Math.max(0,(Number(C.ex)||0)-xpAt(lv)),nx=xpNeed(lv);
