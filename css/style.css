@@ -359,6 +359,7 @@ textarea::placeholder{color:#6f6785}
 .xm button{flex:0 0 auto;min-width:76px;padding:8px 10px}
 .title-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;text-align:left}.title-card .title-copy{flex:1;min-width:0}.title-card strong{display:block;color:#e6d9b5}
 .pf-uid{margin-top:12px;padding:8px;border:1px dashed var(--ln);border-radius:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.8rem}.pf-uid code{word-break:break-all;color:#f3d27a}.pf-uid .chip{flex:0 0 auto;min-width:0;padding:4px 10px;font-size:.75rem}
+.pf-uid .pf-born{flex:1 0 100%;margin:2px 0 0;color:var(--mu)}
 .hc-pet{margin:6px 0 0;font-size:.85rem;color:#f3d27a}
 .pet-card{display:flex;gap:10px;align-items:flex-start}.pet-card.on{border-color:#f3d27a!important}.pet-ic{font-size:2rem;line-height:1;flex:0 0 auto}.pet-body{flex:1;min-width:0}.pet-body small{display:block;color:var(--mu);font-size:.8rem}
 .pet-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.pet-act .chip{flex:0 0 auto;min-width:0;padding:6px 10px;font-size:.8rem}

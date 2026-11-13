@@ -650,6 +650,8 @@ function whoPut(now){if(!DB||!C||!UID)return;if(now){if(whoT){clearTimeout(whoT)
    그래서 타락이 아닐 때는 fl 칸을 지우고, 타락 중일 때는 1로 다시 적는다. null 은 그 칸을 지운다. */
 function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+UID).patch({fl:on?1:null}).catch(()=>{});if(pubLast)pubLast.fl=on?1:0;whoPut(true)}
 function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut(true)}catch(e){}})}
+/* 운영자 프로필용. C.born(캐릭터 생성 ms)을 한국 시각 날짜 문구로. */
+function admBornTxt(ms){const t=Number(ms);if(!Number.isFinite(t)||!(t>0))return "";const k=new Date(t+9*3600000);return k.getUTCFullYear()+"년 "+(k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일"}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
@@ -670,8 +672,12 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
   section("외관",pf.ap);section("성격",pf.pe);section("마법",pf.mg);section("기타 / 과거",pf.et);
   if(!["ap","pe","mg","et"].some(k=>typeof pf[k]==="string"&&pf[k].trim())){const note=document.createElement("p");note.className="hint";note.style.marginTop="14px";note.textContent="아직 캐릭터의 상세 설정이 등록되지 않았다.";b.appendChild(note)}
   if(typeof relSection==="function")relSection(b,p,uid);
-  // 운영자에게만: 이 사람의 계정 아이디(uid)를 보여 주고 복사할 수 있게 한다(복구·지급 작업용).
-  if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사");cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp);b.appendChild(ub)}
+  // 운영자에게만: UID 복사 + 가입 일자(accounts/.../c/born = 캐릭터 생성 시각). 공개 카드에는 올리지 않는다.
+  if(ADM[UID]){const ub=elT("div","pf-uid"),code=elT("code","",uid),cp=elT("button","chip","UID 복사"),bornL=elT("small","pf-born","운영자 전용 · 가입 일자 확인 중…");
+   cp.type="button";cp.onclick=()=>{try{navigator.clipboard.writeText(uid);cp.textContent="복사했다"}catch(e){prompt("UID",uid)}};
+   ub.append(elT("small","","운영자 전용 · 계정 UID "),code,cp,bornL);b.appendChild(ub);
+   DB.doc("accounts/"+uid+"/c/born").get().then(s=>{if(pfU!==uid||!bornL.isConnected)return;
+    const t=Number(s.exists?s.data():0);bornL.textContent=t>0?"운영자 전용 · 가입 "+admBornTxt(t):"운영자 전용 · 가입 일자 없음(옛 캐릭터일 수 있다)"}).catch(()=>{if(bornL.isConnected)bornL.textContent="운영자 전용 · 가입 일자를 읽지 못했다"})}
   /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
   Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
   e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
