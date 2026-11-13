@@ -215,7 +215,8 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
 
 /* ── 전체·개인 보상 지급 (운영자 전용) ──
    공지 탭 하단. 전체는 accounts 등록자 전원, 개인은 UID 한 명. 접속 여부와 상관없이 서버 기록에 바로 더한다.
-   골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다. */
+   골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다.
+   원격 지급: 캐릭터 통째 GET/PATCH 금지. 이름·(경험 시)ex·nt 만 읽고, 재화·가방은 increment 칸 PATCH. */
 function admGrantNum(v,max){const n=Math.floor(Number(v)||0);if(!isFinite(n)||n<=0)return 0;return Math.min(max||999999,n)}
 function admGrantTxt(r){const a=[];if(r.g)a.push("골드 +"+r.g);if(r.ex)a.push("경험치 +"+r.ex);if(r.m)a.push("마력석 +"+r.m);if(r.eggs)a.push("사역마의 알 +"+r.eggs);
  if(r.eggsEv)a.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" +"+r.eggsEv);
@@ -232,15 +233,30 @@ function admGrantOnChar(ch,r){const prev=C;C=ch;try{
   const txt=admGrantTxt(r);C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k:"gift",t:("운영자 보상: "+txt).slice(0,160),u:"",ts:Date.now(),r:false});
   try{if(typeof ntTrim==="function")ntTrim()}catch(e){}try{if(typeof eggFix==="function")eggFix()}catch(e){}
  }finally{C=prev}return ch}
+/* 원격 지급용. 골드·알·가방은 increment. 캐릭터 통째 GET/PATCH 하지 않는다. */
+function admGrantInc(n){return typeof apiInc==="function"?apiInc(n):{".sv":{"increment":Math.trunc(Number(n)||0)}}}
+function admGrantPatchBody(r){const body={ts:Date.now(),sid:"admin-grant"};
+ if(r.g)body["c/gd"]=admGrantInc(r.g);if(r.eggs)body["c/eggs"]=admGrantInc(r.eggs|0);if(r.eggsEv)body["c/eggsEv"]=admGrantInc(r.eggsEv|0);
+ if(r.m)body["c/inv/mana"]=admGrantInc(r.m);
+ Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;body["c/inv/"+id]=admGrantInc(n)});
+ return body}
 async function admGrantIds(){let ids=[];
  try{ids=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
  if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
  if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
  return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
 async function admGrantSave(uid,r){if(uid===UID&&C){admGrantOnChar(C,r);try{if(typeof titleState==="function")titleState()}catch(e){}try{save();await saveCloud(true)}catch(e){throw e||new Error("save")}return "self"}
- const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");
- const ch=admGrantOnChar(JSON.parse(JSON.stringify(acc.c)),r);
- await DB.doc("accounts/"+uid).patch({c:ch,prog:{lv:ch.lv||1,ex:ch.ex||0,xv:ch.xv||3},ts:Date.now(),sid:"admin-grant"});return "ok"}
+ /* 존재만 확인(이름 칸). 본문 전체는 받지 않는다. */
+ const nm=await DB.doc("accounts/"+uid+"/c/n").get();if(!nm.exists||nm.data()==null||nm.data()==="")throw new Error("empty");
+ const body=admGrantPatchBody(r);
+ if(r.ex){let cur=0;try{const s=await DB.doc("accounts/"+uid+"/c/ex").get();cur=Number(s.exists?s.data():0)||0}catch(e){}
+  const add=r.ex|0,next=Math.max(0,cur+add),lv=typeof lvOf==="function"?lvOf(next):1;
+  body["c/ex"]=admGrantInc(add);body["c/lv"]=lv;body["c/xv"]=3;body["prog/ex"]=admGrantInc(add);body["prog/lv"]=lv;body["prog/xv"]=3}
+ const note={k:"gift",t:("운영자 보상: "+admGrantTxt(r)).slice(0,160),u:"",ts:Date.now(),r:false};
+ try{const s=await DB.doc("accounts/"+uid+"/c/nt").get();let nt=s.exists&&Array.isArray(s.data())?s.data().slice():[];
+  nt.unshift(note);const max=typeof NT_MAX==="number"?NT_MAX:60;if(nt.length>max)nt=nt.slice(0,max);body["c/nt"]=nt}
+ catch(e){body["c/nt"]=[note]}
+ await DB.doc("accounts/"+uid).patch(body);return "ok"}
 async function admGrantRun(btn,msg,getR){if(!ADM[UID]||!XON()||!DB)return;const r=getR();if(!r){msg.style.color="var(--bad)";msg.textContent="지급할 보상을 하나 이상 정해 줘.";return}
  const preview=admGrantTxt(r);const t=prompt("등록된 모든 캐릭터에 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
  if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
