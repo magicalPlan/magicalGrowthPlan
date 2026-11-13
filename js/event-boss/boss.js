@@ -2,17 +2,74 @@
    화면은 html/act/ord.html, 숫자와 이름표는 data/event-boss/boss.js, 탭 전환은 js/act/ord.js.
    합계가 있으면 피해와 남은 횟수는 저장을 기다리지 않고 먼저 그린다. 내 기록이 서버에 저장되면 공격이 확정되고, 거절되면 그 표시만 되돌린다. 합계를 더하는 일은 그 뒤에서 끝난다. 오전·오후 보스는 그대로다.
    패턴은 지금 나와 있는 오전·오후 보스의 번호로 고르므로, 20분마다 바뀌는 순서가 그 보스와 같다. */
-let ebTimer=null,ebLast=[],ebBusy=false,ebListed="";
-function ebOf(off=0){const d=new Date();d.setDate(d.getDate()-(off||0));const list=EBOSS.list,def=list[dayN(d)%list.length];
- return{id:"e-"+ymd(d),def,nm:EBOSS.nm,until:EBOSS.until}}
-function ebDay(){const id=ebOf().id;if(!C.eb||C.eb.d!==today())C.eb={d:today(),id,n:0};else if(C.eb.id!==id){C.eb.id=id;C.eb.n=0}}
-function ebHpEst(){if(!DB)return Math.max(BOSS_SCALE.d.min,Math.round(witchHpOf(pw())*D_HP_X))*EBOSS.hpX;return bossHpEst("d")*EBOSS.hpX}
-function ebHp(list){const withHp=(list||[]).filter(v=>v&&v.u&&Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):ebHpEst()}
-function ebDead(list){return list.length>0&&(list.some(v=>v&&v.x)||sumHits(list)>=ebHp(list))}
-function ebMatName(id){const m=typeof MATM!=="undefined"&&MATM[id];return m?m[2]+" "+m[1]:id}
-function ebDropTxt(){const bits=(EBOSS.drop||[]).map(([id,n])=>ebMatName(id)+" "+n);if(typeof clpOn==="function"&&clpOn()&&CLP.drop&&CLP.drop.eb)bits.push(CLP.ic+" "+CLP.nm+" "+CLP.drop.eb);return bits.join(", ")}
-function ebGrant(){C.inv=C.inv||{};const bits=[];(EBOSS.drop||[]).forEach(([id,n])=>{const c=Math.max(0,Number(n)||0);if(!id||!c)return;C.inv[id]=(C.inv[id]||0)+c;bits.push(ebMatName(id)+" +"+c)});
- if(typeof clpGain==="function"){const cp=clpGain("eb");if(cp)bits.push(cp)}return bits.join(", ")}
+let ebTimer=null;
+let ebLast=[];
+let ebBusy = false;
+let ebListed="";
+
+function ebOf (off = 0) {
+   const d = new Date();
+   d.setDate(d.getDate() - (off || 0));
+   const list = EBOSS.list;
+   const def = list[dayN(d) % list.length];
+   
+   return{
+      id: "e-"+ymd(d), def, nm : EBOSS.nm,until : EBOSS.until
+   }
+}
+
+function ebDay () {
+   const id = ebOf().id;
+   
+   if (!C.eb || C.eb.d !== today()) {
+      C.eb = {d: today(), id, n: 0};
+   } else if (C.eb.id !== id) {
+      C.eb.id = id;
+      C.eb.n = 0
+   }
+}
+
+function ebHpEst () {
+   return bossHpEst("e")
+}
+
+function ebHp (list) {
+   const withHp = (list || []).filter(v => v && v.u && Number(v.hp0) > 0);
+   return withHp.length ? Math.round(Number(bFirst(withHp).hp0)) : ebHpEst()
+}
+
+function ebDead (list) {
+   return list.length > 0 && (list.some(v=> v && v.x) || sumHits(list) >= ebHp(list))
+}
+
+function ebMatName (id) {
+   const m = typeof MATM !== "undefined" && MATM[id];
+   return m ? m[2] + " " + m[1] : id
+}
+
+function ebDropTxt () {
+   const bits = (EBOSS.drop || []).map(([id, n])=>ebMatName(id) + " "+n);
+   if (typeof clpOn === "function" && clpOn() && CLP.drop && CLP.drop.eb)bits.push(CLP.ic + " " + CLP.nm+" "+CLP.drop.eb);
+   return bits.join(", ")
+}
+
+function ebGrant () {
+   C.inv = C.inv || {};
+   const bits = [];
+   (EBOSS.drop||[]).forEach(([id,n]) => {
+      const c = Math.max(0, Number(n) || 0);
+      if (!id || !c) return;
+      C.inv[id] = (C.inv[id] || 0) + c;
+      bits.push(ebMatName(id) + " +"+c)
+   });
+
+   if (typeof clpGain === "function") {
+      const cp = clpGain("eb");
+      if (cp) bits.push(cp)
+      }
+   return bits.join(", ")
+}
+
 function ebNext(now){const end=bpEnd(now),d=new Date(now),cut=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()>=12?24:12).getTime();return Math.min(end,cut)}
 function eboss(){show("ord");const m=$("#ebm");if(m){m.textContent="";m.style.color=""} if(!C)return;ebDay();if(typeof clueDraw==="function")clueDraw();if(typeof clpDraw==="function")clpDraw(true);
  if(!DB){drawEboss([]);if(m){m.style.color="var(--mu)";m.textContent="이벤트 보스를 쓸 수 없다."}return}
@@ -21,9 +78,21 @@ function ebMerge(list){const rows=(list||[]).filter(v=>v&&v.u),mine=(ebLast||[])
 function ebSide(){if($("#v-ord").hidden||!C)return;if(typeof clpWatchStart==="function")clpWatchStart();if(typeof clpLoad==="function"&&!clpAt)clpLoad();ebClaimOld()}
 async function loadEboss(){if(!C||!DB||$("#v-ord").hidden||ebBusy)return;ebBusy=true;let sided=false;const b=ebOf();
  const side=()=>{if(sided||$("#v-ord").hidden||!C)return;sided=true;ebSide()};
- try{let meta=null;try{const ms=await DB.doc("wboss/"+b.id+"/meta").get();meta=ms.exists?ms.data():null}catch(e){}
-  if($("#v-ord").hidden||!C||ebOf().id!==b.id)return;
-  if(meta&&Number(meta.hp0)>0){const prev=bossSnap[b.id];bossSnap[b.id]={hp0:Number(meta.hp0),sum:Math.max(Number(meta.sum)||0,prev&&Number(prev.sum)||0),n:Math.max(Number(meta.n)||0,prev&&Number(prev.n)||0),x:meta.x||(prev&&prev.x)||null};drawEboss(ebListed===b.id&&ebLast.length?ebLast:[])}
+ try{
+   let meta = null;
+   try {
+      const ms = await DB.doc("wboss/"+b.id+"/meta").get();
+      meta = ms.exists ? ms.data() : null
+   } catch (e) {
+
+   }
+
+   if ($("#v-ord").hidden || !C || ebOf().id !== b.id) return;
+   
+   if (meta && Number(meta.hp0) > 0) {
+      const prev = bossSnap[b.id];
+      
+      bossSnap[b.id] = {hp0 : Number(meta.hp0), sum : Math.max(Number(meta.sum)||0,prev&&Number(prev.sum)||0),n:Math.max(Number(meta.n)||0,prev&&Number(prev.n)||0),x:meta.x||(prev&&prev.x)||null};drawEboss(ebListed===b.id&&ebLast.length?ebLast:[])}
   else drawEboss(ebListed===b.id?ebLast:[]);
   side();
   let list=[];try{list=await bossList(b)}catch(e){}
@@ -60,7 +129,8 @@ async function ebHit(bt,act){act=BA[act]?act:"str";const b=ebOf(),m=$("#ebm");eb
   const hp0=Number(meta&&meta.hp0)||0,sum=Number(meta&&meta.sum)||0;
   if(!hp0)throw new Error("timeout");
   if((meta&&meta.x)||sum>=hp0){ebHit.busy=false;m.style.color="var(--mu)";m.textContent="이미 쓰러진 보스다.";drawEboss(ebLast);return}
-  const mineRec=mine||{},weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire"),d=Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(C.a.includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)));
+  const mineRec=mine||{},weak=(C.a||[]).includes(b.def[2]),fire=armedSk("fire");
+  const d=calcBossDamage(pw(),ef[0],weak,fire,_attrs().includes("불"),((VL[C.v]||{}).bd||1),petEff("boss"));
   const rec={u:UID,n:nmOf(),d:(Number(mineRec.d)||0)+d,p:Number(mineRec.p)||pw(),c:(Number(mineRec.c)||0)+1,ts:Date.now(),t0:Number(mineRec.t0)||Date.now(),hp0};if(mineRec.x||sum+d>=hp0)rec.x=1;
   const back={n:C.eb.n,hits:C.stats.ebHits||0,boss:C.stats.bossHits||0,read:C.stats.ebRead||0,ebp:Object.assign({},C.ebp||{}),snap:bossSnap[id]?Object.assign({},bossSnap[id]):null,list:(ebLast||[]).slice()};
   const prev=bossSnap[id]||{hp0,sum,n:0};bossSnap[id]={hp0,sum:sum+d,n:(Number(prev.n)||0)+(!mineRec.u?1:0),x:prev.x||rec.x||null};

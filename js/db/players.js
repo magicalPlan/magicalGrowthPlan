@@ -18,5 +18,5 @@ function plWindow(since,onFresh){since=Number(since)||0;if(WINC&&WINSsince<=sinc
 let TOPC=null,TOPT=0,TOPP=null;
 /* 전투력 1위. players 는 pw 순 찾기가 되어 있어 맨 끝 한 명만 받는다. 5분 동안 다시 쓰지 않는다. */
 function plTop(){if(TOPC&&Date.now()-TOPT<PL_TTL)return Promise.resolve(TOPC);if(TOPP)return TOPP;
- TOPP=once(DB.collection("players").by("pw").limit(1)).then(sn=>{const d=(sn.docs||[])[0],p=d?d.data()||{}:{};TOPC={u:d?d.id:"",pw:Math.max(0,Number(p.pw)||0)};TOPT=Date.now();TOPP=null;return TOPC},()=>{TOPP=null;return null});return TOPP}
+ TOPP=once(DB.collection("players").by("pw").limit(1)).then(sn=>{const d=(sn.docs||[])[0],p=d?d.data()||{}:{};TOPC={u:d?d.id:"",pw:Math.max(0,Number(p.pw)||0),lv:Math.max(1,Number(p.lv)||1)};TOPT=Date.now();TOPP=null;return TOPC},()=>{TOPP=null;return null});return TOPP}
 function plClear(){PLC=null;PLT=0;WINC=null;WINSsince=Infinity;WINT=0;TOPC=null;TOPT=0;TOPP=null}
