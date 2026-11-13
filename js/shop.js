@@ -23,13 +23,13 @@ function shopItems(){const qb=$("#shopq"),il=$("#il");if(!qb||!il||!C)return;
  const mkB=(t,f,lab)=>{const b=elT("button","chip",t);b.type="button";if(lab)b.setAttribute("aria-label",lab);b.onclick=f;return b};
  const inp=elT("input");inp.type="number";inp.min="1";inp.max="99";inp.value=shopQ;inp.id="shopqn";inp.setAttribute("aria-label","구매 수량");inp.onchange=()=>set(Number(inp.value));
  qb.append(mkB("−",()=>set(shopQ-1),"하나 줄이기"),inp,mkB("+",()=>set(shopQ+1),"하나 늘리기"));[1,5,10].forEach(n=>{const b=mkB(n+"개",()=>set(n));b.setAttribute("aria-pressed",shopQ===n?"true":"false");qb.appendChild(b)});
- il.innerHTML="";C.inv=C.inv||{};ITM.filter(x=>!CRAFT_ONLY[x[0]]&&!(typeof PET_ONLY!=="undefined"&&PET_ONLY[x[0]])).forEach(x=>{const id=x[0],pc=pr(x[3]),b=document.createElement("button");b.type="button";b.className="chip sq";
+ il.innerHTML="";C.inv=C.inv||{};ITM.filter(x=>!CRAFT_ONLY[x[0]]&&!(typeof MERCHANT_ONLY!=="undefined"&&MERCHANT_ONLY[x[0]])&&!(typeof PET_ONLY!=="undefined"&&PET_ONLY[x[0]])).forEach(x=>{const id=x[0],pc=pr(x[3]),b=document.createElement("button");b.type="button";b.className="chip sq";
   const mx=itemMax(id),n=Math.min(shopQ,mx),cost=pc*n,lim=id==="charm",ct2=lim?charmToday():0;
   const cnt="보유 "+(C.inv[id]||0)+(lim?" · 오늘 "+ct2+"/"+CHARM_MAX:"")+(id==="candle"?" · 최대 1개":"");
   const st=mx<=0?(id==="candle"?"이미 가지고 있다":"오늘은 품절"):n>1?pc+"골드 × "+n+" = "+cost+"골드":pc+"골드"+(shopQ>1&&n<shopQ?" (1개만 살 수 있다)":"");
   b.innerHTML="<b></b><small class='item-feature'></small><small></small><small></small>";const bs=b.querySelectorAll("small");b.querySelector("b").textContent=x[1];bs[0].textContent=x[2];bs[1].textContent=st;bs[2].textContent=cnt;
   {const ic=itIc(id,"lg");if(ic)b.prepend(ic)}b.title=x[2];b.setAttribute("aria-label",x[1]+", "+st+", "+cnt+". "+x[2]);b.disabled=mx<=0||(C.gd||0)<cost;
-  b.onclick=()=>{const k=Math.min(shopQ,itemMax(id)),c=pc*k;if(k<=0||(C.gd||0)<c)return;if(lim)C.daily={d:today(),charm:charmToday()+k};
+  b.onclick=()=>{const k=Math.min(shopQ,itemMax(id)),c=pc*k;if(k<=0||(C.gd||0)<c)return;if(lim){const day=today();C.daily=Object.assign({},C.daily&&C.daily.d===day?C.daily:{},{d:day,charm:charmToday()+k})}
    C.gd-=c;C.inv[id]=(C.inv[id]||0)+k;const dexNew=dexAdd("it",id);titleState();C.stats.purchases=(C.stats.purchases||0)+k;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);
    const fields={["inv/"+id]:C.inv[id],["stats/purchases"]:C.stats.purchases,["stats/maxGold"]:C.stats.maxGold};if(lim)fields.daily=C.daily;if(dexNew)fields["dex/it/"+id]=C.dex.it[id];
    shopWrite(fields,{gd:-c});checkTitles();

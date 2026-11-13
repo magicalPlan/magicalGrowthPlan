@@ -333,8 +333,8 @@ function saveCloud(now){
 // 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
- const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(0,b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
-  if(!$("#v-hub").hidden){$("#hc .hc-dz .bar i").style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
+ const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(dzFloorToday(),b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
+  if(!$("#v-hub").hidden){const bar=$("#hc .hc-dz .bar"),fill=bar&&bar.querySelector("i");if(bar)bar.style.setProperty("--dz-floor",dzFloorToday()+"%");if(fill)fill.style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
@@ -701,6 +701,7 @@ function updNav(){const cb=document.querySelector("#nav [data-g=chat]");if(cb&&C
  // "이름 (3)" 꼴의 숫자는 작은 배지로 바꿔서, 숫자가 생겨도 탭 글자가 잘리지 않게 한다.
  document.querySelectorAll("#nav button").forEach(b=>{const m=b.textContent.match(/^(.*) \((\d+\+?)\)$/);if(m){b.textContent=m[1];b.appendChild(elT("span","nav-n",m[2]))}});if(typeof vcMark==="function")vcMark()}
 const charmToday=()=>C.daily&&C.daily.d===today()?C.daily.charm||0:0;
+const pfcandyToday=()=>C.daily&&C.daily.d===today()?Number(C.daily.pfcandy)||0:0;
 const armed=id=>!!(C.arm&&C.arm[id]&&((C.inv||{})[id]||0)>0);
 // 준비해 둔 소모품을 1개 쓴다. 실제로 썼으면 true.
 const useItem=id=>{C.arm=C.arm||{};C.inv=C.inv||{};const ok=armed(id);if(ok)C.inv[id]--;delete C.arm[id];return ok};
@@ -727,6 +728,7 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   if(id==="vtown"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[vtownOn?"닫기":"사용",()=>{vtownOn=!vtownOn;vtownPick=null;bag()}]],itIc(id)));if(vtownOn)it.appendChild(vtownBox());return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
+  if(id==="pfcandy"){const used=pfcandyToday(),limit=used>=PFCANDY_MAX;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (오늘 "+used+"/"+PFCANDY_MAX+")",[["사용",()=>{const n=pfcandyToday();if(n>=PFCANDY_MAX)return bag("오늘은 보라 꽃 설탕 절임을 더 사용할 수 없다.");if((C.inv.pfcandy||0)<1)return;const day=today(),daily=Object.assign({},C.daily&&C.daily.d===day?C.daily:{},{d:day,pfcandy:n+1}),oldFloor=dzFloorToday(),floor=Math.min(100,oldFloor+10),base=C.pwtmp&&C.pwtmp.day===day?Math.max(0,Number(C.pwtmp.v)||0):0;C.daily=daily;C.inv.pfcandy--;C.dzFloor={day,v:floor};C.dz=Math.max(Number(C.dz)||0,floor);C.pwtmp={day,v:base+25};const dzBefore=C.dz;gain(0,10);const dzAdded=C.dz-dzBefore;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);dexAdd("it","pfcandy");titleState();save();bag("보라 꽃 설탕 절임을 먹었다. 절망도 +"+dzAdded+", 오늘 하한 +"+floor+", 전투력 +"+(base+25)+".")} ,limit]],itIc(id)));return}
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
  bagWeapons();
  const bm=$("#bgm");if(bm){bm.style.color="var(--mu)";bm.textContent=msg||""}if(fresh)applyGift()}
@@ -819,7 +821,7 @@ async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에�
   const add=GIFT_EX[x.g]||0;xs+=add;titleState();C.stats.giftsUsed=(C.stats.giftsUsed||0)+1;gain(add,-rgVal(x.g));
   opened.push({x,dDz:(C.dz||0)-z0,dEx:(C.ex||0)-e0});paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
  const undoOne=o=>{if(!o||!o.x)return;ginPendDel.delete(o.x.id);if(!ginList.some(y=>y&&y.id===o.x.id)){ginList.push(o.x);ginList.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));ginIds=ginList.map(y=>y.id).join("|")}
-  C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(0,Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
+  C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(dzFloorToday(),Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
   paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
  const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
   if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}

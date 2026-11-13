@@ -21,6 +21,7 @@ const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="천재"?4:t==="대�
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
 const eq=i=>C.wp===i;
+const pwCandyTmp=()=>C&&C.pwtmp&&C.pwtmp.day===today()?Math.max(0,Number(C.pwtmp.v)||0):0;
 // 강화가 전투력에 더하는 값. 칼(0번)은 단계마다 2, 다른 무기는 단계마다 1.
 const wup=i=>wlv(i)*(i===0?2:1);
 /* 전투력.
@@ -37,12 +38,13 @@ const wup=i=>wlv(i)*(i===0?2:1);
    + 함께하는 사역마의 전투력
    매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
    권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다. */
-const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");
+const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");
 /* 허브 프로필용 표시 조각. 합산 pw() 는 그대로.
    조건: 어둠(절망 50+)·폭주(절망 60+). 임시: 오늘만 붙는 무기 손질(C.wtmp). */
 function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
 function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}
-function pwExtraTxt(){const a=[],c=pwCond(),t=pwTmp();if(c)a.push("조건 +"+c);if(t)a.push("+"+t);return a.join(" · ")}
+function pwExtraTxt(){const a=[],c=pwCond(),t=pwTmp(),p=pwCandyTmp();if(c)a.push("조건 +"+c);if(t)a.push("+"+t);if(p)a.push("오늘 +"+p);return a.join(" · ")}
+const dzFloorToday=()=>C&&C.dzFloor&&C.dzFloor.day===today()?Math.max(0,Math.min(100,Number(C.dzFloor.v)||0)):0;
 
 // 각인 비용. 지금 단계 L 에서 다음 단계로 가는 마력석은 L+2 개다. 0단계면 2개, 1단계면 3개.
 const rnCost=L=>L+2;
@@ -76,7 +78,7 @@ function xpMigrate(){if(!C||Number(C.xv)>=3)return false;const ex=xpCurve(C.ex,C
    물 속성은 오르는 절망도를 75% 로 줄이되 최소 1. 바람 속성은 경험치 ×1.15.
    반영 전에 옛 경험치를 새 곡선으로 옮기고, 레벨은 누적 경험치로 다시 계산한다. 절망도는 0~100 으로 자른다.
    100 이 되면 타락하고, 90 을 처음 넘으면 타락 직전을 알린다. */
-function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(0,Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
+function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(dzFloorToday(),Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
  if(!C.fall){if(C.dz>=100)fallen();else if(oldDz<90&&C.dz>=90)note("warn","절망도가 "+C.dz+"에 이르렀다. 타락 직전이다."),alertBox("타락 직전","절망도가 "+C.dz+"에 이르렀다. 마음이 무너지기 직전이다.\n절망도가 100이 되면 타락해 마수가 된다. 공명이나 선물로 친구들의 도움을 받자.")}}
 
 /* 10분마다 내려가는 절망도.
