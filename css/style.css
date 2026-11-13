@@ -113,7 +113,7 @@ textarea::placeholder{color:#6f6785}
 .hc-dz small{color:var(--mu);font-size:.75rem;flex:0 0 auto}
 .hc-dz .bar{flex:1;margin:0;height:8px}
 #hc .hc-dz .bar{position:relative}
-#hc .hc-dz .bar::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--dz-floor,0%);border-radius:inherit;background:linear-gradient(90deg,#55358a,#a77aff);pointer-events:none}
+#hc .hc-dz .bar::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--dz-floor,0%);border-radius:6px 0 0 6px;background:linear-gradient(90deg,#55358a,#a77aff);pointer-events:none}
 .hc-dz b{font-size:.85rem;flex:0 0 auto;min-width:2.2em;text-align:right}
 .hc-more{margin-top:8px;font-size:.88rem}
 .hc-more summary{cursor:pointer;color:var(--mu);font-size:.8rem;padding:2px 0}
