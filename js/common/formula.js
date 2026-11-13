@@ -43,7 +43,7 @@ const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefin
    조건: 어둠(절망 50+)·폭주(절망 60+). 임시: 오늘만 붙는 무기 손질(C.wtmp). */
 function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
 function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}
-function pwExtraTxt(){const a=[],c=pwCond(),t=pwTmp(),p=pwCandyTmp();if(c)a.push("조건 +"+c);if(t)a.push("+"+t);if(p)a.push("오늘 +"+p);return a.join(" · ")}
+function pwExtraTxt(){const a=[],c=pwCond(),t=pwTmp()+pwCandyTmp();if(c)a.push("조건 +"+c);if(t)a.push("오늘 +"+t);return a.join(" · ")}
 const dzFloorToday=()=>C&&C.dzFloor&&C.dzFloor.day===today()?Math.max(0,Math.min(100,Number(C.dzFloor.v)||0)):0;
 
 // 각인 비용. 지금 단계 L 에서 다음 단계로 가는 마력석은 L+2 개다. 0단계면 2개, 1단계면 3개.
