@@ -397,11 +397,13 @@ img.av:not(#pv):not(#ev){cursor:zoom-in}
 .set-leave-row{display:flex;justify-content:flex-end;margin:6px 0 0}
 button.set-fold-mark{margin:0;padding:0;border:0;background:none;font:inherit;font-size:.78rem;color:var(--mu);cursor:pointer;letter-spacing:inherit;box-shadow:none;width:auto}
 .set-odd-box{margin:12px 0 0}.set-odd-name{margin:0 0 4px;font-family:"Gowun Batang",serif;font-weight:700}
-.set-odd-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
-.set-odd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 10px;border:1px solid var(--ln);border-radius:10px;background:var(--pn)}
-.set-odd::marker{content:""}
-.set-odd span{min-width:0}
-.set-odd b{flex:none;font-variant-numeric:tabular-nums}
+.set-odd-sub{margin:10px 0 4px;font-size:.85rem;font-weight:700;color:var(--mu)}
+/* 확률표: 2열(항목|확률) × n행 */
+.set-odd-table{width:100%;border-collapse:collapse;margin:6px 0 0;font-size:.9rem}
+.set-odd-table th,.set-odd-table td{padding:8px 10px;border:1px solid var(--ln);text-align:left;vertical-align:middle}
+.set-odd-table th{background:color-mix(in srgb,var(--pn) 70%,var(--ln));font-weight:700;color:var(--mu);font-size:.8rem}
+.set-odd-table td:last-child,.set-odd-table th:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:7.5em}
+.set-odd-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--pn) 88%,#0000)}
 html[data-theme="light"] .set-fold-t{color:#6b5216}
 #v-setting .set-ver{margin:auto 0 0;text-align:right;font-size:.72rem;line-height:1.3;color:var(--mu);letter-spacing:.03em}
 html[data-theme="light"] .ver-bar{background:#fffcf6;color:#3a2c18;border-color:#9a7a36;box-shadow:0 6px 24px #0002}
