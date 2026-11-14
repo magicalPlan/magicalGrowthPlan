@@ -16,12 +16,19 @@ function bossTopShown(){bossTopAsk();const mine=typeof pw==="function"&&C?pw():0
 async function bossTopPw(){let n=bossTopN;if(DB&&typeof plTop==="function"){try{const t=await plTop();n=Math.max(0,Number(t&&t.pw)||0);bossTopN=n;bossTopLv=Math.max(1,Number(t&&t.lv)||1)}catch(e){}}const mine=typeof pw==="function"&&C?pw():0;return Math.max(mine,n||0)}
 const dHpNow=()=>Math.round(witchHpOf(bossTopShown().pw)*D_HP_X);
 const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0||b.ts)||0))[0];
-/* 새 보스 HP 공식. 오전·오후 = (최고 전투력자의 레벨 + 전투력 × (전투력 - 레벨)) ÷ (전투력 ÷ 레벨).
+/* 새 보스 HP 공식. 오전·오후 = (레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1).
    주간 = (레벨 + 전투력 × (전투력 - 레벨)) × (전투력 ÷ 레벨). 정수 HP로 반올림한다.
    1위는 공개 카드를 전투력 순으로 한 명만 읽는다. 정해진 체력은 공격 기록(hp0)에 남아서 그 보스가 끝날 때까지 모두에게 똑같다.
    이미 hp0가 있는 보스는 그 숫자를 그대로 쓴다. */
 const bScaled=(k,id)=>!!id&&String(id)>=BOSS_SCALE_FROM[k];
-function bossHpEst(k){const{lv,pw}=bossTopShown();if(!(lv>0&&pw>0))return 0;const core=lv+pw*(pw-lv),ratio=pw/lv;return Math.round(k==="w"?core*ratio:core/(ratio/(k==="e"?EBOSS.hpX:1)))}
+function bossHpEst (k) {
+   const {lv, pw} = bossTopShown();
+   if (!(lv > 0 && pw > 0)) return 0;
+   const core = lv + pw * (pw - lv), ratio = pw / lv;
+   const scale = k === "d" ? 1.1 : k === "e" ? EBOSS.hpX : 1;
+   return Math.round(k === "w" ? core * ratio : core / (ratio / scale))
+}
+
 const bhpScaled=(k,list)=>{const real=list.filter(v=>v&&v.u),withHp=real.filter(v=>Number(v.hp0)>0);return withHp.length?Math.round(Number(bFirst(withHp).hp0)):bossHpEst(k)};
 const bhp=(k,list,id)=>{if(bScaled(k,id))return bhpScaled(k,list);if(k==="d"&&!(id&&String(id)<BOSS_NEW_FROM.d)){const real=list.filter(v=>v&&v.u),f=real.length?bFirst(real):null;if(!f)return dHpNow();if(Number(f.hp0)>0)return Math.round(Number(f.hp0))}const c=bcfgOf(k,id);return Math.round(c.base+c.k*list.reduce((a,v)=>a+(Number(v.p)||0),0)+(c.m||0)*list.reduce((a,v)=>Math.max(a,Number(v.p)||0),0))};
 /* 한 번 쓰러진 보스는 다시 살아나지 않는다: 마지막 일격을 넣은 사람의 기록에 x 표시를 남기고, 표시가 있거나 피해 합이 체력 이상이면 쓰러진 것으로 본다.
@@ -74,7 +81,7 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const
  const left=cfg.t-C.wb[k],off=!!C.fall||C.dz>=90||left<=0||!!hitBusy;
  c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?(k==="d"?"이번 보스 공격 횟수를 다 썼다":"오늘 공격 횟수를 다 썼다"):hitBusy?"공격하는 중...":"대응을 골라 공격한다 · "+(k==="d"?"":"오늘 ")+left+"/"+cfg.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off;bt.onclick=()=>{row.querySelectorAll("button").forEach(z=>z.disabled=true);hitBoss(k,bt,a)};row.appendChild(bt)});c.appendChild(row);
- if(bScaled(k,b.id)||k==="d"){const wait=bossTopN==null&&!list.length,est=bScaled(k,b.id)?bossHpEst(k):dHpNow();c.appendChild(elT("p","boss-info","체력: 첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+est.toLocaleString()+")")))}
+ if(bScaled(k,b.id)||k==="d"){const scaled=bScaled(k,b.id),wait=bossTopN==null&&!list.length,est=scaled?bossHpEst(k):dHpNow(),rule=scaled&&k==="d"?"(레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1)":"첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배";c.appendChild(elT("p","boss-info","체력: "+rule+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+est.toLocaleString()+")")))}
  c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 /* 공격 중 hitBusy. await 동안 drawBoss 가 버튼을 다시 그려도 잠가 둔다. 연타 시 기록·meta 가 두 번 쓰이는 일을 막는다.
    (쓰기 자체는 내 칸 set + meta 합계 두 통신이 정상이다. 문제는 공격 동작이 두 번 들어가는 쪽이다.) */
