@@ -3,7 +3,7 @@
  */
 
 const DMG_WEAK_MUL = 1.3;        // 약점 속성 타격 시 배율
-const DMG_FIRE_SKILK_MUL = 2.0;  // 홍련의 일격 사용 시 배율
+const DMG_FIRE_SKILL_MUL = 2.0;  // 홍련의 일격 사용 시 배율
 const DMG_LIGHT_SKILL_MUL = 3.0; // 구원의 빛 사용 시 배율 (레이드용)
 const DMG_FIRE_ATTR_MUL = 1.2;   // 불 속성 패시브 보유 시 배율
 
