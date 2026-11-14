@@ -34,6 +34,8 @@ function ebHpEst () {
 }
 
 function ebHp (list) {
+   const id = ebOf().id, snap = typeof bossSnap !== "undefined" ? bossSnap[id] : null;
+   if (snap && Number(snap.hp0) > 0) return Math.round(Number(snap.hp0));
    const withHp = (list || []).filter(v => v && v.u && Number(v.hp0) > 0);
    return withHp.length ? Math.round(Number(bFirst(withHp).hp0)) : ebHpEst()
 }
@@ -81,7 +83,7 @@ async function loadEboss(){if(!C||!DB||$("#v-ord").hidden||ebBusy)return;ebBusy=
  try{
    let meta = null;
    try {
-      const ms = await DB.doc("wboss/"+b.id+"/meta").get();
+      const ms = await DB.doc(typeof bossHpPath==="function"?bossHpPath(b.id):"wboss/"+b.id+"/_hp").get();
       meta = ms.exists ? ms.data() : null
    } catch (e) {
 
@@ -117,7 +119,7 @@ function drawEboss(list){const box=$("#ebl");if(!box||!C)return;ebDay();const b=
  const left=EBOSS.t-(C.eb.n||0),off=!!C.fall||C.dz>=90||left<=0||!!ebHit.busy;
  c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?"오늘 공격 횟수를 다 썼다":"대응을 골라 공격한다 · 오늘 "+left+"/"+EBOSS.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off||!DB;bt.onclick=()=>ebHit(bt,a);row.appendChild(bt)});c.appendChild(row);
- const wait=!!DB&&bossTopN==null&&!list.length;c.appendChild(elT("p","boss-info","체력: 오전·오후 보스 체력의 "+EBOSS.hpX+"배. 첫 공격 때 정해져 내일 0시까지 같다"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+ebHpEst().toLocaleString()+")")));
+ const wait=!!DB&&bossTopN==null&&!list.length;c.appendChild(elT("p","boss-info","체력: (레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ "+EBOSS.hpX+"). 첫 공격 때 정해져 내일 0시까지 같다"+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+ebHpEst().toLocaleString()+")")));
  c.appendChild(elT("p","boss-info","공격 1번: 골드 +"+EBOSS.hit+", 절망도 +"+EBOSS.dz+"(🛡 방어 태세면 0) · 토벌 보상: "+rwTxt(EBOSS.kill)+", "+ebDropTxt()))}
 /* ebHit.busy: 읽기·쓰기 await 동안 버튼을 잠근다. drawEboss 가 다시 그려도 off 에 busy 가 들어가 연타를 막는다. */
 async function ebHit(bt,act){act=BA[act]?act:"str";const b=ebOf(),m=$("#ebm");ebDay();if(ebHit.busy)return;if(C.fall||C.dz>=90||C.eb.n>=EBOSS.t)return;ebHit.busy=true;if(bt)bt.disabled=true;
