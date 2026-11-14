@@ -439,7 +439,7 @@ setInterval(()=>{if(!C||!DB)return;const rmOn=!$("#v-rooms").hidden,need=!!(C.mj
  else if(unX){stopX();xS=-1}
  if(C.mj&&now>=C.mj.T0&&xAuto!==C.mj.id&&(rmOn||!$("#v-hub").hidden)){xAuto=C.mj.id;xView()}
  xTick();xRender()},1000);
-function xSound(k){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const a=ding.c||(ding.c=new A());if(a.state==="suspended")a.resume();const t0=a.currentTime+.02;
+function xSound(k){try{if(typeof dingUnlock==="function")dingUnlock();const a=typeof dingCtx==="function"?dingCtx():(ding.c||null);if(!a)return;if(a.state==="suspended")return;const t0=a.currentTime+.02;
  (XSND[k]||[]).forEach(([f,st,du])=>{const o=a.createOscillator(),g=a.createGain();o.type="triangle";o.frequency.setValueAtTime(f,t0+st);g.gain.setValueAtTime(.0001,t0+st);g.gain.exponentialRampToValueAtTime(.16,t0+st+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+st+du);o.connect(g);g.connect(a.destination);o.start(t0+st);o.stop(t0+st+du+.05)})}catch(e){}}
 if($("#xtog")){$("#xtog").onclick=()=>xFold($("#xbox").hidden);(()=>{let v="1";try{v=localStorage.getItem("mgr_xopen")||"1"}catch(e){}if(v==="0")xFold(false)})()}
 (()=>{try{const s=localStorage.getItem("mgr_xsort");if(s==="def"||s==="hi"||s==="lo")xSort=s}catch(e){}})();
