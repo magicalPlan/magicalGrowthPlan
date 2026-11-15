@@ -788,11 +788,83 @@
             },
             {
               "who": "flanders_artist_default",
-              "texT": "이건, 널 포기하는 게 아니야."
+              "text": "이건, 널 포기하는 게 아니야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "놓아주는 거지..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "이별은 포기 같은 게 아니야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "누군가를 향한 응원일 거야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "그렇게 생각하지 않으면..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "...응, 그렇게 생각할 거야."
+            },
+            {
+              "who": "",
+              "text": "소년은 개를 놓아주었습니다."
+            },
+            {
+              "who": "nero_default",
+              "text": "그래, 우유배달만 하는 건 지겨웠지?"
+            },
+            {
+              "who": "nero_default",
+              "text": "널 보내줄게."
+            },
+            {
+              "who": "nero_default",
+              "text": "더 먼 세상을 여행해."
+            },
+            {
+              "who": "nero_default",
+              "text": "나는, 음..."
+            },
+            {
+              "who": "nero_default",
+              "text": "좀 더, 이곳을 탐험할게."
+            },
+            {
+              "who": "",
+              "text": "어느덧, 파트라슈의 몸이 투명해지기 시작했고..."
+            },
+            {
+              "who": "nero_default",
+              "text": "잘 가, 파트라슈."
+            },
+            {
+              "who": "nero_default",
+              "text": "잘 가, 내 꿈."
+            },
+            {
+              "who": "nero_default",
+              "text": "잘 가, 잘 가, 잘 가."
+            },
+            {
+              "who": "nero_default",
+              "text": "즐거운 여행 되길..."
+            },
+            {
+              "who": "",
+              "text": "소년은, 모든 걸 잃었습니다."
             }
           ]
         }
       }
+    },
+    {
+      "id": "flanders-side2",
+      "title": "마을의 일상 - 네로?1"
     }
   ]
 }

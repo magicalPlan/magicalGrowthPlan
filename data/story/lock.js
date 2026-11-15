@@ -54,5 +54,8 @@ const WORLD_STORY_OPEN=[
  {id: "flanders-1", open:false},
  {id: "flanders-2", open:false},
  {id: "flanders-3", open:true},
- {id: "flanders-side", open:false}
+ {id: "flanders-side", open:false},
+ {id: "flanders-4", open: true},
+ {id: "flanders-5", open: true},
+ {id: "flanders-side2", open: true}
 ];
