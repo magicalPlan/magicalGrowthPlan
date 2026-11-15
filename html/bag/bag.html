@@ -1,14 +1,20 @@
 <!-- 가방. 받은 선물 · 소지품 · 무기(스크롤로 이어짐).
-     그리기는 js/main.js 의 bag(). 탭은 html/home/main.html. -->
+     그리기는 js/main.js 의 bag(). 탭은 html/home/main.html.
+     소지품 bagInvFold / #bgitog · #bgibox (기본 펼침, mgr_bag_it).
+     무기 bagWpFold / #bgwtog · #bgwbox (기본 펼침, mgr_bag_wp). -->
 <div id="v-bag" hidden>
 <h2>받은 선물</h2>
 <p class="hint" id="rgh"></p>
 <div class="hist" id="bgrg"></div>
-<h2>소지품</h2>
+<h2 class="fold-h">소지품<button class="chip fold-btn" id="bgitog" type="button" aria-expanded="true" aria-controls="bgibox">접기 ▲</button></h2>
+<div id="bgibox">
 <div class="hist" id="bgi"></div>
-<h2>무기</h2>
+</div>
+<h2 class="fold-h">무기<button class="chip fold-btn" id="bgwtog" type="button" aria-expanded="true" aria-controls="bgwbox">접기 ▲</button></h2>
+<div id="bgwbox">
 <div class="hist" id="bgw"></div>
 <!-- 강화 설명. 글은 js/weapon.js 의 bagUpHint 가 채운다. -->
 <div class="hint" id="bgwh"></div>
+</div>
 <p class="msg" id="bgm" role="alert"></p>
 </div>

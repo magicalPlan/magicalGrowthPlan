@@ -1,7 +1,6 @@
-/* 단서 탐색. js/event-boss/boss.js 다음에 불러야 한다. 실전 > 장기 의뢰, 이벤트 보스 아래.
-   화면은 html/act/ord.html 의 #clue. 시간과 보상은 data/clue/hunt.js, 조사 문장은 data/clue/script.js.
-   떠나는 동안의 계산·철수·출정 금지는 장기 토벌(js/main.js 의 lhStart, lhClaim)과 같다.
-   기록은 캐릭터의 C.clue 에만 남는다. */
+/* 단서 탐색 로직. 데이터는 data/event/common.js · pack.js (CLUE·CLUE_LOG·CLUE_EXTRA).
+   보상·시간은 common, 이름·설명·문장은 pack. 화면 #clue. 출정 금지는 장기 토벌(lh*)과 동일.
+   기록은 C.clue 만. */
 const clueOf=id=>(CLUE||[]).find(x=>x.id===id);
 const clueOn=()=>!!(C&&C.clue&&clueOf(C.clue.k));
 function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==="function")setTimeout(ordMarks,0);if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();

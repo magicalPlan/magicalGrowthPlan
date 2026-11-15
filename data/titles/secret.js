@@ -11,5 +11,8 @@ const TITLE_SECRET=[
 ["s_unlucky","불운한 대장장이","무기 강화에 10번 실패했다.",c=>(c.stats?.upgradeFails||0)>=10,"secret","망치 소리만 요란했다."],
 ["s_blade","명검의 주인","무기 하나를 최대 단계(+5)까지 강화했다.",c=>Object.values(c.wl||{}).some(v=>Number(v)>=5),"secret","하나만 끝까지 갈고닦았다."],
 ["s_phoenix","불사조","세 번 이상 타락하고도 S등급에 올랐다.",c=>(c.stats?.falls||0)>=3&&c.g==="S","secret","재 속에서 가장 높이 날아오른다."],
-["s_7falls","칠전팔기","일곱 번 타락하고 일곱 번 돌아왔다.",c=>(c.stats?.recovered||0)>=7,"secret","넘어진 횟수보다 한 번 더 일어선다."]
+["s_7falls","칠전팔기","일곱 번 타락하고 일곱 번 돌아왔다.",c=>(c.stats?.recovered||0)>=7,"secret","넘어진 횟수보다 한 번 더 일어선다."],
+["s_wander","이 세계를 방랑한","A·B·C·D 모든 마을에 소속된 적이 있다.",c=>{const s=c.stats?.vSeen||{};return !!(s.A&&s.B&&s.C&&s.D)},"secret","아직 가야 할 곳을 정하지 못했다."],
+["s_shady4","동전을 땅에 버린","무엇이 들어있는지 알 수 없는 상자를 열었다.",c=>(c.stats?.shadyT1||0)>=1000,"secret","하지만 즐겁지 않니? ...후후. 또 오렴!"],
+["s_shady1","상인의 의심을 산","가장 높은 등급의 보상을 열 번 얻었다.",c=>(c.stats?.shadyT4||0)>=10,"secret","어머...혹시 투시력이라도 있는 거야?"]
 ];

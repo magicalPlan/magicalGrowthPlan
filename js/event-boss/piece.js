@@ -1,10 +1,8 @@
-/* 단서 조각. js/event-boss/clue.js 다음에 불러야 한다. 숫자는 data/clue/piece.js.
-   화면은 html/act/ord.html 의 #clp (실전 > 장기 의뢰 맨 위). 장기 의뢰를 열 때(js/event-boss/boss.js 의 eboss) clpDraw 를 부른다.
-   출정(js/room.js 의 settle), 장기 토벌(js/main.js 의 lhClaim), 단서 탐색(js/event-boss/clue.js 의 clueClaim), 이벤트 보스 토벌 보상(js/event-boss/boss.js 의 ebGrant)은 clpGain 을 그대로 부른다.
-   내 기록은 C.clp = {id, n: 찾은 개수, got: {단계 번호: 1}}.
-   서버 합계는 tally/clue/{CLP.id} = {n: 합계, top: [{u, n: 이름, pt: 그 사람이 찾은 개수}]} 한 칸이다(희망의 등대 tally/wf 와 같은 방식).
-   장기 의뢰 화면을 연 동안만 그 칸에 연결한다. 더 커진 합계만 반영하고, 화면을 벗어나거나 기간이 끝나면 연결을 닫는다.
-   TODO(다음 이벤트): 예전 규칙 우회로로 tally/dr/{지난 CLP.id} 에만 쌓였던 칸을 콘솔에서 지운다. 이번 이벤트는 아래 clpMigrateAlt 로 clue 로만 옮긴다. */
+/* 단서 조각 로직. 데이터는 data/event/common.js · pack.js (CLP). 테마 교체는 pack 만.
+   화면 #clp (html/act/ord.html). 장기 의뢰 열 때(eboss) clpDraw.
+   발견 호출: room settle(x) · main lhClaim(lh) · clue clueClaim(clue) · boss ebGrant(eb) → clpGain.
+   C.clp = {id, n, got}. 서버 tally/clue/{CLP.id}. 기간은 CLP.from~to (clpOn).
+   TODO(다음 이벤트): tally/dr/{지난 id} 잔여 삭제 후 clpAlt·clpMigrateAlt 제거. */
 let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0,clpMigBusy=false,clpMigDone=false;
 const clpOn=()=>{const t=Date.now();return t>=CLP.from&&t<CLP.to};
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
@@ -66,10 +64,23 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
 
 /* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜)가 true 일 때만 '스토리 보기'로 연다.
-   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_URL 을 한 번만 읽고, 합계는 CLPN 을 쓴다. */
+   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_INDEX_URL(챕터 목록)→chapters/*.json 을 읽고, 합계는 CLPN 을 쓴다.
+   반환: { chapters:[{id,title,lead,world,shards}], shards:[...평탄...] }. 옛 단일 {shards} 파일도 받는다. */
 let storyBook=null,storyBookP=null,clpStoryGen=0;
-function storyLoad(){if(typeof STORY_URL==="undefined")return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
- storyBookP=fetch(STORY_URL).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(book=>{storyBook=book;return book}).catch(e=>{storyBookP=null;throw e});return storyBookP}
+function storyIndexBase(url){const bare=String(url||"").split("?")[0];const i=bare.lastIndexOf("/");return i>=0?bare.slice(0,i+1):"data/story/"}
+function storyFileUrl(file,base){if(!file)return"";if(/^(https?:)?\/\//.test(file)||file.charAt(0)==="/"||file.indexOf("data/")===0)return file;return(base||"data/story/")+file}
+function storyLoad(){const indexUrl=typeof STORY_INDEX_URL!=="undefined"?STORY_INDEX_URL:(typeof STORY_URL!=="undefined"?STORY_URL:"");if(!indexUrl)return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
+ storyBookP=fetch(indexUrl).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(idx=>{
+  /* 예전: 한 파일에 shards 만. */if(Array.isArray(idx&&idx.shards)&&!Array.isArray(idx.chapters)){storyBook={chapters:[{id:"",title:"",lead:"",world:true,order:0,shards:idx.shards}],shards:idx.shards.slice()};return storyBook}
+  const rows=Array.isArray(idx&&idx.chapters)?idx.chapters:[],base=storyIndexBase(indexUrl);
+  return Promise.all(rows.map((ch,i)=>{if(!ch||!ch.file)return Promise.resolve(null);
+   return fetch(storyFileUrl(ch.file,base)).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json()}).then(body=>{
+    const shards=Array.isArray(body&&body.shards)?body.shards:(Array.isArray(body&&body.episodes)?body.episodes:[]);
+    return{id:String(body&&body.id||ch.id||""),title:String(body&&body.title||ch.title||""),lead:String(body&&body.lead||ch.lead||""),
+     order:ch.order!=null?Number(ch.order):i,world:ch.world!==false&&ch.open!==false,shards}}).catch(()=>null)})).then(loaded=>{
+   const chapters=loaded.filter(Boolean).sort((a,b)=>(a.order||0)-(b.order||0));const shards=[];
+   chapters.forEach(ch=>{(ch.shards||[]).forEach(s=>{if(!s||!s.id)return;shards.push(s)})});
+   storyBook={chapters,shards};return storyBook})}).catch(e=>{storyBookP=null;throw e});return storyBookP}
 function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyReachN!=="function")return;
  const now=Date.now(),rows=STORY_LOCK.filter(lock=>storyReachN(lock,CLPN));if(!rows.length)return;
  const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);
@@ -84,11 +95,13 @@ function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof stor
 /* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.
    위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳.
    제목 옆 퍼즐 칸은 assets/event_items/wt_puzzle_piece.png. 조각을 찾았다는 문구(clpGain)는 CLP.ic 이모티콘을 그대로 쓴다. */
+/* KST 벽시계 문구. pack 의 from/to 를 UI에 그대로 쓴다. */
+function clpWhen(t){const d=new Date(Number(t)+9*36e5);const mi=d.getUTCMinutes();return (d.getUTCMonth()+1)+"월 "+d.getUTCDate()+"일 "+d.getUTCHours()+"시"+(mi?String(mi).padStart(2,"0")+"분":"");}
 function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),before=now<CLP.from,after=now>=CLP.to;box.innerHTML="";
  const c=elT("div","card clp-card");box.appendChild(c);
- const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
+ const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?clpWhen(CLP.from)+" 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
  c.appendChild(elT("p","clp-ds",CLP.ds));
- if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 22일 18시까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
+ if(before){c.appendChild(elT("p","hint",clpWhen(CLP.from)+"부터 "+clpWhen(CLP.to)+"까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
  const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");
  big.append(elT("b",null,CLPN.toLocaleString()),elT("span",null," / "+CLP.goal.toLocaleString()+"개"),elT("em",null,CLPN>=CLP.goal?"목표 달성!":Math.floor(pct*100)+"%"));c.appendChild(big);
  const bar=elT("div","bar clp-bar"),f=elT("i");f.style.width=(pct*100)+"%";bar.appendChild(f);

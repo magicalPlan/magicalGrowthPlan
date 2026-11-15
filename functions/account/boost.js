@@ -82,7 +82,8 @@ function armedCharm(c) {
 }
 const PET_XP_RUN = 1;
 const PET_DROP_X = .02;
-const PET_EV = {from: Date.UTC(2026, 9, 31, 15), to: Date.UTC(2026, 10, 14, 15)};
+const PET_EV = {from: Date.UTC(2026, 9, 31, 15), to: Date.UTC(2026, 10, 22, 15)};
+const PET_EV2 = {from: Date.UTC(2026, 10, 22, 15), to: Date.UTC(2026, 11, 20, 9)};
 const SOLO_RW_MP = .5;
 const COLLECTOR_P = .3;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
@@ -90,6 +91,10 @@ const PET_XP_CAP = PET_LV[PET_LV.length - 1];
 function petEvOn(now) {
   const t = now == null ? Date.now() : now;
   return t >= PET_EV.from && t < PET_EV.to;
+}
+function petEv2On(now) {
+  const t = now == null ? Date.now() : now;
+  return t >= PET_EV2.from && t < PET_EV2.to;
 }
 
 /* 클라 today() 와 같은 날짜 문자열. 서버는 KST(+9) 기준. */
@@ -190,7 +195,7 @@ function marchSide(r, seat, c, boost, rand, now) {
     dh = Math.round(Number(fx.dh) || 0);
     dz += gainDzMod(dh, seat, c, boost);
   }
-  let petXp = 0, egg = 0, eggEv = 0, collector = 0, crow = 0, soloM = 0;
+  let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = 0, crow = 0, soloM = 0;
   if (r && r.ok) {
     if (petCur(c)) petXp = PET_XP_RUN;
     if (title === "수집가" && roll() < COLLECTOR_P) { mm++; collector = 1; }
@@ -199,12 +204,13 @@ function marchSide(r, seat, c, boost, rand, now) {
     if (r.solo && roll() < SOLO_RW_MP) { mm++; soloM = 1; }
     if (roll() < PET_DROP_X) egg = 1;
     if (petEvOn(now) && roll() < PET_DROP_X) eggEv = 1;
+    if (petEv2On(now) && roll() < PET_DROP_X) eggEv2 = 1;
   }
   return {
     dz, mm, gi, tc, charm: charm ? 1 : 0,
     rb, wa, wp: wpOn, wpn, dh, gAdd, exAdd,
     flag, map, sk: msk, skNm: msk.map(id => SK_NM[id]),
-    petXp, egg, eggEv, collector, crow, soloM
+    petXp, egg, eggEv, eggEv2, collector, crow, soloM
   };
 }
 
@@ -365,7 +371,7 @@ async function loadMarchBoost(db, uid, seat, now, cache) {
 module.exports = {
   FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
   DIS_GOAL, VL_DZ, WP_PILE, SK_NM, SOLO_RW_MP, COLLECTOR_P,
-  facLvOf, facLvFromRec, petLv, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn,
+  facLvOf, facLvFromRec, petLv, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
   disSlot, disInfo, disLive, disMine, wfLvOf, wfPack, wfLvFrom, rnLv,
   marchMuls, marchSide, loadMarchBoost, ensureShared, loadFacKeys
 };

@@ -83,6 +83,7 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   }
   if (pay.egg > 0) { bump["c/eggs"] = ServerValue.increment(pay.egg); any = true; }
   if (pay.eggEv > 0) { bump["c/eggsEv"] = ServerValue.increment(pay.eggEv); any = true; }
+  if (pay.eggEv2 > 0) { bump["c/eggsEv2"] = ServerValue.increment(pay.eggEv2); any = true; }
 
   /* 절망은 increment 가 아니라 읽은 뒤 절대값으로 쓴다(0~100 클램프). 클라 gain 과 병행하면 안 된다. */
   const dzAdd = Math.round(Number(pay.dz) || 0);
@@ -108,7 +109,14 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   if (pay.flag) { consumeGear(bump, "flag"); any = true; }
   if (pay.map) { consumeGear(bump, "map"); any = true; }
   if (pay.rb) { bump["c/rsb"] = 1; any = true; }
-  if (pay.wa && day) { bump["c/wtmp"] = {day, v: 1}; any = true; }
+  /* 요새 무기고(wa): 대장간 등 기존 임시 강화를 덮지 않고, 같은 날이면 v+1. */
+  if (pay.wa && day) {
+    const cur = (await root.child("c/wtmp").get()).val();
+    const base = cur && typeof cur === "object" && String(cur.day || "") === day
+      ? Math.max(0, Number(cur.v) || 0) : 0;
+    bump["c/wtmp"] = {day, v: base + 1};
+    any = true;
+  }
 
   if (sk.length) {
     const skDay = String((await root.child("c/sk/day").get()).val() || "");

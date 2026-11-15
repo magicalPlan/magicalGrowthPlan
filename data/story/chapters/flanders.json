@@ -1,0 +1,50 @@
+{
+  "id": "flanders",
+  "title": "플랜더스의 개",
+  "lead": "다시 함께할 수만 있다면 무엇이든 할 수 있어. 그런 생각을 했어.",
+  "shards": [
+    {
+      "id": "flanders-1",
+      "title": "플랜더스의 개-인트로",
+      "cast": {
+        "???": {
+          "name": "???",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+      }
+    },
+    "start": "meet",
+    "nodes": {
+      "meet": {
+        "lines": [
+          {
+            "who": "???",
+            "text": "안녕! 누굴 그리 찾고 있어?"
+          },
+          {
+            "who": "???",
+            "text": "앗, 설마 나야?"
+          },
+          {
+            "who": "???",
+            "text": "우와, 누가 날 찾아주다니! 어쩌면 나, 정말로 일류 화가가 된 걸지도!"
+          }
+        ],
+        "choose": [
+          {
+            "label" :"팔레트?",
+            "next": "pallette_0"
+          },
+          {
+            "label": "일류 화가?",
+            "next": "artist_0"
+          }
+        ]
+      },
+      "pallette_0": {
+
+      }
+    }
+    }
+  ]
+}

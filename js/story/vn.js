@@ -1,10 +1,10 @@
 /* 공용 비주얼 노벨. 버튼을 누르는 쪽에서 vnOpen 으로 띄운다.
-   지금은 장기 의뢰의 단서 조각 칸만 연다. 그 버튼은 data/story/lock.js 의 storyFlag 가 true 일 때만 생긴다.
-   세계관 > 이벤트 탭에서는 열지 않는다.
+   장기 의뢰 단서 조각(storyFlag)과 세계관 > 이벤트 탭(WORLD_STORY_OPEN)에서 연다.
    글과 갈림길은 호출하는 쪽이 객체로 넘긴다. 이 파일은 서버에 묻지 않고, 고른 선택도 저장하지 않는다.
    스토리는 모두에게 같은 글이므로 계정마다 다른 값이 필요 없다. 창을 닫으면 재생은 사라진다.
 
-   이야기 객체 모양 (data/story/shards.json 이 이 모양을 쓴다):
+   챕터 파일: data/story/chapters/*.json → { id, title, lead, shards:[ 에피소드… ] }
+   목록: data/story/index.json. 에피소드(이야기) 객체 모양:
    {
      id, title,
      cast: { "화자키": { name:"이름표", img:"스탠딩 주소", side:"left 또는 right" } },

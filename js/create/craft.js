@@ -21,9 +21,11 @@ function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonu
  ks.forEach(id=>{C.inv[id]=(C.inv[id]||0)+got[id]});C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+ks.reduce((s,id)=>s+got[id],0);
  return "공방 재료: "+ks.map(id=>cfName(id)+" +"+got[id]).join(", ")}
 
-// 이 제작법으로 지금 몇 개까지 만들 수 있는지. 재료, 골드, 들고 있을 수 있는 수(계약의 촛불은 1개)를 모두 본다.
+// 이 제작법으로 지금 몇 개까지 만들 수 있는지. 재료, 골드, 들고 있을 수 있는 수(계약의 촛불은 1개), 시즌 1회 제한을 모두 본다.
 const cfGold=r=>r[4]?pr(r[4]):0;
-const cfCap=r=>r[1]==="candle"?Math.max(0,1-cfHave("candle")):99;
+const cfSeason=r=>!!(typeof CRAFT_SEASON!=="undefined"&&CRAFT_SEASON[r[1]]);
+const cfSeasonDone=r=>cfSeason(r)&&!!((C.scf||{})[r[1]]);
+const cfCap=r=>{if(cfSeason(r))return cfSeasonDone(r)?0:1;return r[1]==="candle"?Math.max(0,1-cfHave("candle")):99};
 function cfMax(r){let n=cfCap(r);Object.entries(r[3]).forEach(([id,k])=>{n=Math.min(n,Math.floor(cfHave(id)/k))});const g=cfGold(r);if(g)n=Math.min(n,Math.floor((C.gd||0)/g));return Math.max(0,n)}
 
 // 마을 공방 단계를 읽어 온 뒤 다시 그린다. 상점과 같은 방식으로 탭을 열 때 한 번만 묻는다.
@@ -37,7 +39,7 @@ function craft(msg){if(!C)return;C.inv=C.inv||{};const fresh=$("#v-craft").hidde
  const ml=$("#cfm");ml.innerHTML="";MAT.forEach(m=>{const c=elT("button","chip cf-mat");c.type="button";c.title=m[3]+" 얻는 곳: "+m[4];c.onclick=()=>{mm.style.color="var(--mu)";mm.textContent=m[2]+" "+m[1]+": "+m[3]+" 얻는 곳: "+m[4]+"."};
   c.append(itIc(m[0],"sm")||elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});
  /* 제작 카드의 이름 위 그림. 아이템 id 파일(license.png 등)이 아니라 이 주소를 쓴다. */
-const CF_ART={license:"assets/items/they_look_very_polite.png",g4:"assets/items/dream_music_box.png",prism:"assets/items/elemental_prism.png"};
+const CF_ART={license:"assets/items/they_look_very_polite.png",g4:"assets/items/dream_music_box.png",prism:"assets/items/elemental_prism.png",vtown:"assets/items/move_to_other_town.png"};
 function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.createElement("img");i.src=src;i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic lg";return i}
 // 만들 수량
  const qb=$("#cfq");qb.innerHTML="";qb.appendChild(elT("span","shopq-l","만들 수량"));
@@ -47,22 +49,24 @@ function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.cre
   const it=ITM.find(t=>t[0]===r[1]),ds=it?it[2]:(MATM[r[1]]||[])[3]||"";
   {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
   const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfNm(id)+" "+cfHave(id)+"/"+n);{const ic=itIc(id,"xs");if(ic)s.prepend(ic)}need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
-  const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":"");
+  const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":cfSeasonDone(r)?"이번 시즌에는 이미 만들었다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):(cfSeason(r)?"시즌마다 1개 · 지금 만들 수 있다":"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":""));
   b.appendChild(elT("small",null,st));b.appendChild(elT("small",null,"보유 "+cfHave(r[1])));
   b.setAttribute("aria-label",cfName(r[1])+" 만들기. "+st+". "+r[6]);b.disabled=lock||mx<=0;b.onclick=()=>doCraft(r[0]);rl.appendChild(b)});
  if(fresh)craftRead()}
 
 // 만들기: 재료와 골드를 쓰고 결과물을 가방에 넣는다. 바뀐 칸만 저장한다.
-function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv("workshop")<r[5])return;const k=Math.min(craftQ,cfMax(r));if(k<=0)return;
+// CRAFT_SEASON 아이템은 C.scf 에 시즌 제작 여부를 남긴다(회귀 때 지워짐).
+function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv("workshop")<r[5])return;if(cfSeasonDone(r))return;const k=Math.min(craftQ,cfMax(r));if(k<=0)return;
  C.inv=C.inv||{};C.stats=C.stats||{};const g=cfGold(r)*k,fields={};
  Object.entries(r[3]).forEach(([id,n])=>{C.inv[id]=cfHave(id)-n*k;fields["inv/"+id]=C.inv[id]});
  if(g){C.gd=(C.gd||0)-g;fields.gd=C.gd}
- let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle")extra=0;out+=extra;
+ let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle"||cfSeason(r))extra=0;out+=extra;
  C.inv[r[1]]=cfHave(r[1])+out;fields["inv/"+r[1]]=C.inv[r[1]];
+ if(cfSeason(r)){C.scf=C.scf&&typeof C.scf==="object"?C.scf:{};C.scf[r[1]]=1;fields["scf/"+r[1]]=1}
  if(ITM.some(t=>t[0]===r[1])&&dexAdd("it",r[1]))fields["dex/it/"+r[1]]=C.dex.it[r[1]];
  C.stats.crafts=(C.stats.crafts||0)+k;fields["stats/crafts"]=C.stats.crafts;
  apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});titleState();checkTitles();
- craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":""))}
+ craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
 
 /* 속성의 프리즘: 가방에서 '사용'을 누르면 아래 상자가 열린다. 바꿀 속성(가진 것)과 새 속성(아직 없는 것)을 고르고 확인하면 바뀐다.
    준비해 둔 마법은 속성이 맞을 때만 쓰이므로(armedSk), 사라진 속성의 마법은 저절로 쓰이지 않는다. 숫자는 data/game.js 의 PRISM_DZ. */
@@ -81,3 +85,29 @@ function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.in
  try{if(typeof dexSkAttr==="function"&&dexSkAttr(p.to))note("dex","도감에 새 마법이 기록되었다: "+((SK[p.to]||{}).nm||p.to))}catch(e){}
  const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}
+
+/* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 를 바꾼다.
+   시설 기여(C.fc → vfac/vfactop)는 사용 즉시 옛 마을에서 빼고 새 마을로 이관한다. 이용 기록(C.fu)은 그대로 둔다.
+   타락 중에는 쓸 수 없다. */
+let vtownOn=false,vtownPick=null,vtownBusy=false;
+function vtownBox(){const box=elT("div","card prism-box"),cur=C.v,opts=Object.keys(VL).filter(k=>k!==cur);
+ box.appendChild(elT("p","hint","지금 마을: "+((VL[cur]||{}).n||cur||"없음")));
+ box.appendChild(elT("p","hint","옮길 마을"));
+ const row=elT("div","row");opts.forEach(k=>{const v=VL[k],b=elT("button","chip",v?v.n:k);b.type="button";b.title=v?v.d:k;b.setAttribute("aria-pressed",vtownPick===k?"true":"false");b.onclick=()=>{vtownPick=k;bag()};row.appendChild(b)});box.appendChild(row);
+ if(vtownPick&&VL[vtownPick])box.appendChild(elT("p","hint",VL[vtownPick].n+": "+VL[vtownPick].d));
+ const ok=!!vtownPick&&!!VL[vtownPick]&&vtownPick!==cur&&!vtownBusy,b=elT("button","btn"+(ok?"":" g"),vtownBusy?"옮기는 중…":ok?(VL[cur]?VL[cur].n:cur)+" → "+VL[vtownPick].n:"옮길 마을을 골라야 한다");b.type="button";b.disabled=!ok;b.onclick=()=>vtownUse();box.appendChild(b);return box}
+async function vtownUse(){const to=vtownPick,from=C.v;if(vtownBusy||!to||!VL[to]||to===from)return;
+ if((C.inv.vtown||0)<1)return;if(C.fall){bag("타락한 동안에는 마을을 떠날 수 없다.");$("#bgm").style.color="var(--bad)";return}
+ if(!confirm((VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮길까?\n\n· 소속이 바뀐다\n· 시설 기여는 새 마을로 옮긴다(옛 마을 합계에서는 뺀다)\n· 오늘 시설 이용 기록은 그대로다\n· 되돌리려면 이동권이 하나 더 필요하다"))return;
+ vtownBusy=true;try{if(typeof bag==="function")bag()}catch(e){}
+ const fc=C.fc&&typeof C.fc==="object"?Object.assign({},C.fc):{};
+ C.inv.vtown--;C.v=to;C.stats=C.stats||{};C.stats.townMoves=(C.stats.townMoves||0)+1;C.stats.vSeen=C.stats.vSeen&&typeof C.stats.vSeen==="object"?C.stats.vSeen:{};if(from&&VL[from])C.stats.vSeen[from]=1;C.stats.vSeen[to]=1;vtownOn=false;vtownPick=null;titleState();
+ /* 화면 캐시: 옛 마을에 붙어 있던 내 기여 보정분을 지운다. 이용 기록(fu)은 손대지 않는다. */
+ try{if(typeof facFly==="object"&&facFly)Object.keys(FAC_KEY||{}).forEach(k=>{delete facFly[from+"/"+k];delete facFly[to+"/"+k]});if(typeof facSrv==="object"&&facSrv)Object.keys(FAC_KEY||{}).forEach(k=>{delete facSrv[from+"/"+k]});if(typeof facVill!=="undefined")facVill="";if(typeof vfacReady==="object"&&vfacReady){delete vfacReady[from];delete vfacReady[to]}}catch(e){}
+ note("quest","마을 이동권: "+(VL[from]?VL[from].n:from)+"에서 "+VL[to].n+"(으)로 옮겼다.");save();regPlayer();checkTitles();
+ let moved="";if(XON()&&typeof apiVfacTransfer==="function"&&Object.keys(fc).some(k=>(Number(fc[k])||0)>0)){
+  try{const w=await apiVfacTransfer(from,to,fc,typeof nmOf==="function"?nmOf():C.n);moved=w.ok?"\n\n시설 기여 "+w.ok+"곳을 새 마을로 옮겼다."+(w.fail?" (실패 "+w.fail+"곳)":""):w.fail?"\n\n시설 기여를 옮기지 못한 칸이 있다. 시설 탭에서 다시 열면 맞춰 볼 수 있다.":""}catch(e){moved="\n\n시설 기여 이관에 실패했다. 시설 탭을 열어 다시 맞춰 보자."}}
+ vtownBusy=false;
+ alertBox("🏘 마을 이동권","잉크가 마르고 각오가 굳었다.\n\n"+(VL[from]?VL[from].n:from)+" → "+VL[to].n+"\n"+VL[to].d+moved+"\n\n당신은 떠났다.");
+ if(typeof loadFac==="function")loadFac(true).catch(()=>{});
+ if(typeof hub==="function")hub();else bag()}

@@ -91,16 +91,18 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    시즌은 players/{운영자}/rst 에도 {id}를 남긴다. 캐릭터의 C.rsv 가 그 id 이상이 되면 같은 회귀는 다시 돌리지 않는다.
    접속(boot) 때는 이미 서버에 반영된 기록을 읽고, C.rstn < due 이면 알림만 한 번 띄운다(다시 회귀시키지 않음).
    접속 중 rr 가 커지면 서버 캐릭터를 다시 읽어 맞추고 알림함만 남긴다. 팝업 알림은 다음 접속 때.
-   남기는 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·통계, 사역마, 장기 토벌·단서, 보상·알림 표시.
-   처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망·친구 등. 시즌 때 공용 채팅·선물·마을·보스·타락은 함께 지운다. */
+   남기는 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·통계(대련 전적 제외), 사역마, 장기 토벌·단서, 보상·알림 표시.
+   처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망·친구, 대련 전적 등. 시즌 때 공용 채팅·선물·마을·보스·타락·대련 방은 함께 지운다. */
 let RST=null;
 /* lh·clue: 장기 진행은 남긴다. lv·ex·xv·gd 는 KEEP에 넣지 않아 레벨 1·경험 0·골드 100으로 돌아간다. rstn 도 KEEP에 넣지 않는다(회귀마다 알림을 다시 띄우려고). */
+/* scf(시즌 제작 1회 기록)는 KEEP에 넣지 않는다. 회귀하면 다시 만들 수 있다. */
+/* duSeen·duNt·du·duD 는 KEEP에 넣지 않는다. 회귀하면 대련 신청 표시·진행·일일 보상 횟수가 비워진다. stats.duW/duL/duD 는 rstShape 에서 0으로 맞춘다. */
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
  "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
- "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","duSeen","rsn","pn","duNt","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
+ "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","rsn","pn","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
-const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드와 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드와 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
-const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·친구 목록 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
+const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
+const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·친구 목록·대련 전적 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
 async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
@@ -115,9 +117,10 @@ function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={}
  keep.a=rstAttrs(keep.a);
  const next=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
  next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
+ next.stats.duW=0;next.stats.duL=0;next.stats.duD=0;
  const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
 function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
- return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
+ return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,du:{w:0,l:0},hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
 /* 한 계정 서버 회귀. 표시보다 뒤에 만든 캐릭터는 내용 없이 rsv 만 맞춘다.
    캐릭터 본문(c)은 patch 가 아니라 set 으로 통째로 갈아 끼운다. patch 로 넣으면 각인(rn)·옛 b 같은 칸이 남아
    레벨만 1인데 전투력이 수천으로 보이는 일이 생긴다. 등록자 명부(who)·공개 카드의 pw 도 같이 맞춘다. */
@@ -130,6 +133,9 @@ async function rstWrite(uid,src,R){if(!src||typeof src!=="object")throw new Erro
  try{await DB.doc("players/"+uid).patch(pub)}catch(e){late.push("공개 카드")}
  try{await DB.doc("who/"+uid).patch({g:String(ch.g||"").slice(0,2),a:String(pub.a||"").slice(0,40),lv:ch.lv||1,pw:Math.max(0,Number(pub.pw)||0),dz:0,fl:null,rv:R.id,db:null})}catch(e){late.push("명부")}
  try{await DB.doc("raid/"+uid).delete()}catch(e){}
+ /* 개인 회귀: 그 사람의 대련 신청함·구인글만 지운다. 진행 중 xb 방·상대 쪽 xa 는 시즌 초기화에서 통째로 비운다. */
+ try{await DB.doc("rooms/xa"+uid).delete()}catch(e){}
+ try{await DB.doc("rooms/xr/"+uid).delete()}catch(e){}
  return{ch,late}}
 async function rstTakeCloud(due){if(!C||!UID||!DB)return false;
  try{const s=await DB.doc("accounts/"+UID).get();const ch=s.exists&&s.data()&&s.data().c;if(!ch||typeof ch!=="object"||(Number(ch.rsv)||0)<due)return false;
@@ -150,14 +156,16 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
  for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
- /* 1:1 방 목록은 rooms/xd{uid}. 출정(xm·xv)·대련(xa·xb·xr) 방은 같은 rooms 아래에 있으므로 통째로 지우지 않는다. */
- try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>String(k).indexOf("xd")===0);
-  let bad=0;for(const k of ks){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("1:1 방 목록 "+bad+"/"+ks.length+"개");else done.push("1:1 방 목록 "+ks.length+"개")}catch(e){fail.push("1:1 방 목록 ("+String(e&&e.message||e)+")")}
+ /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
+  const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
+  let bad=0;for(const k of xd){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("1:1 방 목록 "+bad+"/"+xd.length+"개");else done.push("1:1 방 목록 "+xd.length+"개");
+  bad=0;for(const k of du){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("대련 방 "+bad+"/"+du.length+"개");else done.push("대련 방 "+du.length+"개")}catch(e){fail.push("1:1·대련 방 ("+String(e&&e.message||e)+")")}
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
 async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
- const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구·마을 경쟁·보스 기록이 지금 서버에서 초기화된다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
+ const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구·마을 경쟁·보스·대련 방/전적이 지금 서버에서 초기화된다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
  if((t||"").trim()!=="초기화"){msg.textContent="취소했다.";return}
  btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="초기화하는 중이다. 창을 닫지 말자...";
  try{const R={id:Date.now(),ts:Date.now()};C.rst=R;save();await DB.doc("players/"+UID+"/rst").set(R);RST={id:R.id,by:UID};
@@ -175,8 +183,8 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}btn.disabled=false}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
-  elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드와 시험으로 얻은 속성·등급(E)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록. 공지와 '멸망까지', 출정·대련 방은 남는다."),
+  elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
@@ -191,8 +199,8 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
  rc.append(rb,rm);box.appendChild(rc);
  const pc=elT("div","card rst-card rst-one");pc.style.marginTop="12px";pc.append(elT("h2","","👤 개인 회귀 (운영자 전용)"),
-  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드와 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
-  elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스와 다른 사람의 기록은 그대로 둔다."));
+  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+  elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스·공용 대련 방과 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
  const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc);
  drawAdmGrant(box)}
@@ -214,7 +222,8 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
 
 /* ── 전체·개인 보상 지급 (운영자 전용) ──
    공지 탭 하단. 전체는 accounts 등록자 전원, 개인은 UID 한 명. 접속 여부와 상관없이 서버 기록에 바로 더한다.
-   골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다. */
+   골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다.
+   원격 지급: 캐릭터 통째 GET/PATCH 금지. 이름·(경험 시)ex·nt 만 읽고, 재화·가방은 increment 칸 PATCH. */
 function admGrantNum(v,max){const n=Math.floor(Number(v)||0);if(!isFinite(n)||n<=0)return 0;return Math.min(max||999999,n)}
 function admGrantTxt(r){const a=[];if(r.g)a.push("골드 +"+r.g);if(r.ex)a.push("경험치 +"+r.ex);if(r.m)a.push("마력석 +"+r.m);if(r.eggs)a.push("사역마의 알 +"+r.eggs);
  if(r.eggsEv)a.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" +"+r.eggsEv);
@@ -231,15 +240,30 @@ function admGrantOnChar(ch,r){const prev=C;C=ch;try{
   const txt=admGrantTxt(r);C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k:"gift",t:("운영자 보상: "+txt).slice(0,160),u:"",ts:Date.now(),r:false});
   try{if(typeof ntTrim==="function")ntTrim()}catch(e){}try{if(typeof eggFix==="function")eggFix()}catch(e){}
  }finally{C=prev}return ch}
+/* 원격 지급용. 골드·알·가방은 increment. 캐릭터 통째 GET/PATCH 하지 않는다. */
+function admGrantInc(n){return typeof apiInc==="function"?apiInc(n):{".sv":{"increment":Math.trunc(Number(n)||0)}}}
+function admGrantPatchBody(r){const body={ts:Date.now(),sid:"admin-grant"};
+ if(r.g)body["c/gd"]=admGrantInc(r.g);if(r.eggs)body["c/eggs"]=admGrantInc(r.eggs|0);if(r.eggsEv)body["c/eggsEv"]=admGrantInc(r.eggsEv|0);
+ if(r.m)body["c/inv/mana"]=admGrantInc(r.m);
+ Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;body["c/inv/"+id]=admGrantInc(n)});
+ return body}
 async function admGrantIds(){let ids=[];
  try{ids=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
  if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
  if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
  return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
 async function admGrantSave(uid,r){if(uid===UID&&C){admGrantOnChar(C,r);try{if(typeof titleState==="function")titleState()}catch(e){}try{save();await saveCloud(true)}catch(e){throw e||new Error("save")}return "self"}
- const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");
- const ch=admGrantOnChar(JSON.parse(JSON.stringify(acc.c)),r);
- await DB.doc("accounts/"+uid).patch({c:ch,prog:{lv:ch.lv||1,ex:ch.ex||0,xv:ch.xv||3},ts:Date.now(),sid:"admin-grant"});return "ok"}
+ /* 존재만 확인(이름 칸). 본문 전체는 받지 않는다. */
+ const nm=await DB.doc("accounts/"+uid+"/c/n").get();if(!nm.exists||nm.data()==null||nm.data()==="")throw new Error("empty");
+ const body=admGrantPatchBody(r);
+ if(r.ex){let cur=0;try{const s=await DB.doc("accounts/"+uid+"/c/ex").get();cur=Number(s.exists?s.data():0)||0}catch(e){}
+  const add=r.ex|0,next=Math.max(0,cur+add),lv=typeof lvOf==="function"?lvOf(next):1;
+  body["c/ex"]=admGrantInc(add);body["c/lv"]=lv;body["c/xv"]=3;body["prog/ex"]=admGrantInc(add);body["prog/lv"]=lv;body["prog/xv"]=3}
+ const note={k:"gift",t:("운영자 보상: "+admGrantTxt(r)).slice(0,160),u:"",ts:Date.now(),r:false};
+ try{const s=await DB.doc("accounts/"+uid+"/c/nt").get();let nt=s.exists&&Array.isArray(s.data())?s.data().slice():[];
+  nt.unshift(note);const max=typeof NT_MAX==="number"?NT_MAX:60;if(nt.length>max)nt=nt.slice(0,max);body["c/nt"]=nt}
+ catch(e){body["c/nt"]=[note]}
+ await DB.doc("accounts/"+uid).patch(body);return "ok"}
 async function admGrantRun(btn,msg,getR){if(!ADM[UID]||!XON()||!DB)return;const r=getR();if(!r){msg.style.color="var(--bad)";msg.textContent="지급할 보상을 하나 이상 정해 줘.";return}
  const preview=admGrantTxt(r);const t=prompt("등록된 모든 캐릭터에 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
  if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}

@@ -7,7 +7,8 @@ const MAT_DROP = {
   x_fail: [["m_ash", 1, 1], ["m_shard", 1, .3]]
 };
 const MAT_VIL = {B: "m_herb", D: "m_ash"};
-/* 2026-11 단서 이벤트. 기간이 아니면 clp=0. */
+/* 단서 조각(출정 서버 경로). data/event/pack.js 의 piece.id·from·to 및
+   common.js CLP_FORM.drop.x_ok/x_fail 과 맞춘다. 다음 이벤트 때 pack 과 함께 고치고 배포. */
 const CLP = {
   id: "clue-2026-11",
   from: Date.UTC(2026, 9, 31, 15),
