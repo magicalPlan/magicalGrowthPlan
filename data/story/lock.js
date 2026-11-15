@@ -11,7 +11,7 @@
    새 챕터 추가:: chapters/새파일.json 작성 → index.json chapters 에 한 줄 → 필요 시 WORLD_STORY_OPEN.
    */
 
-const STORY_INDEX_URL="data/story/index.json?v=1";
+const STORY_INDEX_URL="data/story/index.json?v=2";
 /* 예전 단일 파일 주소. storyLoad 가 index 형태가 아닐 때만 쓰이던 호환용 — 지금은 index 를 쓴다. */
 const STORY_URL=STORY_INDEX_URL;
 
@@ -53,5 +53,7 @@ const WORLD_STORY_OPEN=[
  {id: "shady-merchant-1", open:true},
  {id: "flanders-1", open:false},
  {id: "flanders-2", open:false},
+ /* flanders-3: 미술 콩쿠르 이벤트가 끝난 뒤 open 을 true 로 바꾼다. */
+ {id: "flanders-3", open:false},
  {id: "flanders-side", open: false}
 ];

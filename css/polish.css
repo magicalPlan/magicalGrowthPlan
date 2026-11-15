@@ -650,3 +650,11 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 /* 마력 각인 도트(js/main.js 의 drawRunes). 아직 새기지 않은 각인은 흐리게 */
 .rn-row.rn-off>.it-ic{filter:grayscale(.85) opacity(.45)}
 .rn-ic{font-size:26px;width:40px;text-align:center;flex:0 0 auto}
+
+/* 이야기 암전(js/story/vn.js 의 fx:"dark"). 글이 없으면 대화창 대신 화면만 까맣게, 누르면 다음 줄로 */
+.vn-float{transition:background-color .7s ease}
+.vn-float.vn-dark,html[data-theme="light"] .vn-float.vn-dark{background:#000}
+.vn-float.vn-dark .vn-stand{display:none}
+.vn-float.vn-dark-quiet .vn-name,.vn-float.vn-dark-quiet .vn-text{visibility:hidden}
+.vn-float.vn-dark-quiet .vn-box{background:transparent;border-color:transparent;box-shadow:none}
+@media (prefers-reduced-motion:reduce){.vn-float{transition:none}}

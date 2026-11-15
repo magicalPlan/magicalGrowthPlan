@@ -276,12 +276,167 @@
               "text": "파트라슈도 응원해주기로 했어!"
             },
             {
-              "who": "nero_default",
+              "who": "patrasche",
               "text": "왈왈! 컹!"
             },
             {
               "who": "nero_default",
               "text": "하하, 고마워! 파트라슈!"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "flanders-3",
+      "title": "플랜더스의 개-기억의 파편2",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "patrasche": {
+          "name": "파트라슈",
+          "img": "",
+          "side": "left"
+        }
+      },
+      "start": "warn_3",
+      "nodes": {
+        "warn_3": {
+          "lines": [
+            {
+              "who": "",
+              "text": "⚠ 주의: 이번 이야기에는 동물의 고통 묘사가 등장합니다."
+            },
+            {
+              "who": "",
+              "text": "이에 불쾌감을 느끼시는 분들은 열람을 재고해 주시길 바랍니다."
+            }
+          ],
+          "next": "sorry_3"
+        },
+        "sorry_3": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "파트라슈, 미안해."
+            },
+            {
+              "who": "nero_default",
+              "text": "콩쿠르… 결국 우승하지 못했네."
+            },
+            {
+              "who": "nero_default",
+              "text": "…"
+            },
+            {
+              "who": "nero_default",
+              "text": "뭔가 부족했던 걸까?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "실력이 부족했어.",
+              "next": "skill_3"
+            },
+            {
+              "label": "경험이 부족했어.",
+              "next": "exp_3"
+            },
+            {
+              "label": "간절함이 부족했어.",
+              "next": "desire_3"
+            }
+          ]
+        },
+        "skill_3": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "엣, 돌직구네…"
+            },
+            {
+              "who": "nero_default",
+              "text": "…알고는 있었지만."
+            }
+          ],
+          "next": "cough_3"
+        },
+        "exp_3": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "…하지만, 우유배달부가 대체 무슨 경험을 쌓을 수 있겠어."
+            },
+            {
+              "who": "nero_default",
+              "text": "매일 우유배달 하는 것 외에, 뭘 할 수 있어, 내가."
+            }
+          ],
+          "next": "cough_3"
+        },
+        "desire_3": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "…얼마나."
+            },
+            {
+              "who": "nero_default",
+              "text": "얼마나 더, 간절해야 하는데?"
+            }
+          ],
+          "next": "cough_3"
+        },
+        "cough_3": {
+          "lines": [
+            {
+              "who": "patrasche",
+              "text": "켈, 쿨럭… 컥…"
+            },
+            {
+              "who": "nero_default",
+              "text": "…파트라슈."
+            },
+            {
+              "who": "nero_default",
+              "text": "파트라슈, 파트라슈!"
+            },
+            {
+              "who": "",
+              "text": "",
+              "fx": "dark"
+            }
+          ],
+          "next": "poor_3"
+        },
+        "poor_3": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "…미안해."
+            },
+            {
+              "who": "nero_default",
+              "text": "콩쿠르에서 우승해서… 안 아프게 해주려 했는데."
+            },
+            {
+              "who": "nero_default",
+              "text": "그조차도 허락되지가 않아…"
+            },
+            {
+              "who": "nero_default",
+              "text": "가난은 정말 잔혹한 전염병이네."
+            },
+            {
+              "who": "nero_default",
+              "text": "동물한테까지 옮는다니… 하하."
+            },
+            {
+              "who": "nero_default",
+              "text": "…하하."
             }
           ]
         }
