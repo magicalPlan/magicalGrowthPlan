@@ -11,11 +11,15 @@ const {getFunctions} = require("firebase-admin/functions");
 const sim = require("./sim/engine");
 const {grantMarchCore} = require("./sim/xpay");
 const {createFmsgFriend} = require("./friends/fmsg");
+const {createBossHitHp} = require("./boss/hp");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
 /* 친구: fmsg req|ok|del → accounts c/fr·fq·fo PATCH. 공명 rok/rno 제외. */
 exports.fmsgFriend = createFmsgFriend(getDatabase);
+
+/* 보스·이벤트 보스: wboss/{id}/{uid} 공격 기록 → 서버가 _hp(hp0·sum) 를 굳히고 더한다. */
+exports.bossHitHp = createBossHitHp(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
