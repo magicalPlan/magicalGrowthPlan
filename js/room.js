@@ -267,6 +267,7 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
     if(pay.crow)tn.push("밤까마귀가 마력석 1개를 물어 왔다");
     if(pay.egg)tn.push("🥚 사역마의 알을 주웠다!");
     if(pay.eggEv&&typeof PET_EV!=="undefined")tn.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!");
+    if(pay.eggEv2&&typeof PET_EV2!=="undefined")tn.push(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!");
     if(pay.petXp)tn.push("사역마 친밀도 +"+pay.petXp)}
    else if(serverPay)tn.push("출정 보상·소모·펫은 서버에서 반영");
    /* 아래 !serverPay 블록·gain 호출: 로컬/옛 방 전용. 마치(serverPay)는 전부 건너뛴다. */

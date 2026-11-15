@@ -90,7 +90,11 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  const leg=PET_EV.leg||0,lim=PET_EV.lim||0,rare=PET_EV.rare||0,common=Math.max(0,1-leg-lim-rare),limN=Object.values(PETS).filter(x=>x[3]===4).length||1,ev=elT("div","set-odd-box");
  ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","기간 한정은 "+limN+"마리가 같은 확률(각 "+oddsTxt(lim/limN)+")이다. 그다음은 희귀, 나머지는 일반이다."));
  ev.appendChild(oddsTable([[PET_RARE[3],leg],[PET_RARE[4],lim],[PET_RARE[2],rare],[PET_RARE[1],common]],["희귀도","확률"]));
- box.append(egg,ev);const sh=oddsShady();if(sh)box.appendChild(sh)}
+ box.append(egg,ev);
+ if(typeof PET_EV2!=="undefined"){const L2=PET_EV2.leg||0,ids=Array.isArray(PET_EV2.ids)?PET_EV2.ids.filter(id=>PETS[id]):[],lim2=ids.length?(PET_EV2.lim||0):0,rare2=PET_EV2.rare||0,common2=Math.max(0,1-L2-lim2-rare2),limN2=ids.length||1,ev2=elT("div","set-odd-box");
+  ev2.append(elT("p","set-odd-name",PET_EV2.ic+" "+PET_EV2.nm),elT("p","hint",ids.length?"기간 한정은 "+limN2+"마리가 같은 확률(각 "+oddsTxt(lim2/limN2)+")이다. 그다음은 희귀, 나머지는 일반이다.":"기간 한정 사역마는 곧 공개된다. 지금은 전설·희귀·일반만 나온다."));
+  ev2.appendChild(oddsTable([[PET_RARE[3],L2],[PET_RARE[4],lim2],[PET_RARE[2],rare2],[PET_RARE[1],common2]],["희귀도","확률"]));box.appendChild(ev2)}
+ const sh=oddsShady();if(sh)box.appendChild(sh)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
 (function(){const bindDialog=(openId,dialogId)=>{const open=$("#"+openId),dialog=$("#"+dialogId);if(!open||!dialog)return;

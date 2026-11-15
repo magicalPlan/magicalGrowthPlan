@@ -67,6 +67,7 @@ function corePay(r, uid, seedKey, now, boost) {
     petXp: side.petXp || 0,
     egg: side.egg || 0,
     eggEv: side.eggEv || 0,
+    eggEv2: side.eggEv2 || 0,
     collector: side.collector || 0,
     crow: side.crow || 0,
     soloM: side.soloM || 0
@@ -77,7 +78,7 @@ function payHas(amt) {
   if (!amt) return false;
   if (amt.g > 0 || amt.ex > 0 || amt.cl > 0 || amt.clp > 0) return true;
   if (amt.dz || amt.tc || amt.charm || amt.rb || amt.wa || amt.wp || amt.dh) return true;
-  if (amt.flag || amt.map || amt.petXp || amt.egg || amt.eggEv) return true;
+  if (amt.flag || amt.map || amt.petXp || amt.egg || amt.eggEv || amt.eggEv2) return true;
   if (amt.sk && amt.sk.length) return true;
   return !!(amt.inv && Object.keys(amt.inv).some(k => amt.inv[k] > 0));
 }

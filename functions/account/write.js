@@ -83,6 +83,7 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   }
   if (pay.egg > 0) { bump["c/eggs"] = ServerValue.increment(pay.egg); any = true; }
   if (pay.eggEv > 0) { bump["c/eggsEv"] = ServerValue.increment(pay.eggEv); any = true; }
+  if (pay.eggEv2 > 0) { bump["c/eggsEv2"] = ServerValue.increment(pay.eggEv2); any = true; }
 
   /* 절망은 increment 가 아니라 읽은 뒤 절대값으로 쓴다(0~100 클램프). 클라 gain 과 병행하면 안 된다. */
   const dzAdd = Math.round(Number(pay.dz) || 0);
