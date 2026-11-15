@@ -685,6 +685,114 @@
           ]
         }
       }
+    },
+    {
+      "id": "flanders-5",
+      "title" :"플랜더스의 개 - 최종장",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "patrasche": {
+          "name": "파트라슈",
+          "img": "",
+          "side": "left"
+        },
+        "flanders_artist_default": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        }
+      },
+      "start": "once_apon_a_time",
+      "nodes": {
+        "once_apon_a_time": {
+          "lines": [
+            {
+              "who": "",
+              "text": "옛날옛적에, 가난한 우유 배달부 소년과 개 한 마리가 함께 살았습니다."
+            },
+            {
+              "who": "",
+              "text": "..."
+            },
+            {
+              "who": "",
+              "text": "살았던 적이, 있었습니다."
+            },
+            {
+              "who": "",
+              "text": "조금 가까운 현재에, 모든 것을 잃은 '플랜더스의 화가'가 살았습니다."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "...포기 안 해."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "포기 안 할 거야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "그 아이를 위해서."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "꿈을 위해서."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "나는, 절대로...!"
+            },
+            {
+              "who": "",
+              "text": "그 순간."
+            },
+            {
+              "who": "",
+              "text": "절망한 소년의 손을, 새하얀 개가 핥짝였습니다."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "...파트라슈."
+            }, 
+            {
+              "who": "flanders_artist_default",
+              "text": "이런, 미안. 내가 물 주는 걸 깜박했구나. 미안해."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "금방, 금방 줄 테니까..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "그런 눈으로."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "그런 눈으로, 보지 마..."
+            },
+            {
+              "who": "",
+              "text": "소년은 파트라슈를 꽉 끌어안았습니다."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "포기 안 할게."
+            },
+            {
+              "who": "flanders_artist_default",
+              "texT": "이건, 널 포기하는 게 아니야."
+            }
+          ]
+        }
+      }
     }
   ]
 }

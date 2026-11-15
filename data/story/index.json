@@ -12,7 +12,7 @@
       "title": "플랜더스의 개",
       "file": "chapters/flanders.json?v=3",
       "order": 2,
-      "world": false
+      "world": true
     },
     {
       "id": "shady",
