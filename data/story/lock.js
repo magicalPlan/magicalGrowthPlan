@@ -11,7 +11,7 @@
    새 챕터 추가:: chapters/새파일.json 작성 → index.json chapters 에 한 줄 → 필요 시 WORLD_STORY_OPEN.
    */
 
-const STORY_INDEX_URL="data/story/index.json?v=2";
+const STORY_INDEX_URL="data/story/index.json?v=3";
 /* 예전 단일 파일 주소. storyLoad 가 index 형태가 아닐 때만 쓰이던 호환용 — 지금은 index 를 쓴다. */
 const STORY_URL=STORY_INDEX_URL;
 
@@ -44,7 +44,7 @@ function storyAtTxt (at) {
 }
 
 /* 세계관 > 이벤트 탭 전용. open 을 true 로 바꾸면 그 에피소드가 탭에 보인다. CLPN·STORY_LOCK 과 별개다.
-   open 대신 with:"다른 에피소드 id" 를 적으면, 그 에피소드가 열릴 때 함께 열린다.
+   open 대신 with:"다른 에피소드 id" 를 적으면, 그 에피소드가 열릴 때 함께 열린다. with 끼리 이어 걸어도 된다(A→B→C).
    챕터 묶음·소제목은 chapters/*.json 의 title·lead, 에피소드 제목은 shards[].title. */
 const WORLD_STORY_OPEN=[
  {id: "shard-1",open:true},
@@ -56,5 +56,7 @@ const WORLD_STORY_OPEN=[
  {id: "flanders-2", open:false},
  /* flanders-3: with 에 적은 에피소드(사이드 스토리 '네가 이겼어.')가 열릴 때 함께 열린다. 따로 켤 필요 없다. */
  {id: "flanders-3", with: "flanders-side"},
+ /* flanders-4(기억의 파편3): 기억의 파편2(flanders-3)와 함께 열린다. */
+ {id: "flanders-4", with: "flanders-3"},
  {id: "flanders-side", open: false}
 ];

@@ -111,8 +111,8 @@ function worldEvent() {
    (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
       if (r && r.open && r.id) openIds[r.id] = 1
    });
-   // with: 다른 에피소드가 열리면 함께 연다(data/story/lock.js).
-   (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
+   // with: 다른 에피소드가 열리면 함께 연다(data/story/lock.js). 이어 건 것(A→B→C)도 열리도록 몇 번 되풀이한다.
+   for (let pass = 0; pass < 5; pass++) (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
       if (r && r.id && r.with && openIds[r.with]) openIds[r.id] = 1
    });
    if (!Object.keys(openIds).length) {
