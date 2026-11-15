@@ -4,7 +4,7 @@
 const {ServerValue} = require("firebase-admin/database");
 const {lvOf} = require("./xp");
 const {CLP} = require("./drops");
-const {todayStr, PET_XP_CAP} = require("./boost");
+const {todayStr, PET_XP_CAP, petXpCap} = require("./boost");
 
 async function accountExists(db, uid) {
   const root = db.ref("accounts/" + uid);
@@ -136,7 +136,8 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
     if (petId && Array.isArray(pets)) {
       const i = pets.findIndex(q => q && q.id === petId);
       if (i >= 0) {
-        const xp = Math.min(PET_XP_CAP, (Number(pets[i].xp) || 0) + petXp);
+        const cap = typeof petXpCap === "function" ? petXpCap(pets[i]) : PET_XP_CAP;
+        const xp = Math.min(cap, (Number(pets[i].xp) || 0) + petXp);
         bump["c/pets/" + i + "/xp"] = xp;
         any = true;
       }
@@ -145,7 +146,8 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
       for (let k = 0; k < keys.length; k++) {
         const q = pets[keys[k]];
         if (q && q.id === petId) {
-          const xp = Math.min(PET_XP_CAP, (Number(q.xp) || 0) + petXp);
+          const cap = typeof petXpCap === "function" ? petXpCap(q) : PET_XP_CAP;
+          const xp = Math.min(cap, (Number(q.xp) || 0) + petXp);
           bump["c/pets/" + keys[k] + "/xp"] = xp;
           any = true;
           break;

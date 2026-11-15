@@ -11,7 +11,9 @@ const WF_GOLD = .05;
 const WF_CALM = .05;
 const WAND_EX = .08;
 const SCY_DZ = 2;
-const PET_LV = [0, 20, 50, 90, 140];
+/* 클라 data/pets.js 와 동일: 다음 칸 +10×(i+2), 기본 상한 5, 밀크로 15. */
+const PET_LV = (() => { const a = [0]; for (let i = 0; i < 14; i++) a.push(a[i] + 10 * (i + 2)); return a; })();
+const PET_LV_DEF = 5, PET_LV_HARD = 15;
 const DIS = ["fire", "flood", "storm", "quake", "frost", "eclipse"];
 const DIS_MS = 6 * 3600000;
 const DIS_P = .6;
@@ -49,10 +51,18 @@ function facLvFromRec(rec) {
   return facLvOf(rec.sum);
 }
 
+function petLvCap(q) {
+  if (!q) return PET_LV_DEF;
+  const n = Math.floor(Number(q.lm));
+  return Math.min(PET_LV_HARD, Math.max(PET_LV_DEF, isFinite(n) ? n : PET_LV_DEF));
+}
 function petLv(q) {
   if (!q) return 0;
   const xp = Number(q.xp) || 0;
-  return PET_LV.filter(n => xp >= n).length;
+  return Math.min(petLvCap(q), PET_LV.filter(n => xp >= n).length);
+}
+function petXpCap(q) {
+  return PET_LV[Math.max(0, petLvCap(q) - 1)] || 0;
 }
 function petCur(c) {
   if (!c || !Array.isArray(c.pets)) return null;
@@ -87,7 +97,7 @@ const PET_EV2 = {from: Date.UTC(2026, 10, 22, 15), to: Date.UTC(2026, 11, 20, 9)
 const SOLO_RW_MP = .5;
 const COLLECTOR_P = .3;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
-const PET_XP_CAP = PET_LV[PET_LV.length - 1];
+const PET_XP_CAP = PET_LV[PET_LV_HARD - 1];
 function petEvOn(now) {
   const t = now == null ? Date.now() : now;
   return t >= PET_EV.from && t < PET_EV.to;
@@ -369,9 +379,9 @@ async function loadMarchBoost(db, uid, seat, now, cache) {
 }
 
 module.exports = {
-  FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
+  FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_LV_DEF, PET_LV_HARD, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
   DIS_GOAL, VL_DZ, WP_PILE, SK_NM, SOLO_RW_MP, COLLECTOR_P,
-  facLvOf, facLvFromRec, petLv, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
+  facLvOf, facLvFromRec, petLv, petLvCap, petXpCap, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
   disSlot, disInfo, disLive, disMine, wfLvOf, wfPack, wfLvFrom, rnLv,
   marchMuls, marchSide, loadMarchBoost, ensureShared, loadFacKeys
 };

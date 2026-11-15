@@ -309,8 +309,12 @@ html[data-theme="light"] .world-mark{color:#7a5f22;border-color:#c4a15a}
 .cf-mat b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cf-ic{font-size:1.15rem;width:1.4em;text-align:center;flex:0 0 auto}
 .cf-n{font-variant-numeric:tabular-nums;font-weight:700;color:#d8c79a}
-.cf-need{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
-.cf-need span{font-size:.78rem;padding:1px 7px;border-radius:999px;border:1px solid #ffffff22;white-space:nowrap}
+/* 재료 칩: 긴 이름(검은 왕관의 조각 등)은 줄바꿈. 카드 높이는 내용에 맞게 늘어난다. */
+#v-craft .wgrid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}
+#v-craft .chip.sq.cf-r{height:auto;min-height:126px;align-self:stretch;overflow:visible}
+.cf-need{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px;width:100%;align-self:stretch}
+.cf-need span{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px 4px;max-width:100%;box-sizing:border-box;font-size:.78rem;line-height:1.35;padding:3px 8px;border-radius:10px;border:1px solid #ffffff22;white-space:normal;overflow-wrap:anywhere;word-break:keep-all}
+.cf-need span .it-ic.xs{flex:0 0 auto;margin-right:0}
 .cf-need span.ok{color:#9fd8a8;border-color:#9fd8a855}
 .cf-need span.no{color:#ff8da0;border-color:#ff8da055}
 .cf-r.lock{opacity:.55}
@@ -599,6 +603,12 @@ html[data-theme="light"] .dex-it.lock .wp-ic{filter:brightness(0) opacity(.2)}
 /* 재료 도트: 공방 재료 칸과 필요한 재료 칩 */
 .it-ic.xs{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
 .cf-mat .it-ic.sm{width:28px;height:28px;margin:0;vertical-align:middle}
+/* 사역마 간식 선택 (성장 기록) */
+.pet-snack{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff18;width:100%}
+.pet-snack-hd{display:block;margin:0 0 6px;color:var(--mu);font-size:.78rem}
+.pet-snack-row{display:flex;flex-wrap:wrap;gap:6px}
+.pet-snack-row .chip{font-size:.78rem;padding:8px 10px}
+html[data-theme="light"] .pet-snack{border-top-color:var(--ln)}
 
 /* 기억의 파편 버튼. 목록은 js/world.js, 창은 js/story/vn.js */
 .world-shard{display:flex;width:100%;margin-top:12px;padding:16px 18px;text-align:left;font:inherit;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.15rem;letter-spacing:.12em;color:#f6edd4;cursor:pointer;border:1px solid #b89b5e88;border-radius:18px;background:linear-gradient(180deg,#221b38,#120f20 70%)}

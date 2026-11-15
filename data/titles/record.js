@@ -11,7 +11,7 @@ const TITLE_RECORD=[
 ["solo_abyss","심연의 독주","혼자서 심연 출정에 성공했다.",c=>!!c.stats?.soloAbyss],
 ["retrait","운명을 바꾼 자","운명의 재계약으로 특성을 바꿨다.",c=>(c.stats?.traitChanges||0)>=1],
 ["pet_1","첫 사역마","사역마의 알을 처음으로 부화시켰다.",c=>(c.pets||[]).length>=1||(c.stats?.hatched||0)>=1],
-["pet_max","마음이 통하는 사이","사역마와의 친밀도가 최고 단계에 이르렀다.",c=>(c.pets||[]).some(q=>q&&(q.xp||0)>=140)],
+["pet_max","마음이 통하는 사이","사역마와의 친밀도가 최고 단계에 이르렀다.",c=>(c.pets||[]).some(q=>q&&typeof petLv==="function"&&typeof petLvCap==="function"&&petLv(q)>=petLvCap(q))],
 ["pet_leg","전설의 목격자","전설의 사역마를 만났다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="hope"||q.sp==="dragon"))||!!c.stats?.petLeg],
 ["clp_100","단서 수집가","단서 조각을 100개 찾았다.",c=>(c.stats?.clpN||0)>=100],
 ["clp_goal","드러난 진실","모두와 함께 단서 조각을 모아 숨겨진 진실에 닿았다.",c=>!!c.stats?.clpGoal],

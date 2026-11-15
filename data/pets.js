@@ -2,7 +2,8 @@
    형태는 models/pet.js.
    · 알 얻기: 상점가 PET_EGG_G골드(하루 1개), 출정 성공 시 PET_DROP_X 확률, 장기 토벌 성공 시 PET_DROP_LH 확률.
    · 부화: 알을 품으면 PET_HATCH(1시간) 뒤에 깨어난다. 종류는 희귀도 확률(일반 70% · 희귀 27% · 전설 3%)로 정해진다.
-   · 친밀도: 쓰다듬기(하루 1번, +PET_PAT), 간식(PET_SNACK_G골드, 하루 3번, +PET_FEED), 함께 출정 성공(+PET_XP_RUN). 단계 기준 PET_LV.
+   · 친밀도: 쓰다듬기(하루 1번, +PET_PAT), 간식(골드·냠냠 통조림·펫 푸드 특식 합쳐 하루 PET_SNACK_N번), 함께 출정 성공(+PET_XP_RUN).
+     단계 기준 PET_LV(같은 식, 최대 PET_LV_HARD칸). 기본 상한 PET_LV_DEF, 매지컬 밀크로 마리마다 +1(최대 PET_LV_HARD).
    · 캐릭터마다 '가질 수 있는 사역마 상한'(C.petMax, 처음엔 PET_MAX=3마리)까지 데리고 있을 수 있고, '보내 주기'로 자리를 비울 수 있다.
      공방에서 만드는 '사역마 조련 허가증'을 쓰면 상한이 1 오른다. 늘릴 수 있는 것은 PET_MAX_UP(3)마리까지라서 최대 6마리다.
    효과 크기는 petEff()에서 숫자만 고치면 바뀐다. */
@@ -35,8 +36,12 @@ const PET_EV={from:Date.UTC(2026,9,31,15),to:Date.UTC(2026,10,22,15),nm:"서리 
    · 기간 한정 사역마(ids)는 나중에 넣는다. 지금은 lim=0·ids=[] 이라 전설·희귀·일반만 나온다.
    · 기간이 끝나면 품지 않은 알은 부서져 평범한 사역마의 알이 된다. */
 const PET_EV2={from:Date.UTC(2026,10,22,15),to:Date.UTC(2026,11,20,9),nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]};
-const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DROP_X=.02,PET_DROP_LH=.15,PET_PAT=5,PET_FEED=5,PET_SNACK_G=30,PET_SNACK_N=3,PET_XP_RUN=1,PET_MAX=3,PET_LV=[0,20,50,90,140];
-/* 유대의 증거: 사역마를 보내 줄 때 그 사역마의 친밀도 단계에 따라 남기는 개수. [0단계, 1, 2, 3, 4, 5단계]. 동작은 js/pet/care.js 의 petBye. */
-const PET_BOND=[0,1,1,3,3,4];
+/* PET_LV: 단계 문턱. 다음 칸까지 +10×(칸번호+2) → 0,20,50,90,140,200,… 기본 상한 PET_LV_DEF, 밀크로 PET_LV_HARD까지.
+   통조림·특식 친밀도는 PET_CAN_XP / PET_FEAST_XP. 간식 횟수는 q.fd(골드 간식과 공유). */
+const PET_LV=(()=>{const a=[0];for(let i=0;i<14;i++)a.push(a[i]+10*(i+2));return a})();
+const PET_LV_DEF=5,PET_LV_HARD=15;
+const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DROP_X=.02,PET_DROP_LH=.15,PET_PAT=5,PET_FEED=5,PET_CAN_XP=10,PET_FEAST_XP=30,PET_SNACK_G=30,PET_SNACK_N=3,PET_XP_RUN=1,PET_MAX=3;
+/* 유대의 증거: 보내 줄 때 친밀도 단계별 개수. 길이 ≥ PET_LV_HARD. 동작은 petBye. */
+const PET_BOND=[0,1,1,3,3,4,4,4,4,4,4,4,4,4,4,4];
 /* 사역마 조련 허가증으로 늘릴 수 있는 상한 수. 기본 상한은 PET_MAX. 동작은 js/pet/care.js 의 petCap · petLicense. */
 const PET_MAX_UP=3;

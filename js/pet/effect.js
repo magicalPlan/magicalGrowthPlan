@@ -1,7 +1,10 @@
 /* 사역마가 전투와 보상에 보태는 값. main.js 다음에 불러야 한다.
    전투력, 경험치, 상점, 강화는 petEff 를 그대로 부른다. */
-// 사역마 친밀도. 경험치가 PET_LV 칸의 기준을 넘은 개수가 단계다.
-const petLv=q=>q?PET_LV.filter(n=>(q.xp||0)>=n).length:0;
+/* 친밀도 상한: 기본 PET_LV_DEF, 매지컬 밀크(q.lm)로 PET_LV_HARD까지. */
+const petLvCap=q=>{const d=typeof PET_LV_DEF==="number"?PET_LV_DEF:5,h=typeof PET_LV_HARD==="number"?PET_LV_HARD:15;if(!q)return d;const n=Math.floor(Number(q.lm));return Math.min(h,Math.max(d,isFinite(n)?n:d))};
+/* 친밀도 단계: XP 문턱 개수, 단 상한(petLvCap)을 넘지 않는다. */
+const petLv=q=>{if(!q)return 0;const cap=petLvCap(q);return Math.min(cap,PET_LV.filter(n=>(q.xp||0)>=n).length)};
+const petXpCap=q=>PET_LV[Math.max(0,petLvCap(q)-1)]||0;
 // 지금 '함께하기'로 고른 사역마. 없으면 null.
 const petCur=()=>C&&Array.isArray(C.pets)?C.pets.find(q=>q&&q.id===C.pet)||null:null;
 /* 함께하는 사역마가 보태는 값. L 은 친밀도 단계.

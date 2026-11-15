@@ -713,8 +713,8 @@ function bagWpFold(open){const b=$("#bgwtog"),box=$("#bgwbox");if(!b||!box)retur
 function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[];C.wl=C.wl||{};show("bag");drawRG();
  {const t=$("#bgitog");if(t&&!t._bagFold){t._bagFold=1;t.onclick=()=>bagInvFold(!!$("#bgibox")&&!!$("#bgibox").hidden)}}
  {const t=$("#bgwtog");if(t&&!t._bagWpFold){t._bagWpFold=1;t.onclick=()=>bagWpFold(!!$("#bgwbox")&&!!$("#bgwbox").hidden)}}
- /* 프리즘·이동권 사용 UI를 열 때는 소지품 칸을 펼친다. */
- if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn))bagInvFold(true);else bagInvFold(bagInvOpen());
+ /* 프리즘·이동권·사역마 먹이 UI를 열 때는 소지품 칸을 펼친다. */
+ if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn)||(typeof petBagOn!=="undefined"&&petBagOn))bagInvFold(true);else bagInvFold(bagInvOpen());
  bagWpFold(bagWpOpen());
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
@@ -726,6 +726,8 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   if(id==="license"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (지금 상한 "+petCap()+" / "+petCapMax()+"마리)",[["사용",petLicense,petCap()>=petCapMax()]],itIc(id)));return}
   if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]],itIc(id)));if(prismOn)it.appendChild(prismBox());return}
   if(id==="vtown"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[vtownOn?"닫기":"사용",()=>{vtownOn=!vtownOn;vtownPick=null;bag()}]],itIc(id)));if(vtownOn)it.appendChild(vtownBox());return}
+  if(id==="milk"){const open=petBagOn==="milk";it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[open?"닫기":"사용",()=>{petBagOn=open?null:"milk";petBagPick=null;bag()}]],itIc(id)));if(open&&typeof petBagBox==="function")it.appendChild(petBagBox());return}
+  if(id==="petcan"||id==="petfeast"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (성장 기록 › 사역마에서 간식으로 준다)",[] ,itIc(id)));return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
   if(id==="pfcandy"){const used=pfcandyToday(),limit=used>=PFCANDY_MAX;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (오늘 "+used+"/"+PFCANDY_MAX+")",[["사용",()=>{const n=pfcandyToday();if(n>=PFCANDY_MAX)return bag("오늘은 보라 꽃 설탕 절임을 더 사용할 수 없다.");if((C.inv.pfcandy||0)<1)return;const day=today(),daily=Object.assign({},C.daily&&C.daily.d===day?C.daily:{},{d:day,pfcandy:n+1}),oldFloor=dzFloorToday(),floor=Math.min(100,oldFloor+10),base=C.pwtmp&&C.pwtmp.day===day?Math.max(0,Number(C.pwtmp.v)||0):0;C.daily=daily;C.inv.pfcandy--;C.dzFloor={day,v:floor};C.dz=Math.max(Number(C.dz)||0,floor);C.pwtmp={day,v:base+25};const dzBefore=C.dz;gain(0,10);const dzAdded=C.dz-dzBefore;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);dexAdd("it","pfcandy");titleState();save();bag("보라 꽃 설탕 절임을 먹었다. 절망도 +"+dzAdded+", 오늘 하한 +"+floor+", 전투력 +"+(base+25)+".")} ,limit]],itIc(id)));return}
