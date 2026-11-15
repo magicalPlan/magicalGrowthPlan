@@ -1,18 +1,2 @@
-/* 단서 탐색. data/game.js 다음에 불러야 한다.
-   동작은 js/event-boss/clue.js, 화면은 html/act/ord.html 의 이벤트 보스 아래.
-   추가 조사 문장은 data/clue/script.js. 골드·경험치 식은 장기 토벌(lhRollPct)과 같다.
-   이름, 시간, 권장 전투력, 노브·단서·절망을 고치면 된다. 줄을 더 넣으면 탐색이 늘어난다. */
-
-/* id, 이름, 시간, 권장 전투력, 골드 노브, 경험치 노브, 완주 절망도, 마력석, 완주 단서 조각, 단계, 설명.
-   골드·경험치 = 노브 × 경과시간 × roundBetween(95−5×(단계−1), 100−5×(단계−1)) × 0.01.
-   성공 확률은 떠날 때의 전투력 ÷ 권장 전투력 × 0.85 + 사역마 lh (최저 30%, 최고는 lh 펫 있으면 100%·없으면 95%, 장기 토벌과 같은 lhChance). 권장 0이면 그 상한.
-   실패하면 골드·경험치·단서가 절반이고 절망도가 CLUE_FAIL_DZ 더 오른다.
-   중간에 돌아가면 지난 시간 비율의 CLUE_EARLY(절반)만 받고 마력석은 없다. */
-const CLUE=[
- {id:"gate",nm:"눈의 여왕의 소문을 찾아 헤매기",hr:1,pw:0,g:420,ex:550,dz:15,m:0,clp:3,st:1,ds:"마을 사람들로부터 눈의 여왕에 대한 소문을 듣는다."},
- {id:"hall",nm:"눈 내린 벌판",hr:3,pw:100,g:420,ex:550,dz:25,m:0,clp:8,st:2,ds:"전 루프에서는 없었던 곳. 눈의 여왕이 차지한 땅 그 언저리를 탐색한다."},
- {id:"garden",nm:"서리 정원",hr:6,pw:250,g:420,ex:550,dz:45,m:0,clp:15,st:3,ds:"한겨울에만 피어나는 꽃 사이를 헤맨다. 이슬이 얼어 구슬이 되어 있다."},
- {id:"room",nm:"얼음 성",hr:12,pw:400,g:420,ex:550,dz:65,m:0,clp:30,st:4,ds:"눈의 여왕이 머무르는 거처. 당신들의 소중한 것이 이 안에 있다."}];
-const CLUE_FAIL_DZ=10,CLUE_EARLY=.5;
-/* 끝까지 다녀왔을 때의 재료. 성공은 시간마다 ok 표를, 실패는 fail 표를 한 번 굴린다. 표 이름은 data/craft.js 의 MAT_DROP. */
-const CLUE_DROP={ok:"lh_hr",fail:"lh_fail"};
+/* 이동됨 → data/event/common.js (CLUE_FORM · CLUE_FAIL_DZ · CLUE_EARLY · CLUE_DROP)
+   · data/event/pack.js (clue.rows). index.html 은 data/event/* 만 로드한다. */

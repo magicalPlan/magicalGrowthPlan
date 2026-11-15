@@ -1,7 +1,6 @@
-/* 이벤트 보스. js/boss.js 다음에 불러야 한다. 실전 > 장기 의뢰.
-   화면은 html/act/ord.html, 숫자와 이름표는 data/event-boss/boss.js, 탭 전환은 js/act/ord.js.
-   합계가 있으면 피해와 남은 횟수는 저장을 기다리지 않고 먼저 그린다. 내 기록이 서버에 저장되면 공격이 확정되고, 거절되면 그 표시만 되돌린다. 합계를 더하는 일은 그 뒤에서 끝난다. 오전·오후 보스는 그대로다.
-   패턴은 지금 나와 있는 오전·오후 보스의 번호로 고르므로, 20분마다 바뀌는 순서가 그 보스와 같다. */
+/* 이벤트 보스 로직. 데이터는 data/event/common.js · pack.js (EBOSS). 테마(list)는 pack 만.
+   화면 html/act/ord.html, 탭 js/act/ord.js. 패턴 시각은 js/boss.js bpAt 과 동일.
+   합계가 있으면 피해·남은 횟수는 저장 전에 먼저 그린다. 서버 거절 시 표시만 되돌린다. */
 let ebTimer=null;
 let ebLast=[];
 let ebBusy = false;
