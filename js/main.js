@@ -221,7 +221,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  if(claimed){
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
-  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.egg!==undefined)C.egg=mine.egg;
+  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;if(mine.egg!==undefined)C.egg=mine.egg;
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){

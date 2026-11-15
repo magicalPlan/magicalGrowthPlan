@@ -181,7 +181,7 @@
         · 경제: gd/ex/cl/prog · 재료·단서 · 절망(dz)
         · fx: mm/gi/tc/rb/wa/wp/dh
         · 소모: 부적·깃발·지도·출정 스킬(arm 해제·sk.used)
-        · 펫: 친밀도 XP · 알(eggs/eggsEv) · 수집가·까마귀·고독 마력석
+        · 펫: 친밀도 XP · 알(eggs/eggsEv/eggsEv2) · 수집가·까마귀·고독 마력석
       산식·배율·확률은 functions/account/boost.js (클라 settle 과 맞춤). 숫자를 고치면 Functions 배포.
       클라는 pay 가 있으면 위 칸은 올리지 않고 문구·통계·칭호·UI 만 settle. (배포: 신클라 먼저 → Functions.)
       선택지 투표는 rooms/xv{출정}_c{번호}/{나}에 기록하고, 마감 시각까지 들어온 표만 센다. */

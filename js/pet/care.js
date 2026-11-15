@@ -17,23 +17,32 @@ function petLicense(){if(!C||(C.inv.license||0)<1)return;const cur=petCap();if(c
 function petBye(q){const L=petLv(q),k=Math.max(0,Number(PET_BOND[L])||0);if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."+(k?"\n(유대의 증거 "+k+"개를 남기고 간다)":"")))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;
  if(k){C.inv=C.inv||{};C.inv.bond=(C.inv.bond||0)+k;try{dexAdd("it","bond")}catch(e){}note("quest",q.nm+"이(가) 유대의 증거 "+k+"개를 남기고 떠났다.")}
  save();regPlayer();growth(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다."+(k?" 그 자리에 유대의 증거 "+k+"개가 남았다.":""))}
-function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix==="function"&&eggFix())save()}catch(e){}try{petEvMelt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
+function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix==="function"&&eggFix())save()}catch(e){}try{petEvMelt()}catch(e){}try{if(typeof petEv2Melt==="function")petEv2Melt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
  box.appendChild(elT("p","hint","곁을 지키는 작은 마수. '함께하기'로 정한 한 마리의 효과를 받는다. 쓰다듬고, 간식을 주고, 함께 출정할수록 친밀도가 올라 효과가 커진다.\n허나 그 역시 마수, 세 마리 이상 데리고 다니는 것은 권장하지 않는다."));
  box.appendChild(elT("p","hint pet-cap","데리고 있는 사역마 "+C.pets.length+" / "+petCap()+"마리"+(petCap()<petCapMax()?" · 공방의 '사역마 조련 허가증'으로 "+petCapMax()+"마리까지 늘릴 수 있다.":" (최대)")));
 
  // 알
  const ec=elT("div","card pet-card"),eb=elT("div","pet-body");ec.append(elT("span","pet-ic","🥚"),eb);
- if(C.egg){const left=Number(C.egg.t1)-now,done=isFinite(left)&&left<=0;if(C.egg.ev)ec.querySelector(".pet-ic").textContent=PET_EV.ic;eb.append(elT("b","",done?(C.egg.ev?PET_EV.nm+"에 금이 간다!":"알이 흔들린다!"):(C.egg.ev?PET_EV.nm+"을(를) 품는 중":"알을 품는 중")),elT("small","",done?"곧 무언가 깨어날 것 같다.":(isFinite(left)?"부화까지 "+cdTxt(left):"부화 시각을 확인하지 못했다.")));const a=elT("div","pet-act"),b=elT("button","chip",done?"부화시키기":"기다리는 중");b.type="button";b.disabled=!done;b.onclick=petHatch;a.appendChild(b);eb.appendChild(a)}
+ if(C.egg){const left=Number(C.egg.t1)-now,done=isFinite(left)&&left<=0,kind=typeof eggEvKind==="function"?eggEvKind(C.egg):(C.egg.ev?1:0),E=typeof eggEvBag==="function"?eggEvBag(kind):null;
+  if(E)ec.querySelector(".pet-ic").textContent=E.ic;
+  const title=done?(kind===2?"금 사이로 빛이 샌다!":E?E.nm+"에 금이 간다!":"알이 흔들린다!"):(E?E.nm+"을(를) 품는 중":"알을 품는 중");
+  eb.append(elT("b","",title),elT("small","",done?"곧 무언가 깨어날 것 같다.":(isFinite(left)?"부화까지 "+cdTxt(left):"부화 시각을 확인하지 못했다.")));const a=elT("div","pet-act"),b=elT("button","chip",done?"부화시키기":"기다리는 중");b.type="button";b.disabled=!done;b.onclick=petHatch;a.appendChild(b);eb.appendChild(a)}
  else{eb.append(elT("b","","사역마의 알 "+(C.eggs||0)+"개"),elT("small","","상점가 "+PET_EGG_G+"골드(하루 1개) · 출정에서 가끔, 장기 토벌 성공 시 종종 줍는다. 품으면 1시간 뒤 깨어난다. (일반 70% · 희귀 27% · 전설 3%)"));
   const a=elT("div","pet-act"),b1=elT("button","chip","알 품기");b1.type="button";b1.disabled=!(C.eggs>0);b1.onclick=petIncubate;const b2=elT("button","chip","알 사기 ("+PET_EGG_G+"골드)");b2.type="button";b2.disabled=(C.gd||0)<PET_EGG_G||C.eggBuy===today();b2.onclick=petBuyEgg;a.append(b1,b2);eb.appendChild(a)}
  box.appendChild(ec);
 
  // 기간 한정: 서리 드래곤의 알. 이벤트 기간이거나 가지고 있을 때만 보인다. 상점에서는 살 수 없다.
- if(petEvOn()||(C.eggsEv||0)>0){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),end=new Date(PET_EV.to-1),limN=Object.values(PETS).filter(x=>x[3]===4).length||1;vc.append(elT("span","pet-ic",PET_EV.ic),vb);
+ if(petEvOn()||(C.eggsEv||0)>0){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),limN=Object.values(PETS).filter(x=>x[3]===4).length||1;vc.append(elT("span","pet-ic",PET_EV.ic),vb);
   vb.append(elT("b","pet-r4",PET_EV.nm+" "+(C.eggsEv||0)+"개 · 기간 한정"),elT("small","",PET_EV.ds),
    elT("small","","11월 1일 ~ 11월 22일에만 출정·장기 토벌 성공 때 사역마의 알처럼 줍는다(상점에서는 팔지 않는다). 전설 "+Math.round(PET_EV.leg*100)+"% · 기간 한정 "+limN+"마리 각 "+Math.round((PET_EV.lim||0)/limN*100)+"% · 희귀 "+Math.round((PET_EV.rare||0)*100)+"% · 일반이 나머지. 기간이 끝나면 품지 않은 알은 녹아 평범한 사역마의 알이 된다."+(petEvOn()?" (남은 기간 "+cdTxt(PET_EV.to-now)+")":"")),
    elT("small","","기간 한정 사역마의 이름과 성능은 깨어난 뒤에 도감에 적힌다."));
   const a=elT("div","pet-act"),b=elT("button","chip",PET_EV.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
+ // 기간 한정: 금이 간 알. 기간 한정 사역마(ids)는 추후 추가.
+ if(typeof PET_EV2!=="undefined"&&(petEv2On()||(C.eggsEv2||0)>0)){const vc=elT("div","card pet-card pet-ev"),vb=elT("div","pet-body"),ids=Array.isArray(PET_EV2.ids)?PET_EV2.ids.filter(id=>PETS[id]):[],limN=ids.length||1,limOn=!!ids.length&&(PET_EV2.lim||0)>0;vc.append(elT("span","pet-ic",PET_EV2.ic),vb);
+  vb.append(elT("b","pet-r4",PET_EV2.nm+" "+(C.eggsEv2||0)+"개 · 기간 한정"),elT("small","",PET_EV2.ds),
+   elT("small","","11월 23일 0시 ~ 12월 20일 18시까지 출정·장기 토벌 성공 때 사역마의 알처럼 줍는다(상점에서는 팔지 않는다). 전설 "+Math.round((PET_EV2.leg||0)*100)+"%"+(limOn?" · 기간 한정 "+limN+"마리 각 "+Math.round((PET_EV2.lim||0)/limN*100)+"%":" · 기간 한정 사역마는 곧 공개")+" · 희귀 "+Math.round((PET_EV2.rare||0)*100)+"% · 일반이 나머지. 기간이 끝나면 품지 않은 알은 부서져 평범한 사역마의 알이 된다."+(petEv2On()?" (남은 기간 "+cdTxt(PET_EV2.to-now)+")":"")),
+   elT("small","","기간 한정 사역마의 이름과 성능은 깨어난 뒤에 도감에 적힌다."));
+  const a=elT("div","pet-act"),b=elT("button","chip",PET_EV2.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv2>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv2;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
  if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}
  C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),on=C.pet===q.id,nx=PET_LV[L],c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);
   bd.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]),elT("small","","효과: "+P[5](L)+" · 친밀도 "+L+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (최고)")));
