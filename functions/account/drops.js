@@ -11,7 +11,7 @@ const MAT_VIL = {B: "m_herb", D: "m_ash"};
 const CLP = {
   id: "clue-2026-11",
   from: Date.UTC(2026, 9, 31, 15),
-  to: Date.UTC(2026, 10, 14, 15),
+  to: Date.UTC(2026, 10, 22, 9),
   drop: {x_ok: .35, x_fail: .1}
 };
 

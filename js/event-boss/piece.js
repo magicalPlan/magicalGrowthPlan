@@ -88,7 +88,7 @@ function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.
  const c=elT("div","card clp-card");box.appendChild(c);
  const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?"11월 1일 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
  c.appendChild(elT("p","clp-ds",CLP.ds));
- if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 14일 24시까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
+ if(before){c.appendChild(elT("p","hint","11월 1일 0시부터 22일 18시까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
  const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");
  big.append(elT("b",null,CLPN.toLocaleString()),elT("span",null," / "+CLP.goal.toLocaleString()+"개"),elT("em",null,CLPN>=CLP.goal?"목표 달성!":Math.floor(pct*100)+"%"));c.appendChild(big);
  const bar=elT("div","bar clp-bar"),f=elT("i");f.style.width=(pct*100)+"%";bar.appendChild(f);
