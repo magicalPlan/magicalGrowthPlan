@@ -18,8 +18,8 @@ const dHpNow=()=>Math.round(witchHpOf(bossTopShown().pw)*D_HP_X);
 const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0||b.ts)||0))[0];
 /* 새 보스 HP 공식. 오전·오후 = (레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1).
    주간 = (레벨 + 전투력 × (전투력 - 레벨)) × (전투력 ÷ 레벨). 정수 HP로 반올림한다.
-   1위는 공개 카드를 전투력 순으로 한 명만 읽는다. 정해진 체력은 공격 기록(hp0)에 남아서 그 보스가 끝날 때까지 모두에게 똑같다.
-   이미 hp0가 있는 보스는 그 숫자를 그대로 쓴다. */
+   화면의 '약' 추정만 클라가 같은 식으로 그린다. 실제 hp0·sum 은 Functions(bossHitHp)가
+   players 전투력 1위(또는 더 센 공격자)로 계산해 wboss/{id}/_hp 에 굳힌다. */
 const bScaled=(k,id)=>!!id&&String(id)>=BOSS_SCALE_FROM[k];
 function bossHpEst (k) {
    const {lv, pw} = bossTopShown();
@@ -52,12 +52,16 @@ function bossWhy(e){const name=e&&e.name,m=String(e&&e.message||e);if(m==="403")
 function bossBar(id,list,hpOf){const snap=bossSnap[id],mx=snap&&Number(snap.hp0)>0?Number(snap.hp0):hpOf();const dealt=snap&&snap.sum!=null?Number(snap.sum):sumHits(list||[]);const dead=!!(list||[]).some(v=>v&&v.x)||!!(snap&&snap.x)||(mx>0&&dealt>=mx);return{mx,dead,hp:dead?0:Math.max(0,mx-dealt),n:Math.max((list||[]).filter(v=>v&&v.u).length,snap&&snap.n||0)}}
 function bossMinePatch(list,rec){const next=(list||[]).filter(v=>v&&v.u&&v.u!==rec.u);next.push(rec);return next}
 function bossMetaNote(id,list,hp0){if(!id||!(hp0>0))return;const sum=sumHits(list),n=(list||[]).filter(v=>v&&v.u).length,dead=!!((list||[]).some(v=>v&&v.x)||sum>=hp0),prev=bossSnap[id];
- bossSnap[id]={hp0:prev&&Number(prev.hp0)>0?Number(prev.hp0):hp0,sum:Math.max(sum,prev&&prev.sum||0),n:Math.max(n,prev&&prev.n||0),x:dead?1:0};
- /* 참가자가 없으면 서버 _hp 를 만들지 않는다. 화면만 열어도 체력이 굳던 문제를 막는다. 첫 공격은 bossMetaAdd 가 만든다. */
- if(!n)return;
- DB.doc(bossHpPath(id)).transact(cur=>{const p=cur&&typeof cur==="object"?cur:null,hp=Number(p&&p.hp0)||hp0,sm=Math.max(Number(p&&p.sum)||0,sum),xOn=(p&&p.x)||dead||sm>=hp;if(p&&Number(p.hp0)===hp&&Number(p.sum)>=sm&&(!xOn||p.x))return undefined;return{hp0:hp,sum:sm,n:Math.max(Number(p&&p.n)||0,n),x:xOn?1:0}}).then(m=>{if(!m||!(Number(m.hp0)>0))return;const loc=bossSnap[id];if(loc&&Number(loc.sum)>Number(m.sum))return;bossSnap[id]=m}).catch(()=>{})}
+ /* 서버 _hp 가 오기 전 화면용 추정만. 클라는 _hp 를 쓰지 않는다(rules · Functions bossHitHp). */
+ if(prev&&Number(prev.hp0)>0){bossSnap[id]={hp0:Number(prev.hp0),sum:Math.max(sum,Number(prev.sum)||0),n:Math.max(n,Number(prev.n)||0),x:prev.x||(dead?1:0)};return}
+ bossSnap[id]={hp0,sum,n,x:dead?1:0}}
 async function bossHitRead(id){const [ms,mineS]=await Promise.all([DB.doc(bossHpPath(id)).get(),DB.doc("wboss/"+id+"/"+UID).get()]);let meta=ms.exists&&ms.data()&&Number(ms.data().hp0)>0?ms.data():null;const loc=bossSnap[id];if(meta&&(!loc||Number(meta.sum)>=Number(loc.sum||0)))bossSnap[id]=meta;else if(loc&&Number(loc.hp0)>0)meta=loc;const mine=mineS.exists&&mineS.data()&&mineS.data().u?mineS.data():null;return{meta,mine}}
-async function bossMetaAdd(id,hp0,add,first){let applied=false;const after=await DB.doc(bossHpPath(id)).transact(cur=>{applied=false;const p=cur&&typeof cur==="object"?cur:null,hp=Number(p&&p.hp0)||hp0,sum0=Number(p&&p.sum)||0;if(p&&(p.x||(hp>0&&sum0>=hp)))return undefined;applied=true;const sum=sum0+add;return{hp0:hp,sum,n:(Number(p&&p.n)||0)+(first?1:0),x:sum>=hp?1:0}});if(applied&&after&&after.hp0)bossSnap[id]=after;else if(!applied&&after&&Number(after.hp0)>0)bossSnap[id]=after;return applied?after:null}
+/* 공격 기록 set 뒤 Functions 가 _hp 를 쓸 때까지 짧게 기다린다. 실패해도 로컬 추정은 유지한다. */
+async function bossMetaPull(id,tries,gap){tries=tries||4;gap=gap||150;for(let i=0;i<tries;i++){try{const ms=await DB.doc(bossHpPath(id)).get();if(ms.exists&&ms.data()&&Number(ms.data().hp0)>0){const m=ms.data();const loc=bossSnap[id];if(!loc||Number(m.sum)>=Number(loc.sum||0))bossSnap[id]=m;else bossSnap[id]={hp0:Number(m.hp0),sum:Math.max(Number(m.sum)||0,Number(loc.sum)||0),n:Math.max(Number(m.n)||0,Number(loc.n)||0),x:m.x||loc.x||0};return bossSnap[id]}}catch(e){}await new Promise(r=>setTimeout(r,gap))}return bossSnap[id]&&Number(bossSnap[id].hp0)>0?bossSnap[id]:null}
+/* 로컬 합계를 먼저 반영하고, 서버 _hp 는 짧게만 맞춘다. 긴 await 동안 busy 가 풀리면 연타로 횟수(c)가 한 번 더 올라간다. */
+async function bossMetaAdd(id,hp0,add,first){const prev=bossSnap[id]||{hp0,sum:0,n:0};bossSnap[id]={hp0:Number(prev.hp0)>0?Number(prev.hp0):hp0,sum:(Number(prev.sum)||0)+add,n:(Number(prev.n)||0)+(first?1:0),x:0};const sum=bossSnap[id].sum,hp=bossSnap[id].hp0;if(hp>0&&sum>=hp)bossSnap[id].x=1;const m=await bossMetaPull(id,4,150);if(!m)void bossMetaPull(id,8,300);return m||bossSnap[id]}
+/* 쓰기 직전 서버의 내 기록을 다시 읽어 c·d 기준을 맞춘다. 화면 캐시(ebLast/bossLast)만 보면 연타·재시도 때 횟수가 어긋난다. */
+async function bossMineFresh(id,fallback){try{const ms=await DB.doc("wboss/"+id+"/"+UID).get();if(ms.exists&&ms.data()&&ms.data().u)return ms.data()}catch(e){}return fallback&&fallback.u?fallback:{}}
 // 공격 횟수: 오전·오후 보스는 반나절마다, 주간 보스는 하루마다 다시 채워진다.
 function bossDay(){const hk=bossOf("d").id;if(!C.wb||C.wb.day!==today())C.wb={day:today(),h:hk,d:0,w:0};else if(C.wb.h!==hk){C.wb.h=hk;C.wb.d=0}}
 function bossView(){show("boss");$("#bsm").textContent="";bossDay();unB&&unB();unB=null;const box=$("#bsl");box.innerHTML="";
@@ -91,11 +95,16 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const
  const left=cfg.t-C.wb[k],off=!!C.fall||C.dz>=90||left<=0||!!hitBusy;
  c.appendChild(elT("p","bp-left",C.fall?"타락 중에는 싸울 수 없다":C.dz>=90?"절망도가 너무 높아 싸울 수 없다":left<=0?(k==="d"?"이번 보스 공격 횟수를 다 썼다":"오늘 공격 횟수를 다 썼다"):hitBusy?"공격하는 중...":"대응을 골라 공격한다 · "+(k==="d"?"":"오늘 ")+left+"/"+cfg.t+"번 남음"+(armedSk("fire")?" · 홍련의 일격 준비됨":"")));
  const row=elT("div","bp-acts");Object.keys(BA).forEach(a=>{const x=BA[a],bt=elT("button","btn"+(a==="str"?"":" g"),x.ic+" "+x.nm);bt.type="button";bt.disabled=off;bt.onclick=()=>{row.querySelectorAll("button").forEach(z=>z.disabled=true);hitBoss(k,bt,a)};row.appendChild(bt)});c.appendChild(row);
- if(bScaled(k,b.id)||k==="d"){const scaled=bScaled(k,b.id),wait=bossTopN==null&&!list.length,est=scaled?bossHpEst(k):dHpNow(),rule=scaled&&k==="d"?"(레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1)":"첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배";c.appendChild(elT("p","boss-info","체력: "+rule+(list.length?"":wait?" (전투력 1위를 확인하는 중)":" (지금 기준 약 "+est.toLocaleString()+")")))}
- c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
+ if(bScaled(k, b.id) || k==="d") {
+      const scaled = bScaled(k,b.id);
+      const wait = bossTopN == null && !list.length;
+      const est = scaled ? bossHpEst(k) : dHpNow()
+      const rule = scaled && k === "d" ? "(레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1)":"첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배";
+   }
+   c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 /* 공격 중 hitBusy. await 동안 drawBoss 가 버튼을 다시 그려도 잠가 둔다. 연타 시 기록·meta 가 두 번 쓰이는 일을 막는다.
    (쓰기 자체는 내 칸 set + meta 합계 두 통신이 정상이다. 문제는 공격 동작이 두 번 들어가는 쪽이다.) */
-let hitBusy=false;
+   let hitBusy=false;
 
 async function hitBoss (k, bt, act) {
    act = BA[act] ? act : "str";
@@ -128,11 +137,13 @@ async function hitBoss (k, bt, act) {
       const fire = armedSk("fire");
       // 대미지 공식
       const d = calcBossDamage(pw(), ef[0], weak, fire, _attrs().includes("불"), ((VL[C.v]||{}).bd || 1), petEff("boss"));
-      const rec = {u : UID, n : nmOf(), d : (Number(mine.d) || 0) + d, p, c : (Number(mine.c) || 0) + 1, ts: Date.now(), t0:Number(mine.t0) || Date.now()};
+      const mineRec = await bossMineFresh(b.id, mine);
+      const p2 = Number(mineRec.p) || p;
+      const rec = {u : UID, n : nmOf(), d : (Number(mineRec.d) || 0) + d, p:p2, c : (Number(mineRec.c) || 0) + 1, ts: Date.now(), t0:Number(mineRec.t0) || Date.now()};
       
       if (bScaled(k, b.id)) rec.hp0 = bhpScaled(k, list);
-      else if (k === "d") rec.hp0 = Number(mine.hp0) || (list.length ? (Number((bFirst(list) || {}).hp0) || 0) : 0) || dHpNow();
-      if (mine.x || hp - d <= 0) rec.x = 1;
+      else if (k === "d") rec.hp0 = Number(mineRec.hp0) || (list.length ? (Number((bFirst(list) || {}).hp0) || 0) : 0) || dHpNow();
+      if (mineRec.x || hp - d <= 0) rec.x = 1;
       await DB.doc("wboss/"+b.id+"/"+UID).set(rec);
       
       if (fire) useSk("fire");
@@ -191,9 +202,10 @@ async function hitBossFast(k, b, cfg, m, pt, ef, good, act) {
       return
    }
    
-   const mineRec = mine || {}, weak = (C.a || []).includes(b.def[2]), fire=armedSk("fire");
+   const weak = (C.a || []).includes(b.def[2]), fire=armedSk("fire");
    const d=typeof calcBossDamage==="function"?calcBossDamage(pw(),ef[0],weak,fire,_attrs().includes("불"),((VL[C.v]||{}).bd||1),petEff("boss")):Math.max(1,Math.round(pw()*(2+Math.random())*ef[0]*(weak?1.3:1)*(fire?2:1)*(_attrs().includes("불")?1.2:1)*((VL[C.v]||{}).bd||1)*(1+petEff("boss"))));
- const rec={u:UID,n:nmOf(),d:(Number(mineRec.d)||0)+d,p:Number(mineRec.p)||pw(),c:(Number(mineRec.c)||0)+1,ts:Date.now(),t0:Number(mineRec.t0)||Date.now(),hp0};if(mineRec.x||sum+d>=hp0)rec.x=1;
+   const mineRec=await bossMineFresh(id,mine);
+   const rec={u:UID,n:nmOf(),d:(Number(mineRec.d)||0)+d,p:Number(mineRec.p)||pw(),c:(Number(mineRec.c)||0)+1,ts:Date.now(),t0:Number(mineRec.t0)||Date.now(),hp0};if(mineRec.x||sum+d>=hp0)rec.x=1;
  await DB.doc("wboss/"+id+"/"+UID).set(rec);
  try{await bossMetaAdd(id,hp0,d,!mineRec.u)}catch(e){const prev=bossSnap[id]||{hp0,sum,n:0};bossSnap[id]={hp0,sum:(Number(prev.sum)||0)+d,n:(Number(prev.n)||0)+(!mineRec.u?1:0),x:prev.x||rec.x||0}}
  if(fire)useSk("fire");if(dexAdd("bs",b.def[0]))note("dex","도감에 새 보스가 기록되었다: "+b.def[0]);C.wb[k]++;C.wbp=keepIds(C.wbp,b.id);C.gd=(C.gd||0)+cfg.hit;titleState();C.stats.bossHits=(C.stats.bossHits||0)+1;if(good)C.stats.bossRead=(C.stats.bossRead||0)+1;guardAdd(3);const mt=matGain(["boss"]);const dz=ef[2]?0:cfg.dz+ef[1];try{if(dz)gain(0,dz);else save()}catch(e){}checkTitles();
