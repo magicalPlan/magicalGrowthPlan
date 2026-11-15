@@ -44,6 +44,7 @@ function storyAtTxt (at) {
 }
 
 /* 세계관 > 이벤트 탭 전용. open 을 true 로 바꾸면 그 에피소드가 탭에 보인다. CLPN·STORY_LOCK 과 별개다.
+   open 대신 with:"다른 에피소드 id" 를 적으면, 그 에피소드가 열릴 때 함께 열린다.
    챕터 묶음·소제목은 chapters/*.json 의 title·lead, 에피소드 제목은 shards[].title. */
 const WORLD_STORY_OPEN=[
  {id: "shard-1",open:true},
@@ -53,7 +54,7 @@ const WORLD_STORY_OPEN=[
  {id: "shady-merchant-1", open:true},
  {id: "flanders-1", open:false},
  {id: "flanders-2", open:false},
- /* flanders-3: 미술 콩쿠르 이벤트가 끝난 뒤 open 을 true 로 바꾼다. */
- {id: "flanders-3", open:false},
+ /* flanders-3: with 에 적은 에피소드(사이드 스토리 '네가 이겼어.')가 열릴 때 함께 열린다. 따로 켤 필요 없다. */
+ {id: "flanders-3", with: "flanders-side"},
  {id: "flanders-side", open: false}
 ];
