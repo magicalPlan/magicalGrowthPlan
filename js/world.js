@@ -111,6 +111,10 @@ function worldEvent() {
    (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
       if (r && r.open && r.id) openIds[r.id] = 1
    });
+   // with: 다른 에피소드가 열리면 함께 연다(data/story/lock.js).
+   (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
+      if (r && r.id && r.with && openIds[r.with]) openIds[r.id] = 1
+   });
    if (!Object.keys(openIds).length) {
       root.append(elT("p","world-lead","이 기억은 아직 잠겨 있다."), elT("p", "hint", "장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."));
       return

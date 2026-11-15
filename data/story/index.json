@@ -10,7 +10,7 @@
     {
       "id": "flanders",
       "title": "플랜더스의 개",
-      "file": "chapters/flanders.json?v=1",
+      "file": "chapters/flanders.json?v=2",
       "order": 2,
       "world": false
     },

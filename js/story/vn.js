@@ -11,7 +11,7 @@
      start: "처음 노드 id",
      nodes: {
        "노드id": {
-         lines: [ { who:"화자키 또는 빈 문자열(지문)", text:"대사", stand:"이 줄만 쓸 그림 주소" } ],
+         lines: [ { who:"화자키 또는 빈 문자열(지문)", text:"대사", stand:"이 줄만 쓸 그림 주소", fx:"dark" } ],
          choose: [ { label:"선택지 문장", next:"고른 뒤 갈 노드 id" } ],
          next: "선택지 없이 대사가 끝난 뒤 이어질 노드 id"
        }
@@ -19,6 +19,7 @@
    }
    lines 가 끝나면 choose 가 있을 때 선택지를 보여 준다. choose 가 없으면 next 로 넘어간다.
    choose 도 next 도 없으면 그 노드의 마지막 대사에서 이야기가 끝난다.
+   fx:"dark" 인 줄은 암전: 화면이 까맣게 가라앉고 스탠딩이 사라진다. text 를 비우면 대화창도 숨는다.
    img 와 stand 가 비어 있으면 이름만 있는 실루엣을 세운다. 그림 주소를 넣으면 그 그림을 세운다.
    화면을 바꾸면 main.js 의 show 가 vnClose 를 불러 창을 닫는다. */
 let vnRoot=null,vnState=null,vnBack=null;
@@ -146,6 +147,9 @@ function vnPaint() {
   const name = vnRoot.querySelector(".vn-name"), text = vnRoot.querySelector(".vn-text"), next = vnRoot.querySelector(".vn-next"), choices = vnRoot.querySelector(".vn-choices");
   
   vnStand(vnRoot.querySelector(".vn-stand"), spoken || null);
+  const dark = !!(spoken && spoken.fx === "dark");
+  vnRoot.classList.toggle("vn-dark", dark);
+  vnRoot.classList.toggle("vn-dark-quiet", dark && !(spoken.text || "").trim() && vnState.phase === "line");
 
   const who = vnState.who || "";
 
