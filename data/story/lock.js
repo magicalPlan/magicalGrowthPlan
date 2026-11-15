@@ -50,5 +50,8 @@ const WORLD_STORY_OPEN=[
  {id: "shard-2",open:true},
  {id: "shard-3",open:true},
  {id: "shard-4",open:true},
- {id: "shady-merchant-1", open:true}
+ {id: "shady-merchant-1", open:true},
+ {id: "flanders-1", open:false},
+ {id: "flanders-2", open:false},
+ {id: "flanders-side", open: false}
 ];

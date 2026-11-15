@@ -11,7 +11,17 @@
           "name": "???",
           "img": "assets/standing/nero_planders.png",
           "side": "right"
-      }
+        },
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "flanders_artist_default": {
+          "name" : "플랜더스의 화가",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        }
     },
     "start": "meet",
     "nodes": {
@@ -42,9 +52,274 @@
         ]
       },
       "pallette_0": {
-
+        "lines": [
+          {
+            "who": "???",
+            "text": "아아, 이건 내 친구들을 살릴 수 있는 귀중한 도구야."
+          },
+          {
+            "who": "???",
+            "text": "난 세 가지 색으로 뭐든 만들 수 있어. 대단하지?"
+          }
+        ],
+        "next": "who_r_u_0"
+      },
+      "artist_0": {
+        "lines": [
+          {
+            "who": "???",
+            "text": "내 꿈은 일류 화가거든!"
+          },
+          {
+            "who": "???",
+            "text": "그 사람의 말을 듣길 잘했어! 이젠 누군가 내 작품을 찾기까지 하잖아!"
+          }
+        ],
+        "next": "who_r_u_0"
+      },
+      "who_r_u_0": {
+        "lines": [
+          {
+            "who": "???",
+            "text": "...응? 내가 누구냐고?"
+          },
+          {
+            "who": "???",
+            "text": "아, 자기소개를 깜빡했네! 미안!"
+          },
+          {
+            "who": "nero_default",
+            "text": "나는 네로!"
+          }
+        ],
+        "next": "flanders_artist_0"
+      },
+      "flanders_artist_0": {
+        "lines": [
+          {
+            "who": "nero_default",
+            "text": "아아, 이렇게 설명하지 말랬는데! 미안미안!"
+          },
+          {
+            "who": "nero_default",
+            "text": "나는..."
+          },
+          {
+            "who": "nero_default",
+            "text": "마인, '플랜더스의 화가'라고 해!"
+          },
+          {
+            "who": "flanders_artist_default",
+            "text": "날 간절히 찾은 모양이지만, 미안해."
+          },
+          { 
+            "who": "flanders_artist_default",
+            "text": "이제부터 곧 있을 콩쿠르에 낼 작품을 준비해야 하거든!"
+          },
+          {
+            "who": "flanders_artist_default",
+            "text": "널 상대해줄 시간은 없어! 안녕!"
+          },
+          {
+            "who": "",
+            "text": "그가 어딘가로 떠나자, 주위에 남은 의미불명의 동물들이 낑낑대며 손을 핥아준다."
+          },
+          {
+            "who": "",
+            "text": "…"
+          },
+          {
+            "who": "",
+            "text" : "이 아이들을 있을 곳으로 돌려보내주자."
+          }
+        ]
       }
     }
+    },
+    {
+      "id": "flanders-2",
+      "title": "플랜더스의 개-기억의 파편1",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "patrasche": {
+          "name" :"파트라슈",
+          "img" : "",
+          "side" : "left"
+        }
+      },
+      "start": "patrasche_1",
+      "nodes": {
+        "patrasche_1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "파트라슈, 파트라슈!"
+            },
+            {
+              "who": "patrasche",
+              "text": "왈, 왈!"
+            },
+            {
+              "who": "nero_default",
+              "text": "하하, 오늘도 힘차네~!"
+            },
+            {
+              "who": "nero_default",
+              "text": "오늘은 우유 배달이 잔뜩 왔어! 어서 가자!"
+            },
+            {
+              "who": "nero_default",
+              "text": "...어라? 넌 누구야?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "나는...",
+              "next" : "immagical_1"
+            },
+            {
+              "label": "...",
+              "next": "ebaya"
+            }
+          ]
+        },
+        "immagical_1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "그렇구나! 만나서 반가워, 난 네로라고 해!"
+            },
+            {
+              "who": "nero_default",
+              "text": "이 쪽은 파트라슈!"
+            },
+            {
+              "who": "patrasche",
+              "text": "왈, 왈!"
+            }
+          ],
+          "next": "flanders_run_1"
+        },
+        "ebaya": {
+          "lines": [
+            {
+              "who": "patrasche",
+              "text": "(당신의 손을 핥는다)"
+            },
+            {
+              "who" :"nero_default",
+              "text": "하하, 파트라슈는 너가 마음에 들었나봐!"
+            },
+            {
+              "who": "nero_default",
+              "text": "그렇다면, 네가 누구든 상관은 없나!"
+            }
+          ],
+          "next": "flanders_run_1"
+        },
+        "flanders_run_1": {
+          "lines" : [
+            {
+              "who": "",
+              "text": "파트라슈와 네로는 힘차게 길을 달린다."
+            },
+            {
+              "who": "nero_default",
+              "text": "있지, 너는 꿈이 있어?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "있어.",
+              "next": "ihave_dream_1"
+            },
+            {
+              "label" : "없어.",
+              "next": "idnthave_dream_1"
+            }
+          ]
+        },
+        "ihave_dream_1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "그렇구나! 꿈이 있다는 건 정말 좋은 일이야, 그렇지?"
+            }
+          ],
+          "next": "my_dream_is_1"
+        },
+        "idnthave_dream_1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "그래? 그렇다면 나랑 함께 꿈을 찾아보자!"
+            }
+          ],
+          "next": "my_dream_is_1"
+        },
+        "my_dream_is_1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "나는 말이야. 언젠가 일류 화가가 되는 것이 꿈이야!"
+            },
+            {
+              "who": "nero_default",
+              "text": "곧 열리는 콩쿠르에서 우승해서 말이야!"
+            },
+            {
+              "who": "nero_default",
+              "text": "파트라슈도 응원해주기로 했어!"
+            },
+            {
+              "who": "nero_default",
+              "text": "왈왈! 컹!"
+            },
+            {
+              "who": "nero_default",
+              "text": "하하, 고마워! 파트라슈!"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "flanders-side",
+      "title": "플랜더스의 개 - 네가 이겼어.",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        }
+      },
+      "start": "you_won_event",
+      "nodes": {
+        "you_won_event": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "... 아름다운 작품이네."
+            },
+            {
+              "who": "nero_default",
+              "text": "모두가 함께 만든 작품이라."
+            },
+            { 
+              "who" :"nero_default",
+              "text": "좋겠다, 좋겠어."
+            },
+            {
+              "who": "nero_default",
+              "text": "우승 축하해."
+            }
+          ]
+        }
+      }
     }
   ]
 }
