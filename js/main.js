@@ -389,7 +389,8 @@ async function enterGame(){UID=AUTH.uid;AUTH.jc=AUTH.jc||lget("mgr_jc_"+UID)||""
  const frx=fullRestore();
  if(frx)save();
  else pubRemember();
- if(C)pubFall();
+ /* 서버가 붙인 휴면(c/dm)이면 여기서 먼저 풀고 공개 사진을 복구한다. 허브 onlineOnce 가 la·on 을 이어서 맞춘다. */
+ if(C){try{wakeDm()}catch(e){}pubFall()}
  mode(1);boot();checkFounder();setTimeout(checkComp,1500);
  if(frx){regPlayer(true);setTimeout(()=>alertBox("🎁 기록 복구","오류로 사라졌던 '"+C.n+"'의 기록을 백업으로 되돌렸습니다.\n레벨 "+C.lv+" · 칭호 "+C.titles.length+"개 · 무기와 마력 각인까지 모두 돌아왔어요.\n점검 보상과 복구 보상은 잠시 뒤 따로 도착합니다.\n불편을 드려 죄송합니다."),800)}}
 async function codeOk(v){const t=String(v||"").trim().normalize("NFC");if(!t||!(window.crypto&&crypto.subtle))return false;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")===SIGNUP_CODE_HASH}
@@ -639,7 +640,9 @@ function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
    whoPut(): 일반 저장은 WHO_MS(3초) 모아 한 번. 본문(JSON)이 직전과 같으면 set 생략(pw 포함).
    whoPut(true): 타락·프로필·접속·회귀 직후만 즉시 flush.
    허브 전투력·출정 자리 p 는 여기와 무관(pw()·참가 스냅샷). */
-function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
+/* who 명부 본문. la=마지막 활동(휴면 판정용), on=이번 세션 접속 스탬프(접속 중 표시용).
+   set 통째 교체라 dm 칸을 넣지 않으면 재접속 때 휴면 플래그가 지워진다. */
+function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),la:ensureLa(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
 function whoFlush(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;
  const s=JSON.stringify(b);if(s===whoLastSent)return;whoLastSent=s;
  DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null})}
@@ -656,9 +659,13 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
   const hero=document.createElement("div");hero.className="profile-hero";
-  if(typeof p.im==="string"&&p.im.length<20000&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p.im)){const i=document.createElement("img");i.className="av";i.alt="프로필 이미지";i.src=p.im;hero.appendChild(i);hiAv(i,uid)}
+  /* 휴면(dm): 공개 사진은 스윕에서 하드 삭제됨. 남아 있어도 표시하지 않는다. */
+  const dormant=typeof isDm==="function"?isDm(p):Number(p.dm)===1;
+  if(!dormant&&typeof p.im==="string"&&p.im.length<20000&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p.im)){const i=document.createElement("img");i.className="av";i.alt="프로필 이미지";i.src=p.im;hero.appendChild(i);hiAv(i,uid)}
   const intro=document.createElement("div"),h=document.createElement("h2");h.className="profile-name";h.textContent=cn(uid,p.n||"이름 없는 캐릭터");intro.appendChild(h);
-  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=(VL[p.v]?VL[p.v].n:"소속 미상")+" · "+(p.s||"성별 미설정");intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}hero.appendChild(intro);b.appendChild(hero);
+  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=(VL[p.v]?VL[p.v].n:"소속 미상")+" · "+(p.s||"성별 미설정");intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}
+  if(dormant){const hw=document.createElement("p");hw.className="ttl-tag";hw.style.margin="6px 0 0";hw.textContent="화원 · 휴면 계정";intro.appendChild(hw)}
+  hero.appendChild(intro);b.appendChild(hero);
   if(p.fl){const w=document.createElement("p");w.className="fallbar";w.textContent="이 마법소녀는 타락했다. 친구라면 마을의 '타락한 친구' 목록에서 맞서 되돌릴 수 있다.";b.appendChild(w)}
   const stat=document.createElement("div");stat.className="profile-statgrid";
   const stats=[...(p.pet&&PETS[p.pet.s]?[["사역마",PETS[p.pet.s][1]+" "+String(p.pet.n||"").slice(0,10)+" ("+(Number(p.pet.l)||1)+"단계)"]]:[]),["계약 등급",(p.g||"-")+"등급"],["속성",p.a||"미설정"],["레벨",p.lv||1],["토벌 횟수",(p.cl==null?0:p.cl)+"회"],["장착 무기",p.wp||"없음"],["전투력",p.pw==null?"-":p.pw],["절망도",(p.dz==null?"-":p.dz+"/100")],["경험치",p.ex==null?"-":p.ex]];
@@ -957,11 +964,27 @@ function drawTut(){const box=$("#tutbox");if(!box||!C)return;C.tut=C.tut||{};C.t
    b.onclick=()=>{if(!t.done){t.done=1;giveRw(TUT_DONE);note("quest","튜토리얼을 모두 마쳤다. "+rwTxt(TUT_DONE)+"과 칭호 '새내기 졸업'을 받았다.");save();checkTitles();drawTut();toast("튜토리얼 완료! "+rwTxt(TUT_DONE))}else{t.hide=1;save();drawTut()}};c.append(cp,b);w.appendChild(c)}
   else{const h=elT("button","chip","튜토리얼 숨기기");h.type="button";h.style.cssText="margin-top:8px;padding:6px 12px;font-size:.8rem";h.onclick=()=>{if(confirm("튜토리얼을 숨길까? 기록 화면의 칭호 탭 아래 '튜토리얼 다시 보기'로 다시 열 수 있다.")){t.hide=1;save();drawTut()}};w.appendChild(h)}}
  box.appendChild(w)}
-let ONL=[],onAt=0,onOnce=false;
+let ONL=[],onAt=0,laAt=0,onOnce=false;
 const isOn=p=>!!p&&Number(p.on)>Date.now()-ON_WIN;
+const isDm=p=>!!p&&Number(p.dm)===1;
 function onlineStamp(){if(!onAt)onAt=Date.now();return onAt}
-/* 게임 화면이 처음 열릴 때 내 접속 시각만 한 번 남긴다. 접속 인원 목록은 받지 않는다. */
-function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;DB.doc("players/"+UID+"/on").set(onlineStamp()).catch(()=>{});whoPut(true)}
+/* la: 이번 탭에서 쓸 마지막 활동 시각. whoBody/players 에 실어 서버 휴면 스윕 기준으로 쓴다. */
+function ensureLa(){if(!laAt)laAt=Date.now();return laAt}
+/* 휴면 해제 후 공개 사진 복구. 원본 C.img 는 계정에 남아 있고, 스윕이 지운 것은 players.im·wboss/pic* 뿐이다.
+   picSig 를 비워야 pubPic 이 wboss 에 다시 올린다. */
+function dmRepubPic(){if(!C||!C.img||!UID||!DB||LOCAL||typeof XON!=="function"||!XON())return;
+ try{delete C.picSig}catch(e){C.picSig=null}try{delete PICC[UID];delete PICM[UID]}catch(e){}
+ try{regPlayer(true)}catch(e){}}
+/* 휴면(dm)이면 풀고 la 를 지금으로 맞춘다. accounts c/dm 은 save diff 로 null. 공개 사진 재업로드. */
+function wakeDm(){if(!C||!C.dm)return false;delete C.dm;laAt=Date.now();try{save()}catch(e){}
+ if(DB&&UID&&!LOCAL&&typeof XON==="function"&&XON())DB.doc("players/"+UID).patch({dm:null,la:laAt}).catch(()=>{});
+ try{whoLastSent=null;whoPut(true)}catch(e){}dmRepubPic();return true}
+/* 허브 첫 진입: on(접속 중)·la(마지막 활동) 갱신, dm 해제, 필요 시 공개 사진 복구. */
+function onlineOnce(){if(onOnce||!AUTH.uid||!C||!DB||LOCAL||!XON())return;onOnce=true;laAt=Date.now();const on=onlineStamp();
+ const woke=!!C.dm;if(woke){delete C.dm;try{save()}catch(e){}}
+ DB.doc("players/"+UID+"/on").set(on).catch(()=>{});
+ /* players/who dm 은 시즌 회귀 등으로 C.dm 만 빠진 뒤에도 남을 수 있어, 접속 때 항상 지운다. */
+ DB.doc("players/"+UID).patch({la:laAt,dm:null}).catch(()=>{});whoPut(true);if(woke)dmRepubPic()}
 
 /* 화면 모드: 블랙(기본)과 화이트 중에서 고른다. 고른 값은 이 기기에 기억한다. */
 function thmSet(t){const r=document.documentElement;if(t==="light")r.dataset.theme="light";else delete r.dataset.theme;try{localStorage.setItem("mgr_theme",t)}catch(e){}thmDraw()}

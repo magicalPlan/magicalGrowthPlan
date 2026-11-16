@@ -252,6 +252,12 @@ async function admGrantIds(){let ids=[];
  if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
  if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
  return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
+/* 전체 보상용. who.dm=1(휴면·화원)은 빼고, accounts 본문은 받지 않는다.
+   시즌 회귀(rstRun)는 admGrantIds 전체(휴면 포함)를 쓴다. */
+async function admGrantActiveIds(){const ids=await admGrantIds();let dm={};
+ try{const sn=typeof plAll==="function"?await plAll(0):null;(sn&&sn.docs||[]).forEach(d=>{const p=d.data()||{};if(Number(p.dm)===1)dm[d.id]=1})}catch(e){
+  try{const sn=await once(DB.collection("who"));(sn.docs||[]).forEach(d=>{const p=d.data()||{};if(Number(p.dm)===1)dm[d.id]=1})}catch(e2){}}
+ return ids.filter(u=>!dm[u])}
 async function admGrantSave(uid,r){if(uid===UID&&C){admGrantOnChar(C,r);try{if(typeof titleState==="function")titleState()}catch(e){}try{save();await saveCloud(true)}catch(e){throw e||new Error("save")}return "self"}
  /* 존재만 확인(이름 칸). 본문 전체는 받지 않는다. */
  const nm=await DB.doc("accounts/"+uid+"/c/n").get();if(!nm.exists||nm.data()==null||nm.data()==="")throw new Error("empty");
@@ -268,14 +274,14 @@ async function admGrantRun(btn,msg,getR){if(!ADM[UID]||!XON()||!DB)return;const 
  const preview=admGrantTxt(r);const t=prompt("등록된 모든 캐릭터에 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
  if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
  btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="등록자를 모으는 중...";
- let ids=[];try{ids=await admGrantIds()}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
+ let ids=[];try{ids=await admGrantActiveIds()}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
  if(!ids.length){msg.style.color="var(--bad)";msg.textContent="지급할 등록자가 없다.";btn.disabled=false;return}
  let at=0,ok=0,empty=0,fail=0;const total=ids.length;
  async function worker(){for(;;){const i=at++;if(i>=total)return;const uid=ids[i];if(i%6===0)msg.textContent="지급하는 중... "+i+" / "+total+" (성공 "+ok+", 실패 "+fail+")";
   try{await admGrantSave(uid,r);ok++}catch(e){String(e&&e.message||e)==="empty"?empty++:fail++}}}
  await Promise.all(Array.from({length:Math.min(6,total)},worker));
- msg.style.color="var(--mu)";msg.textContent="지급했다. 대상 "+total+"명 · 성공 "+ok+"명"+(empty?" · 기록 없음 "+empty+"명":"")+(fail?" · 실패 "+fail+"명":"")+".";
- alertBox("🎁 전체 보상 지급","보상: "+preview+"\n\n"+msg.textContent+(fail?"\n\n실패한 계정은 데이터베이스 규칙(운영자 계정 읽기·쓰기)을 확인해 보자.":"")+"\n\n접속 중인 사람은 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.");
+ msg.style.color="var(--mu)";msg.textContent="지급했다. 대상 "+total+"명(휴면 제외) · 성공 "+ok+"명"+(empty?" · 기록 없음 "+empty+"명":"")+(fail?" · 실패 "+fail+"명":"")+".";
+ alertBox("🎁 전체 보상 지급","보상: "+preview+"\n\n"+msg.textContent+(fail?"\n\n실패한 계정은 데이터베이스 규칙(운영자 계정 읽기·쓰기)을 확인해 보자.":"")+"\n\n휴면(화원) 계정은 제외했다. 접속 중인 사람은 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.");
  btn.disabled=false}
 async function admGrantOne(btn,msg,getR,uidInp){if(!ADM[UID]||!XON()||!DB)return;const uid=String(uidInp&&uidInp.value||"").trim();
  if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
@@ -314,7 +320,7 @@ function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"�
 function drawAdmGrant(box){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
  const gc=elT("div","card rst-card adm-grant");gc.style.marginTop="12px";
  gc.append(elT("h2","","🎁 전체 보상 지급 (운영자 전용)"),
-  elT("p","hint","accounts 에 캐릭터가 있는 모든 등록자에게 보상을 바로 더한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
+  elT("p","hint","accounts 에 캐릭터가 있는 등록자에게 보상을 바로 더한다. 휴면(화원)은 제외한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
   elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다."));
  const getAll=admGrantFields(gc);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);gc.append(gb,gm);box.appendChild(gc);
  const pc=elT("div","card rst-card adm-grant");pc.style.marginTop="12px";

@@ -452,6 +452,9 @@ html[data-theme="light"] .bp-box{background:#f8f3ea;border-color:#9a7a3655}html[
 .ros-at{margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px}
 .ros-chip{font-size:.75rem;padding:1px 8px;border-radius:999px;border:1px solid var(--c,#b89b5e);color:var(--c,#d8c79a)}
 .ros-meta{margin:4px 0 0;font-size:.78rem;color:var(--mu)}
+.ros-hw{margin:2px 0 0;font-size:.78rem;color:var(--mu);letter-spacing:.08em}
+.ros-card.dm{opacity:.72;filter:grayscale(.35)}
+.ros-dm-h{grid-column:1/-1;margin:18px 0 4px;font-family:"Gowun Batang",serif;font-size:1rem;letter-spacing:.14em;color:var(--mu);text-align:center}
 html[data-theme="light"] .ros-title{color:#8a6510}
 html[data-theme="light"] .ros-card{background:linear-gradient(180deg,#fffcf6,#f6f0e5)}
 html[data-theme="light"] .ros-av,html[data-theme="light"] .ros-g{background:#fffdf8;color:#8a6510;border-color:#9a7a36}

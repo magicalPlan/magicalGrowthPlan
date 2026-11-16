@@ -12,6 +12,7 @@ const sim = require("./sim/engine");
 const {grantMarchCore} = require("./sim/xpay");
 const {createFmsgFriend} = require("./friends/fmsg");
 const {createBossHitHp} = require("./boss/hp");
+const {createDormantSweep} = require("./dormant");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -20,6 +21,9 @@ exports.fmsgFriend = createFmsgFriend(getDatabase);
 
 /* 보스·이벤트 보스: wboss/{id}/{uid} 공격 기록 → 서버가 _hp(hp0·sum) 를 굳히고 더한다. */
 exports.bossHitHp = createBossHitHp(getDatabase);
+
+/* 휴면: 매일 who.la(또는 on) 기준 60일 미접속 → dm=1 + 공개 사진 하드 삭제. accounts 전체 스캔 없음. */
+exports.dormantSweep = createDormantSweep(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
