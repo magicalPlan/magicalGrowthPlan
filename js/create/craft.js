@@ -10,10 +10,15 @@ const cfName=id=>{const m=MATM[id];if(m)return m[2]+" "+m[1];const x=ITM.find(t=
 const cfNm=id=>{const m=MATM[id];if(m&&typeof ITEM_IMG!=="undefined"&&ITEM_IMG[id])return m[1];return cfName(id)};
 const cfHave=id=>((C.inv||{})[id]||0);
 
+/* 개수 칸: 숫자면 그대로, [min,max]면 그 구간 균등(서버 functions/account/drops.js rollQty 와 같음). */
+function matQty(n){if(Array.isArray(n)){const lo=Math.floor(Number(n[0])||1),hi=Math.floor(Number(n[1])||lo);if(hi<=lo)return Math.max(0,lo);return lo+Math.floor(Math.random()*(hi-lo+1))}return Math.max(0,Math.floor(Number(n)||0))}
+/* 정기 출정 성공·실패에 쓸 MAT_DROP 표 목록. functions/account/drops.js marchDropTables 와 맞춘다.
+   ★→x_s1, ★★→x_s2, ★★★→x_hi+x_s3, 심연→x_hi+x_ab(심연의 조각 포함). */
+function marchDropTables(r){if(!r)return[];if(!r.ok)return["x_fail"];const rw=Number(r.rw)||1;if(r.ab)return["x_ok","x_hi","x_ab"];if(rw>=1.4)return["x_ok","x_hi","x_s3"];if(rw>=1)return["x_ok","x_s2"];return["x_ok","x_s1"]}
 /* 재료 얻기: MAT_DROP 의 표 이름 목록을 받아 줄마다 굴린다. times 가 있으면 그 표를 그만큼 반복한다(장기 토벌의 시간마다).
    C.inv 에만 더하고 저장은 하지 않는다. 부른 쪽이 원래 하던 대로 저장한다. 얻은 것이 없으면 빈 글자를 돌려준다. */
 function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonus=MAT_VIL[C.v];
- (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+n})});
+ (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+matQty(n)})});
  // 북극광 순록(기간 한정 사역마): 장기 토벌 시간마다 재료 1개 더
  if(times&&(tables||[]).includes("lh_hr")&&typeof petEff==="function"){const pe=petEff("lhmat"),ids=(MAT_DROP.lh_hr||[]).map(x=>x[0]);for(let i=0;i<times;i++)if(Math.random()<pe){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}
  if(bonus&&got[bonus])got[bonus]++;

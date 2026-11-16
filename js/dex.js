@@ -64,8 +64,8 @@ function drawPetDex(l){if(!l)return;petDexAll().filter(x=>x[3]!==4).forEach(p=>l
    서버나 가방(C.inv)을 보지 않는다. 얻었는지와 관계없이 아래 표만 읽어 전부 펼친다.
    카드의 이름·설명은 data/craft.js MAT 의 둘째·넷째 칸이고, 그림은 data/game.js ITEM_IMG 가 있으면 itIc 가 붙인다.
    얻는 곳 목록은 matLines 가 만든다. 사역마가 재료를 더 주는 효과(data/pets.js 의 북극광 순록, js/pet/effect.js 의 lhmat)는 여기 적지 않는다. */
-/* 개수와 확률. 확률 1은 확정이라 퍼센트를 붙이지 않는다. */
-const matBit=(n,p)=>n+"개"+(Number(p)>=1?"":" ("+Math.round(Number(p)*100)+"%)");
+/* 개수와 확률. 개수가 [min,max]면 1~3개처럼 적는다. 확률 1은 확정이라 퍼센트를 붙이지 않는다. */
+const matBit=(n,p)=>{const qty=Array.isArray(n)?(n[0]===n[1]?n[0]+"개":n[0]+"~"+n[1]+"개"):n+"개";return qty+(Number(p)>=1?"":" ("+Math.round(Number(p)*100)+"%)")};
 /* data/craft.js MAT_WHERE 의 표시 이름. 표 키가 없으면 키를 그대로 쓴다.
    data/clue/hunt.js CLUE_DROP 이 그 표를 단서 탐색에 쓰면, 같은 줄 뒤에 탐색 성공·실패를 붙인다. */
 function matPlace(k){const base=(typeof MAT_WHERE!=="undefined"&&MAT_WHERE[k])||k,more=[];
@@ -74,7 +74,7 @@ function matPlace(k){const base=(typeof MAT_WHERE!=="undefined"&&MAT_WHERE[k])||
 /* 제작에 넣는 것의 이름. 재료는 data/craft.js MATM, 아이템은 data/game.js ITM. */
 function matNm(id){const m=typeof MATM!=="undefined"&&MATM[id];if(m)return m[1];const x=typeof ITM!=="undefined"&&ITM.find(t=>t[0]===id);return x?x[1]:id}
 /* 재료 한 개의 얻는 곳. 순서대로 이어 붙이고, 하나도 없으면 MAT 다섯째 칸을 그대로 적는다.
-   1. MAT_DROP: 출정·장기 토벌·보스 레이드에서 굴리는 표. 줄은 [재료 id, 개수, 확률]. 표시 이름은 matPlace.
+   1. MAT_DROP: 출정·장기 토벌·보스 레이드에서 굴리는 표. 줄은 [재료 id, 개수|[min,max], 확률]. 표시 이름은 matPlace.
    2. MAT_VIL: 그 마을 출신이면 이 재료가 나올 때 1개 더. 마을 이름은 data/game.js VL.
    3. RCP: 만드는 결과(둘째 칸)가 이 재료인 제작법. 필요한 마을 공방 단계·골드·개수도 여기 있다.
    4. EBOSS.drop (data/event-boss/boss.js): 이벤트 보스 토벌 보상. [재료 id, 개수].
