@@ -1,13 +1,14 @@
 /* 친구 소식(fmsg) → 계정 친구 칸 동기화.
    경로: fmsg/{받는이}/{보낸이} = { t, ts, n }
-   · t 가 req|ok|del 일 때만 처리한다. 공명 rok/rno 는 여기서 건드리지 않는다.
+   · t 가 req|ok|del|cx 일 때 처리한다. 공명 rok/rno 는 여기서 건드리지 않는다.
+   · cx: 보낸 사람이 대기 중 신청 취소 → 받는이 fq·보낸이 fo 만 지움(fr 유지/미생성).
    · accounts/{uid} 에 친구 관련 칸만 PATCH 한다(c/fr · c/fq · c/fo + ts · sid).
    · Admin SDK 로 쓰므로 RTDB 규칙의 accounts 본인 쓰기 제한을 우회한다.
    · 배포: firebase deploy --only functions:fmsgFriend
    클라 syncFr 는 알림·화면용으로 남을 수 있다. DB 친구 목록의 권위는 이 함수가 맞춘다. */
 const {onValueWritten} = require("firebase-functions/v2/database");
 
-const FRIEND_T = {req: 1, ok: 1, del: 1};
+const FRIEND_T = {req: 1, ok: 1, del: 1, cx: 1};
 const NAME_MAX = 20;
 const SID = "frsync";
 
@@ -69,6 +70,12 @@ async function applyFmsg(db, to, from, v) {
       ["c/fq/" + to]: null,
       ["c/fo/" + to]: null
     });
+    return;
+  }
+  if (t === "cx") {
+    /* 신청 취소: 친구(fr)는 건드리지 않고 신청 칸만 비운다. */
+    await patchFriend(db, to, {["c/fq/" + from]: null});
+    await patchFriend(db, from, {["c/fo/" + to]: null});
     return;
   }
   if (t === "del") {
