@@ -196,7 +196,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pettrr:1,pettrp:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -260,7 +260,8 @@ function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  return dst}
 function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  const gone=Object.assign({},src.petGone||{},dst.petGone||{});dst.petGone=gone;
- const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else if((Number(q.xp)||0)>(Number(L[i].xp)||0))L[i]=Object.assign({},L[i],{xp:q.xp})});dst.pets=L;
+ const mergePetTr=(a,b)=>{const out=Object.assign({},a&&typeof a==="object"?a:{});if(!b||typeof b!=="object")return out;Object.keys(b).forEach(k=>{const s=b[k];if(!s||typeof s!=="object")return;if(!out[k]||!out[k].c)out[k]={c:Math.floor(Number(s.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(s.r)||1)))}});return out};
+ const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else{const cur=L[i],tr=mergePetTr(cur.tr,q.tr),trAlt=cur.trAlt||q.trAlt||null,lm=Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm;if((Number(q.xp)||0)>(Number(cur.xp)||0))L[i]=Object.assign({},cur,q,{tr,lm,trAlt});else L[i]=Object.assign({},cur,{tr,lm,trAlt});if(!trAlt)delete L[i].trAlt}});dst.pets=L;
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
@@ -721,7 +722,7 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
  {const t=$("#bgitog");if(t&&!t._bagFold){t._bagFold=1;t.onclick=()=>bagInvFold(!!$("#bgibox")&&!!$("#bgibox").hidden)}}
  {const t=$("#bgwtog");if(t&&!t._bagWpFold){t._bagWpFold=1;t.onclick=()=>bagWpFold(!!$("#bgwbox")&&!!$("#bgwbox").hidden)}}
  /* 프리즘·이동권·사역마 먹이 UI를 열 때는 소지품 칸을 펼친다. */
- if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn)||(typeof petBagOn!=="undefined"&&petBagOn))bagInvFold(true);else bagInvFold(bagInvOpen());
+ if((typeof prismOn!=="undefined"&&prismOn)||(typeof vtownOn!=="undefined"&&vtownOn)||(typeof petBagOn!=="undefined"&&petBagOn)||(typeof petTrStoneOn!=="undefined"&&petTrStoneOn))bagInvFold(true);else bagInvFold(bagInvOpen());
  bagWpFold(bagWpOpen());
  const rowEl=(label,sub,btns,ic)=>{const w=document.createElement("div");w.style.cssText="display:flex;gap:8px";const i=document.createElement("div");i.className="chip";i.style.cssText="flex:1;text-align:left;cursor:default";
   i.innerHTML="<b></b><small style='display:block;color:var(--mu);font-weight:400'></small>";i.querySelector("b").textContent=label;i.querySelector("small").textContent=sub;
@@ -734,6 +735,7 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   if(id==="prism"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[prismOn?"닫기":"사용",()=>{prismOn=!prismOn;prismPick=null;bag()}]],itIc(id)));if(prismOn)it.appendChild(prismBox());return}
   if(id==="vtown"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[vtownOn?"닫기":"사용",()=>{vtownOn=!vtownOn;vtownPick=null;bag()}]],itIc(id)));if(vtownOn)it.appendChild(vtownBox());return}
   if(id==="milk"){const open=petBagOn==="milk";it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[open?"닫기":"사용",()=>{petBagOn=open?null:"milk";petBagPick=null;bag()}]],itIc(id)));if(open&&typeof petBagBox==="function")it.appendChild(petBagBox());return}
+  if(id==="trcyan"||id==="trblue"||id==="trcast"){const open=typeof petTrStoneOn!=="undefined"&&petTrStoneOn===id;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[open?"닫기":"사용",()=>{petTrStoneOn=open?null:id;petTrStonePick=null;if(typeof petBagOn!=="undefined")petBagOn=null;bag()}]],itIc(id)));if(open&&typeof petTrStoneBox==="function")it.appendChild(petTrStoneBox(id));return}
   if(id==="petcan"||id==="petfeast"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (성장 기록 › 사역마에서 간식으로 준다)",[] ,itIc(id)));return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}

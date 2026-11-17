@@ -13,6 +13,7 @@ const {grantMarchCore} = require("./sim/xpay");
 const {createFmsgFriend} = require("./friends/fmsg");
 const {createBossHitHp} = require("./boss/hp");
 const {createDormantSweep} = require("./dormant");
+const {createPetTraitGrant, createPetTraitReroll, createPetTraitPick} = require("./pettr");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -24,6 +25,11 @@ exports.bossHitHp = createBossHitHp(getDatabase);
 
 /* 휴면: 매일 who.la(또는 on) 기준 60일 미접속 → dm=1 + 공개 사진 하드 삭제. accounts 전체 스캔 없음. */
 exports.dormantSweep = createDormantSweep(getDatabase);
+
+/* 사역마 특성: pettr 부여 · pettrr 변광석 재굴림 · pettrp 지금/새 선택. 클라 굴림 금지. */
+exports.petTraitGrant = createPetTraitGrant(getDatabase);
+exports.petTraitReroll = createPetTraitReroll(getDatabase);
+exports.petTraitPick = createPetTraitPick(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */

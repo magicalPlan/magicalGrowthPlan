@@ -21,6 +21,8 @@ function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonu
  (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+matQty(n)})});
  // 북극광 순록(기간 한정 사역마): 장기 토벌 시간마다 재료 1개 더
  if(times&&(tables||[]).includes("lh_hr")&&typeof petEff==="function"){const pe=petEff("lhmat"),ids=(MAT_DROP.lh_hr||[]).map(x=>x[0]);for(let i=0;i<times;i++)if(Math.random()<pe){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}
+ /* 특성 mat(공방 재료 획득률): 이번에 굴린 표의 재료 후보 중 하나를 추가 확률로 1개. */
+ if(typeof petEff==="function"){const mp=petEff("mat");if(mp>0){const ids=[];(tables||[]).filter(Boolean).forEach(k=>{(MAT_DROP[k]||[]).forEach(r=>{if(r&&r[0]&&ids.indexOf(r[0])<0)ids.push(r[0])})});if(ids.length&&Math.random()<mp){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}}
  if(bonus&&got[bonus])got[bonus]++;
  const ks=Object.keys(got);if(!ks.length)return "";
  ks.forEach(id=>{C.inv[id]=(C.inv[id]||0)+got[id]});C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+ks.reduce((s,id)=>s+got[id],0);
@@ -35,11 +37,16 @@ function cfMax(r){let n=cfCap(r);Object.entries(r[3]).forEach(([id,k])=>{n=Math.
 
 // 마을 공방 단계를 읽어 온 뒤 다시 그린다. 상점과 같은 방식으로 탭을 열 때 한 번만 묻는다.
 async function craftRead(){if(craftBusy||!C||!XON()||typeof loadFac!=="function")return;craftBusy=true;try{await loadFac()}catch(e){}finally{craftBusy=false}if(!$("#v-craft").hidden)craft()}
+/* 재료 란 접기. 기본 펼침. "0" 이면 접힘(mgr_craft_mat). */
+const craftMatOpen=()=>{try{return localStorage.getItem("mgr_craft_mat")!=="0"}catch(e){return true}};
+function craftMatFold(open){const b=$("#cfmtog"),box=$("#cfmbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_craft_mat",open?"1":"0")}catch(e){}}
 
 function craft(msg){if(!C)return;C.inv=C.inv||{};const fresh=$("#v-craft").hidden,again=!fresh,y=window.scrollY;show("craft");if(again)window.scrollTo(0,y);
  const lv=facLv("workshop"),vb={A:"A마을 주민은 제작 골드가 10% 싸다.",B:"B마을 주민은 치유의 약초를 1개 더 얻는다.",C:"C마을 주민은 제작할 때 "+Math.round(CRAFT_C_BONUS*100)+"% 확률로 하나를 더 만든다.",D:"D마을 주민은 절망의 재를 1개 더 얻는다."}[C.v]||"";
  $("#cfh").textContent=(VL[C.v]?VL[C.v].n+" ":"")+"공방 "+lv+"단계. 마을 사람들이 공방을 지을수록 만들 수 있는 것이 늘어난다. "+vb;
  const mm=$("#cfmsg");mm.style.color="var(--mu)";mm.textContent=msg||"";if(msg&&again)toast(msg);
+ {const t=$("#cfmtog");if(t&&!t._cfMatFold){t._cfMatFold=1;t.onclick=()=>craftMatFold(!!$("#cfmbox")&&!!$("#cfmbox").hidden)}}
+ craftMatFold(craftMatOpen());
  // 가진 재료
  const ml=$("#cfm");ml.innerHTML="";MAT.forEach(m=>{const c=elT("button","chip cf-mat");c.type="button";c.title=m[3]+" 얻는 곳: "+m[4];c.onclick=()=>{mm.style.color="var(--mu)";mm.textContent=m[2]+" "+m[1]+": "+m[3]+" 얻는 곳: "+m[4]+"."};
   c.append(itIc(m[0],"sm")||elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});

@@ -83,6 +83,21 @@ function oddsShady(){if(typeof SHADY_TIER_P==="undefined"||typeof SHADY_POOL==="
   (pool||[]).forEach(r=>{const nm=typeof shadyName==="function"?shadyName(r):(r&&r.id)||"?";items.push([nm+(r&&r.n?" ×"+r.n:"")+" · "+(ti+1)+"등급",tp/len])})});
  box.appendChild(elT("p","set-odd-sub","보상별 확률"));
  box.appendChild(oddsTable(items,["보상","확률"]));return box}
+/* 사역마 특성: 효과×등급 표. 머리글에 등급 확률. data/pet-traits.js 와 맞춤. */
+function oddsPetTr(){if(typeof PET_TR_RATE==="undefined"||typeof PET_TR==="undefined")return null;
+ const box=elT("div","set-odd-box"),rareNm=r=>(typeof PET_TR_RARE!=="undefined"&&PET_TR_RARE[r])||String(r);
+ const rate={};PET_TR_RATE.forEach(([r,p])=>{rate[r]=p});
+ const lvLab=(typeof PET_TR_LV!=="undefined"?PET_TR_LV:[5,10,15]).join("·");
+ const col=r=>rareNm(r)+" ("+oddsTxt(rate[r]||0)+")";
+ const unitOf=t=>t[6]==="pp"||t[1]==="trial"?"%p":t[1]==="up"?"%":"";
+ box.append(elT("p","set-odd-name","사역마 특성"),elT("p","hint","친밀도 "+lvLab+"단계에서 각각 하나씩 받는다. 특성 종류는 남은 것 중 균등하고, 같은 사역마에 같은 특성은 나오지 않는다. 아래 등급 확률은 5·10단계 기준이며, 15단계 슬롯은 전설 고정이다."));
+ const t=elT("table","set-odd-table set-odd-fx"),thead=elT("thead"),hr=elT("tr"),tb=elT("tbody");
+ hr.append(elT("th","","펫 효과"),elT("th","",col(1)),elT("th","",col(2)),elT("th","",col(3)));
+ thead.appendChild(hr);t.appendChild(thead);
+ PET_TR.forEach(row=>{const u=unitOf(row),tr=elT("tr");
+  tr.append(elT("td","",row[2]),elT("td","",(Number(row[3])||0)+u),elT("td","",(Number(row[4])||0)+u),elT("td","",(Number(row[5])||0)+u));
+  tb.appendChild(tr)});
+ t.appendChild(tb);box.appendChild(t);return box}
 function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"||typeof PET_RATE==="undefined"||typeof PET_EV==="undefined")return;box.innerHTML="";
  const rate={};PET_RATE.forEach(([k,p])=>{rate[k]=p});
  const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다. 같은 희귀도 안에서는 종마다 같다."));
@@ -94,6 +109,7 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  if(typeof PET_EV2!=="undefined"){const L2=PET_EV2.leg||0,ids=Array.isArray(PET_EV2.ids)?PET_EV2.ids.filter(id=>PETS[id]):[],lim2=ids.length?(PET_EV2.lim||0):0,rare2=PET_EV2.rare||0,common2=Math.max(0,1-L2-lim2-rare2),limN2=ids.length||1,ev2=elT("div","set-odd-box");
   ev2.append(elT("p","set-odd-name",PET_EV2.ic+" "+PET_EV2.nm),elT("p","hint",ids.length?"기간 한정은 "+limN2+"마리가 같은 확률(각 "+oddsTxt(lim2/limN2)+")이다. 그다음은 희귀, 나머지는 일반이다.":"기간 한정 사역마는 곧 공개된다. 지금은 전설·희귀·일반만 나온다."));
   ev2.appendChild(oddsTable([[PET_RARE[3],L2],[PET_RARE[4],lim2],[PET_RARE[2],rare2],[PET_RARE[1],common2]],["희귀도","확률"]));box.appendChild(ev2)}
+ const tr=oddsPetTr();if(tr)box.appendChild(tr);
  const sh=oddsShady();if(sh)box.appendChild(sh)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();

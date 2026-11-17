@@ -69,8 +69,8 @@ function petCur(c) {
   const id = c.pet;
   return c.pets.find(q => q && q.id === id) || null;
 }
-/* gd/ex 만. 클라 js/pet/effect.js 와 동일. */
-function petEff(q, k) {
+/* 종 효과. 클라 js/pet/effect.js petEffSp 와 동일. 특성은 petTraitEff 가 더한다. */
+function petEffSp(q, k) {
   if (!q) return 0;
   const L = petLv(q), sp = q.sp;
   if (k === "ex") return sp === "rabbit" ? .02 * L : sp === "hope" ? .02 * L : 0;
@@ -78,6 +78,15 @@ function petEff(q, k) {
   if (k === "dz") return sp === "jelly" ? .02 * L : sp === "hope" ? .02 * L : 0;
   if (k === "mana") return sp === "crow" ? .03 * L : 0;
   return 0;
+}
+/* 종 + 특성. functions/account/pet-traits.js 와 맞춤. */
+function petEff(q, k) {
+  let t = 0;
+  try {
+    const {petTraitEff} = require("./pet-traits");
+    t = petTraitEff(q, k) || 0;
+  } catch (e) { t = 0; }
+  return petEffSp(q, k) + t;
 }
 function hasAttr(seat, c, name) {
   if (attrsOf(c).includes(name)) return true;
@@ -381,7 +390,7 @@ async function loadMarchBoost(db, uid, seat, now, cache) {
 module.exports = {
   FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_LV_DEF, PET_LV_HARD, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
   DIS_GOAL, VL_DZ, WP_PILE, SK_NM, SOLO_RW_MP, COLLECTOR_P,
-  facLvOf, facLvFromRec, petLv, petLvCap, petXpCap, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
+  facLvOf, facLvFromRec, petLv, petLvCap, petXpCap, petCur, petEff, petEffSp, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
   disSlot, disInfo, disLive, disMine, wfLvOf, wfPack, wfLvFrom, rnLv,
   marchMuls, marchSide, loadMarchBoost, ensureShared, loadFacKeys
 };

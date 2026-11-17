@@ -37,7 +37,27 @@ function corePay(r, uid, seedKey, now, boost) {
     ex = Math.round((8 + (Number(r.ex) || 0)) * exMul);
   }
   const rand = acc.rng(acc.seedHash(String(seedKey || "") + "|" + uid));
-  const inv = acc.rollMats(acc.marchDropTables(r), seat.v, rand);
+  const tables = acc.marchDropTables(r);
+  const inv = acc.rollMats(tables, seat.v, rand);
+  /* 특성 mat: 출정 재료 표 후보 중 1개를 추가 확률로. 클라 matGain 과 맞춤. */
+  try {
+    const c = (boost && boost.c) || {};
+    const pets = Array.isArray(c.pets) ? c.pets : [];
+    const q = pets.find(p => p && p.id === c.pet) || null;
+    const matP = q && typeof acc.petTraitEff === "function" ? acc.petTraitEff(q, "mat") : 0;
+    if (matP > 0 && rand() < matP) {
+      const ids = [];
+      (tables || []).filter(Boolean).forEach(k => {
+        ((acc.MAT_DROP && acc.MAT_DROP[k]) || []).forEach(row => {
+          if (row && row[0] && ids.indexOf(row[0]) < 0) ids.push(row[0]);
+        });
+      });
+      if (ids.length) {
+        const id = ids[Math.floor(rand() * ids.length)];
+        inv[id] = (inv[id] || 0) + 1;
+      }
+    }
+  } catch (e) { /* 재료 기본분 유지 */ }
   const clp = acc.rollClp(!!r.ok, now, rand);
   const side = acc.marchSide(r, seat, (boost && boost.c) || {}, boost || {}, rand, now);
   if (side.mm) inv.mana = (inv.mana || 0) + side.mm;

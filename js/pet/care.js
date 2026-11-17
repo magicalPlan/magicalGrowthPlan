@@ -1,7 +1,7 @@
 /* 사역마를 데리고 돌보는 화면. main.js · growth.js 다음에 불러도 된다.
    성장 기록은 drawPets 를, 출정은 petXp 를 그대로 부른다.
    간식(골드·통조림·특식)은 이 화면에서 고른다(하루 PET_SNACK_N, q.fd 공유). 매지컬 밀크만 가방. */
-function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(petXpCap(q),(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!")}}
+function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(petXpCap(q),(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!"+(typeof petTrNeed==="function"&&petTrNeed(q)?" 아래에서 특성을 펼쳐 받아 보자.":""))}}
 function petPat(q){if(q.pd===today())return;q.pd=today();petXp0(q,PET_PAT);save();growth(PETS[q.sp][2]+" "+q.nm+"을(를) 쓰다듬었다. 기분이 좋아 보인다. (친밀도 +"+PET_PAT+")")}
 function petSnackUsed(q){return(q.fd&&q.fd.d===today())?q.fd.n:0}
 function petSnackTake(q){if(!q.fd||q.fd.d!==today())q.fd={d:today(),n:0};if(q.fd.n>=PET_SNACK_N)return false;q.fd.n++;return true}
@@ -18,6 +18,18 @@ function petFeed(q,kind){kind=kind||"gold";if(!q||!C)return;
  if(!petSnackTake(q))return;
  if(invId)C.inv[invId]--;else C.gd-=cost;
  petXp0(q,xp);save();growth(PETS[q.sp][2]+" "+q.nm+"이(가) "+nm+"을(를) 맛있게 먹었다. (친밀도 +"+xp+")")}
+let petMoreOpen=null;
+function petCloseMore(){if(petMoreOpen==null)return;petMoreOpen=null;if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets()}
+/* 카드 우측 more.png: 이름 바꾸기·보내 주기. 자주 쓰는 쓰다듬기·간식·함께하기는 밖에 둔다. */
+function petMoreBtn(q){const set=elT("div","pet-more-set"),open=petMoreOpen===q.id;
+ const b=elT("button","pet-more");b.type="button";b.setAttribute("aria-label","더보기");b.setAttribute("aria-haspopup","true");b.setAttribute("aria-expanded",open?"true":"false");
+ const img=document.createElement("img");img.src="assets/resource/more.png";img.alt="";img.width=16;img.height=16;img.decoding="async";b.appendChild(img);
+ const menu=elT("div","pet-more-menu card");menu.hidden=!open;menu.setAttribute("role","menu");
+ const item=(lab,fn,cls)=>{const x=elT("button","chip"+(cls?" "+cls:""),lab);x.type="button";x.setAttribute("role","menuitem");
+  x.onclick=e=>{e.stopPropagation();petMoreOpen=null;fn()};menu.appendChild(x)};
+ item("이름 바꾸기",()=>petRename(q));item("보내 주기",()=>petBye(q),"bad");
+ b.onclick=e=>{e.stopPropagation();petMoreOpen=open?null:q.id;drawPets()};
+ set.append(b,menu);return set}
 let petSnackOpen=null;
 function petSnackRow(q){const wrap=elT("div","pet-snack"),fn=petSnackUsed(q),full=fn>=PET_SNACK_N,canN=(C.inv&&C.inv.petcan)||0,feastN=(C.inv&&C.inv.petfeast)||0;
  wrap.appendChild(elT("small","pet-snack-hd","간식 고르기 · 오늘 "+fn+"/"+PET_SNACK_N+(full?" (끝)":"")));
@@ -81,13 +93,20 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix
   const a=elT("div","pet-act"),b=elT("button","chip",PET_EV2.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv2>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv2;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
  if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}
  C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),cap=petLvCap(q),on=C.pet===q.id,nx=L<cap?PET_LV[L]:null,c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);
-  bd.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]),elT("small","","효과: "+P[5](L)+" · 친밀도 "+L+"/"+cap+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (상한)")));
+  const hd=elT("div","pet-hd"),tit=elT("div","pet-hd-t");
+  tit.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]));
+  hd.append(tit,petMoreBtn(q));bd.appendChild(hd);
+  bd.append(elT("small","","효과: "+P[5](L)),elT("small","","친밀도 "+L+"/"+cap+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (상한)")));
   const bar=elT("div","bar"),f=elT("i");const pv=PET_LV[L-1]||0;f.style.width=(nx!=null?Math.min(100,((q.xp||0)-pv)/Math.max(1,nx-pv)*100):100)+"%";bar.appendChild(f);bd.appendChild(bar);
   const a=elT("div","pet-act"),mk=(t,fn,dis)=>{const b=elT("button","chip",t);b.type="button";b.disabled=!!dis;b.onclick=fn;a.appendChild(b)};
   if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
-  mk(q.pd===today()?"쓰다듬기 (내일 다시)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),q.pd===today());
+  mk(q.pd===today()?"쓰다듬기 (내일)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),q.pd===today());
   const fn=petSnackUsed(q),snackOpen=petSnackOpen===q.id;
-  mk(snackOpen?"간식 닫기":"간식 ("+fn+"/"+PET_SNACK_N+")",()=>{petSnackOpen=snackOpen?null:q.id;drawPets()},false);
-  mk("이름 바꾸기",()=>petRename(q));mk("보내 주기",()=>petBye(q));bd.appendChild(a);
+  mk(snackOpen?"간식 닫기":"간식 ("+fn+"/"+PET_SNACK_N+")",()=>{petSnackOpen=snackOpen?null:q.id;petMoreOpen=null;drawPets()},false);
+  bd.appendChild(a);
   if(snackOpen)bd.appendChild(petSnackRow(q));
+  if(typeof petTrPanel==="function")bd.appendChild(petTrPanel(q));
   box.appendChild(c)})}
+
+function petMoreDocClose(e){if(petMoreOpen==null)return;const t=e.target;if(t&&t.closest&&t.closest(".pet-more-set"))return;petCloseMore()}
+document.addEventListener("click",petMoreDocClose);

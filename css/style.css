@@ -364,8 +364,33 @@ textarea::placeholder{color:#6f6785}
 .pf-uid .pf-born{flex:1 0 100%;margin:2px 0 0;color:var(--mu)}
 .hc-pet{margin:6px 0 0;font-size:.85rem;color:#f3d27a}
 .pet-card{display:flex;gap:10px;align-items:flex-start}.pet-card.on{border-color:#f3d27a!important}.pet-ic{font-size:2rem;line-height:1;flex:0 0 auto}.pet-body{flex:1;min-width:0}.pet-body small{display:block;color:var(--mu);font-size:.8rem}
+.pet-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin:0 0 4px}
+.pet-hd-t{flex:1;min-width:0}.pet-hd-t b{display:block}.pet-hd-t small{margin-top:2px}
+.pet-more-set{position:relative;flex:0 0 auto}
+.pet-more{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin:0;padding:0;border:1px solid var(--ln);border-radius:10px;background:rgba(0,0,0,.14);cursor:pointer}
+.pet-more img{display:block;width:16px;height:16px;filter:brightness(0) saturate(100%) invert(86%) sepia(28%) saturate(679%) hue-rotate(358deg) brightness(97%) contrast(92%)}
+.pet-more[aria-expanded=true],.pet-more:hover,.pet-more:focus-visible{border-color:#f3d27a88;background:rgba(243,210,122,.12)}
+.pet-more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:12;min-width:132px;margin:0;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 10px 28px #0008}
+.pet-more-menu .chip{width:100%;justify-content:flex-start;text-align:left;padding:8px 10px;font-size:.8rem}
+.pet-more-menu .chip.bad{color:#ff8da0;border-color:#ff8da055}
 .pet-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.pet-act .chip{flex:0 0 auto;min-width:0;padding:6px 10px;font-size:.8rem}
 .pet-r1{color:#9fe0a0}.pet-r2{color:#6fc1d1}.pet-r3{color:#f3d27a;text-shadow:0 0 8px rgba(243,210,122,.6)}
+/* 사역마 특성: 카드 하단 접기 + 3행(5·10·15). 등급 글자 없이 색만(일반 흰·희귀 파랑·전설 노랑) */
+.pet-tr-wrap{margin-top:10px;padding-top:8px;border-top:1px solid var(--ln);width:100%}
+.pet-tr-tog{display:inline-block;font-size:.78rem;color:var(--mu);cursor:pointer;user-select:none;line-height:1.4}
+.pet-tr-tog:hover,.pet-tr-tog:focus-visible{color:var(--tx);outline:none;text-decoration:underline}
+.pet-tr-box{margin-top:8px}
+.pet-tr-slots{display:flex;flex-direction:column;gap:4px}
+.pet-tr-slot{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:.8rem;line-height:1.35}
+.pet-tr-slot .pet-tr-lv{flex:0 0 auto;color:var(--mu);font-weight:600;min-width:3.2em}
+.pet-tr-slot .pet-tr-sep{flex:0 0 auto;color:var(--mu);opacity:.7}
+.pet-tr-slot .pet-tr-fx{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.pet-tr-slot.lock{opacity:.65}
+.pet-tr-slot.ready .pet-tr-fx{color:#f3d27a}
+.pet-tr-slot.on.r1 .pet-tr-fx{color:#fff}
+.pet-tr-slot.on.r2 .pet-tr-fx{color:#6fc1d1}
+.pet-tr-slot.on.r3 .pet-tr-fx{color:#f3d27a}
+.pet-tr-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pm-req{margin:6px 0 10px;padding:0;list-style:none;font-size:.85rem;color:var(--mu)}.pm-req li{margin:3px 0}.pm-req li.ok{color:#9fe0a0}.rt-card{border-color:#8a7bd1}
 .hc-heal{display:flex;align-items:center;justify-content:space-between;gap:8px}.hc-heal .hc-next{flex:1;min-width:0}.hc-htog{flex:0 0 auto;min-width:0;padding:4px 10px;font-size:.75rem}.hc-htog[aria-pressed=false]{color:var(--mu);border-style:dashed}
 .du-card h2{margin-top:0}.du-side{margin:8px 0;padding:8px;border:1px solid var(--ln);border-radius:10px}.du-side.me{border-color:#6fc1d1}
@@ -420,6 +445,8 @@ button.set-fold-mark{margin:0;padding:0;border:0;background:none;font:inherit;fo
 .set-odd-table th,.set-odd-table td{padding:8px 10px;border:1px solid var(--ln);text-align:left;vertical-align:middle}
 .set-odd-table th{background:color-mix(in srgb,var(--pn) 70%,var(--ln));font-weight:700;color:var(--mu);font-size:.8rem}
 .set-odd-table td:last-child,.set-odd-table th:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:7.5em}
+.set-odd-table.set-odd-fx th:not(:first-child),.set-odd-table.set-odd-fx td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:auto}
+.set-odd-table.set-odd-fx th:last-child,.set-odd-table.set-odd-fx td:last-child{width:auto}
 .set-odd-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--pn) 88%,#0000)}
 html[data-theme="light"] .set-fold-t{color:#6b5216}
 #v-setting .set-ver{margin:auto 0 0;text-align:right;font-size:.72rem;line-height:1.3;color:var(--mu);letter-spacing:.03em}
