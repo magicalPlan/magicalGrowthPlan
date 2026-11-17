@@ -864,7 +864,66 @@
     },
     {
       "id": "flanders-side2",
-      "title": "마을의 일상 - 네로?1"
+      "title": "마을의 일상 - 네로?1",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "patrasche": {
+          "name": "파트라슈",
+          "img": "",
+          "side": "left"
+        },
+        "flanders_artist_default": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        }
+      },
+      "start": "why_im_here",
+      "nodes": {
+        "why_im_here": {
+          "lines": [
+            {
+              "who": "flanders_artist_default",
+              "text": "..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "왜 난 떠나지 않냐고?"
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "하긴, 악당은 이쯤에서 성불할 타이밍이긴 하지?"
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "음... 근데, 난 안 할 거야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "새로운 꿈이 생겼거든."
+            }
+          ],
+          "choose": [
+            {
+              "label": "꿈?",
+              "next": "yes_dream_p"
+            },
+            {
+              "label": "그냥 가면 안돼?",
+              "next": "just_go_plz"
+            }
+          ]
+        },
+        "yes_dream_p": {
+          "lines": [
+            
+          ]
+        }
+      }
     }
   ]
 }
