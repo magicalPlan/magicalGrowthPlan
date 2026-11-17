@@ -22,4 +22,5 @@ $("#ok").onclick=()=>{const n=$("#nm").value.trim(),m=$("#cm");
  if(!n)return m.textContent="이름을 입력해야 한다.";if(!sg)return m.textContent="소년 또는 소녀를 골라야 한다.";
  if(!sv)return m.textContent="시작 마을을 골라야 한다.";if(!sa)return m.textContent="속성을 골라야 한다.";
  if(pk===null)return m.textContent="수정구로 등급을 한 번 이상 뽑아야 한다.";
- C={n,s:sg,v:sv,a:[sa],g:hs[pk].g,t:hs[pk].t,born:Date.now(),xv:3,rsv:RST?RST.id:0,lv:1,ex:0,cl:0,dz:0,b:0,img:pimg,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",petMax:PET_MAX,stats:{maxDespair:0,maxGold:100,loginDays:1,lastDay:new Date().toISOString().slice(0,10),reachedZero:false}};pubLast=null;try{if(typeof dexSkAttr==="function")dexSkAttr(sa)}catch(e){}save();regPlayer(true);checkTitles();hub()};
+ /* flags: 일반·스토리 플래그 가방(js/flags/flags.js). 공개 카드에는 안 올린다. */
+ C={n,s:sg,v:sv,a:[sa],g:hs[pk].g,t:hs[pk].t,born:Date.now(),xv:3,rsv:RST?RST.id:0,lv:1,ex:0,cl:0,dz:0,b:0,img:pimg,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",petMax:PET_MAX,flags:typeof flagsEmpty==="function"?flagsEmpty():{flag:{},story_flag:{}},stats:{maxDespair:0,maxGold:100,loginDays:1,lastDay:new Date().toISOString().slice(0,10),reachedZero:false}};pubLast=null;try{if(typeof dexSkAttr==="function")dexSkAttr(sa)}catch(e){}save();regPlayer(true);checkTitles();hub()};

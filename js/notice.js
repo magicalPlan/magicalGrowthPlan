@@ -97,8 +97,9 @@ let RST=null;
 /* lh·clue: 장기 진행은 남긴다. lv·ex·xv·gd 는 KEEP에 넣지 않아 레벨 1·경험 0·골드 100으로 돌아간다. rstn 도 KEEP에 넣지 않는다(회귀마다 알림을 다시 띄우려고). */
 /* scf(시즌 제작 1회 기록)는 KEEP에 넣지 않는다. 회귀하면 다시 만들 수 있다. */
 /* duSeen·duNt·du·duD 는 KEEP에 넣지 않는다. 회귀하면 대련 신청 표시·진행·일일 보상 횟수가 비워진다. stats.duW/duL/duD 는 rstShape 에서 0으로 맞춘다. */
+/* flags(일반·스토리 플래그 가방)는 시즌 회귀에도 남긴다 — 스토리/해금 진행 유지. */
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
- "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
+ "flags","cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
  "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","rsn","pn","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
 const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
@@ -118,6 +119,7 @@ function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={}
  const next=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
  next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
  next.stats.duW=0;next.stats.duL=0;next.stats.duD=0;
+ try{if(typeof flagsEnsure==="function")flagsEnsure(next);else if(!next.flags)next.flags={flag:{},story_flag:{}}}catch(e){}
  const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
 function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
  return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,du:{w:0,l:0},hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}

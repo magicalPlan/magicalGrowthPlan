@@ -1,0 +1,10 @@
+// accounts/{uid}/c/flags — 캐릭터 플래그 가방 (클라 js/flags/flags.js).
+// 규칙 변경 불필요: accounts/$uid 본인·운영자 읽기/쓰기로 하위 c/flags 도 포함된다.
+// 공개 명부(who/players)에 올리지 않는다. 최상위 노드·indexOn 추가 없음.
+//
+// 구조(참고용 주석 — 규칙 JSON 에는 넣지 않아도 됨):
+//   c.flags.flag[키]        = 일반 진행·해금
+//   c.flags.story_flag[키]  = 스토리·이벤트 진행
+//
+// accounts 블록 주석에 붙일 한 줄 예시:
+//   // c/flags: { flag:{}, story_flag:{} } — 일반·스토리 플래그. 공개 카드에는 없음.
