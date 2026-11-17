@@ -196,7 +196,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pettrr:1,pettrp:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -261,7 +261,7 @@ function giftBoxMerge(dst,src){if(!dst||!src)return dst;
 function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  const gone=Object.assign({},src.petGone||{},dst.petGone||{});dst.petGone=gone;
  const mergePetTr=(a,b)=>{const out=Object.assign({},a&&typeof a==="object"?a:{});if(!b||typeof b!=="object")return out;Object.keys(b).forEach(k=>{const s=b[k];if(!s||typeof s!=="object")return;if(!out[k]||!out[k].c)out[k]={c:Math.floor(Number(s.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(s.r)||1)))}});return out};
- const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else{const cur=L[i],tr=mergePetTr(cur.tr,q.tr),trAlt=cur.trAlt||q.trAlt||null,lm=Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm;if((Number(q.xp)||0)>(Number(cur.xp)||0))L[i]=Object.assign({},cur,q,{tr,lm,trAlt});else L[i]=Object.assign({},cur,{tr,lm,trAlt});if(!trAlt)delete L[i].trAlt}});dst.pets=L;
+ const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else{const cur=L[i],tr=mergePetTr(cur.tr,q.tr);if((Number(q.xp)||0)>(Number(cur.xp)||0))L[i]=Object.assign({},cur,q,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm});else L[i]=Object.assign({},cur,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm})}});dst.pets=L;
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});

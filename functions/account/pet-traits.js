@@ -1,12 +1,10 @@
 /* 사역마 특성 서버 굴림·PATCH.
    · 클라 data/pet-traits.js 와 숫자·코드를 맞춘다. 고치면 양쪽 + Functions 배포.
-   · 호출: functions/pettr.js
-     - pettr/{uid}/{petId} → grantPetTraits
-     - pettrr/{uid}/{petId}={item,ts} → rerollPetTrait (변광석, trAlt 제안)
-     - pettrp/{uid}/{petId}={pick,ts} → pickPetTraitReroll (old|neu)
-   · 계정은 c/pets/{i}/tr/{lv}·trAlt·inv 리프만 update. pets 배열 통째 교체 금지.
-   · 클라가 보낸 특성 id는 쓰지 않는다. 레벨·빈 슬롯·시드·아이템만 서버가 본다.
-   · 15레벨 슬롯은 전설(r=3) 고정. 같은 펫에 동일 코드(c) 중복 없음. */
+   · 호출: functions/pettr.js (pettr/{uid}/{petId} 쓰기) → grantPetTraits.
+   · 계정은 c/pets/{i}/tr/{lv} 리프만 update. pets 배열 통째 교체 금지.
+   · 클라가 보낸 특성 id는 쓰지 않는다. 레벨·빈 슬롯·시드만 서버가 본다.
+   · 15레벨 슬롯은 전설(r=3) 고정. 같은 펫에 동일 코드(c) 중복 없음.
+   · 변광석 변경은 클라 PATCH(가방). 서버 pettrr/pettrp 없음. */
 "use strict";
 
 /* 친밀도 단계(boost.js 와 동일). boost 를 require 하면 petTraitEff 순환이 생기므로 여기만 둔다. */
@@ -26,8 +24,6 @@ function petLv(q) {
 /* data/pet-traits.js 와 동일. */
 const PET_TR_LV = [5, 10, 15];
 const PET_TR_RATE = [[1, .7], [2, .27], [3, .03]];
-/* 변광석 → 슬롯. 클라 data/pet-traits.js PET_TR_STONE 과 동일. */
-const PET_TR_STONE = {trcyan: 5, trblue: 10, trcast: 15};
 const PET_TR = [
   [1, "ex", "출정 경험치", 1, 2, 3, "pp"],
   [2, "gd", "출정 골드", 1, 2, 3, "pp"],
@@ -192,93 +188,9 @@ async function grantPetTraits(db, uid, petId) {
   return n;
 }
 
-function readTrAlt(q) {
-  const a = q && q.trAlt;
-  if (!a || typeof a !== "object") return null;
-  const lv = Math.floor(Number(a.lv) || 0);
-  if (!PET_TR_LV.includes(lv)) return null;
-  const old = a.old && typeof a.old === "object" ? a.old : null;
-  const neu = a.neu && typeof a.neu === "object" ? a.neu : null;
-  if (!old || !neu) return null;
-  const oc = Math.floor(Number(old.c) || 0), or_ = Math.min(3, Math.max(1, Math.floor(Number(old.r) || 1)));
-  const nc = Math.floor(Number(neu.c) || 0), nr = Math.min(3, Math.max(1, Math.floor(Number(neu.r) || 1)));
-  if (!PET_TRM[oc] || !PET_TRM[nc]) return null;
-  const item = String(a.item || "");
-  if (!PET_TR_STONE[item] || PET_TR_STONE[item] !== lv) return null;
-  return {lv, old: {c: oc, r: or_}, neu: {c: nc, r: nr}, item};
-}
-
-/* 변광석: 아이템 소모 + trAlt 제안. 지금 슬롯 코드는 풀에서 제외(항상 다른 특성). */
-async function rerollPetTrait(db, uid, petId, itemId) {
-  if (!uid || !petId) return 0;
-  const item = String(itemId || "");
-  const lv = PET_TR_STONE[item];
-  if (!lv) return 0;
-  const root = db.ref("accounts/" + uid);
-  const cSnap = await root.child("c").get();
-  if (!cSnap.exists()) return 0;
-  const c = cSnap.val() || {};
-  const found = findPet(c.pets, petId);
-  if (!found) return 0;
-  const q = found.q;
-  if (readTrAlt(q)) return 0;
-  const tr = readTr(q);
-  const cur = tr[String(lv)];
-  if (!cur) return 0;
-  if (petLv(q) < lv) return 0;
-  const inv = c.inv && typeof c.inv === "object" ? c.inv : {};
-  const have = Math.floor(Number(inv[item]) || 0);
-  if (have < 1) return 0;
-  const owned = ownedCodesFromTr(tr);
-  const forceLeg = lv === 15;
-  const rand = rng(seedHash(String(uid) + "|" + String(petId) + "|rr|" + lv + "|" + item + "|" + Date.now() + "|" + (Number(q.xp) || 0)));
-  const got = rollPetTrait(owned, forceLeg, rand);
-  if (!got) return 0;
-  const bump = {
-    ts: Date.now(),
-    sid: "pettrr",
-    ["c/inv/" + item]: have - 1,
-    ["c/pets/" + found.path + "/trAlt"]: {lv, old: {c: cur.c, r: cur.r}, neu: {c: got.c, r: got.r}, item}
-  };
-  await root.update(bump);
-  return 1;
-}
-
-/* trAlt 에서 pick=neu|old 선택 후 슬롯 확정. */
-async function pickPetTraitReroll(db, uid, petId, pickRaw) {
-  if (!uid || !petId) return 0;
-  const pick = String(pickRaw || "") === "neu" ? "neu" : String(pickRaw || "") === "old" ? "old" : "";
-  if (!pick) return 0;
-  const root = db.ref("accounts/" + uid);
-  const petsSnap = await root.child("c/pets").get();
-  if (!petsSnap.exists()) return 0;
-  const found = findPet(petsSnap.val(), petId);
-  if (!found) return 0;
-  const alt = readTrAlt(found.q);
-  if (!alt) return 0;
-  const chosen = pick === "neu" ? alt.neu : alt.old;
-  const tr = readTr(found.q);
-  if (pick === "neu") {
-    const others = ownedCodesFromTr(tr).filter(c => {
-      const slot = tr[String(alt.lv)];
-      return !(slot && slot.c === c);
-    });
-    if (others.includes(chosen.c)) return 0;
-  }
-  const bump = {
-    ts: Date.now(),
-    sid: "pettrp",
-    ["c/pets/" + found.path + "/tr/" + alt.lv]: {c: chosen.c, r: chosen.r},
-    ["c/pets/" + found.path + "/trAlt"]: null
-  };
-  await root.update(bump);
-  return 1;
-}
-
 module.exports = {
-  PET_TR_LV, PET_TR_RATE, PET_TR_STONE, PET_TR, PET_TRM, PET_TR_CODES,
-  petTrRaw, petTrVal, petTraitEff, readTr, readTrAlt, ownedCodesFromTr,
+  PET_TR_LV, PET_TR_RATE, PET_TR, PET_TRM, PET_TR_CODES,
+  petTrRaw, petTrVal, petTraitEff, readTr, ownedCodesFromTr,
   rollPetTrRare, rollPetTrCode, rollPetTrait, grantPetTraits,
-  rerollPetTrait, pickPetTraitReroll,
   seedHash, rng, PET_LV, PET_LV_DEF, PET_LV_HARD, petLv, petLvCap
 };

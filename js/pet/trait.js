@@ -109,13 +109,6 @@ function petTrAsk(q){
 /* 변광석(가방): 클라가 즉시 굴림 → confirm → 예일 때만 특성·아이템 PATCH.
    첫 받기(pettr)와 달리 변경은 프리즘처럼 즉시 반영. 확률표는 PET_TR_RATE 와 동일. */
 let petTrStoneOn=null,petTrStonePick=null;
-function petTrAltOf(q){
- const a=q&&q.trAlt;if(!a||typeof a!=="object")return null;
- const lv=Math.floor(Number(a.lv)||0);if(typeof PET_TR_LV!=="undefined"&&PET_TR_LV.indexOf(lv)<0)return null;
- const old=a.old&&typeof a.old==="object"?a.old:null,neu=a.neu&&typeof a.neu==="object"?a.neu:null;
- if(!old||!neu||typeof PET_TRM==="undefined"||!PET_TRM[old.c]||!PET_TRM[neu.c])return null;
- return {lv,old:{c:Math.floor(Number(old.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(old.r)||1)))},neu:{c:Math.floor(Number(neu.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(neu.r)||1)))},item:String(a.item||"")};
-}
 function petTrStoneSlotLine(slot){if(!slot)return "-";return typeof petTrTxt==="function"?petTrTxt(slot.c,slot.r):("코드 "+slot.c)}
 function petTrStonePets(lv){return (C.pets||[]).filter(q=>{if(!q||!PETS[q.sp])return false;const tr=petTrMap(q);return !!tr[String(lv)]})}
 function petTrRollRare(forceLeg){
@@ -140,12 +133,6 @@ function petTrRollNew(q,lv){
 function petTrStoneBox(itemId){
  const box=elT("div","card prism-box"),lv=typeof PET_TR_STONE!=="undefined"?PET_TR_STONE[itemId]:0;
  if(!lv){box.appendChild(elT("p","hint","이 변광석의 슬롯을 찾지 못했다."));return box}
- const pend=(C.pets||[]).map(q=>({q,alt:petTrAltOf(q)})).find(x=>x.alt);
- if(pend){const {q,alt}=pend;
-  box.append(elT("p","hint",q.nm+"의 "+alt.lv+"단계 결과가 아직 남았다. 변광석은 이미 쓰였다."),
-   elT("p","hint",petTrStoneSlotLine(alt.old)+" → "+petTrStoneSlotLine(alt.neu)));
-  const b=elT("button","btn","결과 고르기");b.type="button";
-  b.onclick=()=>petTrStoneResolveAlt(q);box.appendChild(b);return box}
  const pets=petTrStonePets(lv);
  box.appendChild(elT("p","hint",lv+"단계 특성이 있는 사역마"));
  if(!pets.length){box.appendChild(elT("p","hint","아직 이 단계 특성을 받은 사역마가 없다. 성장 기록에서 특성을 먼저 받자."));return box}
@@ -160,31 +147,16 @@ function petTrStoneRerollAsk(q,itemId){
  const lv=typeof PET_TR_STONE!=="undefined"?PET_TR_STONE[itemId]:0;if(!lv)return;
  const old=petTrMap(q)[String(lv)];if(!old)return bag("이 단계 특성이 없다.");
  if(((C.inv&&C.inv[itemId])||0)<1)return bag("변광석이 없다.");
- if(petTrAltOf(q))return petTrStoneResolveAlt(q);
  const neu=petTrRollNew(q,lv);if(!neu)return bag("바꿀 수 있는 특성이 남지 않았다.");
  if(!confirm(q.nm+"의 새로운 가능성이 떠올랐다.\n"+petTrStoneSlotLine(old)+" → "+petTrStoneSlotLine(neu)+"\n바꾸시겠습니까?"))return;
  const i=(C.pets||[]).findIndex(x=>x&&x.id===q.id);if(i<0)return;
  C.inv=C.inv||{};C.inv[itemId]=(C.inv[itemId]||0)-1;if(C.inv[itemId]<1)delete C.inv[itemId];
- q.tr=q.tr&&typeof q.tr==="object"?q.tr:{};q.tr[String(lv)]={c:neu.c,r:neu.r};if(q.trAlt)delete q.trAlt;
- const fields={};fields["inv/"+itemId]=C.inv[itemId]||0;fields["pets/"+i+"/tr/"+lv]={c:neu.c,r:neu.r};fields["pets/"+i+"/trAlt"]=null;
+ q.tr=q.tr&&typeof q.tr==="object"?q.tr:{};q.tr[String(lv)]={c:neu.c,r:neu.r};
+ const fields={};fields["inv/"+itemId]=C.inv[itemId]||0;fields["pets/"+i+"/tr/"+lv]={c:neu.c,r:neu.r};
  const line=petTrStoneSlotLine(neu);
  note("quest",q.nm+"의 "+lv+"단계 특성: "+line+" (변광석)");
  if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
  toast(q.nm+" · "+lv+"단계 → "+line);
- petTrStoneOn=null;petTrStonePick=null;
- if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets();
- if(typeof bag==="function")bag();
-}
-/* 예전에 서버 pettrr 로 남은 trAlt 정리. 예=neu PATCH, 아니오=trAlt 만 지움. */
-function petTrStoneResolveAlt(q){
- const alt=petTrAltOf(q);if(!alt||!q)return;
- const ok=confirm(q.nm+"의 새로운 가능성이 떠올랐다.\n"+petTrStoneSlotLine(alt.old)+" → "+petTrStoneSlotLine(alt.neu)+"\n바꾸시겠습니까?");
- const i=(C.pets||[]).findIndex(x=>x&&x.id===q.id);if(i<0)return;
- const fields={};fields["pets/"+i+"/trAlt"]=null;delete q.trAlt;
- if(ok){q.tr=q.tr&&typeof q.tr==="object"?q.tr:{};q.tr[String(alt.lv)]={c:alt.neu.c,r:alt.neu.r};fields["pets/"+i+"/tr/"+alt.lv]={c:alt.neu.c,r:alt.neu.r};
-  const line=petTrStoneSlotLine(alt.neu);note("quest",q.nm+"의 "+alt.lv+"단계 특성: "+line+" (변광석)");toast(q.nm+" · "+alt.lv+"단계 → "+line)}
- else toast(q.nm+"의 특성은 그대로 두었다.");
- if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
  petTrStoneOn=null;petTrStonePick=null;
  if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets();
  if(typeof bag==="function")bag();
