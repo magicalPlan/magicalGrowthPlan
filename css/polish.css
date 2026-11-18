@@ -345,17 +345,55 @@ html[data-theme="light"] .rel-go{background:#fffcf6}
 html[data-theme="light"] .rel-r{color:#7a5f22;border-color:#9a7a3688}
 html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
 
+/* 장기 의뢰 테마 변수 기본값(눈의 여왕). 시즌 덮어쓰기: css/event/{key}.css + #v-ord[data-event]. */
+#v-ord{
+ --ord-accent:#9fd8ff;
+ --ord-accent-deep:#3a6fa8;
+ --ord-border:#6fa8dc88;
+ --ord-border-soft:#6fa8dc55;
+ --ord-glow:rgba(140,200,255,.18);
+ --ord-glow2:rgba(62,192,176,.12);
+ --ord-hero-bg:radial-gradient(120% 140% at 100% 0,var(--ord-glow),transparent 55%),radial-gradient(90% 120% at 0 100%,var(--ord-glow2),transparent 60%),linear-gradient(180deg,#141a2a,#100e1c);
+ --ord-hero-title:#e8f4ff;
+ --ord-hero-mark:"❄";
+ --ord-tab-on:linear-gradient(180deg,#1d2a40,#141c2c);
+ --ord-clp-c:#3a5f8f;
+ --ord-clp-glow:rgba(140,200,255,.14);
+ --ord-clp-bar:linear-gradient(90deg,#3a6fa8,#9fd8ff);
+ --ord-clp-big:#cfe9ff;
+ --ord-clp-ic:radial-gradient(circle,#2a4a70,#141c2c);
+ --ord-boss-c:#1d4e5c;
+ --ord-boss-bar:linear-gradient(90deg,#1a4a55,#3ec0b0);
+ --ord-clue-bg:linear-gradient(180deg,#102228,#0c181c);
+ --ord-clue-on:#3ec0b0;
+ --ord-clue-hr-fg:#bff3ea;
+ --ord-clue-hr-bg:#1a4a55;
+ --ord-help-bg:#151324;
+ --ord-light-accent:#1f6fa8;
+ --ord-light-title:#1f3b5a;
+ --ord-light-border:#5a9fd4;
+ --ord-light-hero-bg:linear-gradient(135deg,#eaf3fb,#f6f0e5);
+ --ord-light-tab-on:#eaf3fb;
+ --ord-light-clp-bg:linear-gradient(180deg,#eef5fb,#f6f0e5);
+ --ord-light-clp-ic:#eaf3fb;
+ --ord-light-clue-bg:linear-gradient(180deg,#e7f4f6,#f7f1e6);
+ --ord-light-clue-border:#5a9aa6;
+ --ord-light-clue-on:#1f7a86;
+ --ord-light-clue-hr-fg:#0f5f6a;
+ --ord-light-clue-hr-bg:#d3eef0
+}
+
 /* 장기 의뢰의 이벤트 보스. 카드 틀은 보스 레이드와 같고, 색만 구분한다. */
-.boss-card.e{--c:#1d4e5c}
-.boss-card.e .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
+#v-ord .boss-card.e{--c:var(--ord-boss-c)}
+#v-ord .boss-card.e .bar i{background:var(--ord-boss-bar)}
 
 /* 단서 탐색. 칸은 장기 토벌(.dq)과 같고, 색은 이벤트 보스와 같다. */
 #clue{margin-top:8px}
-#clue .dq{border-color:#1d4e5c;background:linear-gradient(180deg,#102228,#0c181c)}
-#clue .dq .bar i{background:linear-gradient(90deg,#1a4a55,#3ec0b0)}
-#clue .dq.clue-on{border-color:#3ec0b0}
-html[data-theme="light"] #clue .dq{background:linear-gradient(180deg,#e7f4f6,#f7f1e6);border-color:#5a9aa6}
-html[data-theme="light"] #clue .dq.clue-on{border-color:#1f7a86}
+#v-ord #clue .dq{border-color:var(--ord-boss-c);background:var(--ord-clue-bg)}
+#v-ord #clue .dq .bar i{background:var(--ord-boss-bar)}
+#v-ord #clue .dq.clue-on{border-color:var(--ord-clue-on)}
+html[data-theme="light"] #v-ord #clue .dq{background:var(--ord-light-clue-bg);border-color:var(--ord-light-clue-border)}
+html[data-theme="light"] #v-ord #clue .dq.clue-on{border-color:var(--ord-light-clue-on)}
 
 /* 기간 한정 사역마 · 서리 여왕의 알 */
 .pet-r4{color:#9fd8ff;text-shadow:0 0 10px rgba(140,200,255,.55)}
@@ -380,32 +418,32 @@ html[data-theme="light"] .pet-dex-it.lim{border-color:#5a9fd4;background:linear-
 html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(90,159,212,.16) 0 8px,transparent 8px 16px),#f4f8fc}
 html[data-theme="light"] .pet-dex-it .pet-dex-fx{color:#6b5216}
 
-/* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) */
-.clp-card{--c:#3a5f8f;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.14),transparent 70%),var(--card,#14121f)!important;border-color:#6fa8dc88!important}
+/* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) — 색은 #v-ord 변수 */
+#v-ord .clp-card{--c:var(--ord-clp-c);background:radial-gradient(circle at 50% 0,var(--ord-clp-glow),transparent 70%),var(--card,#14121f)!important;border-color:var(--ord-border)!important}
 .clp-bar{position:relative;height:14px;margin:10px 0 6px;overflow:visible}
-.clp-bar i{background:linear-gradient(90deg,#3a6fa8,#9fd8ff)!important}
+#v-ord .clp-bar i{background:var(--ord-clp-bar)!important}
 .clp-tick{position:absolute;top:-3px;width:2px;height:20px;margin-left:-1px;background:#ffffff55}
-.clp-tick.on{background:#9fd8ff;box-shadow:0 0 6px #9fd8ff}
-.clp-num{font-weight:700;color:#9fd8ff;margin:4px 0}
+#v-ord .clp-tick.on{background:var(--ord-accent);box-shadow:0 0 6px var(--ord-accent)}
+#v-ord .clp-num{font-weight:700;color:var(--ord-accent);margin:4px 0}
 .clp-ms{display:flex;flex-direction:column;gap:6px;margin:10px 0}
-.clp-ms .dq.clp-ready{border-color:#9fd8ff;box-shadow:inset 3px 0 0 #9fd8ff}
-html[data-theme="light"] .clp-card{background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important;border-color:#5a9fd4!important}
-html[data-theme="light"] .clp-num{color:#1f6fa8}
+#v-ord .clp-ms .dq.clp-ready{border-color:var(--ord-accent);box-shadow:inset 3px 0 0 var(--ord-accent)}
+html[data-theme="light"] #v-ord .clp-card{background:var(--ord-light-clp-bg)!important;border-color:var(--ord-light-border)!important}
+html[data-theme="light"] #v-ord .clp-num{color:var(--ord-light-accent)}
 html[data-theme="light"] .clp-tick{background:#00000033}
-html[data-theme="light"] .clp-tick.on{background:#1f6fa8;box-shadow:none}
-html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:inset 3px 0 0 #1f6fa8}
+html[data-theme="light"] #v-ord .clp-tick.on{background:var(--ord-light-accent);box-shadow:none}
+html[data-theme="light"] #v-ord .clp-ms .dq.clp-ready{border-color:var(--ord-light-accent);box-shadow:inset 3px 0 0 var(--ord-light-accent)}
 
 /* ── 장기 의뢰 화면 다듬기 (html/act/ord.html) ──
-   넓은 화면: 두 칸(왼쪽 단서 조각·단서 탐색, 오른쪽 이벤트 보스). 좁은 화면: 위의 탭으로 한 칸씩. */
-.ord-hero{position:relative;margin:4px 0 14px;padding:18px 20px;border-radius:16px;border:1px solid #6fa8dc55;overflow:hidden;
- background:radial-gradient(120% 140% at 100% 0,rgba(140,200,255,.18),transparent 55%),radial-gradient(90% 120% at 0 100%,rgba(62,192,176,.12),transparent 60%),linear-gradient(180deg,#141a2a,#100e1c)}
-.ord-hero::after{content:"❄";position:absolute;right:16px;top:6px;font-size:64px;opacity:.08;pointer-events:none}
-.ord-kicker{margin:0;font-size:.78rem;letter-spacing:.12em;color:#9fd8ff}
-.ord-title{margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:#e8f4ff}
+   넓은 화면: 두 칸(왼쪽 단서 조각·단서 탐색, 오른쪽 이벤트 보스). 좁은 화면: 위의 탭으로 한 칸씩.
+   시즌 색·장식: css/event/{key}.css */
+.ord-hero{position:relative;margin:4px 0 14px;padding:18px 20px;border-radius:16px;border:1px solid var(--ord-border-soft);overflow:hidden;background:var(--ord-hero-bg)}
+.ord-hero::after{content:var(--ord-hero-mark);position:absolute;right:16px;top:6px;font-size:64px;opacity:.08;pointer-events:none}
+.ord-kicker{margin:0;font-size:.78rem;letter-spacing:.12em;color:var(--ord-accent)}
+.ord-title{margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:var(--ord-hero-title)}
 .ord-lead{margin:0;color:var(--mu);font-size:.92rem;line-height:1.6}
 .ord-tabs{display:flex;gap:6px;margin:0 0 12px;padding:6px;border-radius:14px;background:#0e0c18e6;backdrop-filter:blur(6px);border:1px solid var(--ln)}
 .ord-tabs button{flex:1;position:relative;padding:10px 6px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--mu);font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
-.ord-tabs button[aria-selected=true]{color:#e8f4ff;border-color:#6fa8dc88;background:linear-gradient(180deg,#1d2a40,#141c2c)}
+.ord-tabs button[aria-selected=true]{color:var(--ord-hero-title);border-color:var(--ord-border);background:var(--ord-tab-on)}
 .ord-dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:#ff6b81;box-shadow:0 0 6px #ff6b81}
 .ord-grid{display:grid;gap:14px}
 .ord-pane{min-width:0}
@@ -423,34 +461,34 @@ html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:i
 .ord-help{position:relative}
 .ord-help summary{cursor:pointer;list-style:none;font-size:.82rem;color:var(--mu);padding:4px 10px;border:1px solid var(--ln);border-radius:999px}
 .ord-help summary::-webkit-details-marker{display:none}
-.ord-help[open] summary{color:#9fd8ff;border-color:#6fa8dc88}
-.ord-help p{position:absolute;right:0;top:calc(100% + 6px);width:min(320px,80vw);z-index:6;margin:0;padding:12px 14px;border-radius:12px;font-size:.85rem;line-height:1.6;color:var(--ink);background:#151324;border:1px solid #6fa8dc66;box-shadow:0 10px 30px #0008}
+.ord-help[open] summary{color:var(--ord-accent);border-color:var(--ord-border)}
+.ord-help p{position:absolute;right:0;top:calc(100% + 6px);width:min(320px,80vw);z-index:6;margin:0;padding:12px 14px;border-radius:12px;font-size:.85rem;line-height:1.6;color:var(--ink);background:var(--ord-help-bg);border:1px solid var(--ord-border);box-shadow:0 10px 30px #0008}
 
 /* 단서 조각 카드 */
 .clp-card{padding:16px 18px!important}
 .clp-hd{display:flex;align-items:center;gap:12px}
-.clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:radial-gradient(circle,#2a4a70,#141c2c);border:1px solid #6fa8dc66}
+.clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--ord-clp-ic);border:1px solid var(--ord-border)}
 .clp-ic-img{display:block;width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges}
 .clp-ht h2{margin:2px 0 0!important;border:0!important;padding:0!important;font-size:1.2rem}
 .clp-ht .boss-tag{margin:0}
 .clp-ds{margin:10px 0 12px;color:var(--mu);font-size:.86rem;line-height:1.55}
 .clp-big{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
-.clp-big b{font-size:1.9rem;line-height:1;color:#cfe9ff;font-variant-numeric:tabular-nums}
+.clp-big b{font-size:1.9rem;line-height:1;color:var(--ord-clp-big);font-variant-numeric:tabular-nums}
 .clp-big span{color:var(--mu);font-size:.95rem}
-.clp-big em{margin-left:auto;font-style:normal;font-weight:700;color:#9fd8ff}
+.clp-big em{margin-left:auto;font-style:normal;font-weight:700;color:var(--ord-accent)}
 .clp-card .clp-bar{height:12px;margin:10px 0 14px}
 .clp-card .clp-ms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
 @media (max-width:420px){.clp-card .clp-ms{grid-template-columns:1fr}}
 .clp-m{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:10px 12px;border-radius:12px;border:1px solid var(--ln);background:#ffffff06;min-width:0;height:100%;box-sizing:border-box}
 .clp-m b,.clp-mn,.clp-mr,.clp-lock{display:block}
 .clp-m b{font-size:.95rem}
-.clp-mn{color:#9fd8ff;font-weight:700;font-size:.78rem}
+.clp-mn{color:var(--ord-accent);font-weight:700;font-size:.78rem}
 .clp-mr{color:var(--mu);font-size:.78rem;line-height:1.45}
 /* 전역 .chip 의 flex:1·min-width:84px 가 2열 칸에서 버튼을 밀어 깨뜨린다.
    margin-top:auto 로 보상/잠금 줄을 카드 하단에 맞춘다(같은 행 높이 기준). */
 .clp-m .chip{flex:0 0 auto;align-self:stretch;width:100%;box-sizing:border-box;margin-top:auto;padding:6px 10px!important;min-width:0!important;min-height:0!important;height:auto!important;font-size:.85rem;line-height:1.3;white-space:normal;word-break:keep-all}
 .clp-lock{margin-top:auto;padding-top:6px;font-size:.78rem;color:var(--mu);opacity:.8}
-.clp-m.ready{border-color:#9fd8ff;box-shadow:inset 0 0 0 1px #9fd8ff55,0 0 14px #9fd8ff22}
+.clp-m.ready{border-color:var(--ord-accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ord-accent) 33%,transparent),0 0 14px color-mix(in srgb,var(--ord-accent) 13%,transparent)}
 .clp-m.got{opacity:.6}
 .clp-ft{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--ln)}
 .clp-me{margin:0;font-weight:700}
@@ -460,25 +498,26 @@ html[data-theme="light"] .clp-ms .dq.clp-ready{border-color:#1f6fa8;box-shadow:i
 .clp-chip.me{border-color:#d8c79a;color:#f3d27a}
 .clp-chip b{font-weight:600}
 .clp-stories{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.clp-story{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid #6fa8dc88;background:#ffffff06}
+.clp-story{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--ord-border);background:#ffffff06}
 .clp-story.wait{opacity:.78;border-style:dashed}
 .clp-story-name{font-weight:700;min-width:0}
 .clp-story .chip{flex:0 0 auto;margin:0}
 .clp-story-wait{flex:0 0 auto;font-size:.82rem;color:var(--mu);white-space:nowrap}
-html[data-theme="light"] .clp-story{background:#fffcf6;border-color:#5a9fd4}
+html[data-theme="light"] #v-ord .clp-story{background:#fffcf6;border-color:var(--ord-light-border)}
 
 /* 단서 탐색 카드 격자 */
 .clue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
-.clue-card{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;border:1px solid #1d4e5c;background:linear-gradient(180deg,#102228,#0c181c)}
+#v-ord .clue-card{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;border:1px solid var(--ord-boss-c);background:var(--ord-clue-bg)}
 .clue-card.hard{border-color:#5a2a3a}
 .clue-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .clue-top b{font-size:1rem}
-.clue-hr{flex:0 0 auto;font-size:.78rem;font-weight:700;padding:2px 10px;border-radius:999px;color:#bff3ea;background:#1a4a55;border:1px solid #3ec0b066}
+#v-ord .clue-hr{flex:0 0 auto;font-size:.78rem;font-weight:700;padding:2px 10px;border-radius:999px;color:var(--ord-clue-hr-fg);background:var(--ord-clue-hr-bg);border:1px solid color-mix(in srgb,var(--ord-clue-on) 40%,transparent)}
 .clue-ds{margin:0;color:var(--mu);font-size:.82rem;line-height:1.5;flex:1}
 .clue-chips{display:flex;flex-wrap:wrap;gap:5px}
 .clue-chip{font-size:.76rem;padding:2px 8px;border-radius:999px;border:1px solid #ffffff1f;background:#ffffff08;white-space:nowrap}
 .clue-chip.good{color:#9fe0a0;border-color:#9fe0a055}.clue-chip.bad{color:#ff8da0;border-color:#ff8da055}
-.clue-chip.dz{color:#c9a3ff}.clue-chip.clp{color:#9fd8ff;border-color:#9fd8ff55}
+.clue-chip.dz{color:#c9a3ff}
+#v-ord .clue-chip.clp{color:var(--ord-accent);border-color:color-mix(in srgb,var(--ord-accent) 33%,transparent)}
 .clue-go{margin:2px 0 0!important;padding:9px!important}
 #clue>.dq{margin-bottom:8px}
 
@@ -488,25 +527,26 @@ html[data-theme="light"] .clp-story{background:#fffcf6;border-color:#5a9fd4}
 #ebl .boss-card h2{margin:2px 0 4px}
 #ebl .boss-info{font-size:.8rem;line-height:1.5}
 
-html[data-theme="light"] .ord-hero{background:linear-gradient(135deg,#eaf3fb,#f6f0e5);border-color:#5a9fd466}
-html[data-theme="light"] .ord-title{color:#1f3b5a}
-html[data-theme="light"] .ord-kicker{color:#1f6fa8}
+html[data-theme="light"] #v-ord .ord-hero{background:var(--ord-light-hero-bg);border-color:color-mix(in srgb,var(--ord-light-border) 40%,transparent)}
+html[data-theme="light"] #v-ord .ord-title{color:var(--ord-light-title)}
+html[data-theme="light"] #v-ord .ord-kicker{color:var(--ord-light-accent)}
 html[data-theme="light"] .ord-tabs{background:#fffcf6ee}
-html[data-theme="light"] .ord-tabs button[aria-selected=true]{color:#1f3b5a;background:#eaf3fb;border-color:#5a9fd4}
-html[data-theme="light"] .ord-help p{background:#fffcf6;border-color:#5a9fd4}
-html[data-theme="light"] .clp-ic{background:#eaf3fb;border-color:#5a9fd4}
-html[data-theme="light"] .clp-big b{color:#1f3b5a}
-html[data-theme="light"] .clp-big em,html[data-theme="light"] .clp-mn{color:#1f6fa8}
+html[data-theme="light"] #v-ord .ord-tabs button[aria-selected=true]{color:var(--ord-light-title);background:var(--ord-light-tab-on);border-color:var(--ord-light-border)}
+html[data-theme="light"] #v-ord .ord-help p{background:#fffcf6;border-color:var(--ord-light-border)}
+html[data-theme="light"] #v-ord .clp-ic{background:var(--ord-light-clp-ic);border-color:var(--ord-light-border)}
+html[data-theme="light"] #v-ord .clp-big b{color:var(--ord-light-title)}
+html[data-theme="light"] #v-ord .clp-big em,html[data-theme="light"] #v-ord .clp-mn{color:var(--ord-light-accent)}
 html[data-theme="light"] .clp-m{background:#fffcf6}
-html[data-theme="light"] .clp-m.ready{border-color:#1f6fa8;box-shadow:inset 0 0 0 1px #1f6fa833}
+html[data-theme="light"] #v-ord .clp-m.ready{border-color:var(--ord-light-accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ord-light-accent) 20%,transparent)}
 html[data-theme="light"] .clp-chip{background:#fffcf6}
 html[data-theme="light"] .clp-chip.me{border-color:#9a7a36;color:#7a5f22}
-html[data-theme="light"] .clue-card{background:linear-gradient(180deg,#e7f4f6,#f7f1e6);border-color:#5a9aa6}
+html[data-theme="light"] #v-ord .clue-card{background:var(--ord-light-clue-bg);border-color:var(--ord-light-clue-border)}
 html[data-theme="light"] .clue-card.hard{border-color:#c98a9a}
-html[data-theme="light"] .clue-hr{color:#0f5f6a;background:#d3eef0;border-color:#5a9aa6}
+html[data-theme="light"] #v-ord .clue-hr{color:var(--ord-light-clue-hr-fg);background:var(--ord-light-clue-hr-bg);border-color:var(--ord-light-clue-border)}
 html[data-theme="light"] .clue-chip{background:#fffcf6;border-color:var(--ln)}
 html[data-theme="light"] .clue-chip.good{color:#2e7d3a}html[data-theme="light"] .clue-chip.bad{color:#b8304a}
-html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}html[data-theme="light"] .clue-chip.clp{color:#1f6fa8}
+html[data-theme="light"] .clue-chip.dz{color:#6b3fa0}
+html[data-theme="light"] #v-ord .clue-chip.clp{color:var(--ord-light-accent)}
 
 /* 아이템 도트 그림 (assets/items, js/common/base.js 의 itIc) */
 .it-ic{image-rendering:pixelated;image-rendering:crisp-edges;flex:0 0 auto;filter:drop-shadow(0 2px 3px #0006)}

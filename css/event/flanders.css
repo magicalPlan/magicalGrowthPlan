@@ -1,0 +1,38 @@
+/* 플랜더스의 개 — 장기 의뢰 테마. #v-ord[data-event="flanders"]
+   따뜻한 캔버스·세피아 톤. 레이아웃은 polish, 색·장식만 여기. */
+#v-ord[data-event="flanders"]{
+ --ord-accent:#d4b07a;
+ --ord-accent-deep:#8a6a3e;
+ --ord-border:#c4a57488;
+ --ord-border-soft:#c4a57455;
+ --ord-glow:rgba(196,165,116,.22);
+ --ord-glow2:rgba(120,72,48,.16);
+ --ord-hero-bg:radial-gradient(120% 140% at 100% 0,var(--ord-glow),transparent 55%),radial-gradient(90% 120% at 0 100%,var(--ord-glow2),transparent 60%),linear-gradient(180deg,#1c1610,#140e0a);
+ --ord-hero-title:#f3e6d0;
+ --ord-hero-mark:"🎨";
+ --ord-tab-on:linear-gradient(180deg,#2a2218,#1a140e);
+ --ord-clp-c:#6b5334;
+ --ord-clp-glow:rgba(196,165,116,.16);
+ --ord-clp-bar:linear-gradient(90deg,#8a6a3e,#e0c898);
+ --ord-clp-big:#f0e0c4;
+ --ord-clp-ic:radial-gradient(circle,#5a4430,#1a140e);
+ --ord-boss-c:#5a3a28;
+ --ord-boss-bar:linear-gradient(90deg,#4a3020,#c4a574);
+ --ord-clue-bg:linear-gradient(180deg,#1e1610,#140e0a);
+ --ord-clue-on:#c4a574;
+ --ord-clue-hr-fg:#f0e0c4;
+ --ord-clue-hr-bg:#4a3020;
+ --ord-help-bg:#1a140e;
+ --ord-light-accent:#8a6230;
+ --ord-light-title:#3d2a14;
+ --ord-light-border:#b8925a;
+ --ord-light-hero-bg:linear-gradient(135deg,#f7efe2,#f3e8d4);
+ --ord-light-tab-on:#f3e8d4;
+ --ord-light-clp-bg:linear-gradient(180deg,#f7efe2,#f3e8d4);
+ --ord-light-clp-ic:#f3e8d4;
+ --ord-light-clue-bg:linear-gradient(180deg,#f4ebe0,#f7f1e6);
+ --ord-light-clue-border:#b8925a;
+ --ord-light-clue-on:#8a6230;
+ --ord-light-clue-hr-fg:#5a3a18;
+ --ord-light-clue-hr-bg:#efe0c8
+}

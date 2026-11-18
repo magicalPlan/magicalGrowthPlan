@@ -108,6 +108,7 @@ clp:{
 
 조립 전역: `EVENT`(활성 팩), `EVENT_ORD`, `EBOSS`, `CLP`, `CLUE`, `PET_EV`/`PET_EV2`, `STORY_LOCK`, …
 출정 스키마 `models/event.js` 는 `EVENT_SHAPE`(구 `EVENT`) — 이름 충돌 금지.
+테마 CSS: `css/event/{key}.css` + `#v-ord[data-event]` — `ordPaint`가 `EVENT.key`를 심음. 레이아웃은 `css/polish.css`.
 
 ---
 
@@ -123,6 +124,7 @@ clp:{
 | `functions/account/drops.js` | `require("./event-seasons")` · `rollClp` |
 | `functions/account/boost.js` | `PET_EV` / `PET_EV2` from event-seasons |
 | `js/act/ord.js` · `js/event-boss/*` · `js/pet/egg.js` | 클라 로직 |
+| `css/event/{key}.css` | 장기 의뢰 시즌 테마 (`#v-ord[data-event]`) |
 | `data/story/lock.js` | `storyFlag` · `WORLD_STORY_OPEN` |
 
 ---
@@ -140,9 +142,10 @@ clp:{
 
 1. `seasons.js`에 행 추가 (`key`, **새** `id`, 기간, `eggInv`, `drop`)
 2. `pack.js`에 같은 `key`의 테마 번들 추가
-3. 스토리·`WORLD_STORY_OPEN` 필요 시
-4. predeploy + Functions 배포 + `?v=` 갱신
-5. (선택) `EVENT_FORCE = "키"`로 UI 확인 후 `null`
+3. `css/event/{key}.css` 추가 후 `index.html`에 `<link>` (색·장식 변수만)
+4. 스토리·`WORLD_STORY_OPEN` 필요 시
+5. predeploy + Functions 배포 + `?v=` 갱신
+6. (선택) `EVENT_FORCE = "키"`로 UI 확인 후 `null`
 
 ---
 

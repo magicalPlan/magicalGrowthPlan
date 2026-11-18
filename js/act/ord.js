@@ -1,10 +1,13 @@
 /* 장기 의뢰. 인수인계: data/event/HANDOFF.md
    main.js 다음. 화면 html/act/ord.html, 전환 show · navGroup.
    히어로·단서 안내: pack.js EVENT_ORD ← ordPaint(). 테마만 바꿀 때 ord.html 하드코딩 금지.
+   CSS: #v-ord[data-event=EVENT.key] ← css/event/{key}.css.
    보스 js/event-boss/boss.js · 조각 piece.js · 탐색 clue.js.
    좁은 화면 탭 / 넓은 화면 그리드. 탭 기억 mgr_ordtab. 점 표시 ordMarks. */
 function ordPaint(){
  const o=typeof EVENT_ORD!=="undefined"&&EVENT_ORD||{};
+ const v=$("#v-ord"),key=(typeof EVENT!=="undefined"&&EVENT&&EVENT.key)||"";
+ if(v)v.dataset.event=key;
  const k=$("#ord-kicker"),t=$("#ord-title"),l=$("#ord-lead"),h=$("#ord-clue-help");
  if(k)k.textContent=o.kicker||"기간 한정 장기 의뢰";
  if(t)t.textContent=o.title||"장기 의뢰";
