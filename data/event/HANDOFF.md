@@ -106,7 +106,8 @@ clp:{
 
 - 마일스톤 수령·합계 판정은 클라(`CLP`). 출정 서버 단서 **발견 확률** `x_ok`/`x_fail`만 `seasons.drop` (클라 `clp.drop`과 맞출 것).
 
-조립 전역: `EVENT`, `EVENT_ORD`, `EBOSS`, `CLP`, `CLUE`, `PET_EV`/`PET_EV2`, `STORY_LOCK`, …
+조립 전역: `EVENT`(활성 팩), `EVENT_ORD`, `EBOSS`, `CLP`, `CLUE`, `PET_EV`/`PET_EV2`, `STORY_LOCK`, …
+출정 스키마 `models/event.js` 는 `EVENT_SHAPE`(구 `EVENT`) — 이름 충돌 금지.
 
 ---
 

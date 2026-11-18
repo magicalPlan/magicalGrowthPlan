@@ -11,7 +11,11 @@ function ordPaint(){
  if(l)l.textContent=o.lead||"";
  if(h)h.textContent=o.clueHelp||""
 }
-function ord(){ordPaint();eboss();ordTab()}
+function ord(){
+ /* 예전 캐시 HTML에는 #ord-kicker 가 없다 → includeHeal 로 화면 조각을 다시 받는다. */
+ if(typeof includeHeal==="function"&&!$("#ord-kicker")){includeHeal();return}
+ ordPaint();eboss();ordTab()
+}
 function ordTab(p){const v=$("#v-ord");if(!v)return;try{if(p)localStorage.setItem("mgr_ordtab",p);else p=localStorage.getItem("mgr_ordtab")||"clp"}catch(e){p=p||"clp"}
  if(!["clp","boss","clue"].includes(p))p="clp";v.dataset.tab=p;v.querySelectorAll(".ord-tabs [data-p]").forEach(b=>b.setAttribute("aria-selected",b.dataset.p===p?"true":"false"));ordMarks()}
 function ordMarks(){const v=$("#v-ord");if(!v||!C)return;const now=Date.now();

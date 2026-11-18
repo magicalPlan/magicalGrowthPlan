@@ -18,7 +18,7 @@
    ============================================================================= */
 
 /* 로컬/테스트 전용. 배포 빌드에서는 반드시 null. */
-const EVENT_FORCE=null;
+const EVENT_FORCE="flanders";
 
 const EVENT_PACKS={
  snow:{
@@ -143,10 +143,10 @@ const EVENT_PACKS={
   },
   egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]},
   storyLock:[
-   {id:"flanders-1",n:2500},
-   {id:"flanders-2",n:5000,at:Date.UTC(2026,10,25,15)},
-   {id:"flanders-3",n:7500,at:Date.UTC(2026,10,28,15)},
-   {id:"flanders-4",n:10000,at:Date.UTC(2026,11,1,15)}
+   {id:"flanders-1",n:5000},
+   {id:"flanders-2",n:10000,at:Date.UTC(2026,11,24,15)},
+   {id:"flanders-3",n:15000,at:Date.UTC(2026,11,27,15)},
+   {id:"flanders-4",n:20000,at:Date.UTC(2026,11,30,15)}
   ],
   titles:[
    ["pet_flanders","금 간 캔버스의 손님","금이 간 알에서 플랜더스 시즌의 사역마를 깨웠다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]

@@ -10,9 +10,8 @@ let ebListed="";
 function ebOf (off = 0) {
    const d = new Date();
    d.setDate(d.getDate() - (off || 0));
-   const list = EBOSS.list;
-   const def = list[dayN(d) % list.length];
-   
+   const list = (EBOSS && EBOSS.list) || [];
+   const def = list.length ? list[dayN(d) % list.length] : ["이벤트 보스","보스 목록을 불러오지 못했다. pack.js · seasons.js 로드를 확인하자.","빛"];
    return{
       id: "e-"+ymd(d), def, nm : EBOSS.nm,until : EBOSS.until
    }
@@ -100,7 +99,7 @@ async function loadEboss(){if(!C||!DB||$("#v-ord").hidden||ebBusy)return;ebBusy=
   let list=[];try{list=await bossList(b)}catch(e){}
   if($("#v-ord").hidden||!C||ebOf().id!==b.id)return;list=ebMerge(list);const hp=ebHp(list);if(hp>0)bossMetaNote(b.id,list,hp);ebListed=b.id;drawEboss(list)}
  finally{ebBusy=false;side()}}
-function drawEboss(list){const box=$("#ebl");if(!box||!C)return;ebDay();const b=ebOf(),def=b.def;box.innerHTML="";
+function drawEboss(list){const box=$("#ebl");if(!box||!C)return;ebDay();const b=ebOf(),def=b.def||["이벤트 보스","",""];box.innerHTML="";
  const c=elT("div","card boss-card e");box.appendChild(c);
  if(list==null){c.append(elT("p","boss-tag",b.nm+" · "+b.until),elT("h2","",def[0]),elT("p","hint","처치 여부와 공격 기록을 불러오는 중..."));return}
  ebLast=list;const info=bossBar(b.id,list,()=>ebHp(list)),dead=info.dead,mx=info.mx,hp=info.hp;
