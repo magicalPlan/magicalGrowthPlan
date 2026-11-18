@@ -155,8 +155,8 @@ body:has(#v-chat:not([hidden])) main{max-width:780px}
  background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px}
 #dl,#alg{height:clamp(300px,calc(100dvh - 440px),620px)}
 @media (max-width:600px){
- #gl,#vcl{height:clamp(380px,calc(100dvh - 300px),680px)}
- #dl,#alg{height:clamp(360px,calc(100dvh - 360px),620px)}
+ #gl,#vcl{height:clamp(420px,calc(100dvh - 250px),760px)}
+ #dl,#alg{height:clamp(400px,calc(100dvh - 310px),700px)}
 }
 #cin{margin-top:0!important;padding:10px;gap:8px;border:1px solid var(--ln);border-top:0;border-radius:0 0 16px 16px;background:var(--pn3)}
 #cin input{border-radius:999px;padding:11px 16px;background:var(--pn2)}
