@@ -1,10 +1,9 @@
 /* 무인 상점. 성장 기록 하위 탭.
    화면은 html/growth/shop.html (성장 화면 #gr-shop 에 한 번 붙인다).
    접기는 상점 무기·아이템(shopWpFold · shopItFold)과 같다.
-   원정 mgr_gshop_raid / #gsrtog · #gsrbox
+   출정 mgr_gshop_raid / #gsrtog · #gsrbox → js/growth/raid.js 의 drawPex
    제작 mgr_gshop_craft / #gsctog · #gscbox
-   강화 mgr_gshop_enhance / #gsetog · #gsebox
-   본문이 커지면 이 파일을 나누면 된다. */
+   강화 mgr_gshop_enhance / #gsetog · #gsebox */
 function growthShopMount(){
  const host=$("#gr-shop"),inner=$("#gr-shop-inner");
  if(!host||!inner)return;
@@ -28,6 +27,7 @@ function drawGrowthShop(){
  growthShopFold("#gsetog","#gsebox","mgr_gshop_enhance",growthShopOpen("mgr_gshop_enhance"));
  growthShopBind("#gsrtog","#gsrbox","mgr_gshop_raid");
  growthShopBind("#gsctog","#gscbox","mgr_gshop_craft");
- growthShopBind("#gsetog","#gsebox","mgr_gshop_enhance")
+ growthShopBind("#gsetog","#gsebox","mgr_gshop_enhance");
+ if(typeof drawPex==="function"&&!$("#gsrbox").hidden)drawPex()
 }
 growthShopMount();

@@ -149,12 +149,14 @@ function diffFlat(a,b,path,out){if(a===b)return;const ao=a&&typeof a==="object",
  Object.keys(keys).forEach(k=>{const np=path+"/"+k;if(!Object.prototype.hasOwnProperty.call(b,k))out[np]=null;else diffFlat(a[k],b[k],np,out)})}
 function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
+ /* 사역마 출정(c/pex)·지급 영수증(pexpay)은 서버만 쓴다. 클라 PATCH 로 지우거나 덮지 않는다. */
+ if(typeof pexStripPatch==="function")pexStripPatch(out);else Object.keys(out).forEach(k=>{if(k==="c/pex"||k.indexOf("c/pex/")===0)delete out[k]});
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
 function pendWrite(slim){if(!AUTH.uid||!slim||!Object.keys(slim).length)return;try{localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(Object.assign({_t:Date.now()},slim)))}catch(e){}}
 function pendRead(){if(!AUTH.uid)return null;try{const raw=localStorage.getItem("mgr_pend_"+AUTH.uid);if(!raw)return null;const f=JSON.parse(raw);if(!f||typeof f!=="object")return null;const t=Number(f._t)||0;const fields={};Object.keys(f).forEach(k=>{if(k==="_t")return;if(k.indexOf("c/")===0||k.indexOf("prog/")===0)fields[k]=f[k]});
   /* 예전 형식(_t 없음·경로 접두 없음)도 칸만 모은다. */if(!Object.keys(fields).length)Object.keys(f).forEach(k=>{if(k!=="_t")fields[k]=f[k]});return{t,fields}}catch(e){return null}}
-function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];
+function applyPend(obj,fields){Object.keys(fields||{}).forEach(path=>{if(path.indexOf("c/")!==0)return;if(path==="c/pex"||path.indexOf("c/pex/")===0)return;const parts=path.split("/").slice(1);let o=obj;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!o[k]||typeof o[k]!=="object")o[k]={};o=o[k]}const last=parts[parts.length-1];
   /* 재접속 때 pend 의 null(옛 정산 시도)로 서버에 남은 장기 토벌·단서 진행을 지우지 않는다. 중복 보상 가능성은 남긴다.
      반대로, 서버에 이미 정산(없음)인데 낡은 pend 가 옛 출정을 되살리는 것도 막는다. */
   if(last==="lh"||last==="clue"){if(fields[path]==null&&o[last]&&typeof o[last]==="object")return;if(fields[path]&&typeof fields[path]==="object"&&!o[last])return}
@@ -196,7 +198,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -237,6 +239,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
+ try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
  return true}
 /* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 도감)은 양쪽을 합친다.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
@@ -326,7 +329,7 @@ function saveCloud(now){
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
    let body=accDiff(sent);body=accPwBonusPatch(body,accBase);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});pendWrite(slim)}catch(e){}
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});if(typeof pexStripPatch==="function")pexStripPatch(slim);pendWrite(slim)}catch(e){}
    /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};

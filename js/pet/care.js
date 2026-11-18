@@ -27,7 +27,9 @@ function petMoreBtn(q){const set=elT("div","pet-more-set"),open=petMoreOpen===q.
  const menu=elT("div","pet-more-menu card");menu.hidden=!open;menu.setAttribute("role","menu");
  const item=(lab,fn,cls)=>{const x=elT("button","chip"+(cls?" "+cls:""),lab);x.type="button";x.setAttribute("role","menuitem");
   x.onclick=e=>{e.stopPropagation();petMoreOpen=null;fn()};menu.appendChild(x)};
- item("이름 바꾸기",()=>petRename(q));item("보내 주기",()=>petBye(q),"bad");
+ item("이름 바꾸기",()=>petRename(q));
+ if(typeof pexAway==="function"&&pexAway(q))item("출정 중",()=>toast("출정에서 돌아온 뒤에 보내 줄 수 있다."),"bad");
+ else item("보내 주기",()=>petBye(q),"bad");
  b.onclick=e=>{e.stopPropagation();petMoreOpen=open?null:q.id;drawPets()};
  set.append(b,menu);return set}
 let petSnackOpen=null;
@@ -62,7 +64,7 @@ function petLicense(){if(!C||(C.inv.license||0)<1)return;const cur=petCap();if(c
  C.inv.license--;C.petMax=cur+1;C.stats=C.stats||{};C.stats.petMax=Math.max(C.stats.petMax||0,C.petMax);note("quest","사역마 조련 허가증을 사용했다. 이제 사역마를 "+C.petMax+"마리까지 데리고 있을 수 있다.");save();regPlayer();
  growth("허가증에 여왕의 문양이 빛나며 새겨졌다. 이제 사역마를 "+C.petMax+"마리까지 데리고 있을 수 있다.")}
 // 보내 주기: 친밀도 단계에 따라 유대의 증거(PET_BOND)를 남기고 떠난다.
-function petBye(q){const L=petLv(q),k=Math.max(0,Number(PET_BOND[L])||0);if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."+(k?"\n(유대의 증거 "+k+"개를 남기고 간다)":"")))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;
+function petBye(q){if(typeof pexAway==="function"&&pexAway(q)){toast("출정에서 돌아온 뒤에 보내 줄 수 있다.");return}const L=petLv(q),k=Math.max(0,Number(PET_BOND[L])||0);if(!confirm(q.nm+"을(를) 보내 줄까? 다시 돌아오지 않는다."+(k?"\n(유대의 증거 "+k+"개를 남기고 간다)":"")))return;C.pets=C.pets.filter(x=>x!==q);C.petGone=C.petGone||{};C.petGone[q.id]=1;if(C.pet===q.id)C.pet=(C.pets[0]||{}).id||null;
  if(k){C.inv=C.inv||{};C.inv.bond=(C.inv.bond||0)+k;try{dexAdd("it","bond")}catch(e){}note("quest",q.nm+"이(가) 유대의 증거 "+k+"개를 남기고 떠났다.")}
  save();regPlayer();growth(q.nm+"이(가) 몇 번이나 뒤를 돌아보다가 숲으로 돌아갔다."+(k?" 그 자리에 유대의 증거 "+k+"개가 남았다.":""))}
 function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix==="function"&&eggFix())save()}catch(e){}try{petEvMelt()}catch(e){}try{if(typeof petEv2Melt==="function")petEv2Melt()}catch(e){}box.innerHTML="";C.pets=Array.isArray(C.pets)?C.pets:[];const now=Date.now();C.petSeen=C.petSeen||{};C.pets.forEach(q=>{if(q&&PETS[q.sp])C.petSeen[q.sp]=1});
@@ -91,19 +93,20 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix
    elT("small","","기간 한정 사역마의 이름과 성능은 깨어난 뒤에 도감에 적힌다."));
   const a=elT("div","pet-act"),b=elT("button","chip",PET_EV2.nm+" 품기");b.type="button";b.disabled=!(C.eggsEv2>0)||!!C.egg;b.title=C.egg?"지금 품고 있는 알이 깨어나야 품을 수 있다.":"";b.onclick=petIncubateEv2;a.appendChild(b);vb.appendChild(a);box.appendChild(vc)}
  if(!C.pets.length){box.appendChild(elT("p","hint","아직 사역마가 없다. 알을 품어 보자."));return}
- C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),cap=petLvCap(q),on=C.pet===q.id,nx=L<cap?PET_LV[L]:null,c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);
+ C.pets.forEach(q=>{const P=PETS[q.sp];if(!P)return;const L=petLv(q),cap=petLvCap(q),on=C.pet===q.id,away=typeof pexAway==="function"&&pexAway(q),nx=L<cap?PET_LV[L]:null,c=elT("div","card pet-card"+(on?" on":"")),bd=elT("div","pet-body");c.append(elT("span","pet-ic",P[2]),bd);
   const hd=elT("div","pet-hd"),tit=elT("div","pet-hd-t");
-  tit.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]));
+  tit.append(elT("b","pet-r"+P[3],P[1]+" '"+q.nm+"'"+(on?" · 함께하는 중":"")+(away?" · 출정 중":"")+(P[3]===4?" ❄한정":P[3]===3?" ★전설":P[3]===2?" ◆희귀":"")),elT("small","",P[4]));
   hd.append(tit,petMoreBtn(q));bd.appendChild(hd);
   bd.append(elT("small","","효과: "+P[5](L)),elT("small","","친밀도 "+L+"/"+cap+"단계"+(nx!=null?" ("+(q.xp||0)+" / "+nx+")":" (상한)")));
   const bar=elT("div","bar"),f=elT("i");const pv=PET_LV[L-1]||0;f.style.width=(nx!=null?Math.min(100,((q.xp||0)-pv)/Math.max(1,nx-pv)*100):100)+"%";bar.appendChild(f);bd.appendChild(bar);
   const a=elT("div","pet-act"),mk=(t,fn,dis)=>{const b=elT("button","chip",t);b.type="button";b.disabled=!!dis;b.onclick=fn;a.appendChild(b)};
-  if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
-  mk(q.pd===today()?"쓰다듬기 (내일)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),q.pd===today());
+  if(away)mk("출정 중",()=>toast("무인 상점에서 돌아오는 것을 기다리자."),true);
+  else if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
+  mk(q.pd===today()?"쓰다듬기 (내일)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),!!away||q.pd===today());
   const fn=petSnackUsed(q),snackOpen=petSnackOpen===q.id;
-  mk(snackOpen?"간식 닫기":"간식 ("+fn+"/"+PET_SNACK_N+")",()=>{petSnackOpen=snackOpen?null:q.id;petMoreOpen=null;drawPets()},false);
+  mk(snackOpen?"간식 닫기":"간식 ("+fn+"/"+PET_SNACK_N+")",()=>{petSnackOpen=snackOpen?null:q.id;petMoreOpen=null;drawPets()},!!away);
   bd.appendChild(a);
-  if(snackOpen)bd.appendChild(petSnackRow(q));
+  if(snackOpen&&!away)bd.appendChild(petSnackRow(q));
   if(typeof petTrPanel==="function")bd.appendChild(petTrPanel(q));
   box.appendChild(c)})}
 
