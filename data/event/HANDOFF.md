@@ -80,11 +80,31 @@ eventLive(now)     → 드롭·획득 on/off (FORCE면 그 팩 live, 아니면 f
 | `key` | seasons.key 와 동일 |
 | `ord` | `{ kicker, title, lead, clueHelp }` → `ordPaint` |
 | `piece` | `{ nm, ic, ds, msNames }` (+ 로드 후 `id`) |
+| `clp` | **선택.** `{ goal?, ms?, drop? }` — 없으면 `CLP_FORM` 기본. `ms`는 `[[비율, 보상], …]`이며 길이는 `msNames`와 동일 |
 | `boss.list` | `[타이틀, 설명, 약점] × 6` |
 | `clue` | `rows×4`, `log`, `extra` |
 | `egg` | `{ nm, ic, ds, leg, lim, rare, ids? }` (+ 로드 후 `inv`) |
 | `storyLock` | 장기 의뢰 단서 칸 |
 | `titles` | 시즌 칭호 (모든 팩 titles → `TITLE_LIST`) |
+
+**보상·목표**
+
+- 기본: `common.js` `CLP_FORM.goal` / `.ms` / `.drop` (지금 값 유지)
+- 시즌만 바꾸려면 해당 팩에 예:
+
+```js
+clp:{
+  goal:12000,
+  ms:[
+    [.25,{g:1200,mat:{m_dew:5}}],
+    [.5,{m:12,mat:{m_shard:10},it:{g2:3}}],
+    [.75,{it:{hope:3},evEgg:3}],
+    [1,{g:3500,m:12,mat:{m_dew:10,m_ash:20}}]
+  ]
+}
+```
+
+- 마일스톤 수령·합계 판정은 클라(`CLP`). 출정 서버 단서 **발견 확률** `x_ok`/`x_fail`만 `seasons.drop` (클라 `clp.drop`과 맞출 것).
 
 조립 전역: `EVENT`, `EVENT_ORD`, `EBOSS`, `CLP`, `CLUE`, `PET_EV`/`PET_EV2`, `STORY_LOCK`, …
 

@@ -12,7 +12,9 @@
    · eventPick / eventLive — HANDOFF §2
 
    번들 필드 (EVENT_PACKS[key]) — 일정 제외
-   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(nm·ic·ds·leg·lim·rare·ids), storyLock, titles
+   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock, titles
+   · clp (선택) { goal, ms, drop } — 없으면 common.js CLP_FORM 기본값.
+     ms: [[비율, 보상], …] 길이·순서는 msNames 와 맞출 것. drop 은 클라 조각 드롭(출정 x_ok/x_fail 는 seasons.drop).
    ============================================================================= */
 
 /* 로컬/테스트 전용. 배포 빌드에서는 반드시 null. */
@@ -202,9 +204,24 @@ var PET_EV2=eventEggOf("eggsEv2")||{from:0,to:0,nm:"이벤트 알",ic:"🥚",ds:
 /* 장기 의뢰 스토리 잠금 — 표시 중인 팩 기준. */
 var STORY_LOCK=(EVENT&&Array.isArray(EVENT.storyLock)?EVENT.storyLock:[]).slice();
 
-/* —— 전역 조립 (로직이 보는 이름). EVENT_PACKS / EVENT_FORCE 를 고친다. —— */
+/* 팩 clp 덮어쓰기 + CLP_FORM 기본. o: {goal?, ms?, drop?} */
+function eventClpMerge(pack){
+ const o=pack&&pack.clp||{},base=CLP_FORM;
+ const goal=o.goal!=null?Number(o.goal):base.goal;
+ const drop=o.drop?Object.assign({},base.drop,o.drop):base.drop;
+ const rows=Array.isArray(o.ms)&&o.ms.length?o.ms:base.ms;
+ const names=pack&&pack.piece&&pack.piece.msNames||[];
+ return{
+  goal:goal,
+  drop:drop,
+  ms:rows.map(function(row,i){return [row[0],row[1],names[i]||""]})
+ }
+}
+
+/* —— 전역 조립 (로직이 보는 이름). EVENT_PACKS / EVENT_FORCE / seasons 를 고친다. —— */
 const EVENT_PACK=EVENT?{piece:Object.assign({},EVENT.piece,{from:EVENT.from,to:EVENT.to}),boss:EVENT.boss,clue:EVENT.clue}:null;
 const EBOSS=Object.assign({},EBOSS_FORM,{list:EVENT&&EVENT.boss&&EVENT.boss.list||[]});
+const _clp=eventClpMerge(EVENT);
 const CLP=Object.assign({},CLP_FORM,{
  id:EVENT&&EVENT.piece?EVENT.piece.id:"clue-none",
  nm:EVENT&&EVENT.piece?EVENT.piece.nm:"단서 조각",
@@ -212,7 +229,9 @@ const CLP=Object.assign({},CLP_FORM,{
  ds:EVENT&&EVENT.piece?EVENT.piece.ds:"",
  from:EVENT?EVENT.from:0,
  to:EVENT?EVENT.to:0,
- ms:CLP_FORM.ms.map(function(row,i){return [row[0],row[1],EVENT&&EVENT.piece&&EVENT.piece.msNames&&EVENT.piece.msNames[i]||""]})
+ goal:_clp.goal,
+ drop:_clp.drop,
+ ms:_clp.ms
 });
 const CLUE=CLUE_FORM.map(function(row,i){return Object.assign({},row,EVENT&&EVENT.clue&&EVENT.clue.rows&&EVENT.clue.rows[i]||{})});
 const CLUE_LOG=EVENT&&EVENT.clue&&EVENT.clue.log||[];

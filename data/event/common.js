@@ -30,10 +30,10 @@ const EBOSS_FORM={
  drop:[["m_ore",1],["m_dew",1]]
 };
 
-/* 단서 조각 공통. 명칭·이모지·설명·기간·단계 이름은 pack.piece (+ 팩 from/to).
-   drop: x_ok/x_fail 출정, lh 장기 토벌(시간마다), clue 단서 탐색, eb 보스 토벌 확정.
-   ms: [합계 비율, 보상] — 표시 이름은 pack.piece.msNames.
-   보상 키: g 골드, m 마력석, it 아이템, mat 재료, evEgg 개수(활성 egg.inv 에 가산). */
+/* 단서 조각 기본값. 팩이 clp:{goal,ms,drop} 을 주면 그 시즌만 덮어쓴다(pack.eventClpMerge).
+   명칭·기간: pack.piece + seasons. 단계 표시명: piece.msNames.
+   drop: x_ok/x_fail·lh·clue·eb (출정 서버 x_ok/x_fail 는 seasons.drop 도 맞춤).
+   ms: [합계 비율, 보상]. 보상 키: g,m,it,mat,evEgg(활성 egg.inv). */
 const CLP_FORM={
  goal:10000,
  drop:{x_ok:.35,x_fail:.1,lh:.35,clue:{base:2,extra:.5,fail:.5,early:.5},eb:3},
