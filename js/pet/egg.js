@@ -1,8 +1,9 @@
-/* 사역마의 알. main.js 다음에 불러야 한다. 얻기, 품기, 부화.
-   출정과 장기 토벌은 petDrop 을, 성장 기록은 petBuyEgg, petIncubate, petHatch 를 그대로 부른다. */
-/* 알 개수는 0 이상의 정수만 남긴다. 품고 있는 알은 {t0, t1} 시각이 둘 다 있어야 한다.
-   회귀 뒤에 시각이 비거나 NaN이면 '알을 품는 중'인데 남은 시간이 NaN으로 뜬다. 그 알은 다시 개수로 돌려준다.
-   egg.ev: 1 서리 드래곤의 알(PET_EV), 2 금이 간 알(PET_EV2). */
+/* 사역마의 알. 이벤트 알 인수인계: data/event/HANDOFF.md §8
+   main.js 다음. 출정·장기 토벌 petDrop, 성장 기록 petBuyEgg · petIncubate · petHatch.
+   시즌 알: pack.js EVENT_PACKS[].egg → PET_EV(eggsEv) / PET_EV2(eggsEv2).
+   petEvOn / petEv2On ← eventLive().egg.inv (날짜 또는 EVENT_FORCE). 서버 boost.js 는 날짜만.
+   egg.ev: 1 → PET_EV, 2 → PET_EV2. */
+/* 알 개수는 0 이상의 정수만. 품는 중 {t0,t1}. 회귀로 시각이 깨지면 개수로 되돌린다. */
 function eggNum(n){n=Math.floor(Number(n));return isFinite(n)&&n>0?n:0}
 function eggEvKind(e){const v=e&&e.ev;return v===2?2:v?1:0}
 function eggEvBag(kind){return kind===2?(typeof PET_EV2!=="undefined"?PET_EV2:null):kind===1?(typeof PET_EV!=="undefined"?PET_EV:null):null}
@@ -17,11 +18,12 @@ function eggFix(){if(!C)return false;let ch=false;if(C.eggs!=null&&C.eggs!==eggN
 // 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
 function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
  if(Math.random()<p){C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 성장 기록에서 품을 수 있다.");out.push("🥚 사역마의 알을 주웠다!")}
- if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;note("quest",PET_EV.nm+"을(를) 주웠다! 11월 22일까지만 얻을 수 있는 알이다.");try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
- if(petEv2On()&&Math.random()<p){C.eggsEv2=(C.eggsEv2||0)+1;note("quest",PET_EV2.nm+"을(를) 주웠다! 12월 20일 18시까지만 얻을 수 있는 알이다.");try{toast(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}
+ if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;const until=typeof eventRangeTxt==="function"?eventRangeTxt(PET_EV.from,PET_EV.to):"";note("quest",PET_EV.nm+"을(를) 주웠다!"+(until?" "+until+"에만 얻을 수 있는 알이다.":""));try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
+ if(petEv2On()&&Math.random()<p){C.eggsEv2=(C.eggsEv2||0)+1;const until=typeof eventRangeTxt==="function"?eventRangeTxt(PET_EV2.from,PET_EV2.to):"";note("quest",PET_EV2.nm+"을(를) 주웠다!"+(until?" "+until+"에만 얻을 수 있는 알이다.":""));try{toast(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}
  return out.join(" ")}
-const petEvOn=()=>{const t=Date.now();return typeof PET_EV!=="undefined"&&t>=PET_EV.from&&t<PET_EV.to};
-const petEv2On=()=>{const t=Date.now();return typeof PET_EV2!=="undefined"&&t>=PET_EV2.from&&t<PET_EV2.to};
+/* 활성 이벤트 알. eventLive().egg.inv 기준 (FORCE·날짜 동일). */
+const petEvOn=()=>{const e=typeof eventLive==="function"?eventLive():null;return !!(e&&e.egg&&e.egg.inv==="eggsEv")};
+const petEv2On=()=>{const e=typeof eventLive==="function"?eventLive():null;return !!(e&&e.egg&&e.egg.inv==="eggsEv2")};
 function petEvMelt(){if(!C||!(C.eggsEv>0)||Date.now()<PET_EV.to)return false;const n=C.eggsEv;C.eggs=(C.eggs||0)+n;C.eggsEv=0;note("quest","이벤트가 끝나 "+PET_EV.nm+" "+n+"개가 녹아 평범한 사역마의 알이 되었다.");save();return true}
 function petEv2Melt(){if(!C||!(C.eggsEv2>0)||typeof PET_EV2==="undefined"||Date.now()<PET_EV2.to)return false;const n=C.eggsEv2;C.eggs=(C.eggs||0)+n;C.eggsEv2=0;note("quest","이벤트가 끝나 "+PET_EV2.nm+" "+n+"개가 부서져 평범한 사역마의 알이 되었다.");save();return true}
 function petRollEv(){const r=Math.random(),pick=rar=>{const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]};

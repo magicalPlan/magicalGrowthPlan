@@ -1,10 +1,17 @@
-/* 장기 의뢰. main.js 다음에 불러야 한다. 실전 하위 탭.
-   화면은 html/act/ord.html, 탭은 html/home/main.html, 전환은 js/main.js 의 show 와 navGroup.
-   이벤트 보스는 data/event-boss/boss.js 와 js/event-boss/boss.js.
-   옆의 대련은 html/duel/arena.html 과 js/duel.js 이다.
-   좁은 화면에서는 위의 탭(단서 조각 · 이벤트 보스 · 단서 탐색)으로 한 칸씩 보고, 넓은 화면에서는 두 칸으로 모두 보인다.
-   고른 탭은 이 기기에 기억한다. 받을 보상이 있거나 탐색에서 돌아왔으면 탭에 점을 찍는다(ordMarks). */
-function ord(){eboss();ordTab()}
+/* 장기 의뢰. 인수인계: data/event/HANDOFF.md
+   main.js 다음. 화면 html/act/ord.html, 전환 show · navGroup.
+   히어로·단서 안내: pack.js EVENT_ORD ← ordPaint(). 테마만 바꿀 때 ord.html 하드코딩 금지.
+   보스 js/event-boss/boss.js · 조각 piece.js · 탐색 clue.js.
+   좁은 화면 탭 / 넓은 화면 그리드. 탭 기억 mgr_ordtab. 점 표시 ordMarks. */
+function ordPaint(){
+ const o=typeof EVENT_ORD!=="undefined"&&EVENT_ORD||{};
+ const k=$("#ord-kicker"),t=$("#ord-title"),l=$("#ord-lead"),h=$("#ord-clue-help");
+ if(k)k.textContent=o.kicker||"기간 한정 장기 의뢰";
+ if(t)t.textContent=o.title||"장기 의뢰";
+ if(l)l.textContent=o.lead||"";
+ if(h)h.textContent=o.clueHelp||""
+}
+function ord(){ordPaint();eboss();ordTab()}
 function ordTab(p){const v=$("#v-ord");if(!v)return;try{if(p)localStorage.setItem("mgr_ordtab",p);else p=localStorage.getItem("mgr_ordtab")||"clp"}catch(e){p=p||"clp"}
  if(!["clp","boss","clue"].includes(p))p="clp";v.dataset.tab=p;v.querySelectorAll(".ord-tabs [data-p]").forEach(b=>b.setAttribute("aria-selected",b.dataset.p===p?"true":"false"));ordMarks()}
 function ordMarks(){const v=$("#v-ord");if(!v||!C)return;const now=Date.now();

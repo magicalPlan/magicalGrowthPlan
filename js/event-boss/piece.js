@@ -1,10 +1,11 @@
-/* 단서 조각 로직. 데이터는 data/event/common.js · pack.js (CLP). 테마 교체는 pack 만.
-   화면 #clp (html/act/ord.html). 장기 의뢰 열 때(eboss) clpDraw.
-   발견 호출: room settle(x) · main lhClaim(lh) · clue clueClaim(clue) · boss ebGrant(eb) → clpGain.
-   C.clp = {id, n, got}. 서버 tally/clue/{CLP.id}. 기간은 CLP.from~to (clpOn).
+/* 단서 조각 로직. 인수인계: data/event/HANDOFF.md
+   데이터: common.js · pack.js (CLP · eventLive). 화면 #clp (html/act/ord.html).
+   발견: room settle(x) · main lhClaim(lh) · clue clueClaim(clue) · boss ebGrant(eb) → clpGain.
+   C.clp={id,n,got}. tally/clue/{CLP.id}. clpOn ← eventLive() (날짜 또는 EVENT_FORCE).
+   마일스톤 evEgg → 활성 팩 egg.inv (eggsEv / eggsEv2).
    TODO(다음 이벤트): tally/dr/{지난 id} 잔여 삭제 후 clpAlt·clpMigrateAlt 제거. */
 let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0,clpMigBusy=false,clpMigDone=false;
-const clpOn=()=>{const t=Date.now();return t>=CLP.from&&t<CLP.to};
+const clpOn=()=>typeof eventLive==="function"?!!eventLive():(Date.now()>=CLP.from&&Date.now()<CLP.to);
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
 const clpPath=()=>"tally/clue/"+CLP.id;
 /* COMPAT: 예전 우회로 칸. 이관(clpMigrateAlt)에만 읽고, 새로 쓰지 않는다. */
@@ -42,7 +43,7 @@ async function clpMigrateAlt(){if(!DB||clpMigDone||clpMigBusy||typeof XON==="fun
    연결이 거절되면 POLL_HUB 마다 다시 묻되, 같으면 본문은 받지 않는다. */
 let unClp=null,clpGen=0;
 function clpWatchStop(){if(!unClp)return;clpGen++;try{unClp()}catch(e){}unClp=null}
-function clpWatchStart(){if(!DB||typeof XON!=="function"||!XON()||unClp)return;const now=Date.now();if(now<CLP.from||now>=CLP.to)return;const gen=++clpGen;
+function clpWatchStart(){if(!DB||typeof XON!=="function"||!XON()||unClp)return;if(!clpOn())return;const gen=++clpGen;
  const take=v=>{if(gen!==clpGen||!clpTake(v))return;if(typeof $==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clpDraw(true)};
  unClp=DB.doc(clpPath()).live().onSnapshot(sn=>take(sn.exists?sn.data():null),()=>{},POLL_HUB)}
 async function clpLoad(){if(!DB||clpBusy)return;clpBusy=true;try{await clpMigrateAlt();const s=await DB.doc(clpPath()).get(),v=s.exists?s.data():null;
@@ -54,14 +55,16 @@ function clpClaim(i){const me=clpMine(),s=CLP.ms[i];if(!s||me.got[i]||me.n<1||CL
  C.inv=C.inv||{};if(r.g){C.gd=(C.gd||0)+r.g;bits.push("골드 +"+r.g)}if(r.m){C.inv.mana=(C.inv.mana||0)+r.m;bits.push("마력석 +"+r.m)}
  Object.entries(r.it||{}).forEach(([id,k])=>{C.inv[id]=(C.inv[id]||0)+k;try{dexAdd("it",id)}catch(e){}const x=ITM.find(t=>t[0]===id);bits.push((x?x[1]:id)+" +"+k)});
  Object.entries(r.mat||{}).forEach(([id,k])=>{C.inv[id]=(C.inv[id]||0)+k;bits.push((typeof cfName==="function"?cfName(id):id)+" +"+k)});
- if(r.evEgg){C.eggsEv=(C.eggsEv||0)+r.evEgg;bits.push((typeof PET_EV!=="undefined"?PET_EV.ic+" "+PET_EV.nm:"이벤트 알")+" +"+r.evEgg)}
+ if(r.evEgg){const live=typeof eventLive==="function"?eventLive():null,egg=(live&&live.egg)||(typeof EVENT!=="undefined"&&EVENT&&EVENT.egg)||null;
+  const inv=egg&&egg.inv==="eggsEv2"?"eggsEv2":"eggsEv",E=inv==="eggsEv2"?(typeof PET_EV2!=="undefined"?PET_EV2:null):(typeof PET_EV!=="undefined"?PET_EV:null);
+  C[inv]=(C[inv]||0)+r.evEgg;bits.push((E?E.ic+" "+E.nm:"이벤트 알")+" +"+r.evEgg)}
  me.got[i]=1;titleState();if(s[0]>=1)C.stats.clpGoal=1;C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);
  note("quest",CLP.nm+" '"+s[2]+"' 보상: "+bits.join(", "));save();checkTitles();toast(CLP.ic+" '"+s[2]+"' 보상을 받았다!");clpDraw(true)}
 
 function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마력석 "+r.m);
  Object.entries(r.it||{}).forEach(([id,k])=>{const x=ITM.find(t=>t[0]===id);b.push((x?x[1]:id)+" "+k)});
  Object.entries(r.mat||{}).forEach(([id,k])=>b.push((typeof cfName==="function"?cfName(id):id)+" "+k));
- if(r.evEgg)b.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" "+r.evEgg);return b.join(", ")}
+ if(r.evEgg){const egg=typeof EVENT!=="undefined"&&EVENT&&EVENT.egg,E=egg&&egg.inv==="eggsEv2"?(typeof PET_EV2!=="undefined"?PET_EV2:null):(typeof PET_EV!=="undefined"?PET_EV:null);b.push((E?E.nm:"이벤트 알")+" "+r.evEgg)}return b.join(", ")}
 
 /* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜)가 true 일 때만 '스토리 보기'로 연다.
    날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_INDEX_URL(챕터 목록)→chapters/*.json 을 읽고, 합계는 CLPN 을 쓴다.
@@ -97,9 +100,9 @@ function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof stor
    제목 옆 퍼즐 칸은 assets/event_items/wt_puzzle_piece.png. 조각을 찾았다는 문구(clpGain)는 CLP.ic 이모티콘을 그대로 쓴다. */
 /* KST 벽시계 문구. pack 의 from/to 를 UI에 그대로 쓴다. */
 function clpWhen(t){const d=new Date(Number(t)+9*36e5);const mi=d.getUTCMinutes();return (d.getUTCMonth()+1)+"월 "+d.getUTCDate()+"일 "+d.getUTCHours()+"시"+(mi?String(mi).padStart(2,"0")+"분":"");}
-function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),before=now<CLP.from,after=now>=CLP.to;box.innerHTML="";
+function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),live=clpOn(),before=!live&&now<CLP.from,after=!live&&now>=CLP.to;box.innerHTML="";
  const c=elT("div","card clp-card");box.appendChild(c);
- const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?clpWhen(CLP.from)+" 시작":after?"종료":"남은 시간 "+cdTxt(CLP.to-now))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
+ const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");t.append(elT("p","boss-tag","서버 공동 이벤트 · "+(before?clpWhen(CLP.from)+" 시작":after?"종료":live&&now>=CLP.to?"미리보기":"남은 시간 "+cdTxt(Math.max(0,CLP.to-now)))),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
  c.appendChild(elT("p","clp-ds",CLP.ds));
  if(before){c.appendChild(elT("p","hint",clpWhen(CLP.from)+"부터 "+clpWhen(CLP.to)+"까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
  const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");

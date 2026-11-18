@@ -1,6 +1,9 @@
-/* 출정 재료·단서 굴림. data/craft.js MAT_DROP·MAT_VIL, data/clue/piece.js CLP.drop 과 맞춘다.
-   시드는 출정·uid 로 고정해 재시도해도 같은 결과가 나오게 한다.
-   줄: [id, 개수|[min,max], 확률]. 개수가 배열이면 확률에 걸린 뒤 구간 균등. */
+/* 출정 재료·단서 굴림. 인수인계: data/event/HANDOFF.md
+   MAT_DROP·MAT_VIL ↔ data/craft.js.
+   단서 시즌 일정: data/event/seasons.js → (predeploy) event-seasons.js.
+   시드: 출정·uid 고정. EVENT_FORCE 없음. */
+const {CLP_SEASONS, CLP, clpAt} = require("./event-seasons");
+
 const MAT_DROP = {
   x_ok: [["m_shard", 1, 1], ["m_shard", 1, .4], ["m_herb", 1, .2], ["m_ore", 1, .2]],
   x_hi: [["m_shard", 1, .6], ["m_dew", 1, .15]],
@@ -11,14 +14,6 @@ const MAT_DROP = {
   x_s3: [["m_valley", [1, 3], .3]]
 };
 const MAT_VIL = {B: "m_herb", D: "m_ash"};
-/* 단서 조각(출정 서버 경로). data/event/pack.js 의 piece.id·from·to 및
-   common.js CLP_FORM.drop.x_ok/x_fail 과 맞춘다. 다음 이벤트 때 pack 과 함께 고치고 배포. */
-const CLP = {
-  id: "clue-2026-11",
-  from: Date.UTC(2026, 9, 31, 15),
-  to: Date.UTC(2026, 10, 22, 9),
-  drop: {x_ok: .35, x_fail: .1}
-};
 
 function seedHash(str) {
   let h = 2166136261 >>> 0;
@@ -63,8 +58,9 @@ function rollMats(tables, village, rand) {
 
 function rollClp(ok, now, rand) {
   now = now || Date.now();
-  if (now < CLP.from || now >= CLP.to) return 0;
-  const p = ok ? CLP.drop.x_ok : CLP.drop.x_fail;
+  const s = clpAt(now);
+  if (!s) return 0;
+  const p = ok ? s.drop.x_ok : s.drop.x_fail;
   return rand() < p ? 1 : 0;
 }
 
@@ -80,4 +76,4 @@ function marchDropTables(r) {
   return ["x_ok", "x_s1"];
 }
 
-module.exports = {MAT_DROP, MAT_VIL, CLP, seedHash, rng, rollQty, rollMats, rollClp, marchDropTables};
+module.exports = {MAT_DROP, MAT_VIL, CLP, CLP_SEASONS, clpAt, seedHash, rng, rollQty, rollMats, rollClp, marchDropTables};

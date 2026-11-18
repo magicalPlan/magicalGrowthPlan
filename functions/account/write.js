@@ -3,7 +3,7 @@
    마치 pay: 경제·재료·단서·절망·전 fx·부적/깃발/지도/스킬 소모·펫 XP·알. */
 const {ServerValue} = require("firebase-admin/database");
 const {lvOf} = require("./xp");
-const {CLP} = require("./drops");
+const {clpAt} = require("./drops");
 const {todayStr, PET_XP_CAP, petXpCap} = require("./boost");
 
 async function accountExists(db, uid) {
@@ -73,13 +73,16 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   });
   if (matN > 0) bump["c/stats/mats"] = ServerValue.increment(matN);
   if (pay.clp > 0) {
-    const idSnap = await root.child("c/clp/id").get();
-    if (idSnap.val() !== CLP.id) {
-      bump["c/clp"] = {id: CLP.id, n: pay.clp, got: {}};
-    } else {
-      bump["c/clp/n"] = ServerValue.increment(pay.clp);
+    const season = clpAt(Date.now());
+    if (season) {
+      const idSnap = await root.child("c/clp/id").get();
+      if (idSnap.val() !== season.id) {
+        bump["c/clp"] = {id: season.id, n: pay.clp, got: {}};
+      } else {
+        bump["c/clp/n"] = ServerValue.increment(pay.clp);
+      }
+      any = true;
     }
-    any = true;
   }
   if (pay.egg > 0) { bump["c/eggs"] = ServerValue.increment(pay.egg); any = true; }
   if (pay.eggEv > 0) { bump["c/eggsEv"] = ServerValue.increment(pay.eggEv); any = true; }
@@ -187,6 +190,8 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
 async function addClueTally(db, uid, n) {
   n = Math.max(0, Math.floor(Number(n) || 0));
   if (!n) return;
+  const season = clpAt(Date.now());
+  if (!season) return;
   const nameSnap = await db.ref("accounts/" + uid + "/c/n").get();
   const nm = String(nameSnap.val() || "").slice(0, 20);
   const meSnap = await db.ref("accounts/" + uid + "/c/clp/n").get();
@@ -202,11 +207,11 @@ async function addClueTally(db, uid, n) {
     o.top = o.top.sort((a, x) => x.pt - a.pt).slice(0, 5);
     return o;
   };
-  const primary = db.ref("tally/clue/" + CLP.id);
+  const primary = db.ref("tally/clue/" + season.id);
   try {
     await primary.transaction(step);
   } catch (e) {
-    await db.ref("tally/dr/" + CLP.id).transaction(cur => {
+    await db.ref("tally/dr/" + season.id).transaction(cur => {
       const o = step(cur);
       o.pts = o.n;
       return o;

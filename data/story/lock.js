@@ -1,11 +1,8 @@
-/* 이야기 잠금·목록 플래그.
-   · 글은 data/story/index.json → chapters/*.json (챕터마다 파일 분리).
-   · STORY_LOCK + storyFlag: 실전 > 장기 의뢰 단서 조각 칸(js/event-boss/piece.js clpStories).
-     서버 합계 CLPN·기기 시각으로 연다. 세계관 탭과 무관하다.
-   · WORLD_STORY_OPEN: 설정 > 세계관 > 이벤트 탭(js/world.js worldEvent).
-     open:true 인 에피소드만 버튼을 그린다. 개수·날짜와 무관 — 이 목록만 손으로 켠다/끈다.
-   · index.json 의 chapters[].world 가 false 이면 그 챕터는 이벤트 탭에 안 나온다(내용 준비 전).
-   대사를 고치면 해당 chapters/*.json 의 ?v= 와 STORY_INDEX_URL 의 v 를 올린다. */
+/* 이야기 잠금·목록 플래그. 이벤트 연동: data/event/HANDOFF.md §9
+   · 글: data/story/index.json → chapters/*.json
+   · STORY_LOCK: pack.js 가 표시 팩 storyLock 으로 세움 (장기 의뢰 단서 칸 · clpStories).
+   · WORLD_STORY_OPEN: 세계관 › 이벤트 탭만. CLPN·STORY_LOCK 과 독립.
+   대사 수정 시 chapters/*.json ?v= 와 STORY_INDEX_URL v 를 올린다. */
    /*
    테스트 시:: storyLoad().then(book => vnOpen(book.shards.find(s => s.id === "shard-1")))
    새 챕터 추가:: chapters/새파일.json 작성 → index.json chapters 에 한 줄 → 필요 시 WORLD_STORY_OPEN.
@@ -15,12 +12,7 @@ const STORY_INDEX_URL="data/story/index.json?v=3";
 /* 예전 단일 파일 주소. storyLoad 가 index 형태가 아닐 때만 쓰이던 호환용 — 지금은 index 를 쓴다. */
 const STORY_URL=STORY_INDEX_URL;
 
-const STORY_LOCK=[
- {id:"shard-1",n:2500},
- {id:"shard-2",n:5000,at:Date.UTC(2026,10,3,15)},
- {id:"shard-3",n:7500,at:Date.UTC(2026,10,6,15)},
- {id:"shard-4",n:10000,at:Date.UTC(2026,10,9,15)}
-];
+/* STORY_LOCK 은 data/event/pack.js 가 활성(표시) 팩의 storyLock 으로 세운다. */
 
 /* true 면 장기 의뢰 칸에서 그 이야기를 열 수 있다. n 은 단서 조각 합계, now 는 밀리초 시각. */
 function storyFlag (lock, n, now) {

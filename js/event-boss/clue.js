@@ -1,6 +1,6 @@
-/* 단서 탐색 로직. 데이터는 data/event/common.js · pack.js (CLUE·CLUE_LOG·CLUE_EXTRA).
-   보상·시간은 common, 이름·설명·문장은 pack. 화면 #clue. 출정 금지는 장기 토벌(lh*)과 동일.
-   기록은 C.clue 만. */
+/* 단서 탐색 로직. 인수인계: data/event/HANDOFF.md
+   보상·시간: common.js CLUE_FORM. 이름·설명·log/extra: pack.js clue.
+   화면 #clue. 출정 금지는 장기 토벌(lh*)과 동일. 기록 C.clue 만. */
 const clueOf=id=>(CLUE||[]).find(x=>x.id===id);
 const clueOn=()=>!!(C&&C.clue&&clueOf(C.clue.k));
 function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==="function")setTimeout(ordMarks,0);if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();

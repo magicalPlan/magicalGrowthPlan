@@ -101,8 +101,8 @@ function armedCharm(c) {
 }
 const PET_XP_RUN = 1;
 const PET_DROP_X = .02;
-const PET_EV = {from: Date.UTC(2026, 9, 31, 15), to: Date.UTC(2026, 10, 22, 15)};
-const PET_EV2 = {from: Date.UTC(2026, 10, 22, 15), to: Date.UTC(2026, 11, 20, 9)};
+/* 이벤트 알 창. data/event/seasons.js → event-seasons.js (predeploy). HANDOFF.md §8. */
+const {PET_EV, PET_EV2} = require("./event-seasons");
 const SOLO_RW_MP = .5;
 const COLLECTOR_P = .3;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
