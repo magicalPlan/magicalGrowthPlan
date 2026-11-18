@@ -644,9 +644,13 @@ function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
 /* who 명부 본문. la=마지막 활동(휴면 판정용), on=이번 세션 접속 스탬프(접속 중 표시용).
    set 통째 교체라 dm 칸을 넣지 않으면 재접속 때 휴면 플래그가 지워진다. */
 function whoBody(){const b=pubCard(),o={n:String(b.n||"").slice(0,20),g:String(b.g||"").slice(0,2),a:String(b.a||"").slice(0,40),v:VL[b.v]?b.v:"",lv:Math.max(1,Number(b.lv)||1),pw:Math.max(0,Number(b.pw)||0),on:onlineStamp(),la:ensureLa(),ti:String(b.ti||"").slice(0,40),tn:String(b.tn||"").slice(0,40),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),fl:b.fl?1:0,rv:Math.max(0,Number(b.rv)||0),dz:Math.max(0,Number(b.dz)||0)};if(b.ev)o.ev=b.ev;return o}
+/* 대련장 전용 슬림 명부. 이름·전적·접속/대련중만. 이벤트 점수(ev)는 서버(duelDevScore)만 쓴다. */
+function duRosterBody(){const b=pubCard();return{n:String(b.n||"").slice(0,20),du:b.du||{w:0,l:0},db:Math.max(0,Number(b.db)||0),on:onlineStamp()}}
 function whoFlush(){if(!DB||!C||!UID)return;const b=whoBody();if(!b.n)return;
  const s=JSON.stringify(b);if(s===whoLastSent)return;whoLastSent=s;
- DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null})}
+ DB.doc("who/"+UID).set(b).catch(()=>{if(whoLastSent===s)whoLastSent=null});
+ /* roster 는 patch: 서버가 쓰는 ev 를 set 으로 지우지 않는다. */
+ const d=duRosterBody();DB.doc("duel/roster/"+UID).patch(d).catch(()=>{})}
 function whoPut(now){if(!DB||!C||!UID)return;if(now){if(whoT){clearTimeout(whoT);whoT=null}whoFlush();return}
  if(whoT)return;whoT=setTimeout(()=>{whoT=null;whoFlush()},WHO_MS)}
 /* 친구 창과 프로필은 계정 기록이 아니라 공개 카드 players/{나}.fl 을 본다.

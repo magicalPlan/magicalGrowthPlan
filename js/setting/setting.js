@@ -49,7 +49,7 @@ function drawSetting(){
 /* 회원 탈퇴: 비밀번호로 다시 확인한 뒤 Firebase 계정과 이 계정의 서버 기록을 지운다. */
 async function leaveWipe(){const uid=AUTH.uid,id=mailId();
  if(DB&&uid){const del=p=>{try{return DB.doc(p).delete()}catch(e){return Promise.resolve()}};
-  await Promise.allSettled([del("accounts/"+uid),del("players/"+uid),del("who/"+uid),del("raid/"+uid),del("wboss/pic/"+uid),del("wboss/picm/"+uid)]);
+  await Promise.allSettled([del("accounts/"+uid),del("players/"+uid),del("who/"+uid),del("duel/roster/"+uid),del("raid/"+uid),del("wboss/pic/"+uid),del("wboss/picm/"+uid)]);
   if(id){let linked="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")linked=s.data()}catch(e){}
    try{await DB.doc("mail/"+id).delete()}catch(e){}
    if(linked&&!mailDummy(linked)){try{await DB.doc("elogin/"+mailKey(linked)).delete()}catch(e){}}}}

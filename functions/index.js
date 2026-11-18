@@ -14,6 +14,7 @@ const {createFmsgFriend} = require("./friends/fmsg");
 const {createBossHitHp} = require("./boss/hp");
 const {createDormantSweep} = require("./dormant");
 const {createPetTraitGrant} = require("./pettr");
+const {createDuelDevScore, createDuelDevClaim} = require("./duel");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -28,6 +29,10 @@ exports.dormantSweep = createDormantSweep(getDatabase);
 
 /* 사역마 특성: pettr/{uid}/{petId} 요청 → c/pets/{i}/tr/{lv} PATCH. 클라 굴림 금지. */
 exports.petTraitGrant = createPetTraitGrant(getDatabase);
+
+/* 대련 이벤트: duel/q 점수 · duel/claim 순위 보상. 클라 낙관 UI, 확정은 서버. */
+exports.duelDevScore = createDuelDevScore(getDatabase);
+exports.duelDevClaim = createDuelDevClaim(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
