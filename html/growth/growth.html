@@ -1,8 +1,16 @@
-<!-- 성장 기록. 사역마.
-     전환은 js/growth/growth.js 의 growth(). 탭은 html/home/main.html.
-     마력 각인·운명의 재계약은 계약 탭(html/pact/pact.html). -->
+<!-- 성장 기록. 사역마 / 무인 상점 / ???.
+     전환·칩은 js/growth/growth.js 의 growth · grSetTab (정기 출정 xSetSort 와 동일).
+     무인 상점 본문은 html/growth/shop.html · js/growth/shop.js.
+     탭은 html/home/main.html. -->
 <div id="v-growth" hidden>
+<div class="row gr-sort" id="gr-sort"></div>
+<div id="gr-pet">
 <h2>사역마</h2>
 <div class="hist" id="bgpt"></div>
+</div>
+<div id="gr-shop" hidden></div>
+<div id="gr-empty" hidden>
+<p class="hint">아직 비어있는 장소입니다.</p>
+</div>
 <p class="msg" id="grm" role="alert"></p>
 </div>

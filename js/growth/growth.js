@@ -1,9 +1,41 @@
-/* 성장 기록. 사역마.
+/* 성장 기록. 사역마 / 무인 상점 / ???.
    화면은 html/growth/growth.html, 탭은 html/home/main.html.
-   사역마 목록은 js/pet/care.js 의 drawPets 를 그대로 부른다.
+   하위 칩은 정기 출정 xSort · xSetSort 와 같은 방식(chip + aria-pressed + localStorage).
+   사역마 목록은 js/pet/care.js 의 drawPets, 무인 상점은 js/growth/shop.js.
    마력 각인·운명의 재계약은 js/pact/pact.js · html/pact/pact.html (drawRunes·drawRetrait). */
+let grTab="pet";
+const GR_TABS=[["pet","사역마"],["shop","무인 상점"],["empty","???"]];
+/* ??? 탭: 잠시 숨김. 다시 쓰려면 false 로. */
+const GR_EMPTY_HIDE=true;
+function grSetTab(k){
+ if(!GR_TABS.some(t=>t[0]===k))return;if(GR_EMPTY_HIDE&&k==="empty")return;if(grTab===k)return;grTab=k;
+ try{localStorage.setItem("mgr_grtab",k)}catch(e){}
+ drawGrowth()
+}
+function drawGrowthTabs(){
+ const row=$("#gr-sort");if(!row)return;row.innerHTML="";
+ GR_TABS.forEach(([k,lab])=>{
+  const b=elT("button","chip",lab);b.type="button";
+  b.setAttribute("aria-pressed",grTab===k?"true":"false");
+  b.onclick=()=>grSetTab(k);
+  if(GR_EMPTY_HIDE&&k==="empty"){b.style.visibility="hidden";b.tabIndex=-1;b.setAttribute("aria-hidden","true");b.disabled=true}
+  row.appendChild(b)
+ })
+}
+function drawGrowth(){
+ if(GR_EMPTY_HIDE&&grTab==="empty"){grTab="pet";try{localStorage.setItem("mgr_grtab","pet")}catch(e){}}
+ drawGrowthTabs();
+ const pet=$("#gr-pet"),shop=$("#gr-shop"),empty=$("#gr-empty");
+ if(pet)pet.hidden=grTab!=="pet";
+ if(shop)shop.hidden=grTab!=="shop";
+ if(empty)empty.hidden=grTab!=="empty";
+ if(grTab==="pet"&&typeof drawPets==="function")drawPets();
+ if(grTab==="shop"&&typeof drawGrowthShop==="function")drawGrowthShop()
+}
 function growth(msg){show("growth");
- if(typeof drawPets==="function")drawPets();
+ /* 사역마 돌보기·부화 등 안내가 있으면 사역마 칸을 연다. */
+ if(msg){grTab="pet";try{localStorage.setItem("mgr_grtab","pet")}catch(e){}}
+ drawGrowth();
  const m=$("#grm");if(m){m.style.color="var(--mu)";m.textContent=msg||""}}
 function drawRunes(){const box=$("#bgr");if(!box||!C)return;box.innerHTML="";const have=(C.inv||{}).mana||0;
  $("#rnh").textContent="마력석을 바쳐 몸에 각인을 새긴다. 실패하지 않고, 한 번 새긴 각인은 영원히 남는다. 가진 마력석 "+have+"개.";
@@ -29,3 +61,4 @@ function retrait(){const r=rtReq();if(!r.ok)return;
  C.inv.mana-=RT_MANA;C.gd-=RT_GOLD;C.t=nt;C.rtT=Date.now();titleState();C.stats.traitChanges=(C.stats.traitChanges||0)+1;
  note("quest","운명의 재계약: 특성이 「"+old+"」에서 「"+nt+"」(으)로 바뀌었다.");gain(0,RT_DZ);save();regPlayer();checkTitles();
  alertBox("✦ 운명의 재계약","계약의 원천이 빛을 삼키고, 오래된 계약의 문양이 부서졌다.\n그리고 새로운 문양이 살갗 위로 떠올랐다.\n\n「"+old+"」 → 「"+nt+"」\n"+(TD[nt]||"")+"\n\n대가로 절망도가 "+RT_DZ+" 올랐다.");if(typeof pact==="function")pact();else growth()}
+(()=>{try{const s=localStorage.getItem("mgr_grtab");if(s==="pet"||s==="shop"||s==="empty")grTab=s;if(GR_EMPTY_HIDE&&grTab==="empty")grTab="pet"}catch(e){}})();
