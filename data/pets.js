@@ -5,7 +5,7 @@
    · 친밀도: 쓰다듬기(하루 1번, +PET_PAT), 간식(골드·냠냠 통조림·펫 푸드 특식 합쳐 하루 PET_SNACK_N번), 함께 출정 성공(+PET_XP_RUN).
      단계 기준 PET_LV(같은 식, 최대 PET_LV_HARD칸). 기본 상한 PET_LV_DEF, 매지컬 밀크로 마리마다 +1(최대 PET_LV_HARD).
    · 캐릭터마다 '가질 수 있는 사역마 상한'(C.petMax, 처음엔 PET_MAX=3마리)까지 데리고 있을 수 있고, '보내 주기'로 자리를 비울 수 있다.
-     공방에서 만드는 '사역마 조련 허가증'을 쓰면 상한이 1 오른다. 늘릴 수 있는 것은 PET_MAX_UP(3)마리까지라서 최대 6마리다.
+     공방에서 만드는 '사역마 조련 허가증'을 쓰면 상한이 1 오른다. 늘릴 수 있는 것은 PET_MAX_UP(7)마리까지라서 최대 10마리다.
    효과 크기는 petEff()에서 숫자만 고치면 바뀐다.
    · 특성: 친밀도 5·10·15에서 서버가 굴려 q.tr 에 넣는다(data/pet-traits.js). 클라는 pettr 요청만. */
 const PETS={rabbit:["rabbit","별토끼","🐇",1,"귀에 별가루가 묻은 토끼. 새로운 것을 배우는 걸 좋아한다.",L=>"출정 경험치 +"+2*L+"%"],
@@ -37,4 +37,4 @@ const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DRO
 /* 유대의 증거: 보내 줄 때 친밀도 단계별 개수. 길이 ≥ PET_LV_HARD. 동작은 petBye. */
 const PET_BOND=[0,1,1,3,3,4,4,4,4,4,4,4,4,4,4,4];
 /* 사역마 조련 허가증으로 늘릴 수 있는 상한 수. 기본 상한은 PET_MAX. 동작은 js/pet/care.js 의 petCap · petLicense. */
-const PET_MAX_UP=3;
+const PET_MAX_UP=7;
