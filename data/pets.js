@@ -37,4 +37,4 @@ const PET_RATE=[[1,.70],[2,.27],[3,.03]],PET_HATCH=3600000,PET_EGG_G=500,PET_DRO
 /* 유대의 증거: 보내 줄 때 친밀도 단계별 개수. 길이 ≥ PET_LV_HARD. 동작은 petBye. */
 const PET_BOND=[0,1,1,3,3,4,4,4,4,4,4,4,4,4,4,4];
 /* 사역마 조련 허가증으로 늘릴 수 있는 상한 수. 기본 상한은 PET_MAX. 동작은 js/pet/care.js 의 petCap · petLicense. */
-const PET_MAX_UP=7;
+const PET_MAX_UP=6;
