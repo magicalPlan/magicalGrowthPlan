@@ -92,14 +92,14 @@ const EVENT_PACKS={
   ord:{
    kicker:"🎨 기간 한정 장기 의뢰",
    title:"플랜더스의 개",
-   lead:"버려진 그림과 남겨진 약속. 화가와 아이, 그리고 개의 발자국을 따라가면, 금이 간 이야기 조각이 보인다.",
-   clueHelp:"플랜더스의 흔적을 찾아 떠난다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다. 단서 조각이 가장 많이 나오는 곳이다."
+   lead:"제 형태를 잃고 망집에 휘말린 동물들을 찾는다. 마법을 이용해, 동물들을 집으로 돌려보내자.",
+   clueHelp:"마을 여기저기를 탐험하며 집으로 돌아가길 바라는 동물들을 찾는다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다. 단서 조각이 가장 많이 나오는 곳이다."
   },
   piece:{
-   nm:"단서 조각",
-   ic:"🧩",
-   ds:"금이 간 캔버스에 남은 진실의 한 조각. 혼자서는 흐릿하지만, 모두의 조각이 모이면 그림이 드러난다.",
-   msNames:["첫 붓질","흩어진 물감","캔버스의 균열","완성된 그림"]
+   nm:"물감",
+   ic:"🖌️",
+   ds:"여린 동물을 덮친 집착. 물감의 형태로 화한 것을 덜어내고 모으자.",
+   msNames:["마수를 닮은 짐승","귀갓길","나는 닿을 수 없어.","집착의 색"]
   },
   boss:{
    list:[
@@ -143,13 +143,13 @@ const EVENT_PACKS={
   },
   egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]},
   storyLock:[
-   {id:"flanders-1",n:5000},
-   {id:"flanders-2",n:10000,at:Date.UTC(2026,11,24,15)},
-   {id:"flanders-3",n:15000,at:Date.UTC(2026,11,27,15)},
-   {id:"flanders-4",n:20000,at:Date.UTC(2026,11,30,15)}
+   {id:"flanders-2",n:5000},
+   {id:"flanders-3",n:10000,at:Date.UTC(2026,11,24,15)},
+   {id:"flanders-4",n:15000,at:Date.UTC(2026,11,27,15)},
+   {id:"flanders-5",n:20000,at:Date.UTC(2026,11,30,15)}
   ],
   titles:[
-   ["pet_flanders","금 간 캔버스의 손님","금이 간 알에서 플랜더스 시즌의 사역마를 깨웠다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
+   ["pet_flanders","포기하는 게 아니야","더 먼 세상을 여행하길 바라며. 금이 간 알에 생명을 불어넣었다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
   ]
  }
 };
@@ -166,10 +166,17 @@ function eventBindSeasons(){
 }
 eventBindSeasons();
 
-function eventPackList(){return Object.keys(EVENT_PACKS).map(function(k){return EVENT_PACKS[k]})}
-function eventPick(now){
- now=now==null?Date.now():now;
- if(EVENT_FORCE&&EVENT_PACKS[EVENT_FORCE])return EVENT_PACKS[EVENT_FORCE];
+function eventPackList () {
+  return Object.keys(EVENT_PACKS).map(
+    function (k) {
+      return EVENT_PACKS[k]
+    }
+  )
+}
+
+function eventPick (now) {
+  now = now == null ? Date.now() : now;
+  if (EVENT_FORCE && EVENT_PACKS[EVENT_FORCE]) return EVENT_PACKS[EVENT_FORCE];
  const list=eventPackList(),live=list.find(function(e){return now>=e.from&&now<e.to});
  if(live)return live;
  const up=list.filter(function(e){return now<e.from}).sort(function(a,b){return a.from-b.from});
