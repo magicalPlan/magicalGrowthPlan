@@ -82,6 +82,13 @@ async function pexClaim(run,early){if(pexBusy||!run||!DB||!UID)return;
 /* 화면 그리기.
    UI 정리(2026-11): 긴 안내 문단을 한 줄+용량 뱃지로 줄이고,
    출정 중 / 보내기(펫·맵·버튼) 구역을 나눔. 맵은 이름·시간·보상 줄을 분리. */
+/* 맵 칸용 보상 목록: [글, 50% 여부]. 기본·조각·특별(확정)·특별(50%). */
+function pexLootList(L){if(!L)return[];const a=[];[L[3],L[6],L[7]].forEach(c=>{const t=pexLootCell(c);if(t)a.push([t,0])});const bn=pexLootCell(L[8]);if(bn)a.push([bn,1]);return a}
+/* 출정 칸.
+   UI 정리(2026-11-19): 위에서 아래로 안내 카드(용량 칸) → 출정 중 카드 → 보내기 1·2단계 → 출정 버튼.
+   · 돌아온 출정은 흐리게 하지 않고 금색으로 강조, '보상 받기'를 주 버튼으로.
+   · 사역마는 드롭다운 대신 칩으로 고른다. 목적지는 넓은 화면에서 두 칸.
+   · 보상은 작은 알약(.pex-rw), 50% 확률은 점선 알약. */
 function drawPex(){const box=$("#gsrbox");if(!box)return;
  if(!C){box.innerHTML="";box.appendChild(elT("p","hint","캐릭터를 불러온 뒤 다시 열어 주세요."));return}
  try{
@@ -90,30 +97,32 @@ function drawPex(){const box=$("#gsrbox");if(!box)return;
   const onMap={};runs.forEach(r=>{onMap[r.k]=(onMap[r.k]|0)+1});
   if(pexPickPet&&(away.has(pexPickPet)||C.pet===pexPickPet||!pexPetOf(pexPickPet)))pexPickPet=null;
 
-  /* [안내] 예전: 규칙 전부를 한 hint 문단에. 지금: 요약 한 줄 + (n/max) 뱃지. */
+  /* [안내] 요약 + 출정 칸(●●○). */
   const head=elT("div","pex-head");
-  head.appendChild(elT("p","hint pex-lead","함께하지 않는 사역마를 보내 보상을 얻는다. 완료 전 귀환은 보상 없음."));
-  const cap=elT("span","pex-cap",runs.length+" / "+max);cap.title="출정 중 / 동시 상한";
-  head.appendChild(cap);
-  box.appendChild(head);
+  const hl=elT("div","pex-head-tx");
+  hl.append(elT("p","hint pex-lead","함께하지 않는 사역마를 보내 보상을 얻는다. 다 돌아오기 전에 부르면 보상은 없다."));
+  const cap=elT("div","pex-cap");cap.title="출정 중 "+runs.length+" / 동시에 "+max+"마리";cap.setAttribute("aria-label",cap.title);
+  for(let i=0;i<max;i++)cap.appendChild(elT("i",i<runs.length?"on":""));
+  cap.appendChild(elT("span","pex-cap-n",runs.length+" / "+max));
+  head.append(hl,cap);box.appendChild(head);
 
-  /* [출정 중] 진행 바·귀환 버튼. 비어 있으면 구역 자체를 숨김(빈 안내 문구 제거). */
+  /* [출정 중] 돌아온 것을 먼저. */
   if(runs.length){
    const sec=elT("section","pex-sec pex-on-sec");
    sec.appendChild(elT("h3","pex-sec-h","출정 중"));
    const list=elT("div","pex-on");
-   runs.forEach(r=>{
+   runs.slice().sort((x,y)=>((now>=y.t1)-(now>=x.t1))||(x.t1-y.t1)).forEach(r=>{
     const q=pexPetOf(r.petId),P=q&&PETS[q.sp],done=now>=r.t1;
-    const w=elT("div","dq pex-run"+(done?" got":"")),cp=elT("div","dq-copy");
-    const bar=elT("div","bar"),f=elT("i");
-    f.style.width=Math.min(100,(now-r.t0)/Math.max(1,r.t1-r.t0)*100)+"%";bar.appendChild(f);
+    const pct=Math.min(100,Math.max(0,(now-r.t0)/Math.max(1,r.t1-r.t0)*100));
+    const w=elT("div","pex-run"+(done?" done":""));
     const nm=q?q.nm:r.petId,ic=P?P[2]:"🐾";
-    cp.append(
-     elT("b","",ic+" "+nm+" · "+r.row[1]),
-     elT("small","",done?"돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(r.t1-now)),
-     bar
-    );
-    const b=elT("button","chip",done?"보상 받기":"불러오기");b.type="button";b.disabled=!!pexBusy;
+    w.appendChild(elT("span","pex-run-ic",ic));
+    const cp=elT("div","pex-run-copy");
+    const t=elT("div","pex-run-top");
+    t.append(elT("b","pex-run-nm",nm),elT("span","pex-run-to","→ "+r.row[1]));
+    const bar=elT("div","bar pex-bar"),f=elT("i");f.style.width=pct+"%";bar.appendChild(f);
+    cp.append(t,elT("small","pex-run-st",done?"✨ 돌아왔다! 보상을 받자.":"남은 시간 "+cdTxt(r.t1-now)+" · "+Math.floor(pct)+"%"),bar);
+    const b=elT("button",done?"btn pex-take":"chip pex-call",done?"보상 받기":"불러오기");b.type="button";b.disabled=!!pexBusy;
     b.title=done?"":"완료 전에 부르면 보상을 받지 못한다";
     b.onclick=()=>pexClaim(r,!done);
     w.append(cp,b);list.appendChild(w)
@@ -122,53 +131,57 @@ function drawPex(){const box=$("#gsrbox");if(!box)return;
   }
 
   if(runs.length>=max){
-   box.appendChild(elT("p","hint pex-full","동시에 "+max+"마리까지. 돌아온 뒤 다시 보낼 수 있다."));
+   box.appendChild(elT("p","pex-full","출정 칸이 모두 찼다. 사역마가 돌아오면 다시 보낼 수 있다."));
    return
   }
 
-  /* [보내기] 펫 select → 맵 목록 → 출정 버튼. 예전의 "출정 보내기" 제목·칩 나열을 셀렉트+맵 카드로. */
+  /* [보내기] 1. 사역마 칩 → 2. 목적지 카드 → 출정 버튼. */
   const send=elT("section","pex-sec pex-send");
   send.appendChild(elT("h3","pex-sec-h","보내기"));
 
   const pets=(C.pets||[]).filter(q=>q&&PETS[q.sp]&&C.pet!==q.id&&!away.has(q.id));
   if(!pexPickPet&&pets.length)pexPickPet=pets[0].id; /* 기본: 보낼 수 있는 목록의 맨 위 */
-  const sel=elT("div","pex-sel");
-  const lab=elT("label","pex-sel-lab","사역마");lab.setAttribute("for","pex-pet");
-  sel.appendChild(lab);
-  if(!pets.length)sel.appendChild(elT("p","hint","보낼 사역마가 없다. 함께하기를 끄거나 귀환을 기다리자."));
+  const sel=elT("div","pex-step");
+  sel.appendChild(elT("p","pex-step-h","① 보낼 사역마"));
+  if(!pets.length)sel.appendChild(elT("p","hint pex-none","보낼 사역마가 없다. 함께하기를 바꾸거나 돌아오기를 기다리자."));
   else{
-   const dd=elT("select","pex-pet-sel");dd.id="pex-pet";dd.setAttribute("aria-label","출정 사역마");dd.disabled=!!pexBusy;
+   const row=elT("div","pex-pets");row.setAttribute("role","group");row.setAttribute("aria-label","출정 사역마");
    pets.forEach(q=>{
-    const P=PETS[q.sp],o=elT("option");o.value=q.id;o.textContent=P[2]+" "+q.nm;
-    if(pexPickPet===q.id)o.selected=true;dd.appendChild(o)
+    const P=PETS[q.sp],on=pexPickPet===q.id,c=elT("button","pex-pet"+(on?" on":""));c.type="button";c.disabled=!!pexBusy;
+    c.setAttribute("aria-pressed",on?"true":"false");
+    c.append(elT("span","pex-pet-ic",P[2]),elT("span","pex-pet-nm",q.nm));
+    c.onclick=()=>{pexPickPet=q.id;drawPex()};row.appendChild(c)
    });
-   dd.onchange=()=>{pexPickPet=dd.value||null;drawPex()};
-   sel.appendChild(dd)
+   sel.appendChild(row)
   }
   send.appendChild(sel);
 
-  /* 맵: 한 줄에 이름·시간·출정 수, 아래에 짧은 보상. 같은 맵 중복 출정 가능. */
-  const mapsWrap=elT("div","pex-maps-wrap");
-  mapsWrap.appendChild(elT("p","pex-maps-lab","목적지"));
+  /* 목적지: 이름 · 시간 뱃지 · 보내 둔 수, 아래에 보상 알약. 같은 맵 중복 출정 가능. */
+  const mapsWrap=elT("div","pex-step");
+  mapsWrap.appendChild(elT("p","pex-step-h","② 목적지"));
   const maps=elT("div","pex-maps");
   (typeof PEX!=="undefined"?PEX:[]).forEach(L=>{
    const n=onMap[L[0]]|0,on=pexPickMap===L[0];
    const row=elT("button","pex-map"+(on?" on":""));row.type="button";row.disabled=!!pexBusy;
    row.setAttribute("aria-pressed",on?"true":"false");
    const top=elT("div","pex-map-top");
-   top.appendChild(elT("b","pex-map-nm",L[1]));
-   const meta=elT("span","pex-map-meta",L[2]+"시간"+(n?" · "+n+"마리":""));
+   top.appendChild(elT("b","pex-map-nm",(on?"✓ ":"")+L[1]));
+   const meta=elT("span","pex-map-meta");
+   meta.appendChild(elT("span","pex-tm","⏱ "+L[2]+"시간"));
+   if(n)meta.appendChild(elT("span","pex-tm pex-tm-n","🐾 "+n));
    top.appendChild(meta);
-   const cp=elT("div","pex-map-copy");
-   cp.append(top,elT("small","pex-map-rw",pexLootLite(L)));
-   row.appendChild(cp);
+   const rw=elT("div","pex-rws");
+   pexLootList(L).forEach(([t,half])=>rw.appendChild(elT("span","pex-rw"+(half?" half":""),t+(half?" · 50%":""))));
+   row.append(top,rw);
    row.onclick=()=>{pexPickMap=L[0];drawPex()};
    maps.appendChild(row)
   });
   mapsWrap.appendChild(maps);send.appendChild(mapsWrap);
 
-  const go=elT("button","btn pex-go"+(pexPickPet&&pexPickMap&&!pexBusy?"":" g"),pexBusy?"처리 중...":"사역마 출정");
-  go.type="button";go.disabled=!pexPickPet||!pexPickMap||!!pexBusy;go.onclick=pexStart;
+  const qp=pexPetOf(pexPickPet),mp=typeof PEXM!=="undefined"&&PEXM[pexPickMap];
+  const ready=!!(qp&&mp&&!pexBusy);
+  const go=elT("button","btn pex-go"+(ready?"":" g"),pexBusy?"처리 중...":ready?"🐾 "+qp.nm+" → "+mp[1]+" 출정 ("+mp[2]+"시간)":qp?"목적지를 골라 주세요":"사역마 출정");
+  go.type="button";go.disabled=!ready;go.onclick=pexStart;
   send.appendChild(go);
   box.appendChild(send);
  }catch(e){box.innerHTML="";box.appendChild(elT("p","hint","출정 화면을 그리지 못했다. 새로고침 후 다시 열어 주세요."))}

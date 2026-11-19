@@ -650,36 +650,69 @@ html[data-theme="light"] .dex-it.lock .wp-ic{filter:brightness(0) opacity(.2)}
 .pet-snack-row .chip{font-size:.78rem;padding:8px 10px}
 html[data-theme="light"] .pet-snack{border-top-color:var(--ln)}
 
-/* 사역마 출정 UI (성장 기록 › 무인 상점 #gsrbox).
-   변경 요약:
-   · .pex-head: 긴 문단 → 요약(.pex-lead) + 용량 뱃지(.pex-cap)
-   · .pex-sec / .pex-sec-h: 출정 중·보내기 구역 제목
-   · .pex-map-top / .pex-map-nm / .pex-map-meta: 맵 이름·시간을 한 줄로 분리
-   · .pex-map-rw: 보상은 보조 줄만 */
-.pex-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:0 0 10px}
-.pex-lead{flex:1;min-width:0;margin:0}
-.pex-cap{flex:0 0 auto;margin-top:1px;padding:4px 9px;border:1px solid var(--ln);border-radius:999px;font-size:.78rem;font-weight:700;color:var(--ink);background:var(--pn);white-space:nowrap}
-.pex-sec{margin:0 0 14px}
-.pex-sec-h{margin:0 0 8px;font-size:.92rem;font-weight:700;letter-spacing:.02em}
+/* 사역마 출정 UI (성장 기록 › 무인 상점 #gsrbox). 그리는 곳은 js/growth/raid.js 의 drawPex.
+   · .pex-head: 안내 카드 + 출정 칸(.pex-cap 의 점)
+   · .pex-run: 출정 중 카드. .done(돌아옴)은 금색 강조, 보상 받기(.pex-take)가 주 버튼
+   · .pex-step: 보내기 ①사역마 칩(.pex-pet) ②목적지 카드(.pex-map, 넓은 화면 두 칸)
+   · .pex-rw: 보상 알약, .half 는 50% 확률(점선)
+   · .gs-soon: 제작·강화 '준비 중' 칸 */
+#gsrbox{--pex-gold:var(--gold,#c9a96a)}
+.pex-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
+.pex-head-tx{flex:1;min-width:0}
+.pex-head-t{display:block;font-size:.98rem;margin-bottom:2px}
+.pex-lead{margin:0;font-size:.84rem;line-height:1.45}
+.pex-cap{flex:0 0 auto;display:flex;align-items:center;gap:5px}
+.pex-cap i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--pex-gold);opacity:.55}
+.pex-cap i.on{background:var(--pex-gold);opacity:1;box-shadow:0 0 6px color-mix(in srgb,var(--pex-gold) 60%,transparent)}
+.pex-cap-n{margin-left:3px;font-size:.78rem;font-weight:700;color:var(--mu);white-space:nowrap}
+.pex-sec{margin:0 0 16px}
+.pex-sec-h{margin:0 0 8px;font-size:.92rem;font-weight:700;letter-spacing:.02em;color:var(--mu)}
 .pex-on{display:flex;flex-direction:column;gap:8px}
-.pex-run{margin:0}
-.pex-full{margin:4px 0 0}
-.pex-send{display:flex;flex-direction:column;gap:12px}
-.pex-sel-lab,.pex-maps-lab{display:block;margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--mu)}
-.pex-pet-sel{display:block;width:100%;max-width:100%;box-sizing:border-box}
-.pex-maps{display:flex;flex-direction:column;gap:6px}
-.pex-map{display:flex;width:100%;margin:0;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
-.pex-map.on{border-color:var(--c,var(--hi));background:color-mix(in srgb,var(--c,var(--hi)) 16%,var(--pn))}
+.pex-run{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
+.pex-run-ic{flex:0 0 auto;width:40px;height:40px;display:grid;place-items:center;font-size:1.4rem;border-radius:50%;background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.pex-run-copy{flex:1;min-width:0}
+.pex-run-top{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pex-run-nm{font-size:.98rem}
+.pex-run-to{font-size:.84rem;color:var(--mu)}
+.pex-run-st{display:block;margin:2px 0 6px;font-size:.8rem;color:var(--mu)}
+.pex-bar{height:6px;margin:0}
+.pex-run .chip,.pex-run .btn{flex:0 0 auto;width:auto;margin:0;white-space:nowrap}
+.pex-take{padding:10px 16px}
+.pex-run.done{border-color:var(--pex-gold);background:color-mix(in srgb,var(--pex-gold) 12%,var(--pn));box-shadow:0 0 14px color-mix(in srgb,var(--pex-gold) 22%,transparent)}
+.pex-run.done .pex-run-st{color:var(--pex-gold);font-weight:700}
+.pex-run.done .pex-bar i{background:var(--pex-gold)}
+.pex-full{margin:4px 0 0;padding:10px 12px;border:1px dashed var(--ln);border-radius:var(--r);font-size:.84rem;color:var(--mu);text-align:center}
+.pex-send{display:flex;flex-direction:column;gap:14px}
+.pex-step-h{margin:0 0 7px;font-size:.84rem;font-weight:700;color:var(--ink)}
+.pex-none{margin:0}
+.pex-pets{display:flex;flex-wrap:wrap;gap:6px}
+.pex-pet{display:inline-flex;align-items:center;gap:6px;padding:7px 12px 7px 8px;font:inherit;font-size:.88rem;color:inherit;cursor:pointer;border:1px solid var(--ln);border-radius:999px;background:var(--pn)}
+.pex-pet-ic{font-size:1.1rem;line-height:1}
+.pex-pet.on{border-color:var(--c,var(--hi));background:color-mix(in srgb,var(--c,var(--hi)) 18%,var(--pn));font-weight:700}
+.pex-pet:disabled{opacity:.6;cursor:default}
+.pex-maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.pex-map{display:flex;flex-direction:column;gap:7px;width:100%;margin:0;padding:11px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
+.pex-map.on{border-color:var(--c,var(--hi));background:color-mix(in srgb,var(--c,var(--hi)) 16%,var(--pn));box-shadow:0 0 0 1px var(--c,var(--hi)) inset}
 .pex-map:disabled{opacity:.62;cursor:default}
-.pex-map-copy{flex:1;min-width:0}
-.pex-map-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:3px}
+.pex-map-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pex-map-nm{font-weight:700;font-size:.98rem}
-.pex-map-meta{flex:0 0 auto;font-size:.78rem;color:var(--mu)}
-.pex-map-rw{display:block;color:var(--mu);font-size:.82rem;line-height:1.4}
-.pex-go{width:100%;margin-top:2px}
-html[data-theme="light"] .pex-cap{background:var(--pn);border-color:var(--ln)}
-html[data-theme="light"] .pex-map{background:var(--pn);border-color:var(--ln)}
+.pex-map-meta{flex:0 0 auto;display:flex;gap:4px}
+.pex-tm{padding:2px 7px;border-radius:999px;font-size:.74rem;font-weight:700;color:var(--mu);background:color-mix(in srgb,var(--ink) 8%,transparent);white-space:nowrap}
+.pex-tm-n{color:var(--pex-gold)}
+.pex-rws{display:flex;flex-wrap:wrap;gap:4px}
+.pex-rw{padding:2px 7px;border:1px solid var(--ln);border-radius:6px;font-size:.76rem;line-height:1.4;color:var(--mu)}
+.pex-rw.half{border-style:dashed;color:var(--pex-gold);border-color:color-mix(in srgb,var(--pex-gold) 55%,transparent)}
+.pex-go{width:100%;margin-top:0}
+.gs-soon{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--ln);border-radius:var(--r);color:var(--mu)}
+.gs-soon-ic{font-size:1.3rem;opacity:.8}
+.gs-soon b{display:block;color:var(--ink);font-size:.92rem}
+.gs-soon small{display:block;font-size:.8rem;margin-top:1px}
+@media (max-width:420px){.pex-run{gap:9px;padding:10px}.pex-run-ic{width:34px;height:34px;font-size:1.2rem}.pex-take{padding:9px 12px}}
+html[data-theme="light"] .pex-head,html[data-theme="light"] .pex-run,html[data-theme="light"] .pex-map,html[data-theme="light"] .pex-pet{background:var(--pn);border-color:var(--ln)}
+html[data-theme="light"] #gsrbox{--pex-gold:#9a7428}
+html[data-theme="light"] .pex-run.done{border-color:var(--pex-gold);background:color-mix(in srgb,var(--pex-gold) 12%,var(--pn))}
 html[data-theme="light"] .pex-map.on{border-color:var(--c,var(--hi));background:color-mix(in srgb,var(--c,var(--hi)) 22%,var(--pn))}
+html[data-theme="light"] .pex-pet.on{border-color:var(--c,var(--hi));background:color-mix(in srgb,var(--c,var(--hi)) 22%,var(--pn))}
 html[data-theme="light"] .pet-tr-slot.on.r1 .pet-tr-fx{color:#2a2a2a}
 html[data-theme="light"] .pet-tr-slot.on.r2 .pet-tr-fx{color:#1a7a9a}
 html[data-theme="light"] .pet-tr-slot.on.r3 .pet-tr-fx{color:#9a7a18}
