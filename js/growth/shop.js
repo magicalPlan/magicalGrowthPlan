@@ -1,7 +1,7 @@
 /* 무인 상점. 성장 기록 하위 탭.
    화면은 html/growth/shop.html (성장 화면 #gr-shop 에 한 번 붙인다).
    접기는 상점 무기·아이템(shopWpFold · shopItFold)과 같다.
-   출정 mgr_gshop_raid / #gsrtog · #gsrbox → js/growth/raid.js 의 drawPex
+   출정 mgr_gshop_raid / #gsrtog · #gsrbox → drawPex (raid.js). UI 본문은 raid.js 가 그림.
    제작 mgr_gshop_craft / #gsctog · #gscbox
    강화 mgr_gshop_enhance / #gsetog · #gsebox */
 function growthShopMount(){

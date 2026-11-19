@@ -147,8 +147,9 @@ function lootLines(g, inv) {
 function rollPexPay(row, early, seed, petNm) {
   const rand = rng(seedHash("pex|" + seed));
   const nm = String(petNm || "사역마").slice(0, 20);
+  /* 중도 귀환: 보상 없음(언제 불러도 동일). */
   if (early) {
-    const inv = {m_ash: 10};
+    const inv = {};
     const sc = pickScript(PEX_EV_EARLY, rand, nm);
     return {g: 0, inv, early: 1, sc, lines: lootLines(0, inv)};
   }
@@ -191,7 +192,7 @@ function seedId() {
   return String(Math.floor(Math.random() * 1e9)) + Date.now().toString(36).slice(-4);
 }
 
-/* 출발. 함께하기 펫·이미 출정·맵 중복·3마리 초과 거절. */
+/* 출발. 함께하기 펫·이미 출정·3마리 초과 거절. 맵은 여러 마리가 같아도 된다. */
 async function applyPexStart(db, uid, body) {
   const petId = String((body && body.petId) || "").replace(/[\/.#$\[\]]/g, "").slice(0, 40);
   const k = String((body && body.k) || "");
@@ -209,7 +210,6 @@ async function applyPexStart(db, uid, body) {
   const runs = pexList((await root.child("c/pex").get()).val());
   if (runs.length >= PEX_MAX) return {ok: 0, why: "full"};
   if (runs.some(r => r.petId === petId)) return {ok: 0, why: "busy"};
-  if (runs.some(r => r.k === k)) return {ok: 0, why: "map"};
 
   const now = Date.now();
   const id = runId();
@@ -224,7 +224,7 @@ async function applyPexStart(db, uid, body) {
   return {ok: 1, id, run, nm: row[1], hr};
 }
 
-/* 귀환. early=1 이면 1시간 지난 뒤만, 절망의 재 10 + 중도 대사. */
+/* 귀환. early=1 이면 완료 전 중도 귀환(언제든 가능, 보상 없음). */
 async function applyPexClaim(db, uid, runIdKey, body) {
   const id = String(runIdKey || "").replace(/[\/.#$\[\]]/g, "").slice(0, 40);
   if (!uid || !id) return {ok: 0, why: "bad"};
@@ -245,7 +245,6 @@ async function applyPexClaim(db, uid, runIdKey, body) {
   const done = now >= t1;
   const wantEarly = !!(body && (body.early === 1 || body.early === true || body.early === "1"));
   if (!done && !wantEarly) return {ok: 0, why: "wait"};
-  if (!done && wantEarly && now < t0 + PEX_EARLY_MS) return {ok: 0, why: "soon"};
   const early = !done;
 
   const paid = await root.child("pexpay/" + sd).get();

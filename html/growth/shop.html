@@ -1,7 +1,8 @@
 <!-- 무인 상점. 성장 기록 하위.
-     전환은 js/growth/growth.js, 접기·그리기는 js/growth/shop.js 의 drawGrowthShop.
-     사역마 출정은 js/growth/raid.js · data/pet-raid.js (서버 functions/pex.js).
-     장비 제작·강화는 이후 세부 파일로 나눌 수 있다. -->
+     전환: js/growth/growth.js · 접기: js/growth/shop.js
+     사역마 출정 본문(#gsrbox): js/growth/raid.js 의 drawPex 가 채움.
+     표·대사 data/pet-raid.js · 서버 functions/pex.js · 스타일 css/polish.css (.pex-*).
+     UI: 안내+용량 / 출정 중 / 보내기(select·맵·버튼). 마크업은 JS 가 생성. -->
 <!-- 처음엔 main 흐름에 붙었다가, shop.js 가 #gr-shop 안으로 옮긴다. -->
 <div id="gr-shop-inner" hidden>
 <h2 class="fold-h">사역마 출정<button class="chip fold-btn" id="gsrtog" type="button" aria-expanded="true" aria-controls="gsrbox">접기 ▲</button></h2>

@@ -101,7 +101,8 @@ function drawPets(){const box=$("#bgpt");if(!box||!C)return;try{if(typeof eggFix
   const bar=elT("div","bar"),f=elT("i");const pv=PET_LV[L-1]||0;f.style.width=(nx!=null?Math.min(100,((q.xp||0)-pv)/Math.max(1,nx-pv)*100):100)+"%";bar.appendChild(f);bd.appendChild(bar);
   const a=elT("div","pet-act"),mk=(t,fn,dis)=>{const b=elT("button","chip",t);b.type="button";b.disabled=!!dis;b.onclick=fn;a.appendChild(b)};
   if(away)mk("출정 중",()=>toast("무인 상점에서 돌아오는 것을 기다리자."),true);
-  else if(!on)mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
+  else if(on)mk("그만 함께하기",()=>{C.pet=null;save();regPlayer();growth(q.nm+"와(과) 함께하기를 그만두었다.")});
+  else mk("함께하기",()=>{C.pet=q.id;save();regPlayer();growth(q.nm+"와(과) 함께하기로 했다.")});
   mk(q.pd===today()?"쓰다듬기 (내일)":"쓰다듬기 (+"+PET_PAT+")",()=>petPat(q),!!away||q.pd===today());
   const fn=petSnackUsed(q),snackOpen=petSnackOpen===q.id;
   mk(snackOpen?"간식 닫기":"간식 ("+fn+"/"+PET_SNACK_N+")",()=>{petSnackOpen=snackOpen?null:q.id;petMoreOpen=null;drawPets()},!!away);
