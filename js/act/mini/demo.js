@@ -5,31 +5,33 @@
 
    ── 규칙 ───────────────────────────────────────────────
    · 1분 동안 흐릿한 안내선(밑그림)을 따라 그린다. 잘 따라 그리면 1장 완성, 다음 선이 나온다.
-   · 시간이 지날수록 어려워진다: 선이 꺾이고 휘고, 안내선이 옅어지고, 허용 오차가 줄어든다(MG_LV).
+   · 시간이 지날수록 어려워진다: 선이 꺾이고 휘고, 안내선이 옅어지고, 허용 오차가 줄어든다.
+   · 시간·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
+     그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다.
    · 서버 통신은 두 번뿐이다.
      ① 1분이 끝났을 때 한 번만 PATCH(덮어쓰기 아님, increment):
-        event_minigame/flanders/rank/{uid} = { n: 이름, c: +완성 개수 }
-        event_minigame/flanders/total_amount = +완성 개수
-     ② 결과 화면·'랭킹 보기' 버튼을 눌렀을 때 랭킹 한 번 읽기(rank 를 c 순서로 상위 MG_TOP 명).
+        {path}/rank/{uid} = { n: 이름, c: +완성 개수 }   (path 기본 event_minigame/flanders)
+        {path}/total_amount = +완성 개수
+     ② 결과 화면·'랭킹 보기' 버튼을 눌렀을 때 랭킹 한 번 읽기(rank 를 c 순서로 상위 top 명).
    · 게임 중 다른 화면으로 나가면(curView 가 mini 가 아니거나 주소가 바뀌면) 그 판은 버리고,
      서버에 아무것도 보내지 않는다. 그림(이미지)은 저장하지 않는다.
-   · DB 규칙: event_minigame/flanders 에 읽기·쓰기 규칙과 rank 의 .indexOn ["c"] 가 필요하다.
+   · DB 규칙: {path} 에 읽기·쓰기 규칙과 rank 의 .indexOn ["c"] 가 필요하다.
    ─────────────────────────────────────────────────────── */
 var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
 (() => {
- const MG_SEC = 60;                 // 한 판 시간(초)
- const MG_PATH = "event_minigame/flanders";
- const MG_TOP = 10;                 // 랭킹에 보여 줄 사람 수
- const MG_W = 600;                  // 캔버스 내부 좌표 크기(정사각형)
- /* 난이도 단계: 시작 후 몇 초부터 · 허용 오차(px) · 안내선 진하기 · 선 모양 */
- const MG_LV = [
-  { at: 0,  tol: 30, alpha: .42, kind: "line" },
-  { at: 10, tol: 26, alpha: .36, kind: "bend" },
-  { at: 22, tol: 22, alpha: .30, kind: "curve" },
-  { at: 34, tol: 19, alpha: .24, kind: "zig" },
-  { at: 46, tol: 16, alpha: .18, kind: "wave" }
- ];
- const PASS_COVER = .82, PASS_ACC = .72;   // 안내선을 덮은 비율 · 그린 점이 안내선 위에 있는 비율
+ const MG_W = 600;                  // 캔버스 내부 좌표 크기(정사각형). 데이터의 tol 도 이 크기 기준.
+ /* 데이터 파일이 없을 때 쓰는 기본값(무작위 선만). 실제 값은 data/act/mini/flanders.js */
+ const MG_DEF = { sec: 60, path: "event_minigame/flanders", top: 10, pass: { cover: .82, acc: .72 },
+  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 10, tol: 26, alpha: .36, pick: ["bend"] }, { at: 22, tol: 22, alpha: .30, pick: ["curve"] }, { at: 34, tol: 19, alpha: .24, pick: ["zig"] }, { at: 46, tol: 16, alpha: .18, pick: ["wave"] }],
+  shapes: {} };
+ const MG = (() => { const d = typeof MG_FLANDERS !== "undefined" && MG_FLANDERS && typeof MG_FLANDERS === "object" ? MG_FLANDERS : {};
+  const lv = Array.isArray(d.levels) && d.levels.length ? d.levels.filter(x => x && Array.isArray(x.pick) && x.pick.length).sort((a, b) => (a.at || 0) - (b.at || 0)) : MG_DEF.levels;
+  return { sec: Math.max(5, Number(d.sec) || MG_DEF.sec), path: String(d.path || MG_DEF.path), top: Math.max(1, Number(d.top) || MG_DEF.top),
+   pass: { cover: Number(d.pass && d.pass.cover) || MG_DEF.pass.cover, acc: Number(d.pass && d.pass.acc) || MG_DEF.pass.acc },
+   levels: lv.length ? lv : MG_DEF.levels, shapes: d.shapes && typeof d.shapes === "object" ? d.shapes : {} } })();
+ const MG_SEC = MG.sec, MG_PATH = MG.path, MG_TOP = MG.top, MG_LV = MG.levels;
+ const PASS_COVER = MG.pass.cover, PASS_ACC = MG.pass.acc;
+ const GEN = { line: 1, bend: 1, curve: 1, zig: 1, wave: 1 };   // 코드로 만드는 무작위 선 이름
 
  let st = null;   // 지금 판의 상태. 판이 끝나거나 버려지면 null.
 
@@ -55,10 +57,28 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   }
   return o
  }
+ /* 미리 그려 둔 밑그림(0~1 좌표)을 판 위에 놓는다. 크기를 조금 바꾸고, 절반은 좌우를 뒤집는다. */
+ function placeShape(raw) {
+  const m = 60, span = MG_W - 2 * m, s = rnd(.82, 1), flip = Math.random() < .5;
+  const dx = rnd(-(1 - s) / 2, (1 - s) / 2), dy = rnd(-(1 - s) / 2, (1 - s) / 2);
+  return raw.filter(p => Array.isArray(p) && p.length >= 2 && isFinite(p[0]) && isFinite(p[1]))
+   .map(([x, y]) => { const u = flip ? 1 - Number(x) : Number(x); return { x: m + span * ((u - .5) * s + .5 + dx), y: m + span * ((Number(y) - .5) * s + .5 + dy) } })
+ }
+ /* 이 단계에서 나올 선 하나를 고른다. 바로 앞과 같은 것은 되도록 피한다. */
+ let lastPick = "";
+ function pickKind(L) {
+  const ok = (MG_LV[L].pick || []).filter(k => GEN[k] || (Array.isArray(MG.shapes[k]) && MG.shapes[k].length >= 2));
+  if (!ok.length) return "line";
+  const pool = ok.length > 1 ? ok.filter(k => k !== lastPick) : ok;
+  return lastPick = pool[Math.floor(Math.random() * pool.length)]
+ }
  function makeLine(kind) {
   const m = 70, R = () => ({ x: rnd(m, MG_W - m), y: rnd(m, MG_W - m) });
   let pts;
-  if (kind === "line") {
+  if (!GEN[kind] && Array.isArray(MG.shapes[kind])) {
+   pts = placeShape(MG.shapes[kind]);
+   if (pts.length < 2) pts = [{ x: m, y: MG_W / 2 }, { x: MG_W - m, y: MG_W / 2 }]
+  } else if (kind === "line") {
    let a, b; do { a = R(); b = R() } while (Math.hypot(a.x - b.x, a.y - b.y) < 260);
    pts = [a, b]
   } else if (kind === "bend") {
@@ -150,7 +170,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   st = { token, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
-  const next = () => { st.guide = makeLine(MG_LV[st.L].kind); st.drawn = [] };
+  const next = () => { st.guide = makeLine(pickKind(st.L)); st.drawn = [] };
   next();
 
   const css = getComputedStyle(document.documentElement);
