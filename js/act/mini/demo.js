@@ -136,7 +136,15 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   root.innerHTML = "";
   root.classList.add("mg-root");
   const intro = el("div", "mg-intro");
+  /* 시작 전 미리보기만. assets/mini_game_preview/{id}.png — 게임 중·결과 화면에는 안 붙인다. */
+  const prev = document.createElement("img");
+  prev.className = "mg-preview";
+  prev.src = "assets/mini_game_preview/" + mgId + ".png" + (typeof APP_VER !== "undefined" ? "?v=" + APP_VER : "");
+  prev.alt = "";
+  prev.decoding = "async";
+  prev.onerror = () => { try { prev.remove() } catch (e) {} };
   intro.append(
+   prev,
    el("p", "mg-lead", "흐릿한 밑그림 선을 따라 그려 그림을 완성하자. 1분 동안 최대한 많이!"),
    (() => { const u = el("ul", "mg-rules");
     ["안내선을 따라 한 번에 쭉 그린다. 잘 따라 그리면 다음 선이 나온다.", "장을 많이 완성할수록 선이 복잡해지고, 안내선도 점점 옅어진다.", "1분이 끝나면 그 판의 장수가 최고 기록이면 랭킹에 오른다. 도중에 화면을 나가면 그 판은 기록되지 않는다."].forEach(t => u.appendChild(el("li", "", t)));
@@ -225,8 +233,14 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const up = ev => {
    if (!st || st.token !== token || !st.down) return; st.down = false; if (st.ended) return;
    const r = judge(st.guide, st.drawn, MG_LV[st.L].tol);
-   if (r.ok) { st.count++; cnt.textContent = "완성 " + st.count; say.textContent = ["좋아! 다음 선.", "깔끔해!", "네로도 감탄할 솜씨!", "그대로 계속!"][st.count % 4]; st.flash = performance.now(); st.flashOk = true; next() }
-   else { say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [] }
+  if (r.ok) {
+    st.count++;
+    cnt.textContent = "완성 " + st.count; 
+    say.textContent = ["좋아! 다음 선.", "깔끔해!", "네로도 감탄할 솜씨!", "그대로 계속!"][st.count % 4];
+    st.flash = performance.now();
+    st.flashOk = true; next()
+  } else {
+    say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [] }
   };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
 

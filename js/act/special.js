@@ -64,10 +64,8 @@ function specialDraw(){
  list.forEach(g=>{
   if(!g||!g.id)return
   const row=elT("button","sp-item");row.type="button"
-  const nm=String(g.nm||g.id),src=String(g.src||"")
+  const nm=String(g.nm||g.id)
   row.appendChild(elT("b","sp-item-nm",nm))
-  if(src)row.appendChild(elT("small","sp-item-src",src))
-  if(g.path)row.appendChild(elT("small","sp-item-path","#/"+String(g.path).replace(/^\/+/,"")))
   if(g.ds)row.appendChild(elT("small","sp-item-ds",String(g.ds)))
   row.onclick=()=>specialPlay(g.id,true)
   box.appendChild(row)
@@ -99,7 +97,7 @@ function specialPlay(id,push){
  else if(spHashNow()!==("/"+String(g.path||g.id).replace(/^\/+/,"")))spReplace(spPathOf(g))
  const t=$("#mini-title"),s=$("#mini-src"),d=$("#mini-ds"),root=$("#mini-root"),msg=$("#mini-msg")
  if(t)t.textContent=g.nm||g.id
- if(s)s.textContent=g.src?("소스: "+g.src):""
+ if(s){s.textContent="";s.hidden=true}
  if(d)d.textContent=g.ds||""
  if(msg)msg.textContent=""
  if(root&&!same){

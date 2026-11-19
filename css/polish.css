@@ -795,6 +795,7 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 
 /* 특별 의뢰 › 플랜더스의 밑그림(js/act/mini/demo.js). 미니게임 칸은 점선 대신 카드로. */
 .sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px}
+.mg-preview{display:block;width:100%;max-width:420px;margin:0 auto 12px;border-radius:var(--r);border:1px solid var(--ln)}
 .mg-lead{margin:0 0 8px;font-weight:700}
 .mg-rules{margin:0 0 12px;padding-left:18px;color:var(--mu);font-size:.86rem;line-height:1.55}
 .mg-btns{display:flex;gap:8px;flex-wrap:wrap}
