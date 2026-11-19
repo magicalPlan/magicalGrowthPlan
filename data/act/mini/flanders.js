@@ -4,10 +4,11 @@
 
    ── 칸 설명 ───────────────────────────────────────────
    sec     한 판 시간(초)
-   path    기록을 남길 DB 칸. 클라는 play/{uid}·go/{uid}/{reqId} 만 쓰고, rank·total_amount 는 Functions 가 increment.
+   path    기록을 남길 DB 칸. 클라는 play/{uid}·go/{uid}/{reqId} 만 씀. rank 는 한 판 최고(c), total_amount 는 합산(Functions).
    top     랭킹에 보여 줄 사람 수
    pass    한 장 완성 기준. cover: 안내선을 덮은 비율 · acc: 그린 선이 안내선 위에 있는 비율
-   levels  난이도 단계. at: 시작 후 몇 초부터 · tol: 허용 오차(px, 판 크기 600 기준) · alpha: 안내선 진하기 · pick: 이 단계에서 나올 선
+   levels  난이도 단계. at: 몇 번째 장부터(1부터 센 장 번호) · tol: 허용 오차(px, 판 크기 600 기준) · alpha: 안내선 진하기 · pick: 이 단계에서 나올 선
+           예: at 0→1장부터, at 3→3장째부터, at 6·9·10. 단계는 장을 새로 낼 때만 바뀐다(그리던 장을 도중에 바꾸지 않음).
    pick 에 쓰는 이름
      · 그때그때 무작위로 만드는 선: line(직선) bend(꺾인 선) curve(곡선) zig(지그재그) wave(물결)
      · 미리 그려 둔 밑그림: 아래 shapes 의 이름
@@ -23,10 +24,10 @@ const MG_FLANDERS={
  pass:{cover:.82,acc:.72},
  levels:[
   {at:0, tol:30,alpha:.42,pick:["line"]},
-  {at:10,tol:26,alpha:.36,pick:["bend","house"]},
-  {at:22,tol:22,alpha:.30,pick:["curve","spire","star"]},
-  {at:34,tol:19,alpha:.24,pick:["zig","heart","moon"]},
-  {at:46,tol:16,alpha:.18,pick:["wave","spiral","heart","star"]}
+  {at:3, tol:26,alpha:.36,pick:["bend","house"]},
+  {at:6, tol:22,alpha:.30,pick:["curve","spire","star"]},
+  {at:9, tol:19,alpha:.24,pick:["zig","heart","moon"]},
+  {at:10,tol:16,alpha:.18,pick:["wave","spiral","heart","star"]}
  ],
  shapes:{
   heart: [[0.5,0.331],[0.505,0.304],[0.536,0.237],[0.608,0.169],[0.712,0.139],[0.825,0.166],[0.912,0.247],[0.944,0.359],[0.912,0.477],[0.825,0.588],[0.712,0.689],[0.608,0.782],[0.536,0.863],[0.505,0.921],[0.5,0.942],[0.495,0.921],[0.464,0.863],[0.392,0.782],[0.288,0.689],[0.175,0.588],[0.088,0.477],[0.056,0.359],[0.088,0.247],[0.175,0.166],[0.288,0.139],[0.392,0.169],[0.464,0.237],[0.495,0.304],[0.5,0.331]],

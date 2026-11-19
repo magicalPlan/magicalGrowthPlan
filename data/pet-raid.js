@@ -7,10 +7,10 @@ const PEX_CONS_N=[[1,.65],[2,.25],[3,.1]];
 /* [키, 이름, 시간(시), 기본, 소모품1, 소모품2, 조각, 특별(확정), 특별(50%)].
    보상칸: {g:n} 골드 · {id,n} 가방 아이템. 해양의 조각 → 해안의 조각(m_coast). */
 const PEX=[
- ["usher","어셔벨",8,{id:"bond",n:2},{id:"m_shard",n:1},{g:500},{id:"m_forest",n:4},{g:250},{g:250}],
- ["batil","바틸리카",4,{id:"bond",n:1},{id:"m_shard",n:1},{g:250},{id:"m_coast",n:2},{id:"m_herb",n:1},{id:"m_dew",n:5}],
- ["calow","칼로웰",4,{id:"bond",n:1},{id:"m_shard",n:1},{g:250},{id:"m_valley",n:1},{id:"m_ore",n:1},{id:"g4",n:1}],
- ["downh","다운힐트",8,{id:"bond",n:2},{id:"m_shard",n:1},{g:500},{id:"m_abyss",n:1},{id:"m_crown",n:1},{id:"m_shard",n:10}]
+ ["usher","A마을",8,{id:"bond",n:2},{id:"m_shard",n:1},{g:500},{id:"m_forest",n:4},{g:250},{g:250}],
+ ["batil","B마을",4,{id:"bond",n:1},{id:"m_shard",n:1},{g:250},{id:"m_coast",n:2},{id:"m_herb",n:1},{id:"m_dew",n:5}],
+ ["calow","C마을",4,{id:"bond",n:1},{id:"m_shard",n:1},{g:250},{id:"m_valley",n:1},{id:"m_ore",n:1},{id:"g4",n:1}],
+ ["downh","D마을",8,{id:"bond",n:2},{id:"m_shard",n:1},{g:500},{id:"m_abyss",n:1},{id:"m_crown",n:1},{id:"m_shard",n:10}]
 ];
 const PEXM=Object.fromEntries(PEX.map(x=>[x[0],x]));
 /* 성공 귀환 공통. 본문의 ${사역마이름} 은 화면·서버가 이름으로 바꾼다. */

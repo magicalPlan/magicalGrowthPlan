@@ -9,6 +9,8 @@
       ".write": false,
       "flanders": {
         ".read": "auth != null",
+        /* 시즌 초기화: 운영자가 칸 전체 삭제만. 점수 쓰기는 Cloud Functions(Admin SDK). */
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists() && !newData.exists()",
         "play": {
           "$uid": {
             ".read": "auth != null && auth.uid === $uid",
@@ -27,13 +29,17 @@
         },
         "rank": {
           ".indexOn": ["c"],
-          ".write": false,
+          ".write": "auth != null && root.child('admins').child(auth.uid).exists() && !newData.exists()",
           "$uid": {
-            ".write": false
+            ".write": "auth != null && root.child('admins').child(auth.uid).exists() && !newData.exists()"
           }
         },
         "total_amount": {
-          ".write": false
+          ".write": "auth != null && root.child('admins').child(auth.uid).exists() && !newData.exists()"
+        },
+        "paid": {
+          ".read": false,
+          ".write": "auth != null && root.child('admins').child(auth.uid).exists() && !newData.exists()"
         }
       }
     },

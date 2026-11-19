@@ -144,6 +144,7 @@ async function rstWrite(uid,src,R){if(!src||typeof src!=="object")throw new Erro
  /* 개인 회귀: 그 사람의 대련 신청함·구인글만 지운다. 진행 중 xb 방·상대 쪽 xa 는 시즌 초기화에서 통째로 비운다. */
  try{await DB.doc("rooms/xa"+uid).delete()}catch(e){}
  try{await DB.doc("rooms/xr/"+uid).delete()}catch(e){}
+ try{await DB.doc("event_minigame/flanders/rank/"+uid).delete()}catch(e){}
  return{ch,late}}
 async function rstTakeCloud(due){if(!C||!UID||!DB)return false;
  try{const s=await DB.doc("accounts/"+UID).get();const ch=s.exists&&s.data()&&s.data().c;if(!ch||typeof ch!=="object"||(Number(ch.rsv)||0)<due)return false;
@@ -163,7 +164,7 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
   const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
@@ -173,7 +174,7 @@ async function rstWipe(){const done=[],fail=[];
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
 async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
- const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구 신청 우편함·마을 경쟁·보스·대련 방/전적이 지금 서버에서 초기화된다. 계정 친구 목록·사역마 상한은 남는다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
+ const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구 신청 우편함·마을 경쟁·보스·대련 방/전적·미니게임 랭킹이 지금 서버에서 초기화된다. 계정 친구 목록·사역마 상한은 남는다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
  if((t||"").trim()!=="초기화"){msg.textContent="취소했다.";return}
  btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="초기화하는 중이다. 창을 닫지 말자...";
  try{const R={id:Date.now(),ts:Date.now()};C.rst=R;save();await DB.doc("players/"+UID+"/rst").set(R);RST={id:R.id,by:UID};
@@ -192,7 +193,7 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
   elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);

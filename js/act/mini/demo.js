@@ -6,13 +6,13 @@
 
    ── 규칙 ───────────────────────────────────────────────
    · 1분 동안 흐릿한 안내선(밑그림)을 따라 그린다. 잘 따라 그리면 1장 완성, 다음 선이 나온다.
-   · 시간이 지날수록 어려워진다: 선이 꺾이고 휘고, 안내선이 옅어지고, 허용 오차가 줄어든다.
-   · 시간·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
-     그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다.
+   · 완성 장수가 늘수록 어려워진다(3·6·9·10번째 장부터 단계 상승). 선이 복잡해지고 안내선이 옅어지며 허용 오차가 줄어든다.
+   · 장수·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
+     그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다. 단계는 next() 때만 바뀌고, 그리던 장을 도중에 바꾸지 않는다.
    · 서버 통신(기록용)은 시작·종료·랭킹 읽기뿐이다. rank·total_amount 는 클라가 직접 쓰지 않는다.
      ① 그리기 시작: play/{uid}={ts} 쓰기를 await 한 뒤에만 타이머 시작(실패면 시작 안 함).
      ② 1분 종료·완성>0: 결과·장수는 바로 두고, go 제출은 백그라운드. 「한 번 더」는 확정될 때까지 비활성.
-     ③ 결과·'랭킹 보기': rank 를 c 순서로 상위 top 명 읽기(+ total_amount).
+     ③ 결과·'랭킹 보기': rank 는 한 판(60초) 최고 장수, total_amount 는 모두 합산.
    · 게임 중 다른 화면으로 나가면(curView 가 mini 가 아니거나 주소가 바뀌면) 그 판은 버리고,
      go 제출을 하지 않는다. 그림(이미지)은 저장하지 않는다.
    · DB 규칙: scripts/event-minigame-rules-fragment.txt (rank·total_amount 클라 쓰기 금지, rank .indexOn c).
@@ -22,7 +22,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
  const MG_W = 600;                  // 캔버스 내부 좌표 크기(정사각형). 데이터의 tol 도 이 크기 기준.
  /* 데이터 파일이 없을 때 쓰는 기본값(무작위 선만). 실제 값은 data/act/mini/flanders.js */
  const MG_DEF = { sec: 60, path: "event_minigame/flanders", top: 10, pass: { cover: .82, acc: .72 },
-  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 10, tol: 26, alpha: .36, pick: ["bend"] }, { at: 22, tol: 22, alpha: .30, pick: ["curve"] }, { at: 34, tol: 19, alpha: .24, pick: ["zig"] }, { at: 46, tol: 16, alpha: .18, pick: ["wave"] }],
+  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 3, tol: 26, alpha: .36, pick: ["bend"] }, { at: 6, tol: 22, alpha: .30, pick: ["curve"] }, { at: 9, tol: 19, alpha: .24, pick: ["zig"] }, { at: 10, tol: 16, alpha: .18, pick: ["wave"] }],
   shapes: {} };
  const MG = (() => { const d = typeof MG_FLANDERS !== "undefined" && MG_FLANDERS && typeof MG_FLANDERS === "object" ? MG_FLANDERS : {};
   const lv = Array.isArray(d.levels) && d.levels.length ? d.levels.filter(x => x && Array.isArray(x.pick) && x.pick.length).sort((a, b) => (a.at || 0) - (b.at || 0)) : MG_DEF.levels;
@@ -38,7 +38,8 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
  let mgG = null;        // 마지막 mount 의 g. 시작 실패 시 인트로로 돌릴 때 씀.
 
  const rnd = (a, b) => a + Math.random() * (b - a);
- const lvAt = sec => { let L = 0; MG_LV.forEach((x, i) => { if (sec >= x.at) L = i }); return L };
+ /* n = 지금 그릴 장 번호(1부터). levels[].at 이상이면 그 단계. */
+ const lvAt = n => { let L = 0; MG_LV.forEach((x, i) => { if (n >= x.at) L = i }); return L };
 
  /* 안내선 점 목록. 4px 간격으로 고르게 다시 뽑는다. */
  function resample(pts, gap) {
@@ -138,7 +139,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   intro.append(
    el("p", "mg-lead", "흐릿한 밑그림 선을 따라 그려 그림을 완성하자. 1분 동안 최대한 많이!"),
    (() => { const u = el("ul", "mg-rules");
-    ["안내선을 따라 한 번에 쭉 그린다. 잘 따라 그리면 다음 선이 나온다.", "시간이 지날수록 선이 꺾이고 휘며, 안내선도 점점 옅어진다.", "1분이 끝나면 완성한 개수가 랭킹에 더해진다. 도중에 화면을 나가면 그 판은 기록되지 않는다."].forEach(t => u.appendChild(el("li", "", t)));
+    ["안내선을 따라 한 번에 쭉 그린다. 잘 따라 그리면 다음 선이 나온다.", "장을 많이 완성할수록 선이 복잡해지고, 안내선도 점점 옅어진다.", "1분이 끝나면 그 판의 장수가 최고 기록이면 랭킹에 오른다. 도중에 화면을 나가면 그 판은 기록되지 않는다."].forEach(t => u.appendChild(el("li", "", t)));
     return u })()
   );
   if (note) intro.appendChild(el("p", "hint mg-send", String(note)));
@@ -205,7 +206,13 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
-  const next = () => { st.guide = makeLine(pickKind(st.L)); st.drawn = [] };
+  /* 장 번호 = 완성한 수 + 1. 단계는 여기서만 올리고, 그리던 장을 도중에 바꾸지 않는다. */
+  const next = () => {
+   st.L = lvAt(st.count + 1);
+   lv.textContent = (st.L + 1) + "단계";
+   st.guide = makeLine(pickKind(st.L));
+   st.drawn = []
+  };
   next();
 
   const css = getComputedStyle(document.documentElement);
@@ -227,8 +234,6 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
    if (!st || st.token !== token || st.dead) return;
    if (!here(token)) { stop(); return }   // 다른 화면으로 나감 → 판 버림, 통신 없음
    const sec = (now - st.t0) / 1000, left = Math.max(0, MG_SEC - sec);
-   const L = lvAt(sec);
-   if (L !== st.L) { st.L = L; lv.textContent = (L + 1) + "단계"; if (!st.down) next() }
    tm.textContent = Math.ceil(left) + "초"; fill.style.width = (left / MG_SEC * 100) + "%";
    tm.classList.toggle("warn", left <= 10);
 
@@ -288,21 +293,35 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const goPath = MG_PATH + "/go/" + UID + "/" + reqId;
   const stillHere = () => !!(msg.isConnected && root.isConnected);
   (async () => {
+   const fail = (head, detail) => {
+    const d = String(detail || "").replace(/\s+/g, " ").trim();
+    msg.textContent = d ? head + " [" + d + "]" : head
+   };
    try {
     await DB.doc(goPath).set({c, n: String(nm || "?").slice(0, 20), ts: Date.now()});
     const out = await mgWait(goPath, 25000);
     if (!stillHere()) return;
-    if (!out) { msg.textContent = "확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자."; return }
+    if (!out) { fail("확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자.", "timeout 25s · " + goPath); return }
     if (!out.ok) {
      const why = String(out.why || "");
-     msg.textContent = why === "early" ? "너무 빨리 제출되어 기록을 받지 않았다." : why === "late" || why === "nosession" ? "세션이 없거나 만료되어 기록을 받지 않았다." : "기록을 남기지 못했다.";
+     const err = String(out.err || "");
+     const head = why === "early" ? "너무 빨리 제출되어 기록을 받지 않았다."
+      : why === "late" ? "세션이 만료되어 기록을 받지 않았다."
+      : why === "nosession" ? "시작 세션이 없어 기록을 받지 않았다."
+      : why === "dup" ? "이미 처리된 판이라 기록을 받지 않았다."
+      : why === "busy" ? "세션 잠금에 실패했다."
+      : why === "bad" ? "제출 값이 올바르지 않다."
+      : why === "err" ? "서버 처리 중 오류가 났다."
+      : "기록을 남기지 못했다.";
+     fail(head, "why=" + (why || "?") + (err ? " · " + err : "") + " · c=" + c + " · req=" + reqId);
      return
     }
     const got = Math.max(0, Math.floor(Number(out.c) || c));
-    msg.textContent = "기록을 남겼다! 랭킹에 " + got + "장이 더해졌다.";
+    const run = Math.max(0, Math.floor(Number(out.run) || c));
+    msg.textContent = out.best ? ("신기록! 최고 " + got + "장.") : ("이번 " + run + "장. 최고 기록은 " + got + "장.");
     showRank(root, got)
    } catch (e) {
-    if (stillHere()) msg.textContent = "기록을 남기지 못했다. (" + (e && e.message || "오류") + ")"
+    if (stillHere()) fail("기록을 남기지 못했다.", (e && e.message || "오류") + " · " + goPath)
    } finally {
     if (stillHere()) again.disabled = false
    }
@@ -323,7 +342,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
    const rows = (snap.docs || []).map(d => { const v = d.data() || {}; return { u: d.id, n: String(v.n || "?"), c: Math.max(0, Number(v.c) || 0) } }).sort((a, b) => b.c - a.c);
    box.innerHTML = "";
    const card = el("div", "mg-rank");
-   const h = el("div", "mg-rank-h"); h.append(el("b", "", "🎨 따라 그리기 랭킹"), el("span", "mg-total", "모두 합쳐 " + tot.toLocaleString() + "장"));
+   const h = el("div", "mg-rank-h"); h.append(el("b", "", "🎨 한 판 최고 랭킹"), el("span", "mg-total", "모두 합쳐 " + tot.toLocaleString() + "장"));
    card.appendChild(h);
    if (!rows.length) card.appendChild(el("p", "hint", "아직 기록이 없다. 첫 번째 화가가 되어 보자!"));
    else {

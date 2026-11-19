@@ -4,5 +4,5 @@
         · data(선택, 미니게임 숫자·그림 데이터 파일. src 보다 먼저 불러온다).
    새 미니게임을 넣을 때 여기에 한 줄 추가하고, 클릭 시 specialPlay 가 #/{path} 로 보낸다. */
 const SPECIAL_GAMES=[
- {id:"flanders",path:"minigame1",nm:"🎨 플랜더스의 밑그림",src:"js/act/mini/demo.js",data:"data/act/mini/flanders.js",ds:"1분 동안 흐릿한 밑그림 선을 최대한 많이 따라 그린다. 완성한 개수로 랭킹이 매겨진다."}
+ {id:"flanders",path:"minigame1",nm:"🎨 플랜더스의 밑그림",src:"js/act/mini/demo.js",data:"data/act/mini/flanders.js",ds:"1분 동안 흐릿한 밑그림 선을 최대한 많이 따라 그린다. 한 판 최고 장수로 랭킹이 매겨진다."}
 ];

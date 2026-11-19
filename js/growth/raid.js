@@ -188,12 +188,17 @@ function drawPex(){const box=$("#gsrbox");if(!box)return;
   box.appendChild(send);
  }catch(e){box.innerHTML="";box.appendChild(elT("p","hint","출정 화면을 그리지 못했다. 새로고침 후 다시 열어 주세요."))}
 }
-/* 돌아올 시각이면 한 번 알린다. 보상은 버튼으로만 받는다. */
-setInterval(async()=>{if(!C)return;const runs=pexRuns(),due=runs.filter(r=>Date.now()>=r.t1&&!r.nt);if(!due.length||pexNtBusy)return;pexNtBusy=true;
- try{for(const r of due){if(C.pex&&C.pex[r.id])C.pex[r.id].nt=1;const q=pexPetOf(r.petId),nm=q?q.nm:r.row[1];
+/* 귀환 알림은 출정 sd 당 1회. c/pex 는 서버 권한이므로 nt 를 계정에 쓰지 않고,
+   로컬(mgr_pex_nt)에만 남긴다. sync 가 C.pex 를 덮어도 같은 출정은 다시 울리지 않는다. */
+function pexNtKey(){return UID?"mgr_pex_nt_"+UID:""}
+function pexNtLoad(){const k=pexNtKey();if(!k)return{};try{const o=JSON.parse(localStorage.getItem(k)||"{}");return o&&typeof o==="object"?o:{}}catch(e){return{}}}
+function pexNtSave(o){const k=pexNtKey();if(!k||!o)return;try{const ks=Object.keys(o);if(ks.length>40)ks.slice(0,ks.length-40).forEach(x=>delete o[x]);localStorage.setItem(k,JSON.stringify(o))}catch(e){}}
+function pexNtHad(sd){const k=String(sd||"");return!!(k&&pexNtLoad()[k])}
+function pexNtMark(sd){const k=String(sd||"");if(!k)return;const o=pexNtLoad();o[k]=1;pexNtSave(o)}
+setInterval(()=>{if(!C||!UID||pexNtBusy)return;const due=pexRuns().filter(r=>Date.now()>=r.t1&&!r.nt&&!pexNtHad(r.sd));if(!due.length)return;pexNtBusy=true;
+ try{due.forEach(r=>{if(C.pex&&C.pex[r.id])C.pex[r.id].nt=1;pexNtMark(r.sd);const q=pexPetOf(r.petId),nm=q?q.nm:r.row[1];
   try{note("quest",nm+"이(가) "+r.row[1]+"에서 돌아왔다! 무인 상점에서 보상을 받자.")}catch(e){}
   try{toast("🐾 "+nm+" · "+r.row[1]+"에서 돌아왔다!")}catch(e){}
-  try{ding()}catch(e){}}
-  /* nt 는 클라 표시용. 서버 c/pex 는 건드리지 않는다(보상 PATCH 금지). */
+  try{ding()}catch(e){}});
   if(typeof drawPex==="function"&&$("#gsrbox")&&$("#v-growth")&&!$("#v-growth").hidden)drawPex()}
  finally{pexNtBusy=false}},30000);

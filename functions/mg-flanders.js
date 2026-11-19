@@ -26,18 +26,22 @@ function createMgFlandersSubmit(getDatabase) {
     const reqId = String(event.params.reqId || "");
     if (!uid || !reqId) return;
     const db = getDatabase();
-    let res = {ok: 0, why: "err", c: 0};
+    let res = {ok: 0, why: "err", c: 0, err: ""};
     try {
       res = await applyMgFlanders(db, uid, after);
+      if (!res.err) res.err = "";
     } catch (e) {
-      res = {ok: 0, why: "err", c: 0};
+      res = {ok: 0, why: "err", c: 0, err: String((e && e.message) || e || "exception").slice(0, 160)};
     }
     try {
       await db.ref("event_minigame/flanders/go/" + uid + "/" + reqId).set({
         done: 1,
         ok: res.ok ? 1 : 0,
         why: res.why || "",
+        err: res.err || "",
         c: res.c || 0,
+        run: res.run || 0,
+        best: res.best ? 1 : 0,
         ts: Date.now()
       });
     } catch (e2) { /* ignore */ }
