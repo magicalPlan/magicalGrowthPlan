@@ -35,6 +35,8 @@ function pexShowRw(res){if(!res||!res.ok)return;
  const sc=res.sc&&res.sc.tx?("\n\n「"+(res.sc.ti||"")+"」\n"+pexFill(res.sc.tx,res.petNm||"사역마")):"";
  const rw=res.rw||(Array.isArray(res.lines)?res.lines.join(", "):"");
  try{if(res.inv&&typeof dexAdd==="function")Object.keys(res.inv).forEach(id=>{try{if(id==="bond"||id==="g4")dexAdd("it",id);else dexAdd("mat",id)}catch(e){}})}catch(e){}
+ /* 사역마 출정 대사(도감 k=px). 제목(ti)이 있으면 발견한 것만 기록. */
+ try{const ti=res.sc&&res.sc.ti;if(ti&&typeof dexAdd==="function"&&dexAdd("px",String(ti))){try{if(typeof note==="function")note("dex","도감에 새 사역마 출정 사건이 기록되었다: "+ti)}catch(e){}try{if(typeof save==="function")save()}catch(e){}}}catch(e){}
  try{if(typeof checkTitles==="function")checkTitles()}catch(e){}
  alertBox("🐾 "+nm+" · "+tag,head+sc+"\n\n"+rw);
  try{if(typeof note==="function")note("quest",nm+": "+head+(rw?" ("+rw+")":""))}catch(e){}}

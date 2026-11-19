@@ -29,7 +29,7 @@ async function readDex(){if(!C||!AUTH.uid||LOCAL||!DB||dexBusy)return;dexBusy=tr
 function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="dex");show("titles");setRec("dex");titleState();C.dex=C.dex||{};C.dex.rw=C.dex.rw||{};ITM.forEach(x=>{if(((C.inv||{})[x[0]]||0)>0)dexAdd("it",x[0])});dexSkOwn();
  let got=0,all=0;DEX.forEach(d=>{got+=dexN(C,d.k);all+=dexTot(d.k)});
  const sm=$("#dex-sum");sm.innerHTML="";const bar=elT("div","bar"),fi=elT("i");fi.style.width=(got/all*100)+"%";bar.appendChild(fi);
- sm.append(elT("h2","","마법소녀 도감"), elT("p","hint","출정, 보스, 상점, 마법에서 만난 것들이 기록된다. 분류마다 절반과 전부를 모으면 보상을 받는다."),bar,elT("p","hint","전체 수집률 " + Math.floor(got/all*100)+"% ("+got+" / "+all+")"));
+ sm.append(elT("h2","","마법소녀 도감"), elT("p","hint","출정, 사역마 출정, 보스, 상점, 마법에서 만난 것들이 기록된다. 분류마다 절반과 전부를 모으면 보상을 받는다."),bar,elT("p","hint","전체 수집률 " + Math.floor(got/all*100)+"% ("+got+" / "+all+")"));
  const cs=$("#dex-cats");cs.innerHTML="";DEX.forEach(d=>{const b=elT("button","chip",d.nm+" "+dexN(C,d.k)+"/"+dexTot(d.k)+(dexClaimable(d).length?" ●":""));b.type="button";b.setAttribute("aria-pressed",dexCat===d.k?"true":"false");b.onclick=()=>{dexCat=d.k;dex()};cs.appendChild(b)});
  const pb=elT("button","chip","사역마 "+petDexN()+"/"+petDexTot());pb.type="button";pb.setAttribute("aria-pressed",dexCat==="pt"?"true":"false");pb.onclick=()=>{dexCat="pt";dex()};cs.appendChild(pb);
  const hd=$("#dex-cat");hd.innerHTML="";const l=$("#dex-list");l.innerHTML="";hideDexMat();const m=$("#dex-msg");m.style.color="var(--mu)";
@@ -44,7 +44,7 @@ function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="de
   if(d.k==="wp"&&typeof wpIc==="function"){const ic=wpIc(Number(String(it.id).slice(1)),"lg");if(ic)c.appendChild(ic)}
   c.append(elT("small","dex-tag",it.tag),elT("b","",has?it.nm+star:"???"),elT("small","",has?it.ds:it.hint));l.appendChild(c)});
  if(d.k==="it")drawDexMat();
- m.textContent=msg||(d.k==="bs"?"★는 처치까지 함께한 보스다.":d.k==="wp"?"★는 +5까지 강화한 무기다.":d.k==="ev"?"마을 전용 이벤트는 그 마을 출신과 함께 출정해야 만날 수 있다.":"");if(fresh)readDex()}
+ m.textContent=msg||(d.k==="bs"?"★는 처치까지 함께한 보스다.":d.k==="wp"?"★는 +5까지 강화한 무기다.":d.k==="ev"?"마을 전용 이벤트는 그 마을 출신과 함께 출정해야 만날 수 있다.":d.k==="px"?"무인 상점 › 사역마 출정 귀환에서 만난 사건이다. 발견한 것만 제목·내용이 열린다.":"");if(fresh)readDex()}
 
 /* 사역마 도감. 알에서 깨어난 종만 이름·설명·성능을 적는다. 기간 한정은 칸 모양이 다르다. */
 function petMet(sp){if(!C||!sp)return false;if(C.petSeen&&C.petSeen[sp])return true;return Array.isArray(C.pets)&&C.pets.some(q=>q&&q.sp===sp)}
@@ -73,13 +73,24 @@ function matPlace(k){const base=(typeof MAT_WHERE!=="undefined"&&MAT_WHERE[k])||
  return more.length?base+" · "+more.join(" · "):base}
 /* 제작에 넣는 것의 이름. 재료는 data/craft.js MATM, 아이템은 data/game.js ITM. */
 function matNm(id){const m=typeof MATM!=="undefined"&&MATM[id];if(m)return m[1];const x=typeof ITM!=="undefined"&&ITM.find(t=>t[0]===id);return x?x[1]:id}
+/* 사역마 출정(data/pet-raid.js PEX) 보상 칸에서 이 id 가 나오는 줄.
+   칸: 3 기본 · 4~5 소모품 · 6 조각 · 7 특별(확정) · 8 특별(50%). */
+function pexSrcLines(id){const out=[];if(typeof PEX==="undefined")return out;
+ PEX.forEach(row=>{const bits=[];
+  for(let i=3;i<row.length;i++){const r=row[i];if(!r||typeof r!=="object"||r.id!==id)continue;
+   const n=Math.floor(Number(r.n)||0);if(n<1)continue;
+   const tag=i===3?"기본":i===6?"조각":i===7?"특별":i===8?"특별(50%)":(i===4||i===5)?"소모품":"";
+   bits.push(n+"개"+(tag?" · "+tag:""))}
+  if(bits.length)out.push("사역마 출정 「"+row[1]+"」: "+bits.join(", "))});
+ return out}
 /* 재료 한 개의 얻는 곳. 순서대로 이어 붙이고, 하나도 없으면 MAT 다섯째 칸을 그대로 적는다.
    1. MAT_DROP: 출정·장기 토벌·보스 레이드에서 굴리는 표. 줄은 [재료 id, 개수|[min,max], 확률]. 표시 이름은 matPlace.
    2. MAT_VIL: 그 마을 출신이면 이 재료가 나올 때 1개 더. 마을 이름은 data/game.js VL.
    3. RCP: 만드는 결과(둘째 칸)가 이 재료인 제작법. 필요한 마을 공방 단계·골드·개수도 여기 있다.
    4. EBOSS.drop (data/event-boss/boss.js): 이벤트 보스 토벌 보상. [재료 id, 개수].
    5. MAT_CROWN_P: 검은 왕관의 조각만. 절망의 마인을 공격할 때의 확률. 실제 지급은 js/corruption.js.
-   6. CLP.ms (data/clue/piece.js): 단서 조각 단계 보상의 mat {재료 id: 개수}. */
+   6. CLP.ms (data/clue/piece.js): 단서 조각 단계 보상의 mat {재료 id: 개수}.
+   7. PEX: 사역마 출정(성장 기록 › 무인 상점) 맵별 보상. */
 function matLines(id){const lines=[];
  if(typeof MAT_DROP==="object")Object.keys(MAT_DROP).forEach(k=>{const rows=(MAT_DROP[k]||[]).filter(r=>r[0]===id);if(rows.length)lines.push(matPlace(k)+": "+rows.map(r=>matBit(r[1],r[2])).join(", "))});
  if(typeof MAT_VIL==="object")Object.keys(MAT_VIL).forEach(v=>{if(MAT_VIL[v]===id)lines.push((VL[v]?VL[v].n:v)+": 이 재료가 나오면 1개 더")});
@@ -88,6 +99,7 @@ function matLines(id){const lines=[];
  if(typeof EBOSS!=="undefined"&&EBOSS.drop)EBOSS.drop.filter(x=>x[0]===id).forEach(x=>lines.push((EBOSS.nm||"이벤트 보스")+" 토벌 보상: "+x[1]+"개"));
  if(id==="m_crown"&&typeof MAT_CROWN_P==="number")lines.push("절망의 마인 공격: "+matBit(1,MAT_CROWN_P));
  if(typeof CLP!=="undefined"&&CLP.ms)CLP.ms.forEach(s=>{const n=s[1]&&s[1].mat&&s[1].mat[id];if(n)lines.push((CLP.nm||"단서 조각")+" 「"+s[2]+"」 보상: "+n+"개")});
+ pexSrcLines(id).forEach(t=>lines.push(t));
  if(!lines.length&&MATM[id]&&MATM[id][4])lines.push(MATM[id][4]);
  return lines}
 /* 아이템이 아닌 분류를 열면 재료 칸을 비우고 숨긴다. */
