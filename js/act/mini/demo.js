@@ -1,21 +1,21 @@
 /* 특별 의뢰 › 플랜더스의 밑그림 (선 따라 그리기 미니게임).
-   목록: data/act/special-list.js 의 {id:"demo", path:"minigame1", src:"js/act/mini/demo.js"}.
+   목록: data/act/special-list.js 의 {id:"flanders", path:"minigame1", src:"js/act/mini/demo.js"}.
    이 파일은 미니게임 화면(#v-mini)에 들어온 뒤에만 js/act/special.js 의 spMiniLoad 가 불러온다.
-   불러오면 SP_MINI.demo = {mount(root,g)} 를 등록하고, specialPlay 가 mount 를 부른다.
+   불러오면 SP_MINI.flanders = {mount(root,g), stop()} 를 등록하고, specialPlay 가 mount 를 부른다.
+   이탈 시 special.js 의 spMiniStop() → stop(). here() 는 st.gameId===spCur.id 로만 판별(id 하드코딩 금지).
 
    ── 규칙 ───────────────────────────────────────────────
    · 1분 동안 흐릿한 안내선(밑그림)을 따라 그린다. 잘 따라 그리면 1장 완성, 다음 선이 나온다.
    · 시간이 지날수록 어려워진다: 선이 꺾이고 휘고, 안내선이 옅어지고, 허용 오차가 줄어든다.
    · 시간·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
      그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다.
-   · 서버 통신은 두 번뿐이다.
-     ① 1분이 끝났을 때 한 번만 PATCH(덮어쓰기 아님, increment):
-        {path}/rank/{uid} = { n: 이름, c: +완성 개수 }   (path 기본 event_minigame/flanders)
-        {path}/total_amount = +완성 개수
-     ② 결과 화면·'랭킹 보기' 버튼을 눌렀을 때 랭킹 한 번 읽기(rank 를 c 순서로 상위 top 명).
+   · 서버 통신(기록용)은 시작·종료·랭킹 읽기뿐이다. rank·total_amount 는 클라가 직접 쓰지 않는다.
+     ① 그리기 시작: play/{uid}={ts} 쓰기를 await 한 뒤에만 타이머 시작(실패면 시작 안 함).
+     ② 1분 종료·완성>0: 결과·장수는 바로 두고, go 제출은 백그라운드. 「한 번 더」는 확정될 때까지 비활성.
+     ③ 결과·'랭킹 보기': rank 를 c 순서로 상위 top 명 읽기(+ total_amount).
    · 게임 중 다른 화면으로 나가면(curView 가 mini 가 아니거나 주소가 바뀌면) 그 판은 버리고,
-     서버에 아무것도 보내지 않는다. 그림(이미지)은 저장하지 않는다.
-   · DB 규칙: {path} 에 읽기·쓰기 규칙과 rank 의 .indexOn ["c"] 가 필요하다.
+     go 제출을 하지 않는다. 그림(이미지)은 저장하지 않는다.
+   · DB 규칙: scripts/event-minigame-rules-fragment.txt (rank·total_amount 클라 쓰기 금지, rank .indexOn c).
    ─────────────────────────────────────────────────────── */
 var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
 (() => {
@@ -34,6 +34,8 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
  const GEN = { line: 1, bend: 1, curve: 1, zig: 1, wave: 1 };   // 코드로 만드는 무작위 선 이름
 
  let st = null;   // 지금 판의 상태. 판이 끝나거나 버려지면 null.
+ let mgId = "flanders"; // mount(g) 때 SPECIAL_GAMES.id 와 맞춤. here()·SP_MINI 키.
+ let mgG = null;        // 마지막 mount 의 g. 시작 실패 시 인트로로 돌릴 때 씀.
 
  const rnd = (a, b) => a + Math.random() * (b - a);
  const lvAt = sec => { let L = 0; MG_LV.forEach((x, i) => { if (sec >= x.at) L = i }); return L };
@@ -118,15 +120,17 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   return { ok: cover >= PASS_COVER && acc >= PASS_ACC, cover, acc }
  }
 
- /* 지금 화면이 이 미니게임인지. 아니면 판을 버린다(서버 통신 없음). */
+ /* 지금 화면이 이 미니게임인지. 아니면 판을 버린다(서버 통신 없음). id 는 mount 때 받은 g.id. */
  function here(token) {
-  return st && st.token === token && typeof curView !== "undefined" && curView === "mini" && typeof spCur !== "undefined" && spCur && spCur.id === "demo"
+  return st && st.token === token && st.gameId === mgId && typeof curView !== "undefined" && curView === "mini" && typeof spCur !== "undefined" && spCur && spCur.id === st.gameId
  }
 
  function el(tag, cls, tx) { return typeof elT === "function" ? elT(tag, cls, tx) : Object.assign(document.createElement(tag), { className: cls || "", textContent: tx == null ? "" : tx }) }
 
  /* ───────── 화면 ───────── */
- function mount(root) {
+ function mount(root, g, note) {
+  mgId = String((g && g.id) || mgId || "flanders");
+  mgG = g || mgG || {id: mgId};
   stop();
   root.innerHTML = "";
   root.classList.add("mg-root");
@@ -137,6 +141,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     ["안내선을 따라 한 번에 쭉 그린다. 잘 따라 그리면 다음 선이 나온다.", "시간이 지날수록 선이 꺾이고 휘며, 안내선도 점점 옅어진다.", "1분이 끝나면 완성한 개수가 랭킹에 더해진다. 도중에 화면을 나가면 그 판은 기록되지 않는다."].forEach(t => u.appendChild(el("li", "", t)));
     return u })()
   );
+  if (note) intro.appendChild(el("p", "hint mg-send", String(note)));
   const btns = el("div", "mg-btns");
   const go = el("button", "btn mg-go", "그리기 시작"); go.type = "button"; go.onclick = () => start(root);
   const rk = el("button", "btn g mg-rk-btn", "랭킹 보기"); rk.type = "button"; rk.onclick = () => showRank(root, null);
@@ -151,9 +156,39 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   st = null
  }
 
- function start(root) {
+ /* go/{uid}/{reqId} 에 done 이 올 때까지 짧게 묻는다(출정 pexWait 과 같은 방식). */
+ async function mgWait(path, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+   try { const s = await DB.doc(path).get(), v = s.exists ? s.data() : null; if (v && v.done) return v } catch (e) {}
+   await new Promise(r => setTimeout(r, 400))
+  }
+  return null
+ }
+ /* 그리기 시작 세션. 성공해야 타이머를 돌린다. LOCAL·비로그인은 기록 없이 true. */
+ async function mgPlayStamp() {
+  if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL || !UID) return true
+  await DB.doc(MG_PATH + "/play/" + UID).set({ts: Date.now()})
+  return true
+ }
+
+ async function start(root) {
   stop();
   root.innerHTML = "";
+  root.classList.add("mg-root");
+  root.appendChild(el("p", "hint mg-send", "준비 중…"));
+  try {
+   await mgPlayStamp()
+  } catch (e) {
+   if (!root.isConnected) return
+   mount(root, mgG, "세션을 만들지 못했다. 연결을 확인한 뒤 다시 시작해 보자.")
+   return
+  }
+  if (!root.isConnected) return
+  if (typeof curView !== "undefined" && curView !== "mini") return
+
+  root.innerHTML = "";
+  root.classList.add("mg-root");
   const token = Date.now() + "_" + Math.random();
   const hud = el("div", "mg-hud");
   const tm = el("b", "mg-time", MG_SEC + "초"), cnt = el("b", "mg-cnt", "완성 0"), lv = el("span", "mg-lv", "1단계");
@@ -169,7 +204,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   cv.width = MG_W * dpr; cv.height = MG_W * dpr;
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  st = { token, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
+  st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
   const next = () => { st.guide = makeLine(pickKind(st.L)); st.drawn = [] };
   next();
 
@@ -226,15 +261,15 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   st.raf = requestAnimationFrame(draw)
  }
 
- /* 1분 끝: 한 번만 기록을 보낸다. */
- async function finish(root, token) {
+ /* 1분 끝: 결과·장수는 바로, 「한 번 더」는 저장 확정까지 잠금. */
+ function finish(root, token) {
   if (!st || st.token !== token || st.ended) return;
   st.ended = true;
   const n = st.count;
   root.innerHTML = "";
   const res = el("div", "mg-result");
   res.append(el("p", "mg-res-k", "시간 종료!"), el("p", "mg-res-n", n + "장"), el("p", "hint mg-res-tx", n ? "밑그림 " + n + "장을 완성했다." : "이번에는 한 장도 완성하지 못했다."));
-  const msg = el("p", "hint mg-send", n ? "기록을 남기는 중…" : "");
+  const msg = el("p", "hint mg-send", n ? "저장 중…" : "");
   res.appendChild(msg);
   const btns = el("div", "mg-btns");
   const again = el("button", "btn mg-go", "한 번 더"); again.type = "button"; again.onclick = () => start(root);
@@ -245,17 +280,33 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
 
   if (!n) return;
   if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL || !UID || typeof C === "undefined" || !C) { msg.textContent = "서버에 연결되어 있지 않아 기록을 남기지 못했다."; return }
-  /* 덮어쓰기 없이 한 번에: 이름은 칸 하나만 PATCH, 개수와 합계는 서버 increment. 다른 계정 정보는 넣지 않는다. */
+  /* rank·total_amount 는 클라가 쓰지 않는다. go 확정 전엔 재시작 잠금(play 덮어쓰기 방지). */
+  again.disabled = true;
   const nm = typeof nmOf === "function" ? nmOf() : String(C.n || "").slice(0, 20);
-  const body = {};
-  body["rank/" + UID + "/n"] = nm;
-  body["rank/" + UID + "/c"] = { ".sv": { increment: n } };
-  body["total_amount"] = { ".sv": { increment: n } };
-  try {
-   await DB.doc(MG_PATH).patch(body);
-   msg.textContent = "기록을 남겼다! 랭킹에 " + n + "장이 더해졌다.";
-   showRank(root, n)
-  } catch (e) { msg.textContent = "기록을 남기지 못했다. (" + (e && e.message || "오류") + ")" }
+  const c = Math.max(0, Math.min(40, Math.floor(Number(n) || 0)));
+  const reqId = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+  const goPath = MG_PATH + "/go/" + UID + "/" + reqId;
+  const stillHere = () => !!(msg.isConnected && root.isConnected);
+  (async () => {
+   try {
+    await DB.doc(goPath).set({c, n: String(nm || "?").slice(0, 20), ts: Date.now()});
+    const out = await mgWait(goPath, 25000);
+    if (!stillHere()) return;
+    if (!out) { msg.textContent = "확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자."; return }
+    if (!out.ok) {
+     const why = String(out.why || "");
+     msg.textContent = why === "early" ? "너무 빨리 제출되어 기록을 받지 않았다." : why === "late" || why === "nosession" ? "세션이 없거나 만료되어 기록을 받지 않았다." : "기록을 남기지 못했다.";
+     return
+    }
+    const got = Math.max(0, Math.floor(Number(out.c) || c));
+    msg.textContent = "기록을 남겼다! 랭킹에 " + got + "장이 더해졌다.";
+    showRank(root, got)
+   } catch (e) {
+    if (stillHere()) msg.textContent = "기록을 남기지 못했다. (" + (e && e.message || "오류") + ")"
+   } finally {
+    if (stillHere()) again.disabled = false
+   }
+  })()
  }
 
  /* 랭킹: 버튼을 누르거나 기록을 남긴 뒤에만 한 번 읽는다. */
@@ -289,5 +340,5 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   } catch (e) { if (root.isConnected) { box.innerHTML = ""; box.appendChild(el("p", "hint", "랭킹을 불러오지 못했다.")) } }
  }
 
- SP_MINI.demo = { mount, stop };
+ SP_MINI.flanders = { mount, stop };
 })();

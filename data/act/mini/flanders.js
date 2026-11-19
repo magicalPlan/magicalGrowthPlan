@@ -4,7 +4,7 @@
 
    ── 칸 설명 ───────────────────────────────────────────
    sec     한 판 시간(초)
-   path    기록을 남길 DB 칸. 끝날 때 rank/{uid} 의 n(이름)·c(+완성 개수), total_amount(+완성 개수)를 PATCH 한다.
+   path    기록을 남길 DB 칸. 클라는 play/{uid}·go/{uid}/{reqId} 만 쓰고, rank·total_amount 는 Functions 가 increment.
    top     랭킹에 보여 줄 사람 수
    pass    한 장 완성 기준. cover: 안내선을 덮은 비율 · acc: 그린 선이 안내선 위에 있는 비율
    levels  난이도 단계. at: 시작 후 몇 초부터 · tol: 허용 오차(px, 판 크기 600 기준) · alpha: 안내선 진하기 · pick: 이 단계에서 나올 선

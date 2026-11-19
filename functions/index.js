@@ -16,6 +16,7 @@ const {createDormantSweep} = require("./dormant");
 const {createPetTraitGrant} = require("./pettr");
 const {createDuelDevScore, createDuelDevClaim} = require("./duel");
 const {createPexStart, createPexClaim} = require("./pex");
+const {createMgFlandersSubmit} = require("./mg-flanders");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -38,6 +39,9 @@ exports.duelDevClaim = createDuelDevClaim(getDatabase);
 /* 사역마 출정: pex/go 출발 스탬프 · pex/take 귀환 보상. 연속 스케줄 없음. */
 exports.pexStart = createPexStart(getDatabase);
 exports.pexClaim = createPexClaim(getDatabase);
+
+/* 플랜더스 밑그림: go 제출 → play 세션 확인 후 rank·total_amount increment. 클라는 합계 직접 불가. */
+exports.mgFlandersSubmit = createMgFlandersSubmit(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */

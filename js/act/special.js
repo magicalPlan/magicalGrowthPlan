@@ -17,6 +17,13 @@
 let spCur=null;
 let spRouteSkip=false;
 
+/* 미니 판 정리. 화면을 떠날 때·다시 붙이기 전에 부른다(raf·판 상태). RTDB 없음. */
+function spMiniStop(){
+ const id=spCur&&spCur.id;
+ const m=typeof SP_MINI!=="undefined"&&id&&SP_MINI[id];
+ if(m&&typeof m.stop==="function"){try{m.stop()}catch(e){}}
+}
+
 function spGames(){
  return typeof SPECIAL_GAMES!=="undefined"&&Array.isArray(SPECIAL_GAMES)?SPECIAL_GAMES:[]
 }
@@ -70,6 +77,8 @@ function specialDraw(){
 function special(opts){
  if(typeof includeHeal==="function"&&!$("#sp-list")){includeHeal();return}
  const push=!(opts&&opts.noPush)
+ if(typeof curView!=="undefined"&&curView==="mini")spMiniStop()
+ spCur=null
  show("special")
  specialDraw()
  const m=$("#sp-msg");if(m)m.textContent=""
@@ -82,6 +91,7 @@ function specialPlay(id,push){
  const g=spGame(id)
  if(!g){toast("그 특별 의뢰를 찾지 못했다.");return}
  const same=spCur&&spCur.id===g.id&&typeof curView!=="undefined"&&curView==="mini"
+ if(!same)spMiniStop()
  spCur=g
  if(typeof includeHeal==="function"&&!$("#mini-root")){includeHeal();return}
  show("mini")
@@ -117,6 +127,7 @@ function spMiniLoad(g,root){
 }
 /* 뒤로가기 버튼 = 브라우저 history.back (스택과 맞춤). */
 function specialBack(){
+ spMiniStop()
  if(history.length>1)history.back()
  else{spCur=null;special({noPush:true})}
 }
@@ -125,6 +136,7 @@ function spRouteApply(){
  const raw=spHashNow()
  const path=raw.charAt(0)==="/"?raw.slice(1):raw
  if(path==="special"){
+  spMiniStop()
   spCur=null
   if(typeof includeHeal==="function"&&!$("#sp-list")){includeHeal();return}
   show("special")
@@ -137,6 +149,7 @@ function spRouteApply(){
   if(g){specialPlay(g.id,false);return}
  }
  if(typeof curView!=="undefined"&&(curView==="special"||curView==="mini")){
+  if(curView==="mini")spMiniStop()
   spCur=null
  }
 }
