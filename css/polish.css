@@ -792,3 +792,35 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 .vn-float.vn-dark-quiet .vn-name,.vn-float.vn-dark-quiet .vn-text{visibility:hidden}
 .vn-float.vn-dark-quiet .vn-box{background:transparent;border-color:transparent;box-shadow:none}
 @media (prefers-reduced-motion:reduce){.vn-float{transition:none}}
+
+/* 특별 의뢰 › 플랜더스의 밑그림(js/act/mini/demo.js). 미니게임 칸은 점선 대신 카드로. */
+.sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px}
+.mg-lead{margin:0 0 8px;font-weight:700}
+.mg-rules{margin:0 0 12px;padding-left:18px;color:var(--mu);font-size:.86rem;line-height:1.55}
+.mg-btns{display:flex;gap:8px;flex-wrap:wrap}
+.mg-btns .btn{flex:1 1 140px;margin-top:0}
+.mg-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
+.mg-time{font-size:1.15rem;font-variant-numeric:tabular-nums;min-width:3.5em}
+.mg-time.warn{color:var(--bad,#e05a5a)}
+.mg-lv{padding:2px 9px;border:1px solid var(--ln);border-radius:999px;font-size:.78rem;color:var(--mu)}
+.mg-cnt{font-size:1.05rem;color:var(--gold,var(--hi));min-width:3.5em;text-align:right}
+.mg-bar{height:6px;margin:0 0 10px}
+.mg-cv-wrap{position:relative;width:100%;max-width:520px;margin:0 auto;aspect-ratio:1/1;border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;
+ background:linear-gradient(color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,linear-gradient(90deg,color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,color-mix(in srgb,var(--pn) 70%,#fff 6%)}
+.mg-cv{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.mg-say{margin:8px 0 0;text-align:center;font-size:.88rem;color:var(--mu);min-height:1.3em}
+.mg-result{text-align:center;padding:6px 0 4px}
+.mg-res-k{margin:0;color:var(--mu);font-weight:700}
+.mg-res-n{margin:2px 0;font-size:2.4rem;font-weight:800;color:var(--gold,var(--hi))}
+.mg-res-tx,.mg-send{margin:0 0 6px}
+.mg-result .mg-btns{margin-top:10px}
+.mg-rank-box{margin-top:12px}
+.mg-rank{padding:12px;border:1px solid var(--ln);border-radius:var(--r)}
+.mg-rank-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.mg-total{font-size:.8rem;color:var(--mu)}
+.mg-rank-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.mg-rank-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.mg-rank-row.me{outline:1px solid var(--gold,var(--hi));background:color-mix(in srgb,var(--gold,var(--hi)) 14%,transparent)}
+.mg-rank-no{width:1.8em;text-align:center;font-weight:700}
+.mg-rank-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-rank-me{margin:8px 0 0}

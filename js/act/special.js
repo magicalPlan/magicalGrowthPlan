@@ -94,9 +94,24 @@ function specialPlay(id,push){
  if(msg)msg.textContent=""
  if(root&&!same){
   root.innerHTML=""
-  root.appendChild(elT("p","hint","미니게임 본문 자리. 실제 로직은 "+(g.src||"src")+" 에 두고 이 칸에 붙이면 된다."))
-  root.appendChild(elT("p","hint","주소 "+spPathOf(g)+" · 이 화면으로 들어오기 전에는 RTDB·구독·계정 PATCH 를 하지 않는다(special.js 상단 규칙)."))
+  spMiniLoad(g,root)
  }
+}
+/* 미니게임 스크립트(g.src)는 mini 화면에 들어온 뒤 한 번만 불러온다(정적 파일, RTDB 아님).
+   스크립트는 SP_MINI[g.id] = {mount(root,g), stop()} 를 등록한다. 없으면 자리 안내만 보인다. */
+const spMiniJs={}
+function spMiniLoad(g,root){
+ const go=()=>{
+  if(!root.isConnected||!spCur||spCur.id!==g.id)return
+  const m=typeof SP_MINI!=="undefined"&&SP_MINI[g.id]
+  if(m&&typeof m.mount==="function"){try{m.mount(root,g)}catch(e){root.innerHTML="";root.appendChild(elT("p","hint","미니게임을 열지 못했다."))}return}
+  root.innerHTML=""
+  root.appendChild(elT("p","hint","미니게임 본문 자리. 실제 로직은 "+(g.src||"src")+" 에 두고 SP_MINI[\""+g.id+"\"] 를 등록하면 된다."))
+ }
+ if(!g.src||(typeof SP_MINI!=="undefined"&&SP_MINI[g.id])){go();return}
+ root.appendChild(elT("p","hint","불러오는 중…"))
+ if(!spMiniJs[g.src])spMiniJs[g.src]=new Promise((ok,no)=>{const s=document.createElement("script");s.src=g.src+(typeof APP_VER!=="undefined"?"?v="+APP_VER:"");s.onload=ok;s.onerror=no;document.head.appendChild(s)})
+ spMiniJs[g.src].then(go).catch(()=>{delete spMiniJs[g.src];if(root.isConnected){root.innerHTML="";root.appendChild(elT("p","hint","미니게임 파일을 불러오지 못했다. 새로고침 후 다시 열어 주세요."))}})
 }
 /* 뒤로가기 버튼 = 브라우저 history.back (스택과 맞춤). */
 function specialBack(){
