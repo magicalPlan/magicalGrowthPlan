@@ -650,6 +650,18 @@ html[data-theme="light"] .dex-it.lock .wp-ic{filter:brightness(0) opacity(.2)}
 .pet-snack-row .chip{font-size:.78rem;padding:8px 10px}
 html[data-theme="light"] .pet-snack{border-top-color:var(--ln)}
 
+/* 특별 의뢰(미니게임 목록). 실전 › #v-special · js/act/special.js
+   목록만 그릴 때는 RTDB 없음(special.js 상단 규칙). */
+.sp-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.sp-item{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;margin:0;padding:12px 14px;text-align:left;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
+.sp-item:hover{border-color:var(--c,var(--hi))}
+.sp-item-nm{font-weight:700;font-size:1rem}
+.sp-item-src{display:block;color:var(--mu);font-size:.78rem;word-break:break-all}
+.sp-item-ds{display:block;color:var(--mu);font-size:.85rem;line-height:1.45}
+.sp-mini-bar{margin:0 0 10px}
+.sp-mini-root{margin-top:12px;padding:12px;border:1px dashed var(--ln);border-radius:var(--r)}
+html[data-theme="light"] .sp-item{background:var(--pn);border-color:var(--ln)}
+
 /* 사역마 출정 UI (성장 기록 › 무인 상점 #gsrbox). 그리는 곳은 js/growth/raid.js 의 drawPex.
    · .pex-head: 안내 카드 + 출정 칸(.pex-cap 의 점)
    · .pex-run: 출정 중 카드. .done(돌아옴)은 금색 강조, 보상 받기(.pex-take)가 주 버튼
