@@ -23,6 +23,30 @@
    img 와 stand 가 비어 있으면 이름만 있는 실루엣을 세운다. 그림 주소를 넣으면 그 그림을 세운다.
    화면을 바꾸면 main.js 의 show 가 vnClose 를 불러 창을 닫는다. */
 let vnRoot=null,vnState=null,vnBack=null,vnOnClose=null;
+/* 스탠딩 주소 → Promise. 줄마다 img 를 지웠다 다시 쓰면 깜빡이므로, 미리 받아 두고 준비된 뒤에만 갈아끼운다. */
+const vnImgPre={};
+
+function vnPreload(src){
+  src=String(src||"").trim();
+  if(!src)return Promise.resolve(null);
+  if(vnImgPre[src])return vnImgPre[src];
+  return vnImgPre[src]=new Promise(function(ok){
+    const im=new Image();
+    im.onload=im.onerror=function(){ok(im)};
+    im.src=src
+  })
+}
+
+function vnPreStory(story){
+  if(!story)return;
+  const cast=story.cast||{};
+  Object.keys(cast).forEach(function(k){const c=cast[k];if(c&&c.img)vnPreload(c.img)});
+  const nodes=story.nodes||{};
+  Object.keys(nodes).forEach(function(id){
+    const lines=nodes[id]&&Array.isArray(nodes[id].lines)?nodes[id].lines:[];
+    lines.forEach(function(L){if(L&&L.stand)vnPreload(L.stand)})
+  })
+}
 
 function vnCast(story,who) {
   const c = story && story.cast && who ? story.cast[who] : null;
@@ -103,35 +127,50 @@ function vnPick (next) {
   vnPaint()
 }
 
-/** 스탠딩을 위한 함수. "who": ""는 독백으로 인식한다. */
+/** 스탠딩을 위한 함수. "who": ""는 독백으로 인식한다.
+    같은 그림이면 DOM 을 건드리지 않는다. 다른 그림은 preload 후 한 번에 교체해 빈 칸 깜빡임을 줄인다. */
 function vnStand (host,line) {
-  host.replaceChildren();
-  if (!vnState) return;
+  if (!vnState){host.replaceChildren();return}
   
   const who = line && line.who !== undefined ? line.who : (vnState.who || "");
 
   if (line && line.who !== undefined) vnState.who = line.who;
 
   if (!who && !(line && line.stand)) {
+    host._vnGen=(host._vnGen||0)+1;
     host.hidden = true;
+    host.replaceChildren();
     return
   }
   host.hidden = false;
   
   const cast = vnCast(vnState.story, who), side = cast.side === "left" ? "left" : "right";
   host.dataset.side = side;
-  const src = String(line && line.stand || cast.img || "").trim(), fig = elT("div", "vn-fig");
+  const src = String(line && line.stand || cast.img || "").trim();
+  const cur = host.querySelector(".vn-fig img");
+  const curSrc = cur && (cur.getAttribute("src") || "") || "";
 
-  if (src) {
+  if (src && cur && curSrc === src) return;
+
+  if (!src) {
+    host._vnGen=(host._vnGen||0)+1;
+    host.replaceChildren();
+    host.appendChild(elT("div", "vn-fig"));
+    return
+  }
+
+  const gen = (host._vnGen = (host._vnGen || 0) + 1);
+  vnPreload(src).then(function () {
+    if (!vnState || host._vnGen !== gen) return;
+    const fig = elT("div", "vn-fig");
     const img = document.createElement("img");
     img.alt = "";
-    img.src =src;
-    img.addEventListener("error", () => { 
-      img.remove();
-    });
-    fig.appendChild(img)
-  }
-  host.appendChild(fig)
+    img.decoding = "async";
+    img.src = src;
+    img.addEventListener("error", function () { img.remove() });
+    fig.appendChild(img);
+    host.replaceChildren(fig)
+  })
 }
 
 function vnSil (name) {
@@ -191,6 +230,7 @@ function vnOpen (story, opt) {
   vnClose(true);
   vnOnClose = opt && typeof opt.onClose === "function" ? opt.onClose : null;
   vnBack = opener && opener !== document.body ? opener : null;
+  vnPreStory(story);
   vnState = {
     story, node: story.start, line : 0, phase : "line", who : ""};
     vnLand();

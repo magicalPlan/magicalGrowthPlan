@@ -297,18 +297,18 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   root.append(res, el("div", "mg-rank-box"));
   st = null;
 
-  /* 한 판 플레이(완성 0이어도) → 칭호「플랜더스의」. 첫 획득 dialog 닫으면 flanders-side → 허브. */
+  /* 한 판 플레이(완성 0이어도) → stats.mgFlanders 횟수.
+     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side → 허브. 100회: 「그림쟁이」. */
   try {
    if (typeof C !== "undefined" && C) {
     C.stats = C.stats || {};
-    const first = !C.stats.mgFlanders;
-    C.stats.mgFlanders = 1;
+    C.stats.mgFlanders = Math.min(1e6, (Number(C.stats.mgFlanders) || 0) + 1);
     let fresh = [];
     try { if (typeof checkTitles === "function") fresh = checkTitles() || [] } catch (e) {}
-    const got = fresh.some(t => t && t[0] === "flanders_mg");
+    const gotFirst = fresh.some(t => t && t[0] === "flanders_mg");
     /* 칭호가 있으면 세계관 탭에 flanders-side 가 열린 것처럼 story_flag 를 켠다. */
     try { if (typeof flandersSideUnlock === "function") flandersSideUnlock(false) } catch (e) {}
-    if (got && typeof alertBox === "function") {
+    if (gotFirst && typeof alertBox === "function") {
      setTimeout(() => {
       alertBox("✦ 새 칭호", "「플랜더스의」\n특별 의뢰 '플랜더스의 밑그림'을 그려 보았다.\n\n칭호 보관함에서 장착할 수 있다.", () => {
        const goHub = () => { try { if (typeof hub === "function") hub() } catch (e) {} };
@@ -321,9 +321,9 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
        }).catch(goHub)
       });
       try { ding() } catch (e) {}
-     }, 300);
-     if (typeof save === "function") save()
-    } else if (first && typeof save === "function") save()
+     }, 300)
+    }
+    if (typeof save === "function") save()
    }
   } catch (e) {}
 

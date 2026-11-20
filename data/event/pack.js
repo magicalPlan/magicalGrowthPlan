@@ -153,6 +153,7 @@ const EVENT_PACKS={
   ],
   titles:[
    ["flanders_mg","플랜더스의","특별 의뢰 '플랜더스의 밑그림'을 한 번 그려 보았다.",c=>!!(c.stats&&c.stats.mgFlanders)],
+   ["flanders_mg100","그림쟁이","플랜더스의 밑그림을 100번 이상 플레이했다. 『너도 화가에 관심 있어?』",c=>(c.stats&&c.stats.mgFlanders||0)>=100],
    ["pet_flanders","포기하는 게 아니야","더 먼 세상을 여행하길 바라며. 금이 간 알에 생명을 불어넣었다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
   ]
  }
