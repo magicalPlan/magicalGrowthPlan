@@ -668,7 +668,7 @@
       "cast": {
         "nero_default": {
           "name": "네로",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         }
       },
@@ -687,6 +687,90 @@
             { 
               "who" :"nero_default",
               "text": "좋겠다, 좋겠어."
+            },
+            {
+              "who": "nero_default",
+              "text": "있지, 예술은 정말 사람들의 말처럼 모두의 것이라고 생각해?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "응.",
+              "next": "yes_side1"
+            },
+            {
+              "label": "아니.",
+              "next": "no_side1"
+            }
+          ]
+        },
+        "yes_side1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "...꽤나 밝은 세상 속에서 살아왔구나."
+            },
+            {
+              "who": "nero_default",
+              "text": "좋겠다."
+            }
+          ],
+          "next": "go_to_sad"
+        },
+        "no_side1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "너도 꽤 어두운 세상에서 살아왔나봐?"
+            },
+            {
+              "who": "nero_default",
+              "text": "나랑 의견이 같은 걸 보니 말이야."
+            }
+          ],
+          "next": "go_to_sad"
+        },
+        "go_to_sad": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "파트라슈가 죽은 후, 나는 콩쿠르장에 들어갔어."
+            },
+            {
+              "who": "nero_default",
+              "text": "바보같지."
+            },
+            {
+              "who": "nero_default",
+              "text":  "사랑하는 가족이 죽었는데 고작 콩쿠르나 치르려 하다니 말이야."
+            },
+            {
+              "who": "nero_default",
+              "text": "그리고, 음... 결과를 말하자면."
+            },
+            {
+              "who": "nero_default",
+              "text": "당연하게도 우승 못 했어."
+            },
+            {
+              "who": "nero_default",
+              "text": "아니, 아예 신청도 못 했어."
+            },
+            {
+              "who": "nero_default",
+              "text": "신청료가 없었거든."
+            },
+            {
+              "who": "nero_default",
+              "text": "하늘이 벌을 준 거라기엔 좀... 너무하지 않나."
+            },
+            {
+              "who": "nero_default",
+              "text": "가족도 꿈도 빼앗아 가다니."
+            },
+            {
+              "who": "nero_default",
+              "text": "뭐, 어쨌거니 내 한심한 이야기는 여기까지."
             },
             {
               "who": "nero_default",
