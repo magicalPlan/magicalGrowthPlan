@@ -26,8 +26,12 @@ const petEvOn=()=>{const e=typeof eventLive==="function"?eventLive():null;return
 const petEv2On=()=>{const e=typeof eventLive==="function"?eventLive():null;return !!(e&&e.egg&&e.egg.inv==="eggsEv2")};
 function petEvMelt(){if(!C||!(C.eggsEv>0)||Date.now()<PET_EV.to)return false;const n=C.eggsEv;C.eggs=(C.eggs||0)+n;C.eggsEv=0;note("quest","이벤트가 끝나 "+PET_EV.nm+" "+n+"개가 녹아 평범한 사역마의 알이 되었다.");save();return true}
 function petEv2Melt(){if(!C||!(C.eggsEv2>0)||typeof PET_EV2==="undefined"||Date.now()<PET_EV2.to)return false;const n=C.eggsEv2;C.eggs=(C.eggs||0)+n;C.eggsEv2=0;note("quest","이벤트가 끝나 "+PET_EV2.nm+" "+n+"개가 부서져 평범한 사역마의 알이 되었다.");save();return true}
+/* 서리 알: 기간 한정은 PET_EV.ids 가 있으면 그 목록만, 없으면 희귀도 4 전체(옛 호환). */
 function petRollEv(){const r=Math.random(),pick=rar=>{const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]};
- if(r<PET_EV.leg)return pick(3);if(r<PET_EV.leg+PET_EV.lim)return pick(4);if(r<PET_EV.leg+PET_EV.lim+(PET_EV.rare||0))return pick(2);return pick(1)}
+ const leg=PET_EV.leg||0,ids=Array.isArray(PET_EV.ids)?PET_EV.ids.filter(id=>PETS[id]):[],lim=ids.length?(PET_EV.lim||0):(PET_EV.lim||0),limPool=ids.length?ids:null;
+ if(r<leg)return pick(3);
+ if(lim&&r<leg+lim){if(limPool&&limPool.length)return limPool[Math.floor(Math.random()*limPool.length)];return pick(4)}
+ if(r<leg+lim+(PET_EV.rare||0))return pick(2);return pick(1)}
 /* 금이 간 알: 기간 한정은 PET_EV2.ids 가 있을 때만 lim 칸을 쓴다. ids 가 비면 lim 확률은 희귀·일반 쪽으로 넘긴다. */
 function petRollEv2(){const r=Math.random(),pick=rar=>{const l=Object.values(PETS).filter(x=>x[3]===rar);return l[Math.floor(Math.random()*l.length)][0]};
  const leg=PET_EV2.leg||0,ids=Array.isArray(PET_EV2.ids)?PET_EV2.ids.filter(id=>PETS[id]):[],lim=ids.length?(PET_EV2.lim||0):0,rare=PET_EV2.rare||0;
@@ -43,7 +47,7 @@ function petBuyEgg(){if((C.gd||0)<PET_EGG_G)return;if(C.eggBuy===today()){petMsg
 function petIncubate(){eggFix();if(!(C.eggs>0)||C.egg)return;if((C.pets||[]).length>=petCap()){petMsg("사역마는 "+petCap()+"마리까지 데리고 있을 수 있다. 한 마리를 보내 주거나, 공방의 '사역마 조련 허가증'으로 상한을 늘려야 새로 품을 수 있다.",1);return}
  const t0=Date.now();C.eggs-=1;C.egg={t0,t1:t0+PET_HATCH};save();growth("알을 품기 시작했다. 1시간 뒤에 깨어난다.")}
 function petHatch(){const e=C.egg;if(!e||Date.now()<e.t1)return;const kind=eggEvKind(e),sp=kind===2?petRollEv2():kind===1?petRollEv():petRoll(),P=PETS[sp],nm=(prompt(P[2]+" "+P[1]+"이(가) 깨어났다!\n이름을 지어 주자. (최대 10자)",P[1])||P[1]).trim().slice(0,10)||P[1];
- const q={id:"p"+Date.now().toString(36),sp,nm,xp:0,born:Date.now()};C.pets=Array.isArray(C.pets)?C.pets:[];C.pets.push(q);C.egg=null;if(!C.pet)C.pet=q.id;titleState();C.stats.hatched=(C.stats.hatched||0)+1;if(PETS[sp][3]===3)C.stats.petLeg=1;if(PETS[sp][3]===4)C.stats.petEv=(C.stats.petEv||0)+1;C.petSeen=C.petSeen||{};C.petSeen[sp]=1;
+ const q={id:"p"+Date.now().toString(36),sp,nm,xp:0,born:Date.now()};C.pets=Array.isArray(C.pets)?C.pets:[];C.pets.push(q);C.egg=null;if(!C.pet)C.pet=q.id;titleState();C.stats.hatched=(C.stats.hatched||0)+1;if(PETS[sp][3]===3)C.stats.petLeg=1;if(PETS[sp][3]===4){if(kind===2)C.stats.petEv2=(C.stats.petEv2||0)+1;else C.stats.petEv=(C.stats.petEv||0)+1}C.petSeen=C.petSeen||{};C.petSeen[sp]=1;
  /* 로컬·화면은 바로 반영(낙관적). 서버만 즉시 PATCH+재시도. save() 디바운스만 쓰면 닫기·다른 탭과 겹쳐 사역마가 빠질 수 있다.
     saveNowRetry 가 pubSync 로 공개 카드 펫 칸도 고친다. 여기서 regPlayer 를 또 부르면 players/who 가 연달아 나간다. */
  note("quest","알에서 "+P[1]+" '"+nm+"'이(가) 깨어났다!");

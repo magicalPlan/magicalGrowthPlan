@@ -25,5 +25,6 @@ module.exports = {
   todayStr: boost.todayStr,
   grantPetTraits: petTraits.grantPetTraits,
   petTraitEff: petTraits.petTraitEff,
+  petEff: boost.petEff,
   MAT_DROP: drops.MAT_DROP
 };

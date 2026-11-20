@@ -44,7 +44,9 @@ function corePay(r, uid, seedKey, now, boost) {
     const c = (boost && boost.c) || {};
     const pets = Array.isArray(c.pets) ? c.pets : [];
     const q = pets.find(p => p && p.id === c.pet) || null;
-    const matP = q && typeof acc.petTraitEff === "function" ? acc.petTraitEff(q, "mat") : 0;
+    /* 종(mat)+특성 mat. 클라 matGain 의 petEff("mat") 와 맞춤. */
+    const matP = q && typeof acc.petEff === "function" ? acc.petEff(q, "mat")
+      : (q && typeof acc.petTraitEff === "function" ? acc.petTraitEff(q, "mat") : 0);
     if (matP > 0 && rand() < matP) {
       const ids = [];
       (tables || []).filter(Boolean).forEach(k => {

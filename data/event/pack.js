@@ -21,7 +21,7 @@
    ============================================================================= */
 
 /* 로컬/테스트 전용. 배포 빌드에서는 반드시 null. */
-const EVENT_FORCE="flanders";
+const EVENT_FORCE=null;
 
 const EVENT_PACKS={
  snow:{
@@ -78,7 +78,7 @@ const EVENT_PACKS={
     ["heart","얼지 않은 심장","침소 가장 깊은 곳. 차갑지 않은 것이 하나, 아직 뛰고 있다.",.12,12]
    ]
   },
-  egg:{nm:"서리 드래곤의 알",ic:"❄️",ds:"얼음 궁전 깊은 곳, 서리 드래곤이 품고 있던 알. 차갑게 반짝이지만, 귀를 대면 작은 심장 소리가 들린다.",leg:.03,lim:.18,rare:.30},
+  egg:{nm:"서리 드래곤의 알",ic:"❄️",ds:"얼음 궁전 깊은 곳, 서리 드래곤이 품고 있던 알. 차갑게 반짝이지만, 귀를 대면 작은 심장 소리가 들린다.",leg:.03,lim:.18,rare:.30,ids:["reindeer","mirror","rose"]},
   storyLock:[
    {id:"shard-1",n:2500},
    {id:"shard-2",n:5000,at:Date.UTC(2026,10,3,15)},
@@ -147,7 +147,7 @@ const EVENT_PACKS={
     ["nechromancer","새로운 주인, 가족.","조금 더 살아갈 수 있게 된 동물들은 자발적으로 이 결계를 지키고 있다",.12,12]
    ]
   },
-  egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]},
+  egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:.18,rare:.30,ids:["magicalhound","olberssnake"]},
   /* storyLock: n=물감 합계, at=열림 시각(UTC), mg=모두 합친 밑그림 장수(event_minigame/flanders/total_amount).
      flanders-3: 물감 10000 + 12/25 0시 + 밑그림 총합 5000. */
   storyLock:[
