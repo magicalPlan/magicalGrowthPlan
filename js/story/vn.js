@@ -22,14 +22,15 @@
    fx:"dark" 인 줄은 암전: 화면이 까맣게 가라앉고 스탠딩이 사라진다. text 를 비우면 대화창도 숨는다.
    img 와 stand 가 비어 있으면 이름만 있는 실루엣을 세운다. 그림 주소를 넣으면 그 그림을 세운다.
    화면을 바꾸면 main.js 의 show 가 vnClose 를 불러 창을 닫는다. */
-let vnRoot=null,vnState=null,vnBack=null;
+let vnRoot=null,vnState=null,vnBack=null,vnOnClose=null;
 
 function vnCast(story,who) {
   const c = story && story.cast && who ? story.cast[who] : null;
   return c || { name : who || "", img : "", side:"right" }
 }
 
-function vnClose () {
+/* skipCb: vnOpen 이 새 이야기를 열기 전에 이전 창만 지울 때 true. */
+function vnClose (skipCb) {
   if (vnRoot) {
     vnRoot.remove();
     vnRoot = null
@@ -43,6 +44,11 @@ function vnClose () {
     try {
       back.focus()
     } catch (e) {}
+  }
+  const cb = vnOnClose;
+  vnOnClose = null;
+  if (!skipCb && typeof cb === "function") {
+    try { cb() } catch (e) {}
   }
 }
 
@@ -178,10 +184,12 @@ function vnPaint() {
   if (focus) focus.focus()
 }
 
-function vnOpen (story) {
+/* opt.onClose: 창을 닫은 뒤(다 읽거나 X·Esc) 한 번 호출. */
+function vnOpen (story, opt) {
   if (!story || !story.nodes || !story.start) return;
   const opener = document.activeElement;
-  vnClose();
+  vnClose(true);
+  vnOnClose = opt && typeof opt.onClose === "function" ? opt.onClose : null;
   vnBack = opener && opener !== document.body ? opener : null;
   vnState = {
     story, node: story.start, line : 0, phase : "line", who : ""};

@@ -12,7 +12,7 @@
    · eventPick / eventLive — HANDOFF §2
 
    번들 필드 (EVENT_PACKS[key]) — 일정 제외
-   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock, titles
+   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock({id,n,at?,mg?}), titles
    · clp (선택) { goal, ms, drop } — 없으면 common.js CLP_FORM 기본값.
      ms: [[비율, 보상], …] 길이·순서는 msNames 와 맞출 것. drop 은 클라 조각 드롭(출정 x_ok/x_fail 는 seasons.drop).
    ============================================================================= */
@@ -143,13 +143,16 @@ const EVENT_PACKS={
    ]
   },
   egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]},
+  /* storyLock: n=물감 합계, at=열림 시각(UTC), mg=모두 합친 밑그림 장수(event_minigame/flanders/total_amount).
+     flanders-3: 물감 10000 + 12/25 0시 + 밑그림 총합 5000. */
   storyLock:[
    {id:"flanders-2",n:5000},
-   {id:"flanders-3",n:10000,at:Date.UTC(2026,11,24,15)},
+   {id:"flanders-3",n:10000,at:Date.UTC(2026,11,24,15),mg:5000},
    {id:"flanders-4",n:15000,at:Date.UTC(2026,11,27,15)},
    {id:"flanders-5",n:20000,at:Date.UTC(2026,11,30,15)}
   ],
   titles:[
+   ["flanders_mg","플랜더스의","특별 의뢰 '플랜더스의 밑그림'을 한 번 그려 보았다.",c=>!!(c.stats&&c.stats.mgFlanders)],
    ["pet_flanders","포기하는 게 아니야","더 먼 세상을 여행하길 바라며. 금이 간 알에 생명을 불어넣었다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
   ]
  }

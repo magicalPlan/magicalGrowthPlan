@@ -667,8 +667,14 @@ html[data-theme="light"] .sp-item{background:var(--pn);border-color:var(--ln)}
    · .pex-run: 출정 중 카드. .done(돌아옴)은 금색 강조, 보상 받기(.pex-take)가 주 버튼
    · .pex-step: 보내기 ①사역마 칩(.pex-pet) ②목적지 카드(.pex-map, 넓은 화면 두 칸)
    · .pex-rw: 보상 알약, .half 는 50% 확률(점선)
-   · .gs-soon: 제작·강화 '준비 중' 칸 */
+   · .gs-soon: 제작·강화 '준비 중' 칸
+   · .gs-flavor: 무인 상점·장비 제작 분위기 문장 */
 #gsrbox{--pex-gold:var(--gold,#c9a96a)}
+.gs-flavor{margin:0 0 16px;padding:12px 14px;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
+.gs-flavor p{margin:0;color:var(--mu);font-size:.88rem;line-height:1.55}
+.gs-flavor p+p{margin-top:8px}
+.gs-flavor-beat{opacity:.72;letter-spacing:.08em}
+#gscbox .gs-flavor{margin-bottom:10px}
 .pex-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--ln);border-radius:var(--r);background:var(--pn)}
 .pex-head-tx{flex:1;min-width:0}
 .pex-head-t{display:block;font-size:.98rem;margin-bottom:2px}

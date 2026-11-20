@@ -66,10 +66,10 @@ function clpRwTxt(r){const b=[];if(r.g)b.push("골드 "+r.g);if(r.m)b.push("마�
  Object.entries(r.mat||{}).forEach(([id,k])=>b.push((typeof cfName==="function"?cfName(id):id)+" "+k));
  if(r.evEgg){const egg=typeof EVENT!=="undefined"&&EVENT&&EVENT.egg,E=egg&&egg.inv==="eggsEv2"?(typeof PET_EV2!=="undefined"?PET_EV2:null):(typeof PET_EV!=="undefined"?PET_EV:null);b.push((E?E.nm:"이벤트 알")+" "+r.evEgg)}return b.join(", ")}
 
-/* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜)가 true 일 때만 '스토리 보기'로 연다.
-   날짜만 남았으면 잠금 시각을 보여 준다. 글은 STORY_INDEX_URL(챕터 목록)→chapters/*.json 을 읽고, 합계는 CLPN 을 쓴다.
+/* 잠긴 이야기. 합계(n)가 되면 행을 그리고, storyFlag(합계+날짜+밑그림 mg)가 true 일 때만 '스토리 보기'로 연다.
+   날짜·밑그림만 남았으면 잠금 안내. 글은 STORY_INDEX_URL→chapters/*.json, 합계는 CLPN·MGN.
    반환: { chapters:[{id,title,lead,world,shards}], shards:[...평탄...] }. 옛 단일 {shards} 파일도 받는다. */
-let storyBook=null,storyBookP=null,clpStoryGen=0;
+let storyBook=null,storyBookP=null,clpStoryGen=0,MGN=0,mgnAt=0,mgnPath="";
 function storyIndexBase(url){const bare=String(url||"").split("?")[0];const i=bare.lastIndexOf("/");return i>=0?bare.slice(0,i+1):"data/story/"}
 function storyFileUrl(file,base){if(!file)return"";if(/^(https?:)?\/\//.test(file)||file.charAt(0)==="/"||file.indexOf("data/")===0)return file;return(base||"data/story/")+file}
 function storyLoad(){const indexUrl=typeof STORY_INDEX_URL!=="undefined"?STORY_INDEX_URL:(typeof STORY_URL!=="undefined"?STORY_URL:"");if(!indexUrl)return Promise.reject();if(storyBook)return Promise.resolve(storyBook);if(storyBookP)return storyBookP;
@@ -84,14 +84,27 @@ function storyLoad(){const indexUrl=typeof STORY_INDEX_URL!=="undefined"?STORY_I
    const chapters=loaded.filter(Boolean).sort((a,b)=>(a.order||0)-(b.order||0));const shards=[];
    chapters.forEach(ch=>{(ch.shards||[]).forEach(s=>{if(!s||!s.id)return;shards.push(s)})});
    storyBook={chapters,shards};return storyBook})}).catch(e=>{storyBookP=null;throw e});return storyBookP}
+/* 밑그림 총합(MGN). lock.mg 가 있는 잠금만 읽는다. 30초 안이면 캐시. */
+function mgTotalLoad(force){const lock=(typeof STORY_LOCK!=="undefined"&&STORY_LOCK||[]).find(l=>l&&l.mg!=null);if(!lock)return Promise.resolve(MGN);
+ const path=typeof storyMgPath==="function"?storyMgPath(lock):"event_minigame/flanders/total_amount";
+ if(!force&&mgnPath===path&&Date.now()-mgnAt<30000)return Promise.resolve(MGN);
+ if(!DB||typeof XON==="function"&&!XON())return Promise.resolve(MGN);
+ return DB.doc(path).get().then(s=>{const v=s.exists?s.data():null;MGN=Math.max(0,Number(v)||0);mgnAt=Date.now();mgnPath=path;return MGN}).catch(()=>MGN)}
+function clpStoryWaitTxt(lock,now,mg){const bits=[];
+ if(lock.at!=null&&(Number(now)||0)<lock.at&&typeof storyAtTxt==="function"){const at=storyAtTxt(lock.at);if(at)bits.push(at+"에 열림")}
+ if(lock.mg!=null&&(Number(mg)||0)<(Number(lock.mg)||0)){const need=Math.max(0,(Number(lock.mg)||0)-(Number(mg)||0));bits.push("밑그림 합계 "+need.toLocaleString()+"장 남음")}
+ return bits.length?"🔒 "+bits.join(" · "):"🔒 아직 잠겨 있다"}
 function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof storyReachN!=="function")return;
  const now=Date.now(),rows=STORY_LOCK.filter(lock=>storyReachN(lock,CLPN));if(!rows.length)return;
  const slot=elT("div","clp-stories"),gen=++clpStoryGen;host.appendChild(slot);
- storyLoad().then(book=>{if(gen!==clpStoryGen||!slot.isConnected)return;const list=Array.isArray(book&&book.shards)?book.shards:[];
-  rows.forEach(lock=>{const story=list.find(s=>s&&s.id===lock.id);if(!story||!story.start)return;const ready=typeof storyFlag==="function"&&storyFlag(lock,CLPN,now);const row=elT("div","clp-story"+(ready?"":" wait"));
+ const needMg=rows.some(l=>l&&l.mg!=null);
+ Promise.all([storyLoad(),needMg?mgTotalLoad():Promise.resolve(MGN)]).then(([book,mg])=>{if(gen!==clpStoryGen||!slot.isConnected)return;const list=Array.isArray(book&&book.shards)?book.shards:[];
+  rows.forEach(lock=>{const story=list.find(s=>s&&s.id===lock.id);if(!story||!story.start)return;const ready=typeof storyFlag==="function"&&storyFlag(lock,CLPN,now,mg);const row=elT("div","clp-story"+(ready?"":" wait"));
    row.appendChild(elT("span","clp-story-name",story.title||"이야기"));
-   if(ready){const b=elT("button","chip","스토리 보기");b.type="button";b.onclick=()=>{if(!storyFlag(lock,CLPN,Date.now()))return;if(typeof vnOpen==="function")vnOpen(story)};row.appendChild(b)}
-   else{const at=lock.at!=null&&typeof storyAtTxt==="function"?storyAtTxt(lock.at):"";row.appendChild(elT("span","clp-story-wait",at?"🔒 "+at+"에 열림":"🔒 아직 잠겨 있다"))}
+   if(ready){const b=elT("button","chip","스토리 보기");b.type="button";b.onclick=()=>{const open=()=>{if(typeof vnOpen==="function")vnOpen(story)};
+    if(lock.mg==null){if(!storyFlag(lock,CLPN,Date.now(),MGN))return;open();return}
+    mgTotalLoad(true).then(v=>{if(!storyFlag(lock,CLPN,Date.now(),v)){toast&&toast("아직 밑그림 합계가 부족하다.");clpDraw(true);return}open()}).catch(()=>{})};row.appendChild(b)}
+   else row.appendChild(elT("span","clp-story-wait",clpStoryWaitTxt(lock,now,mg)));
    slot.appendChild(row)});
   if(!slot.childNodes.length)slot.remove()}).catch(()=>{if(gen===clpStoryGen&&slot.isConnected)slot.appendChild(elT("p","hint","이야기를 불러오지 못했다."))})}
 
