@@ -124,9 +124,10 @@
    /* 아이템 도트 그림(32×32): assets/items/{id}.png. 그림이 있는 아이템만 적는다. 그림을 바꾸면 ITEM_IMG_V 를 올려 브라우저가 새로 받게 한다.
       id와 파일 이름이 다르면 ITEM_FILE 에 적는다. 유대의 증거는 bond_gem.png, 검은 왕관의 조각은 piece_of_black_crown.png, 꿈꾸는 오르골은 dream_music_box.png, 조련 허가증은 they_look_very_polite.png, 마을 이동권은 move_to_other_town.png.
       삼림·해안·골짜기·심연 조각은 grass_fragile·coast_fragile·valley_fragile·abyss_fragile.
-      청록·파랑·주조 변광석은 green_variable·blue_variable·red_variable. */
-   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,m_forest:1,m_coast:1,m_valley:1,m_abyss:1,bond:1,trcyan:1,trblue:1,trcast:1},ITEM_IMG_V=7;
-   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy",m_forest:"grass_fragile",m_coast:"coast_fragile",m_valley:"valley_fragile",m_abyss:"abyss_fragile",trcyan:"green_variable",trblue:"blue_variable",trcast:"red_variable"};
+      청록·파랑·주조 변광석은 green_variable·blue_variable·red_variable.
+      매지컬 밀크·냠냠 통조림·펫 푸드 특식은 magical_milk·nyam_can·special_pet_food. */
+   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,m_forest:1,m_coast:1,m_valley:1,m_abyss:1,bond:1,trcyan:1,trblue:1,trcast:1,milk:1,petcan:1,petfeast:1},ITEM_IMG_V=8;
+   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy",m_forest:"grass_fragile",m_coast:"coast_fragile",m_valley:"valley_fragile",m_abyss:"abyss_fragile",trcyan:"green_variable",trblue:"blue_variable",trcast:"red_variable",milk:"magical_milk",petcan:"nyam_can",petfeast:"special_pet_food"};
    const GV={g1:8,g2:15,g3:3,g4:25},HOPE_DZ=30;
    /* 공방에서만 만드는 아이템(상점에 나오지 않는다)과, 선물을 열 때 함께 얻는 경험치. 제작법은 data/craft.js 의 RCP. 숫자만 고치면 바뀐다. */
    const CRAFT_ONLY={g4:1,prism:1,license:1,vtown:1,milk:1,petcan:1,petfeast:1,trcyan:1,trblue:1,trcast:1},MERCHANT_ONLY={pfcandy:1},GIFT_EX={g4:30};

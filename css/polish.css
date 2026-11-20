@@ -476,6 +476,7 @@ html[data-theme="light"] #v-ord .ord-intro-play:hover,html[data-theme="light"] #
 .clp-hd{display:flex;align-items:center;gap:12px}
 .clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--ord-clp-ic);border:1px solid var(--ord-border)}
 .clp-ic-img{display:block;width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges}
+.clp-ic-img.inline,.clue-chip .clp-ic-img{display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-right:2px}
 .clp-ht h2{margin:2px 0 0!important;border:0!important;padding:0!important;font-size:1.2rem}
 .clp-ht .boss-tag{margin:0}
 .clp-ds{margin:10px 0 12px;color:var(--mu);font-size:.86rem;line-height:1.55}

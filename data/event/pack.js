@@ -12,7 +12,8 @@
    · eventPick / eventLive — HANDOFF §2
 
    번들 필드 (EVENT_PACKS[key]) — 일정 제외
-   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock({id,n,at?,mg?}), titles
+   · key, ord, piece(nm·ic·ds·msNames·img?), boss, clue, egg(…), storyLock({id,n,at?,mg?}), titles
+   · piece.img (선택) — assets/event_items/{img}.png. 장기 의뢰 단서 칸·탐색 칩·획득 문구.
    · ord.introShard (선택) — 장기 의뢰 제목 옆 ▶ 로 재생할 스토리 shard id.
      있으면 #ord-intro-play 표시, 없으면 hidden. 예: flanders → "flanders-1".
      스토리가 아직 chapters 에 없어도 필드는 두어도 되고, 클릭 시 "아직 없다" 안내만 난다.
@@ -35,6 +36,7 @@ const EVENT_PACKS={
   piece:{
    nm:"단서 조각",
    ic:"🧩",
+   img:"wt_puzzle_piece",
    ds:"서리 드래곤이 감춘 진실의 한 조각. 혼자서는 아무것도 알 수 없지만, 모두의 조각이 모이면 숨겨진 이야기가 드러난다.",
    msNames:["첫 번째 실마리","흩어진 기억","얼음 속의 목소리","드러난 진실"]
   },
@@ -103,6 +105,7 @@ const EVENT_PACKS={
   piece:{
    nm:"물감",
    ic:"🖌️",
+   img:"yellow_paint_fd",
    ds:"여린 동물을 덮친 집착. 물감의 형태로 화한 것을 덜어내고 모으자.",
    msNames:["마수를 닮은 짐승","귀갓길","나는 닿을 수 없어.","집착의 색"]
   },
@@ -245,6 +248,7 @@ const CLP=Object.assign({},CLP_FORM,{
  id:EVENT&&EVENT.piece?EVENT.piece.id:"clue-none",
  nm:EVENT&&EVENT.piece?EVENT.piece.nm:"단서 조각",
  ic:EVENT&&EVENT.piece?EVENT.piece.ic:"🧩",
+ img:EVENT&&EVENT.piece&&EVENT.piece.img?EVENT.piece.img:"",
  ds:EVENT&&EVENT.piece?EVENT.piece.ds:"",
  from:EVENT?EVENT.from:0,
  to:EVENT?EVENT.to:0,
@@ -252,6 +256,8 @@ const CLP=Object.assign({},CLP_FORM,{
  drop:_clp.drop,
  ms:_clp.ms
 });
+/* 획득 문구의 CLP.ic 를 그림으로 바꿀 때 쓴다(js/event-boss/piece.js clpImgHtml). */
+const CLP_MARK=CLP.ic;
 const CLUE=CLUE_FORM.map(function(row,i){return Object.assign({},row,EVENT&&EVENT.clue&&EVENT.clue.rows&&EVENT.clue.rows[i]||{})});
 const CLUE_LOG=EVENT&&EVENT.clue&&EVENT.clue.log||[];
 const CLUE_EXTRA=EVENT&&EVENT.clue&&EVENT.clue.extra||[];
