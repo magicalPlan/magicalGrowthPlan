@@ -82,6 +82,9 @@ function xListOpen () {
 
 function xWatchOn () {
    if (!XON()) return false;
+   /* 출발(T0) 뒤에는 자리(xm) live 를 끈다. 자리 SSE 가 호스트 연결을 점유하면
+      xr 구독·calc PUT 이 밀려 「출발 준비 중/전투 기록을 받는 중」에 머문다. 로그는 xr 만. */
+   if (C && C.mj && xNow() >= Number(C.mj.T0)) return false;
    if (xListOpen()) return true;
    if ($("#v-xm").hidden || !(C && C.mj)) return false;
    return !(XR && XR.id === C.mj.id && XR.pl)
@@ -204,8 +207,14 @@ function drawX(el){el.innerHTML="";if(!C)return;
 /* 자리 쓰기: rooms/xm{묶음}_e{번호}/{uid} ← me() 본문 + jt 서버 시각.
    권장 전투력 자체는 올리지 않는다. 개인 전투력 p(및 깃발·특성·무기…)만 올리고,
    출발 시 서버가 파티 p 로 권장·기준치(battleT)를 계산한다(functions/sim/engine.js).
-   flush 는 set 실패로 pend 가 남은 경우에만 다시 올린다. */
-async function xSeatWrite(s,i,body){await DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET)}
+   flush 는 set 실패로 pend 가 남은 경우에만 다시 올린다.
+   자리 live(EventSource)가 같은 호스트 연결을 가득 채우면 PUT 이 대기열에 묶여
+   「서버에 자리를 남기는 중」에 머물다 탭을 옮길 때(live 가 닫힌 뒤)야 나가던 증상이 있다.
+   쓰기·삭제 동안만 목록 live 를 잠시 끊고, 끝나면 다시 연다. */
+async function xSeatNet(fn){const re=xWatchOn();if(re)stopX();
+ try{return await fn()}finally{if(re&&XON()&&(xListOpen()||xWatchOn()))try{watchX(xWatchSlot())}catch(e){}}}
+async function xSeatWrite(s,i,body){return xSeatNet(()=>DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET))}
+async function xSeatDelete(s,i){return xSeatNet(()=>DB.doc(xSeat(s,i)+"/"+UID).delete(X_NET))}
 async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("장기 토벌을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}
  if(C.fall)return xSay("타락한 동안에는 출정할 수 없다.",1);if(C.dz>=90)return xSay("절망도가 너무 높아 출정할 수 없다. 공명으로 절망도를 낮춘 뒤에 다시 오자.",1);
  if(xNow()>=x.close)return xSay("이 출정은 참가가 마감되었다.",1);if(x.d===4&&pw()<ABYSS_MIN)return xSay("심연에는 전투력 "+ABYSS_MIN+" 이상만 들어갈 수 있다. (지금 "+pw()+")",1);
@@ -222,7 +231,7 @@ async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo
     pend 는 다른 기기가 이어서 올릴 수 있게 saveNow 로 계정에 바로 남긴다. */
  (typeof saveNow==="function"?saveNow:save)();drawXAll();xSay(x.nm+" 출정 자리를 서버에 남기는 중… "+xHM(x.T0)+"에 자동으로 출발한다. 준비한 아이템과 마법은 참가한 순간을 기준으로 쓰인다.");
  let dropped=false;
- try{if(mj){await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET);dropped=true;if(xPend&&xPend.id===x.id)xPend.prevGone=true}
+ try{if(mj){await xSeatDelete(mj.s,mj.i);dropped=true;if(xPend&&xPend.id===x.id)xPend.prevGone=true}
   await xSeatWrite(s,i,body);
   if(job!==xJob){if(!C.mj||C.mj.id!==x.id)DB.doc(xSeat(s,i)+"/"+UID).delete().catch(()=>{});return}
   if(C.mj&&C.mj.pend)delete C.mj.pend;if(xPend&&xPend.id===x.id)xPend=null;save();xSay(x.nm+" 출정에 참가했다. "+xHM(x.T0)+"에 자동으로 출발한다.")}
@@ -230,7 +239,7 @@ async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo
 /* 네트워크가 끊겨 참가 기록을 못 올렸어도 신청은 유지한다. 마감(+유예) 전에 연결되면 같은 자리를 다시 쓴다. */
 function xHold(){if(xPend||!C||!C.mj||!C.mj.pend)return xPend;const j=C.mj;xPend={s:j.s,i:j.i,id:j.id,body:Object.assign({},me(),{jt:{".sv":"timestamp"}}),prev:null,prevGone:true};return xPend}
 async function xFlush(){const p=xHold();if(!p||!C||!C.mj||C.mj.id!==p.id||!XON()||xFlush.busy)return;const x=xInfo(p.s,p.i);if(xNow()>=xCloseAt(x))return;xFlush.busy=true;
- try{if(p.prev&&!p.prevGone){await DB.doc(xSeat(p.prev.s,p.prev.i)+"/"+UID).delete(X_NET);p.prevGone=true}if(xPend!==p||!C.mj||C.mj.id!==p.id)return;
+ try{if(p.prev&&!p.prevGone){await xSeatDelete(p.prev.s,p.prev.i);p.prevGone=true}if(xPend!==p||!C.mj||C.mj.id!==p.id)return;
   p.body=Object.assign({},me(),{jt:{".sv":"timestamp"}});await xSeatWrite(p.s,p.i,p.body);if(!C.mj||C.mj.id!==p.id){DB.doc(xSeat(p.s,p.i)+"/"+UID).delete().catch(()=>{});return}
   if(C.mj.pend)delete C.mj.pend;if(xPend===p)xPend=null;save();drawXAll();xSay(x.nm+" 출정 참가를 서버에 남겼다. "+xHM(x.T0)+"에 출발한다.")}catch(e){}finally{xFlush.busy=false}}
 /* 백그라운드·탭 전환 직후엔 interval 이 늦어지므로 gap 없이 한 번 올린다.
@@ -270,7 +279,7 @@ window.addEventListener("focus",()=>{if(!document.hidden)xWakeResume()});
 document.addEventListener("pagehide",()=>xFlushNow());
 async function xLeave(){const mj=C.mj;if(!mj||xNow()>=xInfo(mj.s,mj.i).close)return;const job=++xJob;if(xPend&&xPend.id===mj.id)xPend=null;C.mj=null;xGone={s:mj.s,i:mj.i,till:Date.now()+X_NET};
  if(xS===mj.s&&xSnap["e"+mj.i])delete xSnap["e"+mj.i][UID];xTake.k="";save();drawXAll();xSay("출정 참가를 취소했다.");if(!$("#v-xm").hidden)openRooms();
- try{await DB.doc(xSeat(mj.s,mj.i)+"/"+UID).delete(X_NET)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=Object.assign({},me(),{jt:xNow()})}xTake.k="";save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
+ try{await xSeatDelete(mj.s,mj.i)}catch(e){if(job!==xJob)return;C.mj=mj;xGone=null;if(xS===mj.s){(xSnap["e"+mj.i]=xSnap["e"+mj.i]||{})[UID]=Object.assign({},me(),{jt:xNow()})}xTake.k="";save();drawXAll();xSay("참가 취소를 서버에 기록하지 못했다. "+xNetWhy(e,X_NET),1)}}
 /* RTDB picks 가 배열이 아닌 객체로 오면 Array.isArray 검사가 깨져 표를 잃는다. 클라·서버 모두 같은 정규화를 쓴다. */
 function xNormPicks(raw){if(raw==null)return[];const keys=Array.isArray(raw)?raw.map((_,i)=>i).filter(i=>raw[i]!=null):Object.keys(raw||{}).map(Number).filter(Number.isFinite);const out=[],max=keys.length?Math.max(...keys):-1;
  for(let i=0;i<=max;i++){if(raw[i]==null)continue;const v=raw[i];if(Array.isArray(v))out[i]=v.map(Number).filter(n=>Number.isFinite(n));
@@ -332,7 +341,7 @@ function xSeatMiss(x,d){const mine=d&&d[UID];if(!mine||typeof mine!=="object")re
    목록 xm·채팅 등 다른 live 는 숨기면 닫힌다. 브라우저가 그래도 끊을 수 있어 xWakeResume 은 유지. */
 let xCalcAsk="",unXr=null,xrPoll=null,xrRetryT=null,xrMissT=null,xrMode="",xrKey="",xrMissAt=0;
 /* xr 빈 응답 대기는 X_FETCH_GIVEUP 과 같게 둔다. expireMarch 가 최대 ~1분 늦을 수 있고, T0 calc 킥·분 주기 스케줄이 그 안에 기록을 만든다. */
-const X_XR_CD=10000,X_XR_MISS=X_FETCH_GIVEUP,X_XR_KEEP={keep:1};
+const X_XR_CD=10000,X_XR_MISS=X_FETCH_GIVEUP,X_XR_KEEP={keep:1,stale:1};
 function stopXr(){if(unXr){try{unXr()}catch(e){}}unXr=null;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;if(xrRetryT){clearTimeout(xrRetryT);xrRetryT=null}if(xrMissT){clearTimeout(xrMissT);xrMissT=null}xrMode="";xrKey="";xrMissAt=0}
 /* 투표 마감 집계는 서버(xVoteDue Task + live/x due + expireMarch). 클라는 xr 미생성 시에만 calc 로 보조 깨운다. */
 function xAskCalc(x,mark,flip){if(!x||!mark||xCalcAsk===mark)return;const prev=xCalcAsk;xCalcAsk=mark;const ref=DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc");
@@ -373,21 +382,29 @@ function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR
  let h="";try{h=settle(doc.r,{serverPay:true,pay})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
  if(C){C.ms=x.id;if(C.mj&&C.mj.id===x.id)C.mj=null}save();drawXAll();xMarkDone(ss,ii,doc.endAt);stopXr();if(h)xSound(doc.r&&doc.r.ok?"win":"lose");
  if(typeof accSyncIfNewer==="function")accSyncIfNewer().catch(()=>{})}
-function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();return}
+/* xr 미수신 때 watchXr 가 unXr/xrPoll 만 보고 재연결을 건너뛰는 고착을 푼다.
+   calc boot(20초)과 맞춰, 마지막 강제 재연결 뒤 20초가 지나면 stopXr 후 다시 붙인다.
+   탭 전환(xWakeResume) 없이도 같은 탭 방치에서 수신을 재개한다. */
+let xXrKickAt=0;
+function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();xXrKickAt=0;return}
  if(XR&&XR.id===j.id&&XR.fin){stopXr();return}
+ /* 목록·출정 화면이 자리 live 를 붙잡고 있으면 xr·calc 가 막힌다. 출발 후엔 즉시 끊는다. */
+ if(unX||xPolls)stopX();
  const x=xInfo(j.s,j.i),late=xNow()-x.T0;
  if(late>X_HARD_LIMIT&&!(XR&&XR.fin)){stopXr();xAbandon(xWhyHard(x,late),false);return}
- watchXr(j.s,j.i);
  /* 출발 직후 기록이 없으면 roomCalc 를 깨워 xr 을 바로 만들게 한다. expireMarch(1분)만 기다리지 않는다.
     응답이 없으면 20초마다 다시 요청한다(같은 값 1 쓰기가 트리거를 안 줄 수 있어 0→1 로 다시 올린다). */
  const got=XR&&XR.id===x.id&&XR.res&&(XR.res.r||XR.res.empty);
- if(!got){const boot="boot_"+x.id+"_"+Math.floor(late/20000);
+ if(!got){const wall=Date.now();
+  if(!xXrKickAt||wall-xXrKickAt>=20000){xXrKickAt=wall;stopXr()}
+  watchXr(j.s,j.i);
+  const boot="boot_"+x.id+"_"+Math.floor(late/20000);
   if(xCalcAsk!==boot){const prev=xCalcAsk;xCalcAsk=boot;const ref=DB.doc("rooms/xr"+x.s+"_"+x.i+"/calc");
    const go=()=>ref.set(1).catch(()=>{if(xCalcAsk===boot)xCalcAsk=""});
    if(prev&&String(prev).indexOf("boot_"+x.id+"_")===0)ref.set(0).then(go).catch(go);else go()}
   if(late>X_FETCH_GIVEUP){stopXr();xAbandon(xWhyFetch(x,late),false);return}
   return}
- xGrant(x)}
+ xXrKickAt=0;watchXr(j.s,j.i);xGrant(x)}
 /* 표시만. wait/Wd 는 서버 xr, 내 표는 xv. 마을 복귀 때 키·표를 비우지 않는다. */
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
 function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){if(typeof hub==="function")hub();else show("hub");return}
