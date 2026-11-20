@@ -1037,6 +1037,31 @@
           ]
         }
       }
+    },
+    {
+      "id": "flanders-side3",
+      "title": "플랜더스의 개 - 기억의...?",
+      "cast": {
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        },
+        "patrasche": {
+          "name": "파트라슈",
+          "img": "",
+          "side": "left"
+        },
+        "flanders_artist_default": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/nero_planders.png",
+          "side": "right"
+        }
+      },
+      "start": "glad_to_see_u",
+      "nodes": [
+        
+      ]
     }
   ]
 }
