@@ -463,7 +463,12 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "flanders_artist_hah": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         }
       },
@@ -525,7 +530,7 @@
             },
             {
               "who": "",
-              "text": "",
+              "text": "...",
               "fx": "dark"
             }
           ],
@@ -562,11 +567,11 @@
               "text": "악마든 천사든 알 게 뭐야?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "가난뱅이 소년에게 선택지가 어딨어…"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "내가 나쁜 짓을 한 것도 아니잖아."
             },
             {
@@ -588,7 +593,7 @@
         "people_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그들이 고통스러워해서, 뭐?"
             },
             {
@@ -609,11 +614,11 @@
         "animals_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…그들이 돌아가고 싶어한다고?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…"
             }
           ],
@@ -622,31 +627,31 @@
         "too_late_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그렇게 말해봤자, 이미 늦었어."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "난 포기하지 않아."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "얼마나 더 나에게 포기하라고 말해야 적성이 풀리는 거야?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "세상이 원하길래 꿈도 희망도 포기했는데."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "파트라슈만 있어도 된다고, 기도했는데."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "하나 남은 것조차 포기하라고 한다면…"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…나는."
             },
             {
@@ -695,9 +700,9 @@
       "id": "flanders-5",
       "title" :"플랜더스의 개 - 최종장",
       "cast": {
-        "nero_default": {
-          "name": "네로",
-          "img": "assets/standing/nero_planders.png",
+        "flanders_artist_hah": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         },
         "patrasche": {
@@ -707,7 +712,12 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         }
       },
@@ -732,23 +742,23 @@
               "text": "조금 가까운 현재에, 모든 것을 잃은 '플랜더스의 화가'가 살았습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "...포기 안 해."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "포기 안 할 거야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그 아이를 위해서."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "꿈을 위해서."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "나는, 절대로...!"
             },
             {
@@ -760,7 +770,7 @@
               "text": "절망한 소년의 손을, 새하얀 개가 핥짝였습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "...파트라슈."
             }, 
             {
@@ -772,11 +782,11 @@
               "text": "금방, 금방 줄 테니까..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그런 눈으로."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그런 눈으로, 보지 마..."
             },
             {
@@ -784,27 +794,27 @@
               "text": "소년은 파트라슈를 꽉 끌어안았습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "포기 안 할게."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "이건, 널 포기하는 게 아니야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "놓아주는 거지..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "이별은 포기 같은 게 아니야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "누군가를 향한 응원일 거야."
             },
             {

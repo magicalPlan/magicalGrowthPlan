@@ -159,6 +159,8 @@ const EVENT_PACKS={
   titles:[
    ["flanders_mg","플랜더스의","특별 의뢰 '플랜더스의 밑그림'을 한 번 그려 보았다.",c=>!!(c.stats&&c.stats.mgFlanders)],
    ["flanders_mg100","그림쟁이","플랜더스의 밑그림을 100번 이상 플레이했다. 『너도 화가에 관심 있어?』",c=>(c.stats&&c.stats.mgFlanders||0)>=100],
+   /* 모두 합쳐(total_amount)≥200 인 뒤 한 판을 마치면 stats.mgFlandersConcours=1 → 칭호. 스토리 flanders-side. */
+   ["flanders_concours","콩쿠르 입상","모두 합쳐 밑그림이 200장을 넘긴 뒤 플랜더스의 밑그림을 그렸다.",c=>!!(c.stats&&c.stats.mgFlandersConcours)],
    ["pet_flanders","포기하는 게 아니야","더 먼 세상을 여행하길 바라며. 금이 간 알에 생명을 불어넣었다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
   ]
  }

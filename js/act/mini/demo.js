@@ -298,7 +298,8 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   st = null;
 
   /* 한 판 플레이(완성 0이어도) → stats.mgFlanders 횟수.
-     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side3 → 허브. 100회: 「그림쟁이」. */
+     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side3 → 허브. 100회: 「그림쟁이」.
+     모두 합쳐≥200 뒤 한 판: 칭호「콩쿠르 입상」+ flanders-side (mgMaybeConcours). */
   try {
    if (typeof C !== "undefined" && C) {
     C.stats = C.stats || {};
@@ -327,7 +328,11 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
    }
   } catch (e) {}
 
-  if (!n) return;
+  /* 콩쿠르 입상: total_amount≥200 이면 칭호·flanders-side.
+     제출이 있으면 확정(합계 반영) 뒤에, 완성 0장이면 지금 합계만 보고 판정. */
+  const stillHere = () => !!(msg.isConnected && root.isConnected);
+  const afterPlay = () => { mgMaybeConcours(stillHere) };
+  if (!n) { afterPlay(); return }
   if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL || !UID || typeof C === "undefined" || !C) { msg.textContent = "서버에 연결되어 있지 않아 기록을 남기지 못했다."; return }
   /* rank·total_amount 는 클라가 쓰지 않는다. go 확정 전엔 재시작 잠금(play 덮어쓰기 방지). */
   again.disabled = true;
@@ -335,7 +340,6 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const c = Math.max(0, Math.min(40, Math.floor(Number(n) || 0)));
   const reqId = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
   const goPath = MG_PATH + "/go/" + UID + "/" + reqId;
-  const stillHere = () => !!(msg.isConnected && root.isConnected);
   (async () => {
    const fail = (head, detail) => {
     const d = String(detail || "").replace(/\s+/g, " ").trim();
@@ -345,7 +349,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     await DB.doc(goPath).set({c, n: String(nm || "?").slice(0, 20), ts: Date.now()});
     const out = await mgWait(goPath, 25000);
     if (!stillHere()) return;
-    if (!out) { fail("확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자.", "timeout 25s · " + goPath); return }
+    if (!out) { fail("확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자.", "timeout 25s · " + goPath); afterPlay(); return }
     if (!out.ok) {
      const why = String(out.why || "");
      const err = String(out.err || "");
@@ -358,18 +362,58 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
       : why === "err" ? "서버 처리 중 오류가 났다."
       : "기록을 남기지 못했다.";
      fail(head, "why=" + (why || "?") + (err ? " · " + err : "") + " · c=" + c + " · req=" + reqId);
+     afterPlay();
      return
     }
     const got = Math.max(0, Math.floor(Number(out.c) || c));
     const run = Math.max(0, Math.floor(Number(out.run) || c));
     msg.textContent = out.best ? ("신기록! 최고 " + got + "장.") : ("이번 " + run + "장. 최고 기록은 " + got + "장.");
-    showRank(root, got)
+    showRank(root, got);
+    afterPlay()
    } catch (e) {
-    if (stillHere()) fail("기록을 남기지 못했다.", (e && e.message || "오류") + " · " + goPath)
+    if (stillHere()) fail("기록을 남기지 못했다.", (e && e.message || "오류") + " · " + goPath);
+    afterPlay()
    } finally {
     if (stillHere()) again.disabled = false
    }
   })()
+ }
+
+ /* 모두 합쳐(total_amount)≥200 이면「콩쿠르 입상」+ flanders-side.
+    stillHere: 결과 화면이 살아 있을 때만 팝업(이탈 시 칭호·플래그만 남김). */
+ async function mgMaybeConcours(stillHere) {
+  if (typeof C === "undefined" || !C) return;
+  if ((C.titles || []).includes("flanders_concours") || (C.stats && C.stats.mgFlandersConcours)) return;
+  if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL) return;
+  let tot = 0;
+  try {
+   const s = await DB.doc(MG_PATH + "/total_amount").get();
+   tot = s.exists ? Number(s.data()) || 0 : 0
+  } catch (e) { return }
+  if (!(tot >= 200)) return;
+  C.stats = C.stats || {};
+  C.stats.mgFlandersConcours = 1;
+  let fresh = [];
+  try { if (typeof checkTitles === "function") fresh = checkTitles() || [] } catch (e) {}
+  try { if (typeof flandersConcoursUnlock === "function") flandersConcoursUnlock(false) } catch (e) {}
+  if (typeof save === "function") try { save() } catch (e) {}
+  const got = fresh.some(t => t && t[0] === "flanders_concours");
+  if (!got || typeof alertBox !== "function") return;
+  if (typeof stillHere === "function" && !stillHere()) return;
+  setTimeout(() => {
+   if (typeof stillHere === "function" && !stillHere()) return;
+   alertBox("✦ 새 칭호", "「콩쿠르 입상」\n모두 합쳐 밑그림이 200장을 넘긴 뒤 그려 보았다.\n\n칭호 보관함에서 장착할 수 있다.", () => {
+    const goHub = () => { try { if (typeof hub === "function") hub() } catch (e) {} };
+    if (typeof storyLoad !== "function" || typeof vnOpen !== "function") { goHub(); return }
+    storyLoad().then(book => {
+     const list = Array.isArray(book && book.shards) ? book.shards : [];
+     const story = list.find(s => s && s.id === "flanders-side");
+     if (!story || !story.start) { goHub(); return }
+     vnOpen(story, { onClose: goHub })
+    }).catch(goHub)
+   });
+   try { ding() } catch (e) {}
+  }, 400)
  }
 
  /* 랭킹: 버튼을 누르거나 기록을 남긴 뒤에만 한 번 읽는다. */
