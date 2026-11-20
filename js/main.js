@@ -16,9 +16,7 @@ async function saveNowOk(){if(!AUTH.uid||!DB){await saveNow();return true}const 
 /* 잠깐 실패해도 몇 번 다시 올린다. 장기 토벌처럼 알림을 저장 성공 뒤에 두려면 이걸 쓴다. */
 async function saveNowRetry(n,gap){n=n||4;gap=gap||2500;for(let i=0;i<n;i++){if(await saveNowOk())return true;if(i<n-1)await new Promise(r=>setTimeout(r,gap*(i+1)))}return false}
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
-function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
- if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
-  b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}};m.appendChild(b)}}
+function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st]}
 // jc: 서버 규칙이 첫 저장 때 확인하는 비밀 코드(계정을 만들 때 입력한 값). 그 기기에 계정별로 기억한다.
 const AUTH={uid:null,tok:null,rt:null,name:"",key:"",jc:""};
 const EM=n=>n.toLowerCase()+"@magic-growth.local";
@@ -472,7 +470,7 @@ function lmode(mail) {
    if (fp) fp.hidden =!!signup;
    if (lpw) {
       lpw.autocomplete = signup ? "new-password" : "current-password";
-      lpw.placeholder = signup ? "8자 이상, 영문·숫자":"6자 이상"
+      lpw.placeholder = signup ? "8자 이상, 영문·숫자" : "6자 이상"
    }
  $("#lhint").textContent=signup?"아이디와 비밀번호, 비밀 코드로 계정을 만든다. 이메일은 선택이다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
 function drawLogin(){const form=$("#lform"),box=$("#lfp-box"),lt=$("#lt"),hint=$("#lhint"),m=$("#lm");
@@ -504,10 +502,10 @@ function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}
  if(DB){mode(1);boot();return}
- // 서버를 옮겼을 때: 이 브라우저에 남은 예전 서버의 주소, 키, 로그인 정보, 캐릭터를 지우고 새 서버로 새로 시작한다.
- if(lget("mgr_proj")!==FB_URL){["mgr_fb","mgr_key","mgr_rt","mgr"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});C=null;keep("mgr_proj",FB_URL)}
- let url=lget("mgr_fb")||FB_URL;
- if(url){FBU=url;await startAuth();return}
+ // 서버를 옮겼을 때: 이 브라우저에 남은 예전 키·로그인·캐릭터를 지우고 새 서버로 새로 시작한다.
+ try{localStorage.removeItem("mgr_fb")}catch(e){}
+ if(lget("mgr_proj")!==FB_URL){["mgr_key","mgr_rt","mgr"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});C=null;keep("mgr_proj",FB_URL)}
+ if(FB_URL){FBU=FB_URL;await startAuth();return}
  showLogin();const lm=$("#lm");if(lm)lm.textContent="서버 주소가 없어 입장할 수 없다."})();
 let curView="";
 /* 같은 화면을 다시 그리는 동안 내용이 잠깐 비면(목록을 지우고 다시 채울 때) 휴대폰 브라우저가 화면을 위로 끌어올린다.

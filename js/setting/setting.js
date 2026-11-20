@@ -120,11 +120,10 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  bindDialog("set-terms-open","set-terms-dialog");bindDialog("set-privacy-open","set-privacy-dialog");
  const d=$("#set-license-fold");if(d){const m=d.querySelector(".set-fold-mark");d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})}})();
 {const b=$("#set-theme");if(b)b.onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()}}
-{const b=$("#set-srv");if(b)b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."}}
 {const b=$("#set-mail");if(b)b.onclick=()=>{const box=$("#set-mail-box");if(!box||!AUTH.uid)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-pw-box").hidden=true;const idb=$("#set-mail-idbox");if(idb)idb.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}}}
 {const f=$("#set-mail-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-mail-go"),em=mailOpt($("#set-mail-em").value),pw=$("#set-mail-pw").value,typed=($("#set-mail-id").value||"").trim();m.textContent="";
  if(em===null||!em){m.textContent=em===null?"이메일 형식이 아니다.":"받을 수 있는 이메일을 적어야 한다.";return}
- if(pw.length<6){m.textContent="비밀번호를 적어야 한다.";return}
+ if(!String(pw).length){m.textContent="비밀번호를 적어야 한다.";return}
  const id=mailId()||(/^[A-Za-z0-9_]{3,20}$/.test(typed)?typed.toLowerCase():"");
  if(!id){m.textContent="가입할 때 쓴 아이디를 적어야 한다.";$("#set-mail-idbox").hidden=false;return}
  btn.disabled=true;
@@ -137,7 +136,7 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
 {const b=$("#set-pw");if(b)b.onclick=()=>{const box=$("#set-pw-box");if(!box||!AUTH.uid||!setLinked)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-mail-box").hidden=true;$("#set-pw-old").focus()}}}
 {const f=$("#set-pw-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-pw-go"),old=$("#set-pw-old").value,nw=$("#set-pw-new").value,nw2=$("#set-pw-new2").value;m.textContent="";
  if(!AUTH.uid||!setLinked){m.textContent="이메일을 연동한 계정만 비밀번호를 바꿀 수 있다.";return}
- if(old.length<6){m.textContent="지금 비밀번호를 적어야 한다.";return}
+ if(!String(old).length){m.textContent="지금 비밀번호를 적어야 한다.";return}
  const bad=pwCheck(nw);if(bad){m.textContent=bad;return}
  if(nw!==nw2){m.textContent="새 비밀번호가 서로 다르다.";return}
  if(nw===old){m.textContent="새 비밀번호는 지금 것과 달라야 한다.";return}

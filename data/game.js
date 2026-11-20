@@ -26,7 +26,7 @@
 
    
    /* 앱 버전(APP_VER)은 js/common/include.js 에 있다. 화면 HTML 캐시와 설정 화면이 그 값을 쓴다. */
-   // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
+   // 온라인 서버: Firebase Realtime Database 주소.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
       정기 출정 참가 자리(rooms/xm)는 매지컬 마치 목록이 펼쳐져 보일 때만 묶음 prefix 한 live() 로 지킨다. 거절되면 POLL_FAST 묻기로 받고, 목록을 접거나 화면을 벗어나면 끊는다.
