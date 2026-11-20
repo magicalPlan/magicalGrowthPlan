@@ -883,7 +883,7 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         }
       },
@@ -903,15 +903,15 @@
           "choose": [
             {
               "label": "놀고 있었어.",
-              "choose": "playplay2"
+              "next": "playplay2"
             },
             {
               "label": "쉬고 있었어.",
-              "choose": "take_a_rest"
+              "next": "take_a_rest"
             },
             {
               "label": "아무것도 안 하고 있었어.",
-              "choose": "do_nothing"
+              "next": "do_nothing"
             }
           ]
         },
