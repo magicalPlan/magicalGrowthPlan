@@ -236,7 +236,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   if (r.ok) {
     st.count++;
     cnt.textContent = "완성 " + st.count; 
-    say.textContent = ["좋아! 다음 선.", "깔끔해!", "네로도 감탄할 솜씨!", "그대로 계속!"][st.count % 4];
+    say.textContent = ["빠른데?", "힘내보자.", "열정이 대단하잖아.", "나도 이렇게 그림을 연습했던 적이 있었지.", "파트라슈..."][st.count % 5];
     st.flash = performance.now();
     st.flashOk = true; next()
   } else {
