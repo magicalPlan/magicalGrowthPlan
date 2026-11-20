@@ -439,7 +439,14 @@ html[data-theme="light"] #v-ord .clp-ms .dq.clp-ready{border-color:var(--ord-lig
 .ord-hero{position:relative;margin:4px 0 14px;padding:18px 20px;border-radius:16px;border:1px solid var(--ord-border-soft);overflow:hidden;background:var(--ord-hero-bg)}
 .ord-hero::after{content:var(--ord-hero-mark);position:absolute;right:16px;top:6px;font-size:64px;opacity:.08;pointer-events:none}
 .ord-kicker{margin:0;font-size:.78rem;letter-spacing:.12em;color:var(--ord-accent)}
-.ord-title{margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:var(--ord-hero-title)}
+.ord-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:var(--ord-hero-title)}
+/* 장기 의뢰 인트로 ▶. EVENT_ORD.introShard 있을 때만 표시(ordPaint). 수상한 상인 .shady-play 와 같은 역할. */
+#v-ord .ord-intro-play{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:0;border:1px solid color-mix(in srgb,var(--ord-accent,#b89b5e) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ord-hero-bg,#120f20) 70%,#000 30%);cursor:pointer;vertical-align:middle}
+#v-ord .ord-intro-play[hidden]{display:none!important}
+#v-ord .ord-intro-play img{display:block;width:16px;height:16px;filter:brightness(0) saturate(100%) invert(86%) sepia(28%) saturate(679%) hue-rotate(358deg) brightness(97%) contrast(92%)}
+#v-ord .ord-intro-play:hover,#v-ord .ord-intro-play:focus-visible{border-color:var(--ord-accent,#e6c56a);background:color-mix(in srgb,var(--ord-accent,#e6c56a) 18%,transparent)}
+html[data-theme="light"] #v-ord .ord-intro-play{background:#fffaf0;border-color:color-mix(in srgb,var(--ord-light-accent,#c4a15a) 70%,transparent)}
+html[data-theme="light"] #v-ord .ord-intro-play:hover,html[data-theme="light"] #v-ord .ord-intro-play:focus-visible{border-color:var(--ord-light-accent,#7a5f22)}
 .ord-lead{margin:0;color:var(--mu);font-size:.92rem;line-height:1.6}
 .ord-tabs{display:flex;gap:6px;margin:0 0 12px;padding:6px;border-radius:14px;background:#0e0c18e6;backdrop-filter:blur(6px);border:1px solid var(--ln)}
 .ord-tabs button{flex:1;position:relative;padding:10px 6px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--mu);font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}

@@ -128,6 +128,182 @@
           ]
         }
       }
+    },
+        {
+      "id": "flanders-side2",
+      "title": "마을의 일상 - 네로?1",
+      "cast": {
+        "patrasche": {
+          "name": "파트라슈",
+          "img": "",
+          "side": "left"
+        },
+        "flanders_artist_default": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "flanders_artist_hah": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_hah.png",
+          "side": "right"
+        }
+      },
+      "start": "why_im_here",
+      "nodes": {
+        "why_im_here": {
+          "lines": [
+            {
+              "who": "flanders_artist_hah",
+              "text": "..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "왜 난 떠나지 않냐고?"
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "하긴, 악당은 이쯤에서 성불할 타이밍이긴 하지?"
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "음... 근데, 난 안 할 거야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "새로운 꿈이 생겼거든."
+            }
+          ],
+          "choose": [
+            {
+              "label": "꿈?",
+              "next": "yes_dream_p"
+            },
+            {
+              "label": "그냥 가면 안돼?",
+              "next": "just_go_plz"
+            }
+          ]
+        },
+        "yes_dream_p": {
+          "lines": [
+            {
+              "who": "flanders_artist_default",
+              "text": "그래, 꿈."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "너희와 함께하겠어."
+            }
+          ],
+          "next": "nono_cute_pet"
+        },
+        "just_go_away": {
+          "lines": [
+            {
+              "who": "flanders_artist_default",
+              "text": "하하, 냉정하네."
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "조금 상처인 걸."
+            }
+          ],
+          "next": "nono_cute_pet"
+        },
+        "nono_cute_pet": {
+          "lines": [
+            {
+              "who": "flanders_artist_hah",
+              "text": "여기 내 작업실을 열어보려고 해."
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "겸사겸사 네 어깨에 있는 그 친구도 좀 돕고."
+            }
+          ],
+          "choose": [
+            {
+              "label": "내 어깨에?",
+              "next": "idont_know_this_pet"
+            },
+            {
+              "label": "헐 얘 누구야",
+              "next": "isnt_this_your_familliar"
+            }
+          ]
+        },
+        "idont_know_this_pet": {
+          "lines": [
+            {
+              "who": "flanders_artist_default",
+              "text": "그래, 네 어깨의 그 아이 말이야."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "'사역마'...라고 했던가?"
+            }
+          ],
+          "next": "hwan_yeong5"
+        },
+        "isnt_this_your_familliar": {
+          "lines": [
+            {
+              "who": "flanders_artist_hah",
+              "text": "아, 키우는 애가 아니야...?"
+            }
+          ],
+          "next": "hwan_yeong5"
+        },
+        "hwan_yeong5": {
+          "lines": [
+            {
+              "who": "flanders_artist_default",
+              "text": "하하, 어쨌든... 네 곁의 사역마를 강하게 하고 싶다면, 언제든 날 찾아와."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "물론, 이제 타르타로스의 힘은 쓰지 않으니 안심하고."
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "아무래도 타르타로스의 영향 때문에, 회귀해도 난 기억을 잃지 않는 모양이거든..."
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "...꿈이란 건 멋진 거야. 그렇지?"
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "놓아줘도 괜찮아. 놓은 주먹에 새로운 꿈을 쥘 수 있으니까."
+            },
+            {
+              "who": "flanders_artist_hah",
+              "text": "그러니까..."
+            },
+            {
+              "who": "flanders_artist_default",
+              "text": "꿈이 있다는 건 정말 좋은 일이야, 그렇지?"
+            },
+            {
+              "who": "",
+              "text": "소년은 모든 걸 잃었지만,"
+            },
+            {
+              "who": "",
+              "text": "결코 텅 비어 있진 않았답니다."
+            },
+            {
+              "who": "patrasche",
+              "text": "(화가의 다리에 머리를 부비며)"
+            },
+            {
+              "who": "patrasche",
+              "text": "멍멍!"
+            }
+          ]
+        }
+      }
     }
   ]
 }

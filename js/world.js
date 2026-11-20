@@ -107,7 +107,7 @@ function worldEvent() {
    if (!root) return;
    root.replaceChildren();
 
-   /* 전역 open:true 이거나 계정 story_flag[id] 가 있으면 연다(flanders-side 등). */
+   /* 전역 open:true 이거나 계정 story_flag[id] 가 있으면 연다(flanders-side3 등). */
    const openIds = {};
    (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
       if (!r || !r.id) return;

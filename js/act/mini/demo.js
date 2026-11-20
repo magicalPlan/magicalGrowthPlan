@@ -298,7 +298,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   st = null;
 
   /* 한 판 플레이(완성 0이어도) → stats.mgFlanders 횟수.
-     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side → 허브. 100회: 「그림쟁이」. */
+     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side3 → 허브. 100회: 「그림쟁이」. */
   try {
    if (typeof C !== "undefined" && C) {
     C.stats = C.stats || {};
@@ -306,7 +306,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     let fresh = [];
     try { if (typeof checkTitles === "function") fresh = checkTitles() || [] } catch (e) {}
     const gotFirst = fresh.some(t => t && t[0] === "flanders_mg");
-    /* 칭호가 있으면 세계관 탭에 flanders-side 가 열린 것처럼 story_flag 를 켠다. */
+    /* 칭호가 있으면 세계관 탭에 flanders-side3 가 열린 것처럼 story_flag 를 켠다. */
     try { if (typeof flandersSideUnlock === "function") flandersSideUnlock(false) } catch (e) {}
     if (gotFirst && typeof alertBox === "function") {
      setTimeout(() => {
@@ -315,7 +315,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
        if (typeof storyLoad !== "function" || typeof vnOpen !== "function") { goHub(); return }
        storyLoad().then(book => {
         const list = Array.isArray(book && book.shards) ? book.shards : [];
-        const story = list.find(s => s && s.id === "flanders-side");
+        const story = list.find(s => s && s.id === "flanders-side3");
         if (!story || !story.start) { goHub(); return }
         vnOpen(story, { onClose: goHub })
        }).catch(goHub)

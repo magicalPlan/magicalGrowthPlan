@@ -13,6 +13,9 @@
 
    번들 필드 (EVENT_PACKS[key]) — 일정 제외
    · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock({id,n,at?,mg?}), titles
+   · ord.introShard (선택) — 장기 의뢰 제목 옆 ▶ 로 재생할 스토리 shard id.
+     있으면 #ord-intro-play 표시, 없으면 hidden. 예: flanders → "flanders-1".
+     스토리가 아직 chapters 에 없어도 필드는 두어도 되고, 클릭 시 "아직 없다" 안내만 난다.
    · clp (선택) { goal, ms, drop } — 없으면 common.js CLP_FORM 기본값.
      ms: [[비율, 보상], …] 길이·순서는 msNames 와 맞출 것. drop 은 클라 조각 드롭(출정 x_ok/x_fail 는 seasons.drop).
    ============================================================================= */
@@ -92,6 +95,8 @@ const EVENT_PACKS={
   ord:{
    kicker:"🎨 기간 한정 장기 의뢰",
    title:"플랜더스의 개",
+   /* 제목 옆 ▶. chapters/flanders.json 의 shard id. 없으면 버튼 hidden. */
+   introShard:"flanders-1",
    lead:"제 형태를 잃고 망집에 휘말린 동물들을 찾는다. 마법을 이용해, 동물들을 집으로 돌려보내자.",
    clueHelp:"마을 여기저기를 탐험하며 집으로 돌아가길 바라는 동물들을 찾는다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다. 단서 조각이 가장 많이 나오는 곳이다."
   },

@@ -45,30 +45,31 @@ function storyAtTxt (at) {
 
 /* 세계관 > 이벤트 탭 전용. open:true 이거나 계정 C.flags.story_flag[id] 가 있으면 버튼이 보인다.
    CLPN·STORY_LOCK 과 별개. 챕터 소제목·lead 는 chapters/*.json, 에피소드 제목은 shards[].title.
-   flanders-side: 전역 open 은 false. 칭호「플랜더스의」→ flandersSideUnlock 이 story_flag 를 켠다. */
+   flanders-side3: 전역 open 은 false. 칭호「플랜더스의」→ flandersSideUnlock 이 story_flag 를 켠다. */
 const WORLD_STORY_OPEN=[
  {id: "shard-1",open:true},
  {id: "shard-2",open:true},
  {id: "shard-3",open:true},
  {id: "shard-4",open:true},
  {id: "shady-merchant-1", open:true},
- {id: "flanders-1", open:false},
- {id: "flanders-2", open:false},
+ {id: "flanders-1", open:true},
+ {id: "flanders-2", open:true},
  {id: "flanders-3", open:true},
- {id: "flanders-side", open:false},
+ {id: "flanders-side", open:true},
  {id: "flanders-4", open: true},
  {id: "flanders-5", open: true},
- {id: "flanders-side2", open: true}
+ {id: "flanders-side2", open: false},
+ {id: "flanders-side3", open:false}
 ];
 
-/* 칭호 flanders_mg 가 있으면 story_flag["flanders-side"]=1. 이미 켜져 있으면 false.
+/* 칭호 flanders_mg 가 있으면 story_flag["flanders-side3"]=1. 이미 켜져 있으면 false.
    저장은 saveIt!==false 일 때. 반환: 이번에 새로 켰으면 true. */
 function flandersSideUnlock (saveIt) {
   if (typeof C === "undefined" || !C) return false;
   if (!(C.titles || []).includes("flanders_mg")) return false;
-  if (typeof sflagHas === "function" && sflagHas("flanders-side")) return false;
+  if (typeof sflagHas === "function" && sflagHas("flanders-side3")) return false;
   if (typeof sflagSet !== "function") return false;
-  sflagSet("flanders-side", 1);
+  sflagSet("flanders-side3", 1);
   if (saveIt !== false && typeof save === "function") {
     try { save() } catch (e) {}
   }
