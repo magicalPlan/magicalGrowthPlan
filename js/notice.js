@@ -51,27 +51,59 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
    시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
    운영자가 시작일을 고르면 그날이 시작, 현실 28일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐).
    시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤. */
-const DOOM_DAYS=28,DOOM_REAL_PER_GAME=2;let DOOM=null;
-const doomOk=o=>!!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
-const doomYmd=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const DOOM_DAYS = 28;
+const DOOM_REAL_PER_GAME = 2;
+let DOOM = null;
+const doomOk = o => !!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
+const doomYmd = t => {
+   const d = new Date(t);
+   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const doomDay=s=>{const [y,m,d]=String(s).split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)};
-function doomState(o){if(!doomOk(o))return null;const st=doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
- const e=new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
- const [,sm,sd]=o.d.split("-").map(Number);
+function doomState(o){
+   if(!doomOk(o))return null;
+   const st = doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
+   const e = new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
+   const [,sm,sd]=o.d.split("-").map(Number);
  /* elapsed: 시작일=0. 홀수째(1,3,…) 현실일 → 낮, 짝수째 → 밤. gLeft: 남은 게임일(표시용). */
- const elapsed=Math.max(0,Math.min(DOOM_DAYS,today-st)),nth=elapsed+1,dayPhase=nth%2===1,gLeft=left<=0?0:Math.ceil(left/DOOM_REAL_PER_GAME),gDay=Math.min(DOOM_DAYS/DOOM_REAL_PER_GAME,Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
- return {left,gLeft,gDay,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
-async function loadDoom(){if(!XON())return;
- try{const r=await DB.doc("doom").get();const d=r.exists?r.data():null;DOOM=doomOk(d)?d:null}catch(e){}
- drawDoom()}
-function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),src=XON()?DOOM:(C&&C.doom)||null,st=doomState(src);
- if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
- b.innerHTML="";const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;if(!show)return;
- /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마. */
- const final=live&&st.gLeft<=1,phase=live&&!final?(st.dayPhase?"day":"night"):"",phaseTx=st&&st.dayPhase?"낮":"밤",phaseMark=st&&st.dayPhase?"☀":"☾";
+   const elapsed=Math.max(0,Math.min(DOOM_DAYS,today-st));
+   const nth = elapsed+1;
+   const dayPhase = nth % 2 === 1
+   const gLeft = left <= 0 ? 0 : Math.ceil(left/DOOM_REAL_PER_GAME)
+   const gDay = Math.min(DOOM_DAYS/DOOM_REAL_PER_GAME , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
+   return {left,gLeft,gDay,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
+
+async function loadDoom(){
+   if(!XON())return;
+   try{
+      const r = await DB.doc("doom").get();
+      const d = r.exists ? r.data() : null;
+      DOOM = doomOk(d)?d:null
+   } catch (e) {
+
+   }
+   drawDoom()
+}
+
+function drawDoom () {
+   const b = $("#doom");
+   
+   if (!b) return;
+   
+   const isA = !!(C&&ADM[UID])
+   const src = XON() ? DOOM : (C&&C.doom) || null
+   const st = doomState(src);
+   
+   if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
+   
+   b.innerHTML="";
+   const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;
+   if(!show)return;
+   
+   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마. */
+   const final=live&&st.gLeft<=1,phase=live&&!final?(st.dayPhase?"day":"night"):"",phaseTx=st&&st.dayPhase?"낮":"밤",phaseMark=st&&st.dayPhase?"☀":"☾";
  const c=elT("div","doom-card"+(live&&(final||st.gLeft<=2)?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off")+(phase?" "+phase:""));
- const l=elT("div","doom-l");l.append(elT("p","doom-t",live&&!final?"멸망까지 · "+phaseMark+" "+phaseTx+" · 18:00":"멸망까지 · 18:00시"));
- if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":final?st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작":st.endTx+" 18:00시 멸망 · 게임 "+st.gDay+"일째 "+phaseTx+" · "+st.startTx+" 시작"));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"+" · "+phaseMark));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":final?st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작":st.endTx+" 18:00시 멸망 · 게임 "+st.gDay+"일째 "+phaseTx));
  else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14 · 현실 28일).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
  c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.gLeft):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
