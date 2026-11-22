@@ -133,6 +133,7 @@ function drawDoom () {
    처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망, 대련 전적 등.
    강제 취소: 장기 토벌(lh)·단서 탐색(clue) — 진행 중·완료(미수령)여도 보상 없이 지운다.
    알: 부화 중(egg)·재고(eggs·eggsEv·eggsEv2) 전부 0. 환불·부화 없음.
+   등대·시설: 개인 wf·fc·wfl 등 비움. 시즌 wipe 는 tally/wf·score·vfac·vfactop·tally/dr 도 지운다.
    시즌 때 공용 채팅·선물 우편함·마을·보스·타락·대련 방은 함께 지운다(계정 친구 목록 fr 은 남김). */
 let RST=null;
 /* lh·clue: KEEP에 넣지 않는다. 회귀 때 진행·완료 미수령도 강제 취소(보상 없음). lhGot·clueGot 도 함께 비움.
@@ -167,8 +168,11 @@ function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={}
  next.lh=null;next.clue=null;next.lhGot={};next.clueGot={};
  /* 알: 부화·재고 전부 0(환불 없음). */
  try{if(typeof eggRstAbort==="function")eggRstAbort(next);else{next.egg=null;next.eggs=0;next.eggsEv=0;next.eggsEv2=0}}catch(e){next.egg=null;next.eggs=0;next.eggsEv=0;next.eggsEv2=0}
+ /* 희망의 등대·마을 시설 개인 칸: 기여·기억 단계·일일 이용 비움(공용 tally/vfac 는 시즌 wipe). */
+ next.wf=0;next.wfl=0;next.wfDone=null;next.wfu=null;next.fc={};next.facl={};next.fu=null;
  next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
  next.stats.duW=0;next.stats.duL=0;next.stats.duD=0;
+ next.stats.wfGive=0;next.stats.facGive=0;next.stats.facUses=0;
  /* 사역마 보유 상한: petMax 와 stats.petMax 중 큰 쪽을 맞춘다(허가증 기록 유지). */
  {const pm=Math.max(Number(next.petMax)||0,Number(next.stats.petMax)||0);if(pm>0){next.petMax=pm;next.stats.petMax=Math.max(Number(next.stats.petMax)||0,pm)}}
  try{if(typeof flagsEnsure==="function")flagsEnsure(next);else if(!next.flags)next.flags={flag:{},story_flag:{}}}catch(e){}
@@ -191,6 +195,8 @@ async function rstWrite(uid,src,R){if(!src||typeof src!=="object")throw new Erro
  try{await DB.doc("rooms/xa"+uid).delete()}catch(e){}
  try{await DB.doc("rooms/xr/"+uid).delete()}catch(e){}
  try{await DB.doc("event_minigame/flanders/rank/"+uid).delete()}catch(e){}
+ /* 시설·등대 기여 카드도 캐릭터와 같이 비운다(옛 score 로 tally 가 다시 채워지지 않게). */
+ try{const prev=C;C=ch;const body=typeof scoreBody==="function"?scoreBody():{n:String(ch.n||"").slice(0,20),v:ch.v||"",fc:{},wf:0,dr:null};C=prev;await DB.doc("score/"+uid).set(body)}catch(e){try{await DB.doc("score/"+uid).delete()}catch(e2){}}
  return{ch,late}}
 function rstClearTripUI(){try{lhDefer=null}catch(e){}
  try{if(typeof hubLH==="function")hubLH()}catch(e){}
@@ -218,7 +224,8 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["tally/wf","희망의 등대 합계"],["tally/dr","재해 진압 합계"],["tally/seed","등대·시설 시드 자물쇠"],["score","시설·등대·재해 기여 카드"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
+ try{if(typeof WFD==="object"){WFD={sum:0,v:{},top:[]}}if(typeof FACD==="object")FACD={};if(typeof facSrv==="object")facSrv={};if(typeof facFly==="object")facFly={};if(typeof vfacReady==="object")vfacReady={};if(typeof DRP==="object"){for(const k of Object.keys(DRP))delete DRP[k]}if(typeof scoreSig!=="undefined")scoreSig="";if(typeof facAt!=="undefined")facAt=0}catch(e){}
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
   const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
@@ -240,14 +247,14 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
     await rstWrite(uid,acc.c,R);ok++}catch(e){String(e&&e.message||e)==="empty"?empty++:fail++}}}
   if(total)await Promise.all(Array.from({length:Math.min(6,total)},worker));
   if(C){const self=await rstTakeCloud(R.id);if(!self){C=rstShape(C,R.id);try{clearPend()}catch(e){}try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}rstClearTripUI()}
-   C.rstn=R.id;save();try{hub()}catch(e){}}
+   C.rstn=R.id;save();try{if(typeof pubScore==="function")pubScore()}catch(e){}try{hub()}catch(e){}try{if(typeof hubFac==="function")hubFac()}catch(e){}}
   alertBox("🌑 시즌 초기화 완료","서버에서 캐릭터 "+total+"명 중 "+ok+"명을 되돌렸다."+(empty?" 기록 없음 "+empty+"명.":"")+(fail?" 실패 "+fail+"명.":"")+"\n플레이어에게는 다음 접속 때 알림이 한 번 뜬다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
   msg.textContent=""}
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}btn.disabled=false}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
   elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계·기여 순위, 희망의 등대 합계·기여 카드·재해 진압 합계, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 등대·시설 기여와 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
@@ -337,7 +344,7 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
   let src=null;if(uid===UID&&C)src=C;else{const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");src=acc.c}
   const w=await rstWrite(uid,src,R);await DB.doc("players/"+UID+"/rstu/"+uid).set(R);
   if(uid===UID){C=w.ch;try{clearPend()}catch(e){}try{if(typeof accMark==="function")accMark()}catch(e){}try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}
-   C.rstn=R.id;note("notice",rstNoteTxt(true));save();try{hub()}catch(e){}msg.textContent="이 계정을 지금 회귀했다.";inp.value=""}
+   C.rstn=R.id;note("notice",rstNoteTxt(true));save();try{if(typeof pubScore==="function")pubScore()}catch(e){}try{hub()}catch(e){}try{if(typeof hubFac==="function")hubFac()}catch(e){}msg.textContent="이 계정을 지금 회귀했다.";inp.value=""}
   else msg.textContent=who+" 의 캐릭터를 서버에서 지금 되돌렸다. 알림은 그 사람이 다음에 접속할 때 한 번 뜬다."+(w.late.length?" "+w.late.join(", ")+"은 그 사람이 다음에 접속하면 맞춰진다.":"");inp.value=""}
  catch(e){const c=String(e&&e.message||e);msg.style.color="var(--bad)";msg.textContent=c==="401"||c==="403"?"이 계정의 기록을 운영자가 직접 바꾸지 못했다. 데이터베이스 규칙에서 운영자의 계정 읽기와 쓰기가 열려 있는지 확인해야 한다.":c==="empty"?"그 UID의 캐릭터 기록을 찾지 못했다.":"저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
  btn.disabled=false}
