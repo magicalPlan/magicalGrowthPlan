@@ -414,11 +414,11 @@ html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
 html[data-theme="light"] #v-ord #clue .dq{background:var(--ord-light-clue-bg);border-color:var(--ord-light-clue-border)}
 html[data-theme="light"] #v-ord #clue .dq.clue-on{border-color:var(--ord-light-clue-on)}
 
-/* 기간 한정 사역마 · 서리 여왕의 알 */
-.pet-r4{color:#9fd8ff;text-shadow:0 0 10px rgba(140,200,255,.55)}
-.pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
-html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
-html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
+/* 기간 한정(이벤트) 사역마 · 시즌 공통(겨울·그림 등 테마색 없음) */
+.pet-r4{color:#e8a8c8;text-shadow:0 0 10px rgba(220,140,180,.45)}
+.pet-card.pet-ev{border-color:#d090b088!important;background:radial-gradient(circle at 50% 0,rgba(220,140,180,.14),transparent 70%),var(--card,#14121f)}
+html[data-theme="light"] .pet-r4{color:#a83870;text-shadow:none}
+html[data-theme="light"] .pet-card.pet-ev{border-color:#c06090!important;background:linear-gradient(180deg,#fbf0f5,#f7f2ea)!important}
 #pet-dex{margin-top:28px}
 #pet-dex .wgrid{margin:0 0 8px}
 .pet-dex-it{cursor:default}
@@ -428,13 +428,13 @@ html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;backgro
 #dex-list .pet-dex-it.lock>small:last-child{display:block}
 #dex-list .pet-dex-it.lim.lock{opacity:1}
 .pet-dex-it .pet-dex-fx{color:#d8c79a}
-.pet-dex-lim-h{color:#9fd8ff;border-bottom-color:#8cc8ff55}
-.pet-dex-it.lim{border-color:#8cc8ff88;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.2),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #8cc8ff33}
-.pet-dex-it.lim .dex-tag{color:#9fd8ff!important}
-.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(140,200,255,.08) 0 8px,transparent 8px 16px),#14121f}
-html[data-theme="light"] .pet-dex-lim-h{color:#1f6fa8;border-bottom-color:#5a9fd4}
-html[data-theme="light"] .pet-dex-it.lim{border-color:#5a9fd4;background:linear-gradient(180deg,#eef5fb,#f6f0e5);box-shadow:none}
-html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(90,159,212,.16) 0 8px,transparent 8px 16px),#f4f8fc}
+.pet-dex-lim-h{color:#e8a8c8;border-bottom-color:#d090b055}
+.pet-dex-it.lim{border-color:#d090b088;background:radial-gradient(circle at 50% 0,rgba(220,140,180,.18),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #d090b033}
+.pet-dex-it.lim .dex-tag{color:#e8a8c8!important}
+.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(220,140,180,.08) 0 8px,transparent 8px 16px),#14121f}
+html[data-theme="light"] .pet-dex-lim-h{color:#a83870;border-bottom-color:#c06090}
+html[data-theme="light"] .pet-dex-it.lim{border-color:#c06090;background:linear-gradient(180deg,#fbf0f5,#f7f2ea);box-shadow:none}
+html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(192,96,144,.14) 0 8px,transparent 8px 16px),#faf4f7}
 html[data-theme="light"] .pet-dex-it .pet-dex-fx{color:#6b5216}
 
 /* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) — 색은 #v-ord 변수 */

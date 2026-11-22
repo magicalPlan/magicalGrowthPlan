@@ -20,6 +20,7 @@ const {createMgFlandersSubmit} = require("./mg-flanders");
 const {createAccountLeave} = require("./leave");
 const {createRosterMirrorSync} = require("./roster-mirror");
 const {createAccountRst} = require("./account-rst");
+const {createBoardCmtNotify} = require("./board/cmt");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -54,6 +55,9 @@ exports.pexClaim = createPexClaim(getDatabase);
 
 /* 플랜더스 밑그림: go 제출 → play 세션 확인 후 rank·total_amount increment. 클라는 합계 직접 불가. */
 exports.mgFlandersSubmit = createMgFlandersSubmit(getDatabase);
+
+/* 게시판 댓글: board/c/{id} 생성 → 글·부모 댓글 작성자 accounts c/nt (클라 note("board") 금지). */
+exports.boardCmtNotify = createBoardCmtNotify(getDatabase);
 
 const XS = 300000, XN = 10, X_DROP = 2 * 60 * 1000, X_HARD = 20 * 60 * 1000;
 /* T0 직후 empty 로 찍혀도 이 시간 안에는 xm 을 다시 읽어 파티를 살린다(늦은 자리 set). data/game.js X_EMPTY_RETRY 와 같게 둔다. */
