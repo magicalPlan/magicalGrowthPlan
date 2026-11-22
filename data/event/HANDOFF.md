@@ -162,7 +162,7 @@ clp:{
 ## 8. UTC / KST
 
 - `Date.UTC(year, month0, day, hourUtc)` — 월은 0부터. KST = UTC+9  
-  - 11/22 19:00 KST → `Date.UTC(2026,10,22,10)`
+  - 11/22 18:00 KST → `Date.UTC(2026,10,22,9)`
 - UI: `eventRangeTxt` / `clpWhen`
 
 ---
@@ -180,4 +180,4 @@ clp:{
 | key | 기간 (KST) | piece.id | eggInv |
 |-----|------------|----------|--------|
 | `snow` | 2026-11-01 0:00 ~ 11-22 18:00 | `clue-2026-11` | `eggsEv` |
-| `flanders` | 2026-11-22 19:00 ~ 12-20 18:00 | `clue-2026-flanders` | `eggsEv2` |
+| `flanders` | 2026-11-22 18:00 ~ 12-20 18:00 | `clue-2026-flanders` | `eggsEv2` |

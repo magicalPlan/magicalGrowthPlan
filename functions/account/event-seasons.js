@@ -13,13 +13,13 @@
    · EVENT_FORCE 는 여기 없음 (클라 pack.js 전용).
 
    UTC: Date.UTC(y, m0, d, h). KST = UTC+9.
-     11/22 19:00 KST → Date.UTC(2026,10,22,10)
+     11/22 18:00 KST → Date.UTC(2026,10,22,9)
    ============================================================================= */
 const EVENT_SEASONS=[
  /* 눈의 여왕 — 2026-11-01 0:00 ~ 11-22 18:00 KST */
  {key:"snow",id:"clue-2026-11",from:Date.UTC(2026,9,31,15),to:Date.UTC(2026,10,22,9),eggInv:"eggsEv",drop:{x_ok:.35,x_fail:.1}},
- /* 플랜더스의 개 — 2026-11-22 19:00 ~ 12-20 18:00 KST */
- {key:"flanders",id:"clue-2026-flanders",from:Date.UTC(2026,10,22,10),to:Date.UTC(2026,11,20,9),eggInv:"eggsEv2",drop:{x_ok:.35,x_fail:.1}}
+ /* 플랜더스의 개 — 2026-11-22 18:00 ~ 12-20 18:00 KST */
+ {key:"flanders",id:"clue-2026-flanders",from:Date.UTC(2026,10,22,9),to:Date.UTC(2026,11,20,9),eggInv:"eggsEv2",drop:{x_ok:.35,x_fail:.1}}
 ];
 
 function clpAt(now) {
