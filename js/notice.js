@@ -249,7 +249,66 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스·공용 대련 방과 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
  const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc);
+ const fc=elT("div","card rst-card");fc.style.marginTop="12px";fc.append(elT("h2","","☍ 유령 친구 정리 (운영자 전용)"),
+  elT("p","hint","캐릭터 이름(c/n)이 없는 계정을 유령으로 본다. 다른 사람의 친구·신청 칸(fr·fq·fo)에서 빼고, 계약직 명부(who)·공개 카드(players)·대련 roster 고아 칸도 지운다. 탈퇴 누락분 정리용이다."),
+  elT("p","hint","접속 중인 사람은 새로고침·재로그인 후 친구 목록이 맞춰진다. 캐시된 계약직 목록은 잠시 뒤·명부 다시 열면 갱신된다."));
+ const fb=elT("button","btn","유령 친구·명부 정리"),fm=elT("p","msg","");fb.type="button";fb.onclick=()=>frGhostRun(fb,fm);fc.append(fb,fm);box.appendChild(fc);
  drawAdmGrant(box)}
+/* 유령: accounts 에 c/n 이 없는 UID.
+   1) accounts shallow → c/n 있는 것만 생존
+   2) 생존 계정 fr·fq·fo 에서 유령 peer PATCH
+   3) who/players/duel/roster 에만 남은 고아 UID 삭제 (계약직 명부 잔재) */
+/* 생존 = accounts/.../c/n 이 있음. 읽기 실패는 생존으로 본다(오삭제 방지).
+   목록은 accounts 루트 shallow(운영자만 규칙 허용). who/players 우회 목록은 쓰지 않는다. */
+async function frGhostAlive(){let keys=[];
+ try{keys=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
+ keys=keys.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u));
+ const alive={};const chunk=40;let unsure=0,named=0;
+ for(let i=0;i<keys.length;i+=chunk){const part=keys.slice(i,i+chunk);
+  await Promise.all(part.map(async uid=>{
+   try{const s=await DB.doc("accounts/"+uid+"/c/n").get();const n=s.exists?s.data():null;
+    if(n!=null&&n!==""){alive[uid]=1;named++}
+   }catch(e){alive[uid]=1;unsure++}}))}
+ return{alive,unsure,scanned:keys.length,named,src:"accounts"}}
+async function frGhostFix(uid,alive){const body={},take=async(path,prefix)=>{const s=await DB.doc("accounts/"+uid+"/c/"+path).get();const v=s.exists?s.data():null;if(!v||typeof v!=="object")return;
+  Object.keys(v).forEach(p=>{if(p&&!alive[p])body["c/"+prefix+"/"+p]=null})};
+ await take("fr","fr");await take("fq","fq");await take("fo","fo");
+ const n=Object.keys(body).length;if(!n)return 0;
+ body.ts=Date.now();body.sid="fr-ghost";
+ await DB.doc("accounts/"+uid).patch(body);
+ if(uid===UID&&C){Object.keys(body).forEach(k=>{const m=String(k).match(/^c\/(fr|fq|fo)\/(.+)$/);if(!m)return;C[m[1]]=C[m[1]]||{};delete C[m[1]][m[2]]});try{updNav()}catch(e){}try{save()}catch(e){}}
+ return n}
+/* who·players·duel/roster 고아 + 빈 accounts 껍질 삭제. */
+async function frGhostRoster(alive){let whoK=[],plK=[],accK=[];
+ try{whoK=Object.keys((await DB.doc("who").peek())||{})}catch(e){}
+ try{plK=Object.keys((await DB.doc("players").peek())||{})}catch(e){}
+ try{accK=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
+ const bag={};whoK.concat(plK).concat(accK).forEach(u=>{if(/^[A-Za-z0-9]{8,128}$/.test(u)&&!alive[u])bag[u]=1});
+ const ids=Object.keys(bag);let gone=0,fail=0,at=0;
+ async function worker(){for(;;){const i=at++;if(i>=ids.length)return;const uid=ids[i];
+  try{await Promise.allSettled([DB.doc("who/"+uid).delete(),DB.doc("players/"+uid).delete(),DB.doc("duel/roster/"+uid).delete(),DB.doc("accounts/"+uid).delete()]);gone++}catch(e){fail++}}}
+ if(ids.length)await Promise.all(Array.from({length:Math.min(6,ids.length)},worker));
+ try{if(typeof plClear==="function")plClear()}catch(e){}
+ return{gone,fail,n:ids.length}}
+async function frGhostRun(btn,msg){if(!ADM[UID]||!XON()||!DB)return;
+ const t=prompt("탈퇴·삭제된 계정이 친구 목록·신청 칸·계약직 명부(who)에 남은 것을 지금 서버에서 지운다.\n이름이 있는 정상 계정은 지우지 않는다.\n캐릭터 본문은 받지 않는다.\n\n계속하려면 '정리'라고 입력해 줘.");
+ if((t||"").trim()!=="정리"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="생존 계정을 모으는 중(이름 확인)…";
+ let alive={},unsure=0,scanned=0,src="";
+ try{const r=await frGhostAlive();alive=r.alive||{};unsure=r.unsure||0;scanned=r.scanned||0;src=r.src||""}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
+ const ids=Object.keys(alive);
+ if(!scanned){msg.style.color="var(--bad)";msg.textContent="accounts 목록을 읽지 못했다. 운영자만 accounts 루트 읽기가 열려 있는지 규칙을 게시한 뒤 다시 하자.";btn.disabled=false;return}
+ if(!ids.length){msg.style.color="var(--bad)";msg.textContent="accounts "+scanned+"개 중 이름이 있는 계정을 확인하지 못했다. 정리하지 않았다.";btn.disabled=false;return}
+ let at=0,cleared=0,touched=0,fail=0;const total=ids.length;
+ async function worker(){for(;;){const i=at++;if(i>=total)return;const uid=ids[i];if(i%6===0)msg.textContent="유령 친구 정리 중... "+i+" / "+total+" (칸 "+cleared+", 실패 "+fail+")";
+  try{const n=await frGhostFix(uid,alive);cleared+=n;if(n)touched++}catch(e){fail++}}}
+ try{await Promise.all(Array.from({length:Math.min(6,total)},worker));
+  msg.textContent="계약직 명부·공개 카드 고아를 지우는 중…";
+  const rost=await frGhostRoster(alive);
+  msg.style.color="var(--mu)";msg.textContent="정리했다. 검사 "+total+"명 · 친구 칸 "+cleared+"개 · 명부 고아 "+rost.gone+"/"+rost.n+"개"+(fail||rost.fail?" · 실패 "+(fail+(rost.fail||0)):"")+".";
+  alertBox("☍ 유령 친구·명부 정리","친구/신청: 검사 "+total+"명 · 손본 "+touched+"명 · 지운 칸 "+cleared+"개\n계약직 명부·카드: 고아 "+rost.n+"명 중 "+rost.gone+"명 삭제"+(unsure?"\n이름 읽기 실패(보존) "+unsure+"명":"")+(fail||rost.fail?"\n실패 "+(fail+(rost.fail||0))+"건":"")+"\n\n접속 중인 사람은 새로고침·재로그인 후 친구 목록이 맞춰진다. 계약직 명부는 다시 열어 보자.")}
+ catch(e){msg.style.color="var(--bad)";msg.textContent="정리를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
+ btn.disabled=false}
 async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(inp.value||"").trim();
  if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
  let name="";try{const s=await DB.doc("players/"+uid+"/n").get();if(s.exists&&typeof s.data()==="string")name=s.data().replace(/👑/g,"").trim().slice(0,20)}catch(e){}
@@ -293,10 +352,9 @@ function admGrantPatchBody(r){const body={ts:Date.now(),sid:"admin-grant"};
  if(r.m)body["c/inv/mana"]=admGrantInc(r.m);
  Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;body["c/inv/"+id]=admGrantInc(n)});
  return body}
+/* 등록자 UID 목록: accounts 루트 shallow. 운영자 accounts .read 규칙이 필요하다(who 우회 없음). */
 async function admGrantIds(){let ids=[];
  try{ids=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
- if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
- if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
  return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
 /* 전체 보상용. who.dm=1(휴면·화원)은 빼고, accounts 본문은 받지 않는다.
    시즌 회귀(rstRun)는 admGrantIds 전체(휴면 포함)를 쓴다. */

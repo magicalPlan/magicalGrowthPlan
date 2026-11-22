@@ -28,6 +28,8 @@
    /* 앱 버전(APP_VER)은 js/common/include.js 에 있다. 화면 HTML 캐시와 설정 화면이 그 값을 쓴다. */
    // 온라인 서버: Firebase Realtime Database 주소.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
+   /* 회원 탈퇴 Cloud Function (asia-southeast1). js/setting/setting.js leaveAccount 가 호출. */
+   const FB_LEAVE_URL="https://asia-southeast1-magical-growth.cloudfunctions.net/accountLeave";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
       정기 출정 참가 자리(rooms/xm)는 매지컬 마치 목록이 펼쳐져 보일 때만 묶음 prefix 한 live() 로 지킨다. 거절되면 POLL_FAST 묻기로 받고, 목록을 접거나 화면을 벗어나면 끊는다.
       타락 명단은 마을에 들어올 때 raid 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나면 닫는다. 사람마다 체력을 따로 읽지 않는다.

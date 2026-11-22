@@ -5,7 +5,9 @@ verKeep();
 let setLinked="";
 function pwShow(em){setLinked=em&&!mailDummy(em)?em:"";const b=$("#set-pw");if(b)b.hidden=!setLinked;if(!setLinked){const f=$("#set-pw-box");if(f)f.hidden=true}}
 function mailErr(e,act){const s=String(e&&e.message||e),pw=act==="pw",leave=act==="leave";
- if(s==="401"||s==="403")return leave?"서버 규칙이 계정 기록 삭제를 막았다.":"서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
+ if(s==="401"||s==="403")return leave?"탈퇴 권한이 거부되었다. 다시 로그인한 뒤 시도하자.":"서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
+ if(s==="LEAVE_URL")return "탈퇴 서버 주소가 없다. 페이지를 새로고침하거나 운영자에게 알려 주자.";
+ if(s==="must"||s==="wipe"||s.indexOf("LEAVE_")==0)return "친구·이메일 기록을 지우지 못해 탈퇴를 끝내지 못했다. 잠시 뒤 다시 시도하자.";
  if(s.indexOf("EMAIL_EXISTS")===0)return "이미 다른 계정에 쓰이는 이메일이다.";
  if(s.indexOf("INVALID_PASSWORD")===0||s.indexOf("INVALID_LOGIN_CREDENTIALS")===0||s.indexOf("EMAIL_NOT_FOUND")===0)return "비밀번호가 맞지 않다.";
  if(s.indexOf("WEAK_PASSWORD")===0)return "새 비밀번호는 8자 이상·영문·숫자가 필요하다.";
@@ -46,23 +48,28 @@ function drawSetting(){
  oddsDraw();
  if(on)mailNote();
 }
-/* 회원 탈퇴: 비밀번호로 다시 확인한 뒤 Firebase 계정과 이 계정의 서버 기록을 지운다. */
-async function leaveWipe(){const uid=AUTH.uid,id=mailId();
- if(DB&&uid){const del=p=>{try{return DB.doc(p).delete()}catch(e){return Promise.resolve()}};
-  await Promise.allSettled([del("accounts/"+uid),del("players/"+uid),del("who/"+uid),del("duel/roster/"+uid),del("raid/"+uid),del("wboss/pic/"+uid),del("wboss/picm/"+uid)]);
-  if(id){let linked="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")linked=s.data()}catch(e){}
-   try{await DB.doc("mail/"+id).delete()}catch(e){}
-   if(linked&&!mailDummy(linked)){try{await DB.doc("elogin/"+mailKey(linked)).delete()}catch(e){}}}}
+/* 회원 탈퇴: 비밀번호 재인증 후 Cloud Function(accountLeave)이 RTDB·Auth 를 일괄 정리한다.
+   클라는 Bearer idToken 으로 호출하고, 로컬 세션만 비운다. (구 leaveWipe·idt delete 는 서버로 이전) */
+function leaveLocalClear(uid){
  try{["mgr_rt","mgr_id","mgr"].forEach(k=>localStorage.removeItem(k));if(uid){localStorage.removeItem("mgr_jc_"+uid);localStorage.removeItem("mgr_bk_"+uid);localStorage.removeItem("mgr_pend_"+uid);localStorage.removeItem("mgr_rr_"+uid)}}catch(e){}}
+async function leaveCall(){const url=typeof FB_LEAVE_URL==="string"&&FB_LEAVE_URL;if(!url)throw new Error("LEAVE_URL");
+ if(!AUTH.tok)throw new Error("CREDENTIAL_TOO_OLD_LOGIN_AGAIN");
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+AUTH.tok},body:JSON.stringify({id:mailId()||""})});
+ let j=null;try{j=await r.json()}catch(e){j=null}
+ if(r.status===401||r.status===403)throw new Error(String(r.status));
+ if(!r.ok||!(j&&j.ok))throw new Error((j&&j.why)||("LEAVE_"+r.status));
+ return j}
 async function leaveAccount(){const m=$("#setm");if(m)m.textContent="";
  if(!AUTH.uid){if(m)m.textContent="로그인한 뒤에 탈퇴할 수 있다.";return}
  if(!confirm("정말 회원 탈퇴를 진행하시겠습니까?"))return;
  const pw=prompt("비밀번호를 입력해주십시오.");if(pw==null)return;
  if(!String(pw).length){if(m)m.textContent="비밀번호를 적어야 한다.";return}
  const btn=$("#set-leave");if(btn)btn.disabled=true;
+ const uid=AUTH.uid;
  try{await mailReauth(mailId(),pw,setLinked||AUTH.mail||"");
-  await leaveWipe();
-  await idt("delete",{idToken:AUTH.tok});
+  if(m)m.textContent="서버에서 기록을 지우는 중이다…";
+  await leaveCall();
+  leaveLocalClear(uid);
   AUTH.uid=null;AUTH.tok=null;AUTH.rt="";AUTH.mail="";AUTH.name="";
   alert("회원 탈퇴에 성공하였습니다.");
   location.reload()}

@@ -17,8 +17,12 @@ const {createPetTraitGrant} = require("./pettr");
 const {createDuelDevScore, createDuelDevClaim} = require("./duel");
 const {createPexStart, createPexClaim} = require("./pex");
 const {createMgFlandersSubmit} = require("./mg-flanders");
+const {createAccountLeave} = require("./leave");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
+
+/* 회원 탈퇴: POST Bearer idToken → RTDB 관련 칸 일괄 삭제 + Auth deleteUser. */
+exports.accountLeave = createAccountLeave(getDatabase);
 
 /* 친구: fmsg req|ok|del → accounts c/fr·fq·fo PATCH. 공명 rok/rno 제외. */
 exports.fmsgFriend = createFmsgFriend(getDatabase);
