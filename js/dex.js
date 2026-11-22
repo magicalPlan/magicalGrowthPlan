@@ -49,7 +49,7 @@ function dex(msg,again){const fresh=!again&&($("#v-titles").hidden||recTab!=="de
 /* 사역마 도감. 알에서 깨어난 종만 이름·설명·성능을 적는다. 기간 한정은 칸 모양이 다르다. */
 function petMet(sp){if(!C||!sp)return false;if(C.petSeen&&C.petSeen[sp])return true;return Array.isArray(C.pets)&&C.pets.some(q=>q&&q.sp===sp)}
 function petDexCard(P){const lim=P[3]===4,got=petMet(P[0]),c=elT("div","chip sq dex-it pet-dex-it"+(lim?" lim":"")+(got?"":" lock"));
- c.appendChild(elT("span","pet-ic",got?P[2]:(lim?"❄️":"❔")));
+ c.appendChild(elT("span","pet-ic",got?P[2]:(lim?"✨":"❔")));
  c.appendChild(elT("small","dex-tag",got?(lim?"기간 한정":(PET_RARE[P[3]]||"")):(lim?"기간 한정":"사역마")));
  c.appendChild(elT("b",got?"pet-r"+P[3]:"",got?P[1]:"???"));
  c.appendChild(elT("small","",got?P[4]:(lim?"우연이 닿아야만 만날 수 있는 이들이 있다.":"아직 만나지 못한 사역마이다.")));

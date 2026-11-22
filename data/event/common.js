@@ -38,10 +38,10 @@ const CLP_FORM={
  goal:10000,
  drop:{x_ok:.35,x_fail:.1,lh:.35,clue:{base:2,extra:.5,fail:.5,early:.5},eb:3},
  ms:[
-  [.25,{g:1000,mat:{m_dew:5}}],
-  [.5,{m:10,mat:{m_shard:10,m_herb:10},it:{g2:3}}],
-  [.75,{it:{hope:3},evEgg:3}],
-  [1,{g:3000,m:10,mat:{m_dew:10,m_ash:20}}]
+  [.25,{g:2000,mat:{m_dew:5,m_forest:10,m_coast:10,m_valley:10}}],
+  [.5,{g:4000,mat:{m_herb:10,m_ore:10},it:{g4:3,petcan:5}}],
+  [.75,{g:6000,mat:{m_crown:10,m_abyss:5},it:{petfeast:3},evEgg:5}],
+  [1,{g:8000,it:{milk:1,trcyan:1,trblue:1,trcast:1}}]
  ]
 };
 
