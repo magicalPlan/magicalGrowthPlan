@@ -18,11 +18,15 @@ const {createDuelDevScore, createDuelDevClaim} = require("./duel");
 const {createPexStart, createPexClaim} = require("./pex");
 const {createMgFlandersSubmit} = require("./mg-flanders");
 const {createAccountLeave} = require("./leave");
+const {createRosterMirrorSync} = require("./roster-mirror");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
 /* 회원 탈퇴: POST Bearer idToken → RTDB 관련 칸 일괄 삭제 + Auth deleteUser. */
 exports.accountLeave = createAccountLeave(getDatabase);
+
+/* 등록자 미러: 운영자 POST Bearer → accounts/c 기준 players·who 강제 맞춤. */
+exports.rosterMirrorSync = createRosterMirrorSync(getDatabase);
 
 /* 친구: fmsg req|ok|del → accounts c/fr·fq·fo PATCH. 공명 rok/rno 제외. */
 exports.fmsgFriend = createFmsgFriend(getDatabase);

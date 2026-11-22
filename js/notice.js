@@ -133,6 +133,7 @@ function drawDoom () {
    처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망, 대련 전적 등.
    강제 취소: 장기 토벌(lh)·단서 탐색(clue) — 진행 중·완료(미수령)여도 보상 없이 지운다.
    알: 부화 중(egg)·재고(eggs·eggsEv·eggsEv2) 전부 0. 환불·부화 없음.
+   등대·시설: 개인 wf·fc·wfl 등 비움. 시즌 wipe 는 tally/wf·score·vfac·vfactop·tally/dr 도 지운다.
    시즌 때 공용 채팅·선물 우편함·마을·보스·타락·대련 방은 함께 지운다(계정 친구 목록 fr 은 남김). */
 let RST=null;
 /* lh·clue: KEEP에 넣지 않는다. 회귀 때 진행·완료 미수령도 강제 취소(보상 없음). lhGot·clueGot 도 함께 비움.
@@ -167,31 +168,71 @@ function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={}
  next.lh=null;next.clue=null;next.lhGot={};next.clueGot={};
  /* 알: 부화·재고 전부 0(환불 없음). */
  try{if(typeof eggRstAbort==="function")eggRstAbort(next);else{next.egg=null;next.eggs=0;next.eggsEv=0;next.eggsEv2=0}}catch(e){next.egg=null;next.eggs=0;next.eggsEv=0;next.eggsEv2=0}
+ /* 희망의 등대·마을 시설 개인 칸: 기여·기억 단계·일일 이용 비움(공용 tally/vfac 는 시즌 wipe). */
+ next.wf=0;next.wfl=0;next.wfDone=null;next.wfu=null;next.fc={};next.facl={};next.fu=null;
  next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
  next.stats.duW=0;next.stats.duL=0;next.stats.duD=0;
+ next.stats.wfGive=0;next.stats.facGive=0;next.stats.facUses=0;
  /* 사역마 보유 상한: petMax 와 stats.petMax 중 큰 쪽을 맞춘다(허가증 기록 유지). */
  {const pm=Math.max(Number(next.petMax)||0,Number(next.stats.petMax)||0);if(pm>0){next.petMax=pm;next.stats.petMax=Math.max(Number(next.stats.petMax)||0,pm)}}
  try{if(typeof flagsEnsure==="function")flagsEnsure(next);else if(!next.flags)next.flags={flag:{},story_flag:{}}}catch(e){}
  const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
-function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
- return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,du:{w:0,l:0},hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
+/* 등록자 미러 맞춤은 Cloud Function(rosterMirrorSync)이 Admin SDK 로 한다.
+   클라는 Bearer + 운영자 검증만 넘기고, players/who 일괄 PATCH 는 하지 않는다. */
+function rosterCacheClear(){try{if(typeof plClear==="function")plClear();else if(typeof PLC!=="undefined")PLC=null}catch(e){}
+ try{if(typeof rsSnapClear==="function")rsSnapClear()}catch(e){}}
+async function rosterPeekMaxLv(){let max=0,n=0;try{const sn=await once(DB.collection("players").by("lv").limit(8));(sn.docs||[]).forEach(d=>{const lv=Math.max(0,Number((d.data()||{}).lv)||0);if(lv>max)max=lv;n++})}catch(e){try{const sn=await once(DB.collection("players").by("pw").limit(8));(sn.docs||[]).forEach(d=>{const lv=Math.max(0,Number((d.data()||{}).lv)||0);if(lv>max)max=lv;n++})}catch(e2){}}
+ return{max,n}}
+/* 서버 응답을 그대로 담아 실패 종류(write/read/…)를 화면 문구에 쓴다. */
+function rosterMirrorErr(j,status){const e=new Error((j&&j.why)||("MIRROR_"+status));e.why=j&&j.why;e.payload=j||null;e.status=status;return e}
+function rosterMirrorFailTxt(rost){const rf=Number(rost&&rost.readFail)||0,wf=Number(rost&&rost.writeFail)||0,parts=[];
+ if(rf)parts.push("계정 조회 실패 "+rf+"명");
+ if(wf)parts.push("공개 카드·명부 쓰기 실패 "+wf+"명(조회만 되고 PATCH/update 가 거절됨)");
+ return parts.join(" · ")}
+async function rosterMirrorCall(mode,uids){const url=typeof FB_ROSTER_MIRROR_URL==="string"&&FB_ROSTER_MIRROR_URL;if(!url)throw new Error("MIRROR_URL");
+ if(!AUTH.tok)throw new Error("auth");
+ const body={mode:mode==="rst"?"rst":"sync"};
+ if(Array.isArray(uids)&&uids.length)body.uids=uids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(String(u||"")));
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+AUTH.tok},body:JSON.stringify(body)});
+ let j=null;try{j=await r.json()}catch(e){j=null}
+ if(r.status===401||r.status===403)throw rosterMirrorErr(j||{why:String(r.status)},r.status);
+ /* 207·500 등: 본문에 집계가 있으면 호출측이 문구로 보여 준다. */
+ if(!r.ok||!(j&&j.ok)){const err=rosterMirrorErr(j,r.status);if(j)err.partial=j;throw err}
+ return j}
+async function rosterForceRun(btn,msg){if(!ADM[UID]||!XON()||!DB)return;
+ const t=prompt("서버가 accounts 기준으로 등록자(players)·명부(who)를 다시 쓴다. 캐릭터 본문은 건드리지 않는다.\n이름·등급·특성·속성·레벨·토벌·전투력·칭호·사역마 요약 등을 맞춘다. 계정 없는 고아 명부는 지운다.\n\n계속하려면 '동기화'라고 입력해 줘.");
+ if((t||"").trim()!=="동기화"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="서버에서 명부를 맞추는 중...";
+ try{const rost=await rosterMirrorCall("sync");rosterCacheClear();
+  let peak={max:0};try{peak=await rosterPeekMaxLv()}catch(e){}
+  try{if(typeof roster==="function"&&$("#v-roster")&&!$("#v-roster").hidden)roster()}catch(e){}
+  const peakTxt=peak.max?" · 동기화 후 players 최고 레벨 "+peak.max:"";
+  const failTxt=rosterMirrorFailTxt(rost);
+  msg.style.color=failTxt?"var(--bad)":"var(--mu)";msg.textContent="동기화했다. 대상 "+(rost.total||0)+"명 · 맞춤 "+(rost.synced||0)+"명"+(rost.gone?" · 고아 삭제 "+rost.gone+"명":"")+(failTxt?" · "+failTxt:"")+peakTxt+".";
+  alertBox("📋 명부 강제 동기화",msg.textContent+(failTxt?"\n\n"+failTxt+". 잠시 뒤 다시 동기화해 보자.":"")+(peak.max>20?"\n\n아직 레벨 "+peak.max+" 카드가 보인다. 계정(c)이 회귀되지 않았거나, 접속 중인 옛 탭이 다시 올렸을 수 있다.":"")+"\n\n등록자 탭을 다시 열면 맞춘 목록이 보인다.")}
+ catch(e){const c=String(e&&e.why||e&&e.message||e),partial=e&&e.partial;
+  if(partial){rosterCacheClear();const failTxt=rosterMirrorFailTxt(partial)||(c==="write"?"공개 카드·명부 쓰기(PATCH/update) 실패":"명부 동기화 실패");
+   msg.style.color="var(--bad)";msg.textContent="조회는 했으나 쓰기에 실패했다. 맞춤 "+(partial.synced||0)+"/"+(partial.total||0)+" · "+failTxt+(partial.msg?" ("+partial.msg+")":"")+".";
+   alertBox("📋 명부 강제 동기화",msg.textContent+"\n\n다시 '명부 강제 동기화'를 눌러 보자.");btn.disabled=false;return}
+  msg.style.color="var(--bad)";msg.textContent=c==="403"||c==="401"?"운영자만 서버 명부 동기화를 쓸 수 있다.":c==="MIRROR_URL"?"서버 주소를 찾지 못했다. 배포·캐시를 확인해 보자.":c==="write"?"계정은 조회됐지만 공개 카드·명부 쓰기에 실패했다. 잠시 뒤 다시 시도해 보자.":"동기화를 끝내지 못했다. 인터넷 연결과 함수 배포를 확인하고 다시 시도해 보자."}
+ btn.disabled=false}
 /* 한 계정 서버 회귀. 표시보다 뒤에 만든 캐릭터는 내용 없이 rsv 만 맞춘다.
    캐릭터 본문(c)은 patch 가 아니라 set 으로 통째로 갈아 끼운다. patch 로 넣으면 각인(rn)·옛 b 같은 칸이 남아
-   레벨만 1인데 전투력이 수천으로 보이는 일이 생긴다. 등록자 명부(who)·공개 카드의 pw 도 같이 맞춘다. */
+   레벨만 1인데 전투력이 수천으로 보이는 일이 생긴다.
+   players/who 미러는 rstWrite 가 쓰지 않는다 — 호출측이 rosterMirrorCall 로 맞춘다. */
 async function rstWrite(uid,src,R){if(!src||typeof src!=="object")throw new Error("empty");
  const ch=Number(src.born)>R.id?Object.assign(JSON.parse(JSON.stringify(src)),{rsv:R.id}):rstShape(src,R.id);
  await DB.doc("accounts/"+uid+"/c").set(ch);
  await DB.doc("accounts/"+uid).patch({prog:{lv:ch.lv||1,ex:ch.ex||0,xv:ch.xv||3},ts:Date.now(),sid:"admin-rst"});
  await DB.doc("players/"+uid+"/rr").set(R.id);
- const pub=rstPub(ch),late=[];
- try{await DB.doc("players/"+uid).patch(pub)}catch(e){late.push("공개 카드")}
- try{await DB.doc("who/"+uid).patch({g:String(ch.g||"").slice(0,2),a:String(pub.a||"").slice(0,40),lv:ch.lv||1,pw:Math.max(0,Number(pub.pw)||0),dz:0,fl:null,rv:R.id,db:null})}catch(e){late.push("명부")}
  try{await DB.doc("raid/"+uid).delete()}catch(e){}
  /* 개인 회귀: 그 사람의 대련 신청함·구인글만 지운다. 진행 중 xb 방·상대 쪽 xa 는 시즌 초기화에서 통째로 비운다. */
  try{await DB.doc("rooms/xa"+uid).delete()}catch(e){}
  try{await DB.doc("rooms/xr/"+uid).delete()}catch(e){}
  try{await DB.doc("event_minigame/flanders/rank/"+uid).delete()}catch(e){}
- return{ch,late}}
+ /* 시설·등대 기여 카드도 캐릭터와 같이 비운다(옛 score 로 tally 가 다시 채워지지 않게). */
+ try{const prev=C;C=ch;const body=typeof scoreBody==="function"?scoreBody():{n:String(ch.n||"").slice(0,20),v:ch.v||"",fc:{},wf:0,dr:null};C=prev;await DB.doc("score/"+uid).set(body)}catch(e){try{await DB.doc("score/"+uid).delete()}catch(e2){}}
+ return{ch}}
 function rstClearTripUI(){try{lhDefer=null}catch(e){}
  try{if(typeof hubLH==="function")hubLH()}catch(e){}
  try{if(typeof clueDraw==="function")clueDraw()}catch(e){}
@@ -218,7 +259,8 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["tally/wf","희망의 등대 합계"],["tally/dr","재해 진압 합계"],["tally/seed","등대·시설 시드 자물쇠"],["score","시설·등대·재해 기여 카드"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
+ try{if(typeof WFD==="object"){WFD={sum:0,v:{},top:[]}}if(typeof FACD==="object")FACD={};if(typeof facSrv==="object")facSrv={};if(typeof facFly==="object")facFly={};if(typeof vfacReady==="object")vfacReady={};if(typeof DRP==="object"){for(const k of Object.keys(DRP))delete DRP[k]}if(typeof scoreSig!=="undefined")scoreSig="";if(typeof facAt!=="undefined")facAt=0}catch(e){}
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
   const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
@@ -239,20 +281,39 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
    try{const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object"){empty++;continue}
     await rstWrite(uid,acc.c,R);ok++}catch(e){String(e&&e.message||e)==="empty"?empty++:fail++}}}
   if(total)await Promise.all(Array.from({length:Math.min(6,total)},worker));
+  msg.textContent="서버에서 명부를 맞추는 중...";
+  let rost={synced:0,total:0,gone:0,fail:0},mirrorErr="",mirrorPartial=null;
+  try{rost=await rosterMirrorCall("rst")}catch(e){mirrorErr=String(e&&e.why||e&&e.message||e);mirrorPartial=e&&e.partial||null;if(mirrorPartial)rost=mirrorPartial}
   if(C){const self=await rstTakeCloud(R.id);if(!self){C=rstShape(C,R.id);try{clearPend()}catch(e){}try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}try{saveCloud(true)}catch(e){}try{regPlayer()}catch(e){}rstClearTripUI()}
-   C.rstn=R.id;save();try{hub()}catch(e){}}
-  alertBox("🌑 시즌 초기화 완료","서버에서 캐릭터 "+total+"명 중 "+ok+"명을 되돌렸다."+(empty?" 기록 없음 "+empty+"명.":"")+(fail?" 실패 "+fail+"명.":"")+"\n플레이어에게는 다음 접속 때 알림이 한 번 뜬다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
+   C.rstn=R.id;save();try{if(typeof pubScore==="function")pubScore()}catch(e){}try{hub()}catch(e){}try{if(typeof hubFac==="function")hubFac()}catch(e){}}
+  rosterCacheClear();
+  let peak={max:0};try{peak=await rosterPeekMaxLv()}catch(e){}
+  const peakTxt=peak.max?" 동기화 후 players 최고 레벨 "+peak.max+".":"";
+  const failTxt=rosterMirrorFailTxt(rost);
+  const lateTxt=mirrorErr||failTxt?"\n\n명부: "+(failTxt||("서버 동기화 실패 ("+mirrorErr+")"))+". 조회만 되고 쓰기가 안 됐을 수 있다. '명부 강제 동기화'를 다시 눌러 보자.":"";
+  alertBox("🌑 시즌 초기화 완료","서버에서 캐릭터 "+total+"명 중 "+ok+"명을 되돌렸다."+(empty?" 기록 없음 "+empty+"명.":"")+(fail?" 실패 "+fail+"명.":"")+"\n명부 동기화: 맞춤 "+(rost.synced||0)+"/"+(rost.total||0)+"."+(rost.gone?" 고아 삭제 "+rost.gone+".":"")+peakTxt+lateTxt+"\n플레이어에게는 다음 접속 때 알림이 한 번 뜬다.\n\n지운 것: "+(w.done.join(", ")||"없음")+(w.fail.length?"\n\n지우지 못한 것: "+w.fail.join(", ")+"\n(서버 규칙에서 운영자 쓰기가 막혀 있을 수 있다. Firebase 콘솔에서 직접 지워야 한다.)":""));
   msg.textContent=""}
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}btn.disabled=false}
+/* 공지 탭 접기. 가방·상점·의뢰와 같은 fold-h / 접기▲·펼치기▼. */
+function ntcListFold(open){const b=$("#ntctog"),box=$("#ntcbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_ntc_list",open?"1":"0")}catch(e){}}
+function rstFoldOpen(id,def){try{const v=localStorage.getItem("mgr_rst_"+id);if(v==null)return !!def;return v!=="0"}catch(e){return !!def}}
+function rstFoldApply(btn,box,open,id){if(!btn||!box)return;box.hidden=!open;btn.textContent=open?"접기 ▲":"펼치기 ▼";btn.setAttribute("aria-expanded",open?"true":"false");if(id)try{localStorage.setItem("mgr_rst_"+id,open?"1":"0")}catch(e){}}
+/* 운영 카드: 제목만 두고 본문은 접는다. 기본 접힘(defOpen=false). {c,box} */
+function rstFoldCard(title,id,extraClass,defOpen){const c=elT("div","card rst-card"+(extraClass?" "+extraClass:""));c.style.marginTop="12px";
+ const box=elT("div","rst-fold");box.id="rstb-"+id;
+ const btn=elT("button","chip fold-btn","");btn.type="button";btn.setAttribute("aria-controls",box.id);btn.setAttribute("aria-label",title+" 접기 펼치기");
+ const h=elT("h2","fold-h");h.append(elT("span","",title),btn);c.append(h,box);
+ const open=rstFoldOpen(id,defOpen);rstFoldApply(btn,box,open,id);btn.onclick=()=>rstFoldApply(btn,box,box.hidden,id);
+ return{c,box}}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
- const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
-  elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
+ const season=rstFoldCard("🌑 시즌 초기화 (운영자 전용)","season","",false);season.c.style.marginTop="0";
+ season.box.append(elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계·기여 순위, 희망의 등대 합계·기여 카드·재해 진압 합계, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 등대·시설 기여와 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
- const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
- const rc=elT("div","card rst-card");rc.style.marginTop="12px";rc.append(elT("h2","","🏛 시설 기여 복구 (운영자 전용)"),
-  elT("p","hint","각 플레이어 카드와 기여 기록에 남아 있는 시설 기여를 읽어, 마을별 전체 기여·단계와 개인 순위를 지금 기록에 맞춘다. 프로필 사진은 받지 않는다. 다시 실행해도 점수가 두 배로 쌓이지 않는다."));
+ const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);season.box.append(b,m);box.appendChild(season.c);
+ const vfac=rstFoldCard("🏛 시설 기여 복구 (운영자 전용)","vfac","",false);
+ vfac.box.append(elT("p","hint","각 플레이어 카드와 기여 기록에 남아 있는 시설 기여를 읽어, 마을별 전체 기여·단계와 개인 순위를 지금 기록에 맞춘다. 프로필 사진은 받지 않는다. 다시 실행해도 점수가 두 배로 쌓이지 않는다."));
  const rb=elT("button","btn","시설 기여 복구"),rm=elT("p","msg","");rb.type="button";rb.onclick=async()=>{if(!ADM[UID]||!XON()||typeof apiVfacRecover!=="function")return;
   const t=prompt("플레이어에게 저장된 시설 기여로 마을 단계와 순위를 다시 쓴다.\n기부가 몰리는 때는 피하고, 한 번만 실행하면 된다.\n\n계속하려면 '복구'라고 입력해 줘.");
   if((t||"").trim()!=="복구"){rm.style.color="var(--mu)";rm.textContent="취소했다.";return}
@@ -260,16 +321,20 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   try{const w=await apiVfacRecover(s=>{rm.textContent=s});rm.style.color="var(--mu)";rm.textContent="복구했다. 플레이어 "+w.players+"명 중 기여 "+w.used+"명."+(w.skipped?" 마을이 없는 기록 "+w.skipped+"명.":"")+(w.failRead?" 읽지 못한 플레이어 "+w.failRead+"명.":"")+(w.failWrite?" 쓰지 못한 칸 "+w.failWrite+"개.":"")+(w.removed?" 옛 순위 "+w.removed+"개 삭제.":"");
    alertBox("🏛 시설 기여 복구",rm.textContent+(w.lines.length?"\n\n"+w.lines.join("\n"):"\n\n옮길 시설 기여가 없었다.")+"\n\n마을 탭에 다시 들어가면 맞춘 단계가 보인다.");}
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
- rc.append(rb,rm);box.appendChild(rc);
- const pc=elT("div","card rst-card rst-one");pc.style.marginTop="12px";pc.append(elT("h2","","👤 개인 회귀 (운영자 전용)"),
-  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+ vfac.box.append(rb,rm);box.appendChild(vfac.c);
+ const one=rstFoldCard("👤 개인 회귀 (운영자 전용)","one","rst-one",false);
+ one.box.append(elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
   elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스·공용 대련 방과 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
- const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc);
- const fc=elT("div","card rst-card");fc.style.marginTop="12px";fc.append(elT("h2","","☍ 유령 친구 정리 (운영자 전용)"),
-  elT("p","hint","캐릭터 이름(c/n)이 없는 계정을 유령으로 본다. 다른 사람의 친구·신청 칸(fr·fq·fo)에서 빼고, 계약직 명부(who)·공개 카드(players)·대련 roster 고아 칸도 지운다. 탈퇴 누락분 정리용이다."),
+ const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);one.box.append(row,pm);box.appendChild(one.c);
+ const sync=rstFoldCard("📋 명부 강제 동기화 (운영자 전용)","roster","",false);
+ sync.box.append(elT("p","hint","서버가 accounts 기준으로 등록자(players)·명부(who)를 다시 쓴다. 캐릭터 본문은 바꾸지 않는다. 회귀 뒤 미접속자 레벨·특성이 옛값으로 남아 있을 때 쓴다."),
+  elT("p","hint","이름·등급·특성·속성·레벨·토벌·전투력·칭호·사역마 요약을 맞춘다. 접속·휴면·사진(on/la/dm/im)은 건드리지 않는다. 상세 프로필·정밀 전투력은 각자 접속할 때 보정된다."));
+ const sb=elT("button","btn","명부 강제 동기화"),sm=elT("p","msg","");sb.type="button";sb.onclick=()=>rosterForceRun(sb,sm);sync.box.append(sb,sm);box.appendChild(sync.c);
+ const ghost=rstFoldCard("☍ 유령 친구 정리 (운영자 전용)","ghost","",false);
+ ghost.box.append(elT("p","hint","캐릭터 이름(c/n)이 없는 계정을 유령으로 본다. 다른 사람의 친구·신청 칸(fr·fq·fo)에서 빼고, 계약직 명부(who)·공개 카드(players)·대련 roster 고아 칸도 지운다. 탈퇴 누락분 정리용이다."),
   elT("p","hint","접속 중인 사람은 새로고침·재로그인 후 친구 목록이 맞춰진다. 캐시된 계약직 목록은 잠시 뒤·명부 다시 열면 갱신된다."));
- const fb=elT("button","btn","유령 친구·명부 정리"),fm=elT("p","msg","");fb.type="button";fb.onclick=()=>frGhostRun(fb,fm);fc.append(fb,fm);box.appendChild(fc);
+ const fb=elT("button","btn","유령 친구·명부 정리"),fm=elT("p","msg","");fb.type="button";fb.onclick=()=>frGhostRun(fb,fm);ghost.box.append(fb,fm);box.appendChild(ghost.c);
  drawAdmGrant(box)}
 /* 유령: accounts 에 c/n 이 없는 UID.
    1) accounts shallow → c/n 있는 것만 생존
@@ -336,9 +401,13 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
  try{const R={id:Date.now(),ts:Date.now()};
   let src=null;if(uid===UID&&C)src=C;else{const s=await DB.doc("accounts/"+uid).get();const acc=s.exists?s.data():null;if(!acc||!acc.c||typeof acc.c!=="object")throw new Error("empty");src=acc.c}
   const w=await rstWrite(uid,src,R);await DB.doc("players/"+UID+"/rstu/"+uid).set(R);
+  msg.textContent="서버에서 명부를 맞추는 중...";
+  let lateMsg="";try{await rosterMirrorCall("rst",[uid])}catch(e){const why=String(e&&e.why||e&&e.message||e);const ft=e&&e.partial?rosterMirrorFailTxt(e.partial):"";
+   lateMsg=" 명부: "+(ft||(why==="write"?"조회는 됐으나 공개 카드·명부 쓰기 실패":"서버 동기화 실패"))+" — '명부 강제 동기화'로 다시 맞출 수 있다."}
+  rosterCacheClear();
   if(uid===UID){C=w.ch;try{clearPend()}catch(e){}try{if(typeof accMark==="function")accMark()}catch(e){}try{keep("mgr_rr_"+UID,String(R.id))}catch(e){}
-   C.rstn=R.id;note("notice",rstNoteTxt(true));save();try{hub()}catch(e){}msg.textContent="이 계정을 지금 회귀했다.";inp.value=""}
-  else msg.textContent=who+" 의 캐릭터를 서버에서 지금 되돌렸다. 알림은 그 사람이 다음에 접속할 때 한 번 뜬다."+(w.late.length?" "+w.late.join(", ")+"은 그 사람이 다음에 접속하면 맞춰진다.":"");inp.value=""}
+   C.rstn=R.id;note("notice",rstNoteTxt(true));save();try{if(typeof pubScore==="function")pubScore()}catch(e){}try{hub()}catch(e){}try{if(typeof hubFac==="function")hubFac()}catch(e){}msg.textContent="이 계정을 지금 회귀했다."+lateMsg;inp.value=""}
+  else msg.textContent=who+" 의 캐릭터를 서버에서 지금 되돌렸다. 알림은 그 사람이 다음에 접속할 때 한 번 뜬다."+lateMsg;inp.value=""}
  catch(e){const c=String(e&&e.message||e);msg.style.color="var(--bad)";msg.textContent=c==="401"||c==="403"?"이 계정의 기록을 운영자가 직접 바꾸지 못했다. 데이터베이스 규칙에서 운영자의 계정 읽기와 쓰기가 열려 있는지 확인해야 한다.":c==="empty"?"그 UID의 캐릭터 기록을 찾지 못했다.":"저장하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
  btn.disabled=false}
 
@@ -439,14 +508,14 @@ function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"�
   take(itRows);take(matRows);const r={g:admGrantNum(gIn.inp.value),ex:admGrantNum(exIn.inp.value),m:admGrantNum(mIn.inp.value),eggs:admGrantNum(egIn.inp.value,9999),eggsEv:admGrantNum(evIn.inp.value,9999),inv};
   if(!r.g&&!r.ex&&!r.m&&!r.eggs&&!r.eggsEv&&!Object.keys(inv).length)return null;return r}}
 function drawAdmGrant(box){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
- const gc=elT("div","card rst-card adm-grant");gc.style.marginTop="12px";
- gc.append(elT("h2","","🎁 전체 보상 지급 (운영자 전용)"),
-  elT("p","hint","accounts 에 캐릭터가 있는 등록자에게 보상을 바로 더한다. 휴면(화원)은 제외한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
+ const all=rstFoldCard("🎁 전체 보상 지급 (운영자 전용)","grant_all","adm-grant",false);
+ all.box.append(elT("p","hint","accounts 에 캐릭터가 있는 등록자에게 보상을 바로 더한다. 휴면(화원)은 제외한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
   elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다."));
- const getAll=admGrantFields(gc);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);gc.append(gb,gm);box.appendChild(gc);
- const pc=elT("div","card rst-card adm-grant");pc.style.marginTop="12px";
- pc.append(elT("h2","","🎁 개인 보상 지급 (운영자 전용)"),
-  elT("p","hint","UID 한 명의 캐릭터에만 보상을 더한다. 접속 중이 아니어도 서버 기록에 바로 반영된다. 보상 종류는 전체 지급과 같다."),
+ const getAll=admGrantFields(all.box);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);all.box.append(gb,gm);box.appendChild(all.c);
+ const one=rstFoldCard("🎁 개인 보상 지급 (운영자 전용)","grant_one","adm-grant",false);
+ one.box.append(elT("p","hint","UID 한 명의 캐릭터에만 보상을 더한다. 접속 중이 아니어도 서버 기록에 바로 반영된다. 보상 종류는 전체 지급과 같다."),
   elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤, 대상 UID를 넣고 지급한다."));
- const urow=elT("div","row");urow.style.cssText="margin-top:8px;gap:6px";const uinp=elT("input");uinp.type="text";uinp.maxLength=128;uinp.placeholder="계정 UID";uinp.setAttribute("aria-label","보상 받을 계정 UID");uinp.autocomplete="off";uinp.spellcheck=false;uinp.style.flex="1";urow.appendChild(uinp);pc.appendChild(urow);
- const getOne=admGrantFields(pc);const pb=elT("button","btn","이 사람에게 지급"),pm=elT("p","msg","");pb.type="button";pb.style.marginTop="12px";pb.onclick=()=>admGrantOne(pb,pm,getOne,uinp);pc.append(pb,pm);box.appendChild(pc)}
+ const urow=elT("div","row");urow.style.cssText="margin-top:8px;gap:6px";const uinp=elT("input");uinp.type="text";uinp.maxLength=128;uinp.placeholder="계정 UID";uinp.setAttribute("aria-label","보상 받을 계정 UID");uinp.autocomplete="off";uinp.spellcheck=false;uinp.style.flex="1";urow.appendChild(uinp);one.box.appendChild(urow);
+ const getOne=admGrantFields(one.box);const pb=elT("button","btn","이 사람에게 지급"),pm=elT("p","msg","");pb.type="button";pb.style.marginTop="12px";pb.onclick=()=>admGrantOne(pb,pm,getOne,uinp);one.box.append(pb,pm);box.appendChild(one.c)}
+(()=>{const t=$("#ntctog");if(t)t.onclick=()=>ntcListFold($("#ntcbox")&&$("#ntcbox").hidden);
+ let v="1";try{v=localStorage.getItem("mgr_ntc_list")||"1"}catch(e){}if(v==="0")ntcListFold(false)})();
