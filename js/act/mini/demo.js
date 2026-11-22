@@ -213,7 +213,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   cv.width = MG_W * dpr; cv.height = MG_W * dpr;
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
+  st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, ptr: null, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
   /* 장 번호 = 완성한 수 + 1. 단계는 여기서만 올리고, 그리던 장을 도중에 바꾸지 않는다. */
   const next = () => {
    st.L = lvAt(st.count + 1);
@@ -227,11 +227,31 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const ink = (css.getPropertyValue("--ink") || "#eee").trim() || "#eee";
   const hi = (css.getPropertyValue("--gold") || css.getPropertyValue("--hi") || "#c9a96a").trim() || "#c9a96a";
 
-  const pos = ev => { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) / r.width * MG_W, y: (ev.clientY - r.top) / r.height * MG_W } };
-  cv.addEventListener("pointerdown", ev => { if (!here(token) || st.ended) return; ev.preventDefault(); try { cv.setPointerCapture(ev.pointerId) } catch (e) {} st.down = true; st.drawn = [pos(ev)] });
-  cv.addEventListener("pointermove", ev => { if (!st || st.token !== token || !st.down) return; ev.preventDefault(); const p = pos(ev), l = st.drawn[st.drawn.length - 1]; if (!l || Math.hypot(p.x - l.x, p.y - l.y) > 2) st.drawn.push(p) });
+  /* 표시 크기 기준으로 MG_W 좌표로. 모바일 스크롤 훔침 막으려면 passive:false + preventDefault. */
+  const pos = ev => {
+   const r = cv.getBoundingClientRect(), w = r.width || 1, h = r.height || 1;
+   return {
+    x: Math.max(0, Math.min(MG_W, (ev.clientX - r.left) / w * MG_W)),
+    y: Math.max(0, Math.min(MG_W, (ev.clientY - r.top) / h * MG_W))
+   }
+  };
+  const pe = {passive: false};
+  cv.addEventListener("pointerdown", ev => {
+   if (!here(token) || st.ended || !ev.isPrimary) return;
+   ev.preventDefault();
+   try { cv.setPointerCapture(ev.pointerId) } catch (e) {}
+   st.down = true; st.ptr = ev.pointerId; st.drawn = [pos(ev)]
+  }, pe);
+  cv.addEventListener("pointermove", ev => {
+   if (!st || st.token !== token || !st.down || ev.pointerId !== st.ptr) return;
+   ev.preventDefault();
+   const p = pos(ev), l = st.drawn[st.drawn.length - 1];
+   if (!l || Math.hypot(p.x - l.x, p.y - l.y) > 1.5) st.drawn.push(p)
+  }, pe);
   const up = ev => {
-   if (!st || st.token !== token || !st.down) return; st.down = false; if (st.ended) return;
+   if (!st || st.token !== token || !st.down) return;
+   if (ev && ev.pointerId != null && st.ptr != null && ev.pointerId !== st.ptr) return;
+   st.down = false; st.ptr = null; if (st.ended) return;
    const r = judge(st.guide, st.drawn, MG_LV[st.L].tol);
   if (r.ok) {
     st.count++;
@@ -245,7 +265,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [];
     try { if (typeof sfx === "function") sfx("assets/raw/mg_fail.mp3") } catch (e) {} }
   };
-  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("pointerup", up, pe); cv.addEventListener("pointercancel", up, pe);
 
   const draw = now => {
    if (!st || st.token !== token || st.dead) return;

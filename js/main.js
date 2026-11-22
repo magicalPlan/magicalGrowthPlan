@@ -189,8 +189,12 @@ async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
 async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=await rstDueRemote();if(!(due>(Number(C.rsv)||0)))return false;
  try{clearPend()}catch(e){}
  try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return true;const d=full.data()||{},ch=d.c;
-  /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선. */
-  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accMark(ch);accReady=true;
+  /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선.
+     장기·단서는 서버본에 남아 있어도 강제 취소(진행·완료 미수령 포함, 보상 없음).
+     알 부화·재고는 0(옛 서버본에 남아 있어도). */
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}
+   try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
+   accSeen=Number(d.ts)||Date.now();accMark(C);accReady=true;
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}
    try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
  }catch(e){}
@@ -210,11 +214,17 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  /* 일반: C.b max 보호. 회귀: 서버본 b 그대로(더 큰 로컬 b 되살리기 금지). */
  if(!rstNewer)keepPwBonus(C,mine);
- /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
- if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
- if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
- C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot);
- if(rstNewer){try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
+ /* 회귀: 장기 토벌·단서 강제 취소. pickTrip 으로 옛 탭 진행(완료 미수령 포함)을 되살리지 않는다.
+    알: 부화·재고 전부 0(옛 탭·keepMerge 되살리기 금지). */
+ if(rstNewer){C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};
+  try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
+  try{lhDefer=null}catch(e){}
+  try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
+ else{
+  /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
+  if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
+  if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
+  C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot)}
  /* 이 탭이 그 시드를 이미 정산(got)했는데 서버만 옛 진행이면, 보상을 서버 옛값으로 되돌리지 않는다.
     (진행 없음+서버만 있음은 정산이 아님 → pickTrip 이 서버 진행을 살림) */
  const claimed=!rstNewer&&(tripClaimed(mine.lh,rem.lh,mine.lhGot)||tripClaimed(mine.clue,rem.clue,mine.clueGot));
