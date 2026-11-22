@@ -766,28 +766,27 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
 /* ── 선물 동기화 ─────────────────────────────────────────────
    [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
    [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
-   [지금 이중 경로] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
-                 giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
+   [한도] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
                gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
    [소모] rgUse: 효과·목록·절망/경험치를 낙관 반영 후 ginbox 삭제·계정 저장은 백그라운드.
                삭제 실패 시에만 그 칸 효과를 되돌린다. ginPendDel 로 live 가 잠깐 다시 채우지 않게 한다.
    [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
-       COMPAT_GIFT_PULL(ginPullGift·giftBellWatch), 보내기의 gift/ 쓰기,
+       COMPAT_GIFT_PULL(ginPullGift), 보내기의 gift/ 쓰기,
        rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
    TODO(선물 한도→서버): 일일 GIFT_DAY 한도는 아직 RTDB gift/ 칸 규칙 + 클라 C.gsl 뿐이다.
        Cloud Functions(또는 동등 서버)로 이관해 ginbox 쓰기와 함께 강제하고, 그다음 gift/
-       경로·규칙·클라 giftSlot/gsl·COMPAT pull·giftn 을 제거한다. 구현 코드는 아직 없음.
+       경로·규칙·클라 giftSlot/gsl·COMPAT pull 을 제거한다. 구현 코드는 아직 없음.
    ─────────────────────────────────────────────────────────── */
 const ginPath=id=>"ginbox/"+UID+"/"+id;
 const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot);
 const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||"");
-let giftBell=0,unGift=null,giftGen=0,ginPullBusy=false,ginPendDel=new Set();
+let ginPullBusy=false,ginPendDel=new Set();
 /* ginbox·gift 공통 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
 async function giftDbDel(path){if(!DB||!path)return false;for(let i=0;i<3;i++){try{await DB.doc(path).delete();return true}catch(e){const c=String(e&&e.message||e);if(c==="404")return true;if(i<2)await new Promise(r=>setTimeout(r,200*(i+1)))}}return false}
 function giftWatch(){applyGift()}
-/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) giftn·gift pull. */
-async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();giftBellWatch();try{await ginPullGift()}catch(e){}}
+/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) gift/→ginbox pull. */
+async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();try{await ginPullGift()}catch(e){}}
 /* 계정에 남던 옛 받은 함(c.rg)을 ginbox 로 한 번만 옮긴다. ginboxV>=1 이면 끝. */
 async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||ginMigBusy)return;ginMigBusy=true;
  try{const puts=[],seen={};
@@ -797,7 +796,7 @@ async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||gi
   if(puts.length)await Promise.all(puts);
   C.ginboxV=1;C.rg=[];if(typeof saveNow==="function")saveNow();else save()}finally{ginMigBusy=false}}
 /* COMPAT_GIFT_PULL: 구버전·미게시 규칙으로 ginbox 에만 빠진 칸을 gift/ 에서 보충.
-   후일 ginbox 단독 시 이 함수·호출(applyGift·giftBellWatch)을 제거한다. */
+   허브·가방 진입 때 한 번. 후일 ginbox 단독 시 이 함수·호출을 제거한다. */
 async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!puts&&ginPullBusy)return;const own=!puts;if(own){ginPullBusy=true;puts=[];seen={}}
  try{C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const s=await once(DB.collection("gift/"+UID));let bump=false;
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
@@ -809,11 +808,6 @@ async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!pu
    Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>add(f+"_"+k,Number(k),v[k]))});
   if(own){if(puts.length)await Promise.all(puts);if(bump){if(typeof saveNow==="function")saveNow();else save()}}}
  catch(e){}finally{if(own)ginPullBusy=false}}
-/* COMPAT: giftn 벨 → ginPullGift. 신버전은 ginWatch 만으로도 충분. 후일 제거 후보. */
-function giftBellWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unGift)return;const gen=++giftGen;
- const take=sn=>{if(gen!==giftGen||!AUTH.uid||!C)return;const p=sn.exists?sn.data():null,ts=p&&typeof p.ts==="number"?p.ts:0;if(!ts||ts<=giftBell)return;giftBell=ts;ginPullGift()};
- DB.doc("giftn/"+UID).get().then(take).catch(()=>{});
- unGift=DB.doc("giftn/"+UID).live().onSnapshot(take,()=>{},30000)}
 /* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
@@ -877,10 +871,9 @@ $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;r
   const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
   try{const body={g:sel,ts:{".sv":"timestamp"},n:nmOf()};
-   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. giftn = COMPAT 벨. 후일 한도 이관 후 gift·giftn 쓰기 제거. */
+   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. 알림은 giftNtin→ntin. */
    await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set(body);
    await DB.doc("ginbox/"+u+"/"+ginSlotId(UID,g.i)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"},slot:g.i});
-   try{await DB.doc("giftn/"+u).set({u:UID,g:sel,n:nmOf(),ts:{".sv":"timestamp"}})}catch(e){}
    C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
    C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
   catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}

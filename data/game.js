@@ -150,8 +150,8 @@
    // 받은 선물: 보낸 친구가 정한 선물 종류만 인정하고, 한 번에 최대 40까지 절망도를 낮춘다.
    /* 선물: 같은 친구에게 하루(24시간)에 GIFT_DAY개까지 보낼 수 있다.
       [권위] ginbox/{받는이}/{id}: 받은 함·열기·화면. 계정 c.rg 안 씀. c.gs 는 개봉·이관 워터마크.
-      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. giftn/{받는이}: 도착 벨(호환 pull).
-      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·giftn·COMPAT pull 제거 → ginbox 단독.
+      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. 알림은 ntin, 목록은 ginbox.
+      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·COMPAT pull 제거 → ginbox 단독.
       TODO(선물 한도→서버): 한도 서버 이관 로직은 아직 없음. Functions 등으로 ginbox 송신과
          함께 GIFT_DAY 를 강제한 뒤 gift/ 규칙·클라 gsl 을 걷어낸다.
       규칙: ginbox 는 $to 읽기/지우기·호환 이관, 보낸이(u) 쓰기. validate 에 auth==$to 허용 필요. */
