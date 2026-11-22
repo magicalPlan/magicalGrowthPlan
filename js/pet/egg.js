@@ -15,6 +15,10 @@ function eggFix(){if(!C)return false;let ch=false;if(C.eggs!=null&&C.eggs!==eggN
  if(typeof e!=="object"){C.egg=null;return true}
  const t0=Number(e.t0),t1=Number(e.t1);if(!isFinite(t0)||!isFinite(t1)){const k=eggEvKind(e);if(k===2)C.eggsEv2=(C.eggsEv2||0)+1;else if(k===1)C.eggsEv=(C.eggsEv||0)+1;else C.eggs=(C.eggs||0)+1;C.egg=null;return true}
  if(e.t0!==t0||e.t1!==t1){e.t0=t0;e.t1=t1;ch=true}return ch}
+/* 회귀: 부화 중 알·알 재고를 전부 0으로 비운다. 환불·부화 없음. */
+function eggRstAbort(ch){if(!ch||typeof ch!=="object")return false;
+ const had=!!(ch.egg||ch.eggs||ch.eggsEv||ch.eggsEv2);
+ ch.egg=null;ch.eggs=0;ch.eggsEv=0;ch.eggsEv2=0;return had}
 // 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
 function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
  if(Math.random()<p){C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 성장 기록에서 품을 수 있다.");out.push("🥚 사역마의 알을 주웠다!")}
