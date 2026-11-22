@@ -367,4 +367,4 @@ function createRosterMirrorSync(getDatabase) {
   });
 }
 
-module.exports = {createRosterMirrorSync, mirrorPw, buildPlayers, buildWho};
+module.exports = {createRosterMirrorSync, mirrorPw, buildPlayers, buildWho, collectUids, okUid};

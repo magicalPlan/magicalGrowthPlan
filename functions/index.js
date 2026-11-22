@@ -19,6 +19,7 @@ const {createPexStart, createPexClaim} = require("./pex");
 const {createMgFlandersSubmit} = require("./mg-flanders");
 const {createAccountLeave} = require("./leave");
 const {createRosterMirrorSync} = require("./roster-mirror");
+const {createAccountRst} = require("./account-rst");
 
 initializeApp({databaseURL: "https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app"});
 
@@ -27,6 +28,9 @@ exports.accountLeave = createAccountLeave(getDatabase);
 
 /* 등록자 미러: 운영자 POST Bearer → accounts/c 기준 players·who 강제 맞춤. */
 exports.rosterMirrorSync = createRosterMirrorSync(getDatabase);
+
+/* 회귀: 운영자 POST Bearer → 계정당 accounts 되돌림 + 그 UID players/who 한 흐름. */
+exports.accountRst = createAccountRst(getDatabase);
 
 /* 친구: fmsg req|ok|del → accounts c/fr·fq·fo PATCH. 공명 rok/rno 제외. */
 exports.fmsgFriend = createFmsgFriend(getDatabase);
