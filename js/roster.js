@@ -10,6 +10,8 @@ const RS_PAGE=20,RS_TTL=45000;
 let RS=[],RSD=[],rsHits=[],rsQ="",rsS="pw",rsEdge=null,rsDone=false,rsBusy=false,rsGen=0,rsFindGen=0,rsFindBusy=false,rsFindErr=false,rsFindT=null,rsShown=RS_PAGE,rsBag={};
 function rsSnapSave(){if(rsQ.trim()||!RS.length)return;rsBag[rsS]={at:Date.now(),list:RS.slice(),dm:RSD.slice(),edge:rsEdge?{v:rsEdge.v,n:rsEdge.n}:null,done:!!rsDone,shown:rsShown}}
 function rsSnapUse(){const c=rsBag[rsS];if(!c||!c.list||!c.list.length||Date.now()-c.at>RS_TTL)return false;RS=c.list.slice();RSD=Array.isArray(c.dm)?c.dm.slice():[];rsEdge=c.edge?{v:c.edge.v,n:c.edge.n}:null;rsDone=!!c.done;rsShown=c.shown||RS_PAGE;rsBusy=false;return true}
+/* 회귀·명부 강제 동기화 뒤 옛 목록이 남지 않게 한다. */
+function rsSnapClear(){rsBag={};RS=[];RSD=[];rsHits=[];rsEdge=null;rsDone=false;rsBusy=false;rsGen++;rsFindGen++;rsShown=RS_PAGE}
 function rsField(){return rsS==="lv"?"lv":"pw"}
 function rsIsDm(p){return typeof isDm==="function"?isDm(p):!!p&&Number(p.dm)===1}
 function rsList(){const f=rsField(),L=(rsQ.trim()?rsHits:RS).slice();
