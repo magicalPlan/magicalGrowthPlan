@@ -6,7 +6,7 @@
 
    ── 규칙 ───────────────────────────────────────────────
    · 1분 동안 흐릿한 안내선(밑그림)을 따라 그린다. 잘 따라 그리면 1장 완성, 다음 선이 나온다.
-   · 완성 장수가 늘수록 어려워진다(3·6·9·10번째 장부터 단계 상승). 선이 복잡해지고 안내선이 옅어지며 허용 오차가 줄어든다.
+   · 완성 장수가 늘수록 어려워진다(3·6·9번째 장부터 단계 상승). 선이 복잡해지고 안내선이 옅어지며 허용 오차가 줄어든다.
    · 장수·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
      그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다. 단계는 next() 때만 바뀌고, 그리던 장을 도중에 바꾸지 않는다.
    · 서버 통신(기록용)은 시작·종료·랭킹 읽기뿐이다. rank·total_amount 는 클라가 직접 쓰지 않는다.
@@ -22,7 +22,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
  const MG_W = 600;                  // 캔버스 내부 좌표 크기(정사각형). 데이터의 tol 도 이 크기 기준.
  /* 데이터 파일이 없을 때 쓰는 기본값(무작위 선만). 실제 값은 data/act/mini/flanders.js */
  const MG_DEF = { sec: 60, path: "event_minigame/flanders", top: 10, pass: { cover: .82, acc: .72 },
-  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 3, tol: 26, alpha: .36, pick: ["bend"] }, { at: 6, tol: 22, alpha: .30, pick: ["curve"] }, { at: 9, tol: 19, alpha: .24, pick: ["zig"] }, { at: 10, tol: 16, alpha: .18, pick: ["wave"] }],
+  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 3, tol: 26, alpha: .36, pick: ["bend"] }, { at: 6, tol: 22, alpha: .30, pick: ["curve"] }, { at: 9, tol: 17, alpha: .20, pick: ["zig", "wave"] }],
   shapes: {} };
  const MG = (() => { const d = typeof MG_FLANDERS !== "undefined" && MG_FLANDERS && typeof MG_FLANDERS === "object" ? MG_FLANDERS : {};
   const lv = Array.isArray(d.levels) && d.levels.length ? d.levels.filter(x => x && Array.isArray(x.pick) && x.pick.length).sort((a, b) => (a.at || 0) - (b.at || 0)) : MG_DEF.levels;
@@ -238,9 +238,12 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     cnt.textContent = "완성 " + st.count; 
     say.textContent = ["빠른데?", "힘내보자.", "열정이 대단하잖아.", "나도 이렇게 그림을 연습했던 적이 있었지.", "파트라슈..."][st.count % 5];
     st.flash = performance.now();
-    st.flashOk = true; next()
+    st.flashOk = true;
+    try { if (typeof sfx === "function") sfx("assets/raw/minigame_complete.mp3") } catch (e) {}
+    next()
   } else {
-    say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [] }
+    say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [];
+    try { if (typeof sfx === "function") sfx("assets/raw/mg_fail.mp3") } catch (e) {} }
   };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
 
