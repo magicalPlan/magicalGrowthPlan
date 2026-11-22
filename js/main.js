@@ -200,7 +200,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,board:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -764,7 +764,8 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
  return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
 /* ── 선물 동기화 ─────────────────────────────────────────────
-   [권위] 받은 함 목록·알림·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
+   [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
+   [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
    [지금 이중 경로] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
                  giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
@@ -813,13 +814,13 @@ function giftBellWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unGift)return;const gen=+
  const take=sn=>{if(gen!==giftGen||!AUTH.uid||!C)return;const p=sn.exists?sn.data():null,ts=p&&typeof p.ts==="number"?p.ts:0;if(!ts||ts<=giftBell)return;giftBell=ts;ginPullGift()};
  DB.doc("giftn/"+UID).get().then(take).catch(()=>{});
  unGift=DB.doc("giftn/"+UID).live().onSnapshot(take,()=>{},30000)}
-/* 본선: ginbox live. 목록·토스트·내비의 유일한 권위 구독. ginbox 단독 이후에도 유지. */
+/* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
  const take=sn=>{if(gen!==ginGen||!AUTH.uid||!C)return;ginApply(sn.docs||[])};
  try{once(DB.collection("ginbox/"+UID)).then(take).catch(()=>{})}catch(e){}
  unGin=DB.collection("ginbox/"+UID).live().onSnapshot(take,()=>{},30000)}
-function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
+function ginApply(docs){const items=[];
  (docs||[]).forEach(d=>{const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object"||GV[v.g]==null)return;
   const id=d.id;if(!id||ginPendDel.has(id))return;items.push({id,g:v.g,n:String(v.n||"누군가").slice(0,20),u:String(v.u||""),ts:Number(v.ts)||0})});
  items.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));
@@ -827,13 +828,7 @@ function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
  if(items.length>cap&&!ginTrimBusy){ginTrimBusy=true;const drop=items.slice(0,items.length-cap);
   Promise.all(drop.map(x=>DB.doc(ginPath(x.id)).delete().catch(()=>{}))).finally(()=>{ginTrimBusy=false})}
  ginList=items.length>cap?items.slice(-cap):items;ginIds=ginList.map(x=>x.id).join("|");ginReady=true;
- updNav();if(!$("#v-bag").hidden)drawRG();
- /* 첫 스냅샷은 이미 있던 함이라 알림 안 울림. 그 다음부터 새로 생긴 id 만 알림·토스트. */
- if(ready&&ginIds!==prev){const had=new Set(prev.split("|").filter(Boolean)),fresh=ginList.filter(x=>!had.has(x.id));
-  if(fresh.length){const rs=fresh.map(x=>x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 보냈다");
-   fresh.forEach(x=>note("gift",x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",x.u));
-   toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
-   if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}}}
+ updNav();if(!$("#v-bag").hidden)drawRG()}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}

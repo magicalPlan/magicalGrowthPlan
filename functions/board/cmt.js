@@ -1,12 +1,12 @@
 /* 게시판 댓글 알림.
-   · 경로: board/c/{id} = { bt:"c", p, r?, u, n, x, ts } (클라가 chat 이 아닌 여기에 씀)
-   · 생성 시에만: 글 작성자(최상위 댓글) 또는 부모 댓글 작성자(답글)의 accounts/…/c/nt 에 board 한 줄.
-   · 클라는 note("board") 금지. 알림함은 서버 권위(출정 march 와 같음).
-   · chat/{id} 전체에 걸면 단체·마을 채팅마다 호출되므로 board/c 만 본다.
+   · 경로: board/c/{id} = { bt:"c", p, r?, u, n, x, ts }
+   · 생성 시에만: 글·부모 댓글 작성자 ntin/{uid}/{댓글id} 에 짧은 벨.
+   · 클라는 ntin live 1개로 받아 note() 한다. 계정 c/nt·accSync 를 쓰지 않는다.
    배포: firebase deploy --only functions:boardCmtNotify,database */
 "use strict";
 
 const {onValueWritten} = require("firebase-functions/v2/database");
+const {pushNtin, TEXT_MAX} = require("../ntin");
 
 const RTDB = {
   instance: "magical-growth-default-rtdb",
@@ -14,31 +14,12 @@ const RTDB = {
   timeoutSeconds: 30,
   memory: "256MiB"
 };
-const SID = "board";
-const NT_MAX = 60;
-const TEXT_MAX = 160;
-
-function normalizeNt(cur) {
-  if (Array.isArray(cur)) return cur.filter(n => n && typeof n === "object");
-  if (cur && typeof cur === "object") {
-    return Object.keys(cur).sort((a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b)))
-      .map(k => cur[k]).filter(n => n && typeof n === "object");
-  }
-  return [];
-}
-
-async function accountExists(db, uid) {
-  const root = db.ref("accounts/" + uid);
-  if ((await root.child("c/n").get()).exists()) return true;
-  return (await root.child("c/ex").get()).exists();
-}
 
 async function readVal(db, path) {
   const sn = await db.ref(path).get();
   return sn.exists() ? sn.val() : null;
 }
 
-/* 글 목록 칸: bp_ · bx_b_… · 예전 b_ 본문 글. */
 async function readPost(db, postId) {
   const id = String(postId || "");
   if (!id) return null;
@@ -52,7 +33,6 @@ async function readPost(db, postId) {
   return null;
 }
 
-/* 부모 댓글: 새 칸 board/c, 예전 chat/bc_… */
 async function readCmt(db, cmtId) {
   const id = String(cmtId || "");
   if (!id) return null;
@@ -61,19 +41,6 @@ async function readCmt(db, cmtId) {
     if (v && typeof v === "object" && v.bt === "c" && v.u) return v;
   }
   return null;
-}
-
-async function pushBoardNote(db, uid, entry) {
-  if (!uid || !(await accountExists(db, uid))) return;
-  const root = db.ref("accounts/" + uid);
-  const sid = String(entry.id || "");
-  const tx = await root.child("c/nt").transaction(cur => {
-    const list = normalizeNt(cur);
-    if (sid && list.some(n => n && String(n.id || "") === sid)) return;
-    return [entry].concat(list).slice(0, NT_MAX);
-  });
-  if (!tx.committed) return;
-  await root.update({ts: Date.now(), sid: SID});
 }
 
 async function applyBoardCmt(db, id, after, isCreate) {
@@ -106,13 +73,11 @@ async function applyBoardCmt(db, id, after, isCreate) {
     : name + "님이 내 글 「" + String(post && post.ti || "").slice(0, 20) + "」에 댓글을 달았다: " + preview;
 
   const ts = Number(after.ts);
-  await pushBoardNote(db, target, {
+  await pushNtin(db, target, id, {
     k: "board",
     t: text.slice(0, TEXT_MAX),
     u: postId,
-    ts: Number.isFinite(ts) && ts > 0 ? ts : Date.now(),
-    r: false,
-    id: String(id).slice(0, 80)
+    ts: Number.isFinite(ts) && ts > 0 ? ts : Date.now()
   });
 }
 
@@ -128,8 +93,8 @@ function createBoardCmtNotify(getDatabase) {
     const isCreate = !event.data.before.exists();
     try {
       await applyBoardCmt(getDatabase(), id, after, isCreate);
-    } catch (e) { /* 다음 쓰기·재시도에 맡김 */ }
+    } catch (e) { /* ignore */ }
   });
 }
 
-module.exports = {createBoardCmtNotify, applyBoardCmt, SID};
+module.exports = {createBoardCmtNotify, applyBoardCmt};
