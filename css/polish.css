@@ -827,8 +827,8 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 @media (prefers-reduced-motion:reduce){.vn-float{transition:none}}
 
 /* 특별 의뢰 › 플랜더스의 밑그림(js/act/mini/demo.js). 미니게임 칸은 점선 대신 카드로. */
-.sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px}
-.mg-preview{display:block;width:100%;max-width:420px;margin:0 auto 12px;border-radius:var(--r);border:1px solid var(--ln)}
+.sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px;max-width:100%;box-sizing:border-box;overflow-x:hidden}
+.mg-preview{display:block;width:100%;max-width:min(420px,100%);height:auto;max-height:min(42vh,420px);object-fit:contain;margin:0 auto 12px;border-radius:var(--r);border:1px solid var(--ln)}
 .mg-lead{margin:0 0 8px;font-weight:700}
 .mg-rules{margin:0 0 12px;padding-left:18px;color:var(--mu);font-size:.86rem;line-height:1.55}
 .mg-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -839,9 +839,10 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 .mg-lv{padding:2px 9px;border:1px solid var(--ln);border-radius:999px;font-size:.78rem;color:var(--mu)}
 .mg-cnt{font-size:1.05rem;color:var(--gold,var(--hi));min-width:3.5em;text-align:right}
 .mg-bar{height:6px;margin:0 0 10px}
-.mg-cv-wrap{position:relative;width:100%;max-width:520px;margin:0 auto;aspect-ratio:1/1;border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;
+/* 판: 가로·세로 뷰포트 안에 맞게. canvas 비트맵(600×dpr)이 레이아웃을 밀지 않도록 절대배치. */
+.mg-cv-wrap{position:relative;width:min(100%,520px,72dvh);max-width:100%;margin:0 auto;aspect-ratio:1/1;border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
  background:linear-gradient(color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,linear-gradient(90deg,color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,color-mix(in srgb,var(--pn) 70%,#fff 6%)}
-.mg-cv{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.mg-cv{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
 .mg-say{margin:8px 0 0;text-align:center;font-size:.88rem;color:var(--mu);min-height:1.3em}
 .mg-result{text-align:center;padding:6px 0 4px}
 .mg-res-k{margin:0;color:var(--mu);font-weight:700}
