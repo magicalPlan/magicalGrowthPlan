@@ -4,14 +4,14 @@
    · 등급 확률 후 등급 안 균등. UI 는 결과 칸·버튼·골드만 고친다(상점 통째 재구성 금지).
    · 로컬에서 골드·보상을 한 번에 반영한 뒤 칸 PATCH. 실패 시 스냅샷으로 되돌린다. */
 const SHADY_COST=2000,SHADY_N=10,SHADY_UNIT=SHADY_COST/SHADY_N;
-/* 등급 뽑기 확률(합 100%). 칸마다 독립. 등급 안 아이템은 균등 → 표의 8.38%/4%/1%/0.33% 와 같음. */
+/* 등급 뽑기 확률(합 100%). 칸마다 독립. 등급 안 아이템은 균등. */
 const SHADY_TIER_P=[.67,.28,.04,.01];
-/* [등급0..][보상]. k: inv(가방·재료)·gd·eggs·eggsEv. n: 개수. */
+/* [등급0..][보상]. k: inv(가방·재료)·gd·eggs·eggsEv. n: 개수. 기존 보상은 유지하고 추가·수량만 고친다. */
 const SHADY_POOL=[
- [{k:"inv",id:"mana",n:2},{k:"inv",id:"charm",n:1},{k:"inv",id:"map",n:1},{k:"inv",id:"flag",n:1},{k:"inv",id:"seal",n:1},{k:"inv",id:"hope",n:1},{k:"inv",id:"g2",n:1},{k:"gd",n:50}],
- [{k:"inv",id:"m_shard",n:2},{k:"inv",id:"m_herb",n:2},{k:"inv",id:"m_ore",n:2},{k:"inv",id:"m_dew",n:2},{k:"inv",id:"m_ash",n:10},{k:"inv",id:"m_crown",n:1},{k:"gd",n:500}],
- [{k:"inv",id:"g4",n:3},{k:"inv",id:"pfcandy",n:5},{k:"eggs",n:1},{k:"eggsEv",n:1},{k:"gd",n:5000}],
- [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1}]
+ [{k:"inv",id:"mana",n:2},{k:"inv",id:"charm",n:1},{k:"inv",id:"map",n:1},{k:"inv",id:"flag",n:1},{k:"inv",id:"seal",n:1},{k:"inv",id:"hope",n:1},{k:"inv",id:"g2",n:1},{k:"gd",n:50},{k:"inv",id:"m_forest",n:1},{k:"inv",id:"m_coast",n:1},{k:"inv",id:"m_valley",n:1}],
+ [{k:"inv",id:"m_shard",n:2},{k:"inv",id:"m_herb",n:2},{k:"inv",id:"m_ore",n:2},{k:"inv",id:"m_dew",n:2},{k:"inv",id:"m_ash",n:10},{k:"inv",id:"m_crown",n:1},{k:"gd",n:500},{k:"inv",id:"petcan",n:3},{k:"inv",id:"m_abyss",n:2}],
+ [{k:"inv",id:"g4",n:3},{k:"inv",id:"pfcandy",n:3},{k:"eggs",n:2},{k:"eggsEv",n:2},{k:"gd",n:5000},{k:"inv",id:"petfeast",n:2},{k:"inv",id:"trcyan",n:1},{k:"inv",id:"trblue",n:1},{k:"inv",id:"trcast",n:1}],
+ [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1},{k:"inv",id:"milk",n:1}]
 ];
 let shadyBusy=false,shadyBuilt=false;
 function shadyOpen(){try{return localStorage.getItem("mgr_shop_shd")!=="0"}catch(e){return true}}

@@ -1,8 +1,10 @@
 /* 출정 이벤트 공통 모델. 이 파일은 형태 설명이고, 실제 목록은 아래 세 파일이다.
    공통 사건 data/events/common.js, 마을 사건 data/events/village.js, 고독 사건 data/events/solo.js.
    그 목록을 고친 뒤 firebase deploy --only functions 를 해야 서버 계산에 들어간다.
-   t 안의 {v}는 마을 이름, {f}는 친구 이름으로 바뀐다. */
-const EVENT={
+   t 안의 {v}는 마을 이름, {f}는 친구 이름으로 바뀐다.
+   이름 주의: data/event/pack.js 가 장기 의뢰 활성 팩을 const EVENT 로 쓴다.
+   여기 스키마는 EVENT_SHAPE — 같은 전역 이름을 쓰면 Identifier already been declared. */
+const EVENT_SHAPE={
  id:"고유 아이디",
  t:"결과 문장. 선택지가 없는 이벤트에 쓴다.",
  q:"선택지 상황 문장",

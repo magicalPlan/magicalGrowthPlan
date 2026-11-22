@@ -26,8 +26,10 @@
 
    
    /* 앱 버전(APP_VER)은 js/common/include.js 에 있다. 화면 HTML 캐시와 설정 화면이 그 값을 쓴다. */
-   // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
+   // 온라인 서버: Firebase Realtime Database 주소.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
+   /* 회원 탈퇴 Cloud Function (asia-southeast1). js/setting/setting.js leaveAccount 가 호출. */
+   const FB_LEAVE_URL="https://asia-southeast1-magical-growth.cloudfunctions.net/accountLeave";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
       정기 출정 참가 자리(rooms/xm)는 매지컬 마치 목록이 펼쳐져 보일 때만 묶음 prefix 한 live() 로 지킨다. 거절되면 POLL_FAST 묻기로 받고, 목록을 접거나 화면을 벗어나면 끊는다.
       타락 명단은 마을에 들어올 때 raid 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나면 닫는다. 사람마다 체력을 따로 읽지 않는다.
@@ -77,9 +79,10 @@
       const HEAL_MS=600000,HEAL_DZ=10;
 
 
-      /* 계정 만들기 비밀 코드: 코드 자체는 파일에 적지 않고, 바꾼 값(해시)만 적어 둔다. 가입 화면에서 받은 뒤 authDigest 로 맞춰 본다.
-         코드를 바꾸려면 새 코드의 SHA-256 값으로 이 줄을 고친다. AUTO_JC 는 안내용 평문이다. 가입 화면에서는 직접 입력받는다. */
-      const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f",AUTO_JC="희망하라";
+      /* 계정 만들기 비밀 코드: 브라우저에서 입력값을 SHA-256 해 이 해시와 맞춘다(UI 게이트).
+         해시·검증이 클라이언트에만 있으면 소스로 우회할 수 있다. 진짜 제한은 서버(Functions 등)에서 해야 한다.
+         코드를 바꾸려면 새 코드의 SHA-256(hex)으로 이 줄을 고친다. */
+      const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f";
       /* 재계약 시험 대기. 시작한 시각(C.trT)부터 이 시간이 지나야 다시 볼 수 있다. */
       const TRIAL_CD=12*3600000;
 
@@ -120,14 +123,17 @@
 
    /* 가방, 무기 강화, 선물 */
    // 아이템: [id, 이름, 설명, 가격]. 마력석은 무기 강화 재료이고, g로 시작하는 id는 친구에게 보내는 선물이다. 숫자는 임시 값이다.
-   const ITM=[["mana","마력석","무기를 강화할 때 쓰는 재료.",40],["charm","결계 부적","다음 출정에서 오르는 절망도가 절반으로 줄어든다. 하루에 3개까지 살 수 있다.",50],["map","마수 사냥 지도","다음 출정의 전투 횟수가 3번으로 고정된다. 보상은 원래 정해진 횟수대로 받는다.",70],["flag","용기의 깃발","다음 출정에서 파티 전원의 전투력이 5 오른다.",60],["seal","여왕의 인장","재계약 시험에서 한 번 실패해도 절망도가 오르지 않는다.",120],["candle","계약의 촛불","다음 재계약 시험의 판정에 +5를 더한다. 한 번에 1개까지만 가질 수 있다.",90],["whet","보호의 숫돌","준비해 두면 강화에 실패했을 때 마력석 대신 숫돌이 깨진다(마력석을 돌려받는다). 실패했을 때만 사라진다.",100],["hope","희망의 결정","가방에서 사용하면 내 절망도가 바로 30 내려간다. 타락 중에는 쓸 수 없다.",300],["pfcandy","보라 꽃 설탕 절임","사용하면 절망도 +10, 오늘 하루 절망도 하한 +10 및 전투력 +25. 하루 최대 2개. 조금 더 강해진 듯한 기분이 든다. 「무슨 꽃잎이냐고? 후후...궁금하니?」",0],["g1","작은 꽃다발","친구에게 선물하면, 친구가 원할 때 열어 절망도를 8 낮출 수 있다.",30],["g2","별빛 쿠키","친구에게 선물하면, 친구가 원할 때 열어 절망도를 15 낮출 수 있다.",60],["g3","달빛 편지","친구에게 선물하면, 친구가 원할 때 열어 절망도를 3 낮출 수 있다.",20],["prism","속성의 프리즘","공방에서만 만들 수 있다. 가방에서 사용하면 지금 가진 속성(불·물·바람·땅·빛·어둠) 하나를 아직 없는 다른 속성으로 바꾼다. 되돌릴 수 없고, 사용하면 절망도가 10 오른다.",0],["g4","꿈꾸는 오르골","공방에서만 만들 수 있는 선물. 태엽을 감으면 매지컬 랜드의 자장가가 흐른다. 친구에게 선물하면, 친구가 원할 때 열어 절망도를 25 낮추고 경험치를 30 얻는다.",0],["license","사역마 조련 허가증","가방에서 사용하면 데리고 있을 수 있는 사역마가 1마리 늘어난다(최대 6마리). 여왕의 허가는 시간에 구애되지 않는다.",0],["vtown","마을 이동권","절망을 갈아 잉크를 만들고, 조각을 깎아 각오를 다진다. 지금 설 곳은 당신이 있을 곳이 아니다. 당신은 어디로든 갈 수 있다. 떠나자. 떠나서. 떠나서...",0],["bond","유대의 증거","보내 준 사역마가 마지막으로 남기고 간 작은 증표. 함께한 시간이 길수록 많이 남긴다. 상점에서는 팔지 않는다.",0]];
+   const ITM=[["mana","마력석","무기를 강화할 때 쓰는 재료.",40],["charm","결계 부적","다음 출정에서 오르는 절망도가 절반으로 줄어든다. 하루에 3개까지 살 수 있다.",50],["map","마수 사냥 지도","다음 출정의 전투 횟수가 3번으로 고정된다. 보상은 원래 정해진 횟수대로 받는다.",70],["flag","용기의 깃발","다음 출정에서 파티 전원의 전투력이 5 오른다.",60],["seal","여왕의 인장","재계약 시험에서 한 번 실패해도 절망도가 오르지 않는다.",120],["candle","계약의 촛불","다음 재계약 시험의 판정에 +5를 더한다. 한 번에 1개까지만 가질 수 있다.",90],["whet","보호의 숫돌","준비해 두면 강화에 실패했을 때 마력석 대신 숫돌이 깨진다(마력석을 돌려받는다). 실패했을 때만 사라진다.",100],["hope","희망의 결정","가방에서 사용하면 내 절망도가 바로 30 내려간다. 타락 중에는 쓸 수 없다.",300],["pfcandy","보라 꽃 설탕 절임","사용하면 절망도 +10, 오늘 하루 절망도 하한 +10 및 전투력 +25. 하루 최대 2개. 조금 더 강해진 듯한 기분이 든다. 「무슨 꽃잎이냐고? 후후...궁금하니?」",0],["g1","작은 꽃다발","친구에게 선물하면, 친구가 원할 때 열어 절망도를 8 낮출 수 있다.",30],["g2","별빛 쿠키","친구에게 선물하면, 친구가 원할 때 열어 절망도를 15 낮출 수 있다.",60],["g3","달빛 편지","친구에게 선물하면, 친구가 원할 때 열어 절망도를 3 낮출 수 있다.",20],["prism","속성의 프리즘","공방에서만 만들 수 있다. 가방에서 사용하면 지금 가진 속성(불·물·바람·땅·빛·어둠) 하나를 아직 없는 다른 속성으로 바꾼다. 되돌릴 수 없고, 사용하면 절망도가 10 오른다.",0],["g4","꿈꾸는 오르골","공방에서만 만들 수 있는 선물. 태엽을 감으면 매지컬 랜드의 자장가가 흐른다. 친구에게 선물하면, 친구가 원할 때 열어 절망도를 25 낮추고 경험치를 30 얻는다.",0],["license","사역마 조련 허가증","가방에서 사용하면 데리고 있을 수 있는 사역마가 1마리 늘어난다(최대 6마리). 여왕의 허가는 시간에 구애되지 않는다.",0],["vtown","마을 이동권","절망을 갈아 잉크를 만들고, 조각을 깎아 각오를 다진다. 지금 설 곳은 당신이 있을 곳이 아니다. 당신은 어디로든 갈 수 있다. 떠나자. 떠나서. 떠나서...",0],["bond","유대의 증거","보내 준 사역마가 마지막으로 남기고 간 작은 증표. 함께한 시간이 길수록 많이 남긴다. 사역마 출정 기본 보상으로도 얻을 수 있다. 상점에서는 팔지 않는다.",0],["milk","매지컬 밀크","마법의 힘을 담은 우유. 먹으면 정말로 키가 클지도 모른다. 단, 사람은 먹지 마시오. 가방에서 사역마에게 주면 그 사역마의 친밀도 상한이 1 오른다(최대 15).",0],["petcan","냠냠 통조림","익숙한 꼬순내가 나는 통조림. 고양이 사역마가 무척 좋아한다.",0],["petfeast","펫 푸드 특식","인간도 먹을 수 있다는 고급 특식. 어쩌면 내가 먹는 것보다 좋은 재료로 만들어졌을지도.",0],["trcyan","청록 변광석","청록빛 변광석. 어둠 속에서 보아도 흐리게 빛난다. 가능성을 바꾸는 가장 여린 빛이다. 사역마의 특성 중 첫 번째를 변경할 수 있다.",0],["trblue","파랑 변광석","파랑빛 변광석. 눈을 감는다 한들 파도 소리가 사라지는 것은 아니다. 가능성을 바꾸는 평온한 소리이다. 사역마의 특성 중 두 번째를 바꿀 수 있다.",0],["trcast","주조 변광석","주조 변광석. 단단하고 굳건하여, 길을 헤맬 때 주저하지 않을 용기를 준다. 사역마의 특성 중 세 번째를 변경한다. 기적을 굴절하여 희망을 빚는다.",0]];
    /* 아이템 도트 그림(32×32): assets/items/{id}.png. 그림이 있는 아이템만 적는다. 그림을 바꾸면 ITEM_IMG_V 를 올려 브라우저가 새로 받게 한다.
-      id와 파일 이름이 다르면 ITEM_FILE 에 적는다. 유대의 증거는 bond_gem.png, 검은 왕관의 조각은 piece_of_black_crown.png, 꿈꾸는 오르골은 dream_music_box.png, 조련 허가증은 they_look_very_polite.png, 마을 이동권은 move_to_other_town.png. */
-   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,bond:1},ITEM_IMG_V=5;
-   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy"};
+      id와 파일 이름이 다르면 ITEM_FILE 에 적는다. 유대의 증거는 bond_gem.png, 검은 왕관의 조각은 piece_of_black_crown.png, 꿈꾸는 오르골은 dream_music_box.png, 조련 허가증은 they_look_very_polite.png, 마을 이동권은 move_to_other_town.png.
+      삼림·해안·골짜기·심연 조각은 grass_fragile·coast_fragile·valley_fragile·abyss_fragile.
+      청록·파랑·주조 변광석은 green_variable·blue_variable·red_variable.
+      매지컬 밀크·냠냠 통조림·펫 푸드 특식은 magical_milk·nyam_can·special_pet_food. */
+   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,m_forest:1,m_coast:1,m_valley:1,m_abyss:1,bond:1,trcyan:1,trblue:1,trcast:1,milk:1,petcan:1,petfeast:1},ITEM_IMG_V=8;
+   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy",m_forest:"grass_fragile",m_coast:"coast_fragile",m_valley:"valley_fragile",m_abyss:"abyss_fragile",trcyan:"green_variable",trblue:"blue_variable",trcast:"red_variable",milk:"magical_milk",petcan:"nyam_can",petfeast:"special_pet_food"};
    const GV={g1:8,g2:15,g3:3,g4:25},HOPE_DZ=30;
    /* 공방에서만 만드는 아이템(상점에 나오지 않는다)과, 선물을 열 때 함께 얻는 경험치. 제작법은 data/craft.js 의 RCP. 숫자만 고치면 바뀐다. */
-   const CRAFT_ONLY={g4:1,prism:1,license:1,vtown:1},MERCHANT_ONLY={pfcandy:1},GIFT_EX={g4:30};
+   const CRAFT_ONLY={g4:1,prism:1,license:1,vtown:1,milk:1,petcan:1,petfeast:1,trcyan:1,trblue:1,trcast:1},MERCHANT_ONLY={pfcandy:1},GIFT_EX={g4:30};
    /* 사역마를 보내 줄 때만 얻는 특수 아이템(상점에 나오지 않는다). 얼마나 주는지는 data/pets.js 의 PET_BOND. */
    const PET_ONLY={bond:1};
    /* 속성의 프리즘: 사용하면 속성 하나를 바꾸고 절망도가 PRISM_DZ 오른다. 동작은 js/create/craft.js 의 prism… */
@@ -244,11 +250,20 @@
    땅:{id:"earth",nm:"대지의 가호",d:"다음 재계약 시험에서 실패한 층을 한 번 다시 판정한다.",w:"재계약 시험"},
    빛:{id:"light",nm:"구원의 빛",d:"다음 타락 레이드 공격의 피해가 3배가 된다. 타락한 친구를 되돌릴 때 쓴다.",w:"타락 레이드"},
    어둠:{id:"dark",nm:"그림자 계약",d:"다음 출정에서 파티 전투력이 8 오른다. 대신 내 절망도가 6 더 오른다.",w:"출정"}};
+   /* 사역마 출정(무인 상점) 귀환 대사 도감. data/pet-raid.js PEX_EV·PEX_EV_EARLY·PEX_EV_MAP.
+      id=대사 제목(ti). 본문 ${사역마이름} 은 도감에서 '사역마'로 표시. */
+   const pexDexItems=()=>{const L=[],seen={};const ds=tx=>String(tx||"").replace(/\$\{사역마\s*이름\}/g,"사역마").replace(/\$\{사역마이름\}/g,"사역마");
+    const add=(ti,tx,tag,hint)=>{const id=String(ti||"");if(!id||seen[id])return;seen[id]=1;L.push({id,nm:id,ds:ds(tx),tag,hint})};
+    (typeof PEX_EV!=="undefined"&&PEX_EV||[]).forEach(r=>add(r[0],r[1],"공통","사역마 출정 성공 귀환에서 만날 수 있다."));
+    (typeof PEX_EV_EARLY!=="undefined"&&PEX_EV_EARLY||[]).forEach(r=>add(r[0],r[1],"중도 귀환","출정 중 불러오면 만날 수 있다."));
+    const maps=typeof PEX_EV_MAP!=="undefined"&&PEX_EV_MAP||{};Object.keys(maps).forEach(k=>{(maps[k]||[]).forEach(r=>{const nm=(typeof PEXM!=="undefined"&&PEXM[k]&&PEXM[k][1])||k;add(r[0],r[1],nm,nm+" 출정에서 만날 수 있다.")})});
+    return L};
    const DEX=[
    {k:"ev",nm:"출정 이벤트",half:{g:100},full:{g:300,m:5},items:()=>EV.concat(...Object.values(VEV)).map(x=>{const v=evVil(x.id),[n,d]=evName(x,v||"A");return{id:x.id,nm:n,ds:d,tag:v?VL[v].n+" 전용":x.o?"선택지":"일반",hint:v?VL[v].n+" 출신과 함께 출정하면 만날 수 있다.":"출정 중에 만날 수 있다."}}).concat(SOLO_EV.map(x=>{const[n,d]=evName(x,"A");return{id:x.id,nm:n,ds:d,tag:"고독한 출정"+(x.o?" · 선택지":""),hint:"혼자 출발하는 고독한 출정에서만 만날 수 있다."}}))},
+   {k:"px",nm:"사역마 출정",half:{g:50},full:{g:150,m:2},items:pexDexItems},
    {k:"bs",nm:"보스",half:{g:80},full:{g:200,m:3},items:()=>DBOSS.map(b=>({id:b[0],nm:b[0],ds:b[1]+" 약점: "+b[2]+" 속성.",tag:"오전·오후 보스",hint:"오전·오후 보스로 나타난다. 한 번 공격하면 기록된다."})).concat(WBOSS.map(b=>({id:b[0],nm:b[0],ds:b[1]+" 약점: "+b[2]+" 속성.",tag:"주간 보스",hint:"주간 보스로 나타난다. 한 번 공격하면 기록된다."})))},
    {k:"wp",nm:"무기",half:{g:50},full:{g:150,m:2},items:()=>WP.map((w,i)=>({id:"w"+i,nm:w[0],ds:w[1]+" 전투력 +"+w[3]+".",tag:"무기",hint:"상점에서 살 수 있다."}))},
-   {k:"it",nm:"아이템",half:{g:40},full:{g:100,m:1},items:()=>ITM.map(x=>({id:x[0],nm:x[1],ds:x[2],tag:PET_ONLY[x[0]]?"특수":GV[x[0]]!=null?"선물":USE[x[0]]||x[0]==="hope"||x[0]==="pfcandy"||x[0]==="prism"||x[0]==="license"||x[0]==="vtown"?"소모품":"재료",hint:CRAFT_ONLY[x[0]]?"공방에서 한 번 만들면 기록된다.":MERCHANT_ONLY[x[0]]?"수상한 상인에게서 얻을 수 있다.":PET_ONLY[x[0]]?"사역마를 한 번 보내 주면 기록된다.":"상점에서 한 번 사면 기록된다."}))},
+   {k:"it",nm:"아이템",half:{g:40},full:{g:100,m:1},items:()=>ITM.map(x=>({id:x[0],nm:x[1],ds:x[2],tag:PET_ONLY[x[0]]?"특수":GV[x[0]]!=null?"선물":USE[x[0]]||x[0]==="hope"||x[0]==="pfcandy"||x[0]==="prism"||x[0]==="license"||x[0]==="vtown"||x[0]==="milk"||x[0]==="petcan"||x[0]==="petfeast"||x[0]==="trcyan"||x[0]==="trblue"||x[0]==="trcast"?"소모품":"재료",hint:CRAFT_ONLY[x[0]]?"공방에서 한 번 만들면 기록된다.":(x[0]==="petcan"||x[0]==="petfeast")?"성장 기록 › 사역마에서 간식으로 쓴다.":(x[0]==="trcyan"||x[0]==="trblue"||x[0]==="trcast")?"가방에서 사역마 특성을 바꾼다.":MERCHANT_ONLY[x[0]]?"수상한 상인에게서 얻을 수 있다.":PET_ONLY[x[0]]?"사역마를 보내 주거나 사역마 출정에서 얻으면 기록된다.":"상점에서 한 번 사면 기록된다."}))},
    {k:"sk",nm:"마법",half:{m:2},full:{m:5},items:()=>Object.keys(SK).map(a=>({id:SK[a].id,nm:SK[a].nm,ds:SK[a].d,tag:a+" 속성",hint:a+" 속성을 얻거나 프리즘으로 바꾸면 기록된다."}))}];
 
 
@@ -422,9 +437,10 @@
 
    /* 대련 이벤트: DEV.t0 ~ DEV.t1 동안 대련 결과로 점수를 모아 순위를 겨룬다. 승리 3점 · 무승부 2점 · 패배 1점.
       같은 상대와의 대련은 하루에 DEV.PAIR번까지만 점수가 된다(친한 사람끼리 점수를 몰아주는 것을 막는다).
-      끝나고 DEV.GRACE(1시간)가 지나면 순위가 확정되고, 각자 접속할 때 순위 보상을 한 번 받는다. 숫자만 고치면 바뀐다.
+      끝나고 DEV.GRACE(1시간)가 지나면 순위가 확정되고, 각자 접속할 때 순위 보상을 한 번 받는다.
+      화면은 즉시(낙관), 확정·순위·보상은 서버(functions/duel, duel/q·duel/claim). 숫자·id·기간은 클라 DEV 와 functions/duel/dev.js 를 같이 고친다.
       새 이벤트를 열려면 id·기간·보상만 바꾸면 된다(id가 바뀌면 점수는 0부터 다시 센다). */
-   const DEV={id:"duel-ev-20261020",nm:"대련 이벤트",t0:Date.parse("2026-10-18T16:00:00+09:00"),t1:Date.parse("2026-10-21T00:00:00+09:00"),PAIR:2,GRACE:3600000,
+   const DEV={id:"duel-ev-20261207",nm:"대련 이벤트",t0:Date.parse("2026-11-30T00:00:00+09:00"),t1:Date.parse("2026-12-08T00:00:00+09:00"),PAIR:2,GRACE:3600000,
    PT:{w:3,d:2,l:1},RW:[{g:1500,m:15},{g:1000,m:10},{g:700,m:7},{g:500,m:5},{g:300,m:3}],JOIN:{n:3,g:100}};
    /* 대련 구인 게시판: rooms/xr/{나} = {n 이름, e 속성, g 등급, m 한마디, ts 올린 시각}. 본인만 올리고 내릴 수 있다(서버 규칙 추가 불필요).
       DUR_TTL(2시간)이 지나면 자동으로 목록에서 빠진다. 대련 중인 사람은 '대련 중'으로 표시된다. 숫자만 고치면 바뀐다. */
@@ -442,9 +458,17 @@
    const BDI_MAX=720,BDI_KB=180;
 
 
-   /* 접속 시각: 페이지를 열 때 내 명부(who)에 시각(on)만 남긴다. 접속 인원 수는 세지 않고, 그 목록도 받지 않는다.
-      ON_WIN 은 대련·등록자에서 최근 접속으로 볼 기준이다. 보스 체력은 전투력 1위 한 명을 읽는다. */
-   const ON_WIN=150000;
+   /* 접속·휴면 시각
+      · on: 페이지를 열 때 who 에 남기는 세션 스탬프. ON_WIN(150초) 안이면 '접속 중' 표시용.
+        세션당 한 번 고정이라 장기 휴면 판정에는 쓰지 않는다.
+      · la (last active): 허브 진입·재접속 때 Date.now()로 고치는 "마지막 활동 ms".
+        서버 dormantSweep 이 who.la < now-DM_MS 이면 휴면(dm=1)으로 올린다.
+        (인덱스: RTDB who ".indexOn" 에 "la" 필요.)
+      · dm: 휴면 플래그. 등록자 최하단 '화원', 공개 사진 삭제, 전체 보상 제외.
+        원본 C.img 는 남기고, 재접속 때 공개본(players.im·wboss/pic*)만 다시 올린다.
+      · DM_MS: 약 2개월(60일).
+      캐릭터 플래그 가방은 C.flags (js/flags/flags.js). flag / story_flag. 공개 카드·규칙 추가 없음. */
+   const ON_WIN=150000,DM_MS=60*24*60*60*1000;
    /* 자연재해: 하루를 6시간씩 넷(한국 시각 0·6·12·18시)으로 나누고, 구간마다 DIS_P 확률로 한 마을에 재해가 닥친다.
       언제 어디에 무엇이 오는지는 시각으로 계산해서 모두에게 같다.
       제압되지 않은 동안만 그 마을 주민에게 효과가 있고, 길어도 그 구간이 끝날 때(최대 6시간)까지다.

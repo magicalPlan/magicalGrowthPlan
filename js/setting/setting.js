@@ -5,7 +5,9 @@ verKeep();
 let setLinked="";
 function pwShow(em){setLinked=em&&!mailDummy(em)?em:"";const b=$("#set-pw");if(b)b.hidden=!setLinked;if(!setLinked){const f=$("#set-pw-box");if(f)f.hidden=true}}
 function mailErr(e,act){const s=String(e&&e.message||e),pw=act==="pw",leave=act==="leave";
- if(s==="401"||s==="403")return leave?"서버 규칙이 계정 기록 삭제를 막았다.":"서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
+ if(s==="401"||s==="403")return leave?"탈퇴 권한이 거부되었다. 다시 로그인한 뒤 시도하자.":"서버 규칙이 이메일 기록을 막았다. mail 과 elogin 을 로그인 없이 읽을 수 있게 열어야 한다.";
+ if(s==="LEAVE_URL")return "탈퇴 서버 주소가 없다. 페이지를 새로고침하거나 운영자에게 알려 주자.";
+ if(s==="must"||s==="wipe"||s.indexOf("LEAVE_")==0)return "친구·이메일 기록을 지우지 못해 탈퇴를 끝내지 못했다. 잠시 뒤 다시 시도하자.";
  if(s.indexOf("EMAIL_EXISTS")===0)return "이미 다른 계정에 쓰이는 이메일이다.";
  if(s.indexOf("INVALID_PASSWORD")===0||s.indexOf("INVALID_LOGIN_CREDENTIALS")===0||s.indexOf("EMAIL_NOT_FOUND")===0)return "비밀번호가 맞지 않다.";
  if(s.indexOf("WEAK_PASSWORD")===0)return "새 비밀번호는 8자 이상·영문·숫자가 필요하다.";
@@ -46,23 +48,28 @@ function drawSetting(){
  oddsDraw();
  if(on)mailNote();
 }
-/* 회원 탈퇴: 비밀번호로 다시 확인한 뒤 Firebase 계정과 이 계정의 서버 기록을 지운다. */
-async function leaveWipe(){const uid=AUTH.uid,id=mailId();
- if(DB&&uid){const del=p=>{try{return DB.doc(p).delete()}catch(e){return Promise.resolve()}};
-  await Promise.allSettled([del("accounts/"+uid),del("players/"+uid),del("who/"+uid),del("raid/"+uid),del("wboss/pic/"+uid),del("wboss/picm/"+uid)]);
-  if(id){let linked="";try{const s=await DB.doc("mail/"+id).get();if(s.exists&&typeof s.data()==="string")linked=s.data()}catch(e){}
-   try{await DB.doc("mail/"+id).delete()}catch(e){}
-   if(linked&&!mailDummy(linked)){try{await DB.doc("elogin/"+mailKey(linked)).delete()}catch(e){}}}}
+/* 회원 탈퇴: 비밀번호 재인증 후 Cloud Function(accountLeave)이 RTDB·Auth 를 일괄 정리한다.
+   클라는 Bearer idToken 으로 호출하고, 로컬 세션만 비운다. (구 leaveWipe·idt delete 는 서버로 이전) */
+function leaveLocalClear(uid){
  try{["mgr_rt","mgr_id","mgr"].forEach(k=>localStorage.removeItem(k));if(uid){localStorage.removeItem("mgr_jc_"+uid);localStorage.removeItem("mgr_bk_"+uid);localStorage.removeItem("mgr_pend_"+uid);localStorage.removeItem("mgr_rr_"+uid)}}catch(e){}}
+async function leaveCall(){const url=typeof FB_LEAVE_URL==="string"&&FB_LEAVE_URL;if(!url)throw new Error("LEAVE_URL");
+ if(!AUTH.tok)throw new Error("CREDENTIAL_TOO_OLD_LOGIN_AGAIN");
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+AUTH.tok},body:JSON.stringify({id:mailId()||""})});
+ let j=null;try{j=await r.json()}catch(e){j=null}
+ if(r.status===401||r.status===403)throw new Error(String(r.status));
+ if(!r.ok||!(j&&j.ok))throw new Error((j&&j.why)||("LEAVE_"+r.status));
+ return j}
 async function leaveAccount(){const m=$("#setm");if(m)m.textContent="";
  if(!AUTH.uid){if(m)m.textContent="로그인한 뒤에 탈퇴할 수 있다.";return}
  if(!confirm("정말 회원 탈퇴를 진행하시겠습니까?"))return;
  const pw=prompt("비밀번호를 입력해주십시오.");if(pw==null)return;
  if(!String(pw).length){if(m)m.textContent="비밀번호를 적어야 한다.";return}
  const btn=$("#set-leave");if(btn)btn.disabled=true;
+ const uid=AUTH.uid;
  try{await mailReauth(mailId(),pw,setLinked||AUTH.mail||"");
-  await leaveWipe();
-  await idt("delete",{idToken:AUTH.tok});
+  if(m)m.textContent="서버에서 기록을 지우는 중이다…";
+  await leaveCall();
+  leaveLocalClear(uid);
   AUTH.uid=null;AUTH.tok=null;AUTH.rt="";AUTH.mail="";AUTH.name="";
   alert("회원 탈퇴에 성공하였습니다.");
   location.reload()}
@@ -83,17 +90,33 @@ function oddsShady(){if(typeof SHADY_TIER_P==="undefined"||typeof SHADY_POOL==="
   (pool||[]).forEach(r=>{const nm=typeof shadyName==="function"?shadyName(r):(r&&r.id)||"?";items.push([nm+(r&&r.n?" ×"+r.n:"")+" · "+(ti+1)+"등급",tp/len])})});
  box.appendChild(elT("p","set-odd-sub","보상별 확률"));
  box.appendChild(oddsTable(items,["보상","확률"]));return box}
+/* 사역마 특성: 효과×등급 표. 머리글에 등급 확률. data/pet-traits.js 와 맞춤. */
+function oddsPetTr(){if(typeof PET_TR_RATE==="undefined"||typeof PET_TR==="undefined")return null;
+ const box=elT("div","set-odd-box"),rareNm=r=>(typeof PET_TR_RARE!=="undefined"&&PET_TR_RARE[r])||String(r);
+ const rate={};PET_TR_RATE.forEach(([r,p])=>{rate[r]=p});
+ const lvLab=(typeof PET_TR_LV!=="undefined"?PET_TR_LV:[5,10,15]).join("·");
+ const col=r=>rareNm(r)+" ("+oddsTxt(rate[r]||0)+")";
+ const unitOf=t=>t[6]==="pp"||t[1]==="trial"?"%p":t[1]==="up"?"%":"";
+ box.append(elT("p","set-odd-name","사역마 특성"),elT("p","hint","친밀도 "+lvLab+"단계에서 각각 하나씩 받는다. 특성 종류는 남은 것 중 균등하고, 같은 사역마에 같은 특성은 나오지 않는다. 아래 등급 확률은 5·10단계 기준이며, 15단계 슬롯은 전설 고정이다."));
+ const t=elT("table","set-odd-table set-odd-fx"),thead=elT("thead"),hr=elT("tr"),tb=elT("tbody");
+ hr.append(elT("th","","펫 효과"),elT("th","",col(1)),elT("th","",col(2)),elT("th","",col(3)));
+ thead.appendChild(hr);t.appendChild(thead);
+ PET_TR.forEach(row=>{const u=unitOf(row),tr=elT("tr");
+  tr.append(elT("td","",row[2]),elT("td","",(Number(row[3])||0)+u),elT("td","",(Number(row[4])||0)+u),elT("td","",(Number(row[5])||0)+u));
+  tb.appendChild(tr)});
+ t.appendChild(tb);box.appendChild(t);return box}
 function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"||typeof PET_RATE==="undefined"||typeof PET_EV==="undefined")return;box.innerHTML="";
  const rate={};PET_RATE.forEach(([k,p])=>{rate[k]=p});
  const egg=elT("div","set-odd-box");egg.append(elT("p","set-odd-name","사역마의 알"),elT("p","hint","품으면 1시간 뒤에 희귀도가 정해진다. 같은 희귀도 안에서는 종마다 같다."));
  egg.appendChild(oddsTable([[PET_RARE[1],rate[1]],[PET_RARE[2],rate[2]],[PET_RARE[3],rate[3]]],["희귀도","확률"]));
- const leg=PET_EV.leg||0,lim=PET_EV.lim||0,rare=PET_EV.rare||0,common=Math.max(0,1-leg-lim-rare),limN=Object.values(PETS).filter(x=>x[3]===4).length||1,ev=elT("div","set-odd-box");
+ const leg=PET_EV.leg||0,idsEv=Array.isArray(PET_EV.ids)?PET_EV.ids.filter(id=>PETS[id]):[],lim=PET_EV.lim||0,rare=PET_EV.rare||0,common=Math.max(0,1-leg-lim-rare),limN=idsEv.length||Object.values(PETS).filter(x=>x[3]===4).length||1,ev=elT("div","set-odd-box");
  ev.append(elT("p","set-odd-name",PET_EV.ic+" "+PET_EV.nm),elT("p","hint","기간 한정은 "+limN+"마리가 같은 확률(각 "+oddsTxt(lim/limN)+")이다. 그다음은 희귀, 나머지는 일반이다."));
  ev.appendChild(oddsTable([[PET_RARE[3],leg],[PET_RARE[4],lim],[PET_RARE[2],rare],[PET_RARE[1],common]],["희귀도","확률"]));
  box.append(egg,ev);
  if(typeof PET_EV2!=="undefined"){const L2=PET_EV2.leg||0,ids=Array.isArray(PET_EV2.ids)?PET_EV2.ids.filter(id=>PETS[id]):[],lim2=ids.length?(PET_EV2.lim||0):0,rare2=PET_EV2.rare||0,common2=Math.max(0,1-L2-lim2-rare2),limN2=ids.length||1,ev2=elT("div","set-odd-box");
   ev2.append(elT("p","set-odd-name",PET_EV2.ic+" "+PET_EV2.nm),elT("p","hint",ids.length?"기간 한정은 "+limN2+"마리가 같은 확률(각 "+oddsTxt(lim2/limN2)+")이다. 그다음은 희귀, 나머지는 일반이다.":"기간 한정 사역마는 곧 공개된다. 지금은 전설·희귀·일반만 나온다."));
   ev2.appendChild(oddsTable([[PET_RARE[3],L2],[PET_RARE[4],lim2],[PET_RARE[2],rare2],[PET_RARE[1],common2]],["희귀도","확률"]));box.appendChild(ev2)}
+ const tr=oddsPetTr();if(tr)box.appendChild(tr);
  const sh=oddsShady();if(sh)box.appendChild(sh)}
 (function(){const d=$("#set-odds-fold");if(!d)return;const m=d.querySelector(".set-fold-mark");
  d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})})();
@@ -104,11 +127,10 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
  bindDialog("set-terms-open","set-terms-dialog");bindDialog("set-privacy-open","set-privacy-dialog");
  const d=$("#set-license-fold");if(d){const m=d.querySelector(".set-fold-mark");d.addEventListener("toggle",()=>{if(m)m.textContent=d.open?"접기":"펼치기"})}})();
 {const b=$("#set-theme");if(b)b.onclick=()=>{thmSet(document.documentElement.dataset.theme==="light"?"dark":"light");drawSetting()}}
-{const b=$("#set-srv");if(b)b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}else if(u)$("#setm").textContent="주소는 https:// 로 시작해야 한다."}}
 {const b=$("#set-mail");if(b)b.onclick=()=>{const box=$("#set-mail-box");if(!box||!AUTH.uid)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-pw-box").hidden=true;const idb=$("#set-mail-idbox");if(idb)idb.hidden=!!mailId();(mailId()?$("#set-mail-em"):$("#set-mail-id")).focus()}}}
 {const f=$("#set-mail-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-mail-go"),em=mailOpt($("#set-mail-em").value),pw=$("#set-mail-pw").value,typed=($("#set-mail-id").value||"").trim();m.textContent="";
  if(em===null||!em){m.textContent=em===null?"이메일 형식이 아니다.":"받을 수 있는 이메일을 적어야 한다.";return}
- if(pw.length<6){m.textContent="비밀번호를 적어야 한다.";return}
+ if(!String(pw).length){m.textContent="비밀번호를 적어야 한다.";return}
  const id=mailId()||(/^[A-Za-z0-9_]{3,20}$/.test(typed)?typed.toLowerCase():"");
  if(!id){m.textContent="가입할 때 쓴 아이디를 적어야 한다.";$("#set-mail-idbox").hidden=false;return}
  btn.disabled=true;
@@ -121,7 +143,7 @@ function oddsDraw(){const box=$("#set-odds");if(!box||typeof PETS==="undefined"|
 {const b=$("#set-pw");if(b)b.onclick=()=>{const box=$("#set-pw-box");if(!box||!AUTH.uid||!setLinked)return;box.hidden=!box.hidden;if(!box.hidden){$("#set-mail-box").hidden=true;$("#set-pw-old").focus()}}}
 {const f=$("#set-pw-box");if(f)f.onsubmit=async e=>{e.preventDefault();const m=$("#setm"),btn=$("#set-pw-go"),old=$("#set-pw-old").value,nw=$("#set-pw-new").value,nw2=$("#set-pw-new2").value;m.textContent="";
  if(!AUTH.uid||!setLinked){m.textContent="이메일을 연동한 계정만 비밀번호를 바꿀 수 있다.";return}
- if(old.length<6){m.textContent="지금 비밀번호를 적어야 한다.";return}
+ if(!String(old).length){m.textContent="지금 비밀번호를 적어야 한다.";return}
  const bad=pwCheck(nw);if(bad){m.textContent=bad;return}
  if(nw!==nw2){m.textContent="새 비밀번호가 서로 다르다.";return}
  if(nw===old){m.textContent="새 비밀번호는 지금 것과 달라야 한다.";return}

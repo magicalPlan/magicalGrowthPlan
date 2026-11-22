@@ -1,0 +1,38 @@
+/* 눈의 여왕 — 장기 의뢰 테마. #v-ord[data-event="snow"]
+   기본값은 polish.css #v-ord 에도 있음. 여기 값을 바꾸면 시즌만 덮어쓴다. */
+#v-ord[data-event="snow"]{
+ --ord-accent:#9fd8ff;
+ --ord-accent-deep:#3a6fa8;
+ --ord-border:#6fa8dc88;
+ --ord-border-soft:#6fa8dc55;
+ --ord-glow:rgba(140,200,255,.18);
+ --ord-glow2:rgba(62,192,176,.12);
+ --ord-hero-bg:radial-gradient(120% 140% at 100% 0,var(--ord-glow),transparent 55%),radial-gradient(90% 120% at 0 100%,var(--ord-glow2),transparent 60%),linear-gradient(180deg,#141a2a,#100e1c);
+ --ord-hero-title:#e8f4ff;
+ --ord-hero-mark:"❄";
+ --ord-tab-on:linear-gradient(180deg,#1d2a40,#141c2c);
+ --ord-clp-c:#3a5f8f;
+ --ord-clp-glow:rgba(140,200,255,.14);
+ --ord-clp-bar:linear-gradient(90deg,#3a6fa8,#9fd8ff);
+ --ord-clp-big:#cfe9ff;
+ --ord-clp-ic:radial-gradient(circle,#2a4a70,#141c2c);
+ --ord-boss-c:#1d4e5c;
+ --ord-boss-bar:linear-gradient(90deg,#1a4a55,#3ec0b0);
+ --ord-clue-bg:linear-gradient(180deg,#102228,#0c181c);
+ --ord-clue-on:#3ec0b0;
+ --ord-clue-hr-fg:#bff3ea;
+ --ord-clue-hr-bg:#1a4a55;
+ --ord-help-bg:#151324;
+ --ord-light-accent:#1f6fa8;
+ --ord-light-title:#1f3b5a;
+ --ord-light-border:#5a9fd4;
+ --ord-light-hero-bg:linear-gradient(135deg,#eaf3fb,#f6f0e5);
+ --ord-light-tab-on:#eaf3fb;
+ --ord-light-clp-bg:linear-gradient(180deg,#eef5fb,#f6f0e5);
+ --ord-light-clp-ic:#eaf3fb;
+ --ord-light-clue-bg:linear-gradient(180deg,#e7f4f6,#f7f1e6);
+ --ord-light-clue-border:#5a9aa6;
+ --ord-light-clue-on:#1f7a86;
+ --ord-light-clue-hr-fg:#0f5f6a;
+ --ord-light-clue-hr-bg:#d3eef0
+}

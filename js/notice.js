@@ -46,36 +46,73 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
    catch(err){msg.textContent="게시하지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}go.disabled=false};
   b.append(row,f)}}
 
-/* ── '멸망까지' 카운트다운 (D-14) ──
+/* ── '멸망까지' 카운트다운 (현실 28일 · 게임 14일) ──
    기간은 doom 한 칸뿐이다. 운영자가 다시 저장하면 그 날짜가 이전 날짜를 갈아 끼운다. 로그인한 사람은 읽고, 운영자만 고친다.
    시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
-   운영자가 시작일을 고르면 그날이 D-14, 14일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐). */
-const DOOM_DAYS=14;let DOOM=null;
-const doomOk=o=>!!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
-const doomYmd=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+   운영자가 시작일을 고르면 그날이 시작, 현실 28일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐).
+   시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤. */
+const DOOM_DAYS = 28;
+const DOOM_REAL_PER_GAME = 2;
+let DOOM = null;
+const doomOk = o => !!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
+const doomYmd = t => {
+   const d = new Date(t);
+   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const doomDay=s=>{const [y,m,d]=String(s).split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)};
-function doomState(o){if(!doomOk(o))return null;const st=doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
- const e=new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
- const [,sm,sd]=o.d.split("-").map(Number);
- return {left,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
-async function loadDoom(){if(!XON())return;
- try{const r=await DB.doc("doom").get();const d=r.exists?r.data():null;DOOM=doomOk(d)?d:null}catch(e){}
- drawDoom()}
-function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),src=XON()?DOOM:(C&&C.doom)||null,st=doomState(src);
- if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
- b.innerHTML="";const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;if(!show)return;
- const c=elT("div","doom-card"+(live&&st.left<=3?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off"));
- const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지 · 18:00시"));
- if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작"));
- else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
- c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.left):"—"));
+function doomState(o){
+   if(!doomOk(o))return null;
+   const st = doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
+   const e = new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
+   const [,sm,sd]=o.d.split("-").map(Number);
+ /* elapsed: 시작일=0. 홀수째(1,3,…) 현실일 → 낮, 짝수째 → 밤. gLeft: 남은 게임일(표시용). */
+   const elapsed=Math.max(0,Math.min(DOOM_DAYS,today-st));
+   const nth = elapsed+1;
+   const dayPhase = nth % 2 === 1
+   const gLeft = left <= 0 ? 0 : Math.ceil(left/DOOM_REAL_PER_GAME)
+   const gDay = Math.min(DOOM_DAYS/DOOM_REAL_PER_GAME , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
+   return {left,gLeft,gDay,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
+
+async function loadDoom(){
+   if(!XON())return;
+   try{
+      const r = await DB.doc("doom").get();
+      const d = r.exists ? r.data() : null;
+      DOOM = doomOk(d)?d:null
+   } catch (e) {
+
+   }
+   drawDoom()
+}
+
+function drawDoom () {
+   const b = $("#doom");
+   
+   if (!b) return;
+   
+   const isA = !!(C&&ADM[UID])
+   const src = XON() ? DOOM : (C&&C.doom) || null
+   const st = doomState(src);
+   
+   if(b.querySelector(".doom-form:not([hidden]) input:focus"))return;// 운영자가 날짜를 고르는 중이면 다시 그리지 않는다
+   
+   b.innerHTML="";
+   const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;
+   if(!show)return;
+   
+   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마. */
+   const final=live&&st.gLeft<=1,phase=live&&!final?(st.dayPhase?"day":"night"):"",phaseTx=st&&st.dayPhase?"낮":"밤",phaseMark=st&&st.dayPhase?"☀":"☾";
+ const c=elT("div","doom-card"+(live&&(final||st.gLeft<=2)?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off")+(phase?" "+phase:""));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"+" · "+phaseMark));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":final?st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작":st.endTx+" 18:00시 멸망 · 게임 "+st.gDay+"일째 "+phaseTx));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14 · 현실 28일).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
+ c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.gLeft):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
  b.appendChild(c);
  if(isA){const set=elT("button","chip doom-set","⏳ 시작일 설정");set.type="button";
   const f=elT("form","doom-form");f.hidden=true;const inp=elT("input");inp.type="date";inp.value=doomOk(src)?src.d:doomYmd(srvNow());inp.setAttribute("aria-label","카운트다운 시작일");
-  const hint=elT("p","hint","고른 날이 D-14, 14일 뒤가 D-DAY가 된다.");
+  const hint=elT("p","hint","고른 날부터 현실 28일(표시 D-14). 2일=1일, 홀수째 낮·짝수째 밤.");
   const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
-  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY)":"날짜를 골라야 한다."};inp.oninput=upd;upd();
+  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY) · 현실 28일":"날짜를 골라야 한다."};inp.oninput=upd;upd();
   f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
   const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;msg.textContent="";
    try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}
@@ -91,18 +128,23 @@ function drawDoom(){const b=$("#doom");if(!b)return;const isA=!!(C&&ADM[UID]),sr
    시즌은 players/{운영자}/rst 에도 {id}를 남긴다. 캐릭터의 C.rsv 가 그 id 이상이 되면 같은 회귀는 다시 돌리지 않는다.
    접속(boot) 때는 이미 서버에 반영된 기록을 읽고, C.rstn < due 이면 알림만 한 번 띄운다(다시 회귀시키지 않음).
    접속 중 rr 가 커지면 서버 캐릭터를 다시 읽어 맞추고 알림함만 남긴다. 팝업 알림은 다음 접속 때.
-   남기는 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·통계(대련 전적 제외), 사역마, 장기 토벌·단서, 보상·알림 표시.
-   처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망·친구, 대련 전적 등. 시즌 때 공용 채팅·선물·마을·보스·타락·대련 방은 함께 지운다. */
+   남기는 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·통계(대련 전적 제외), 사역마(친밀도·보유 상한),
+   친구 관계(fr 등), 장기 토벌·단서, flags, 보상·알림 표시.
+   처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망, 대련 전적 등.
+   시즌 때 공용 채팅·선물 우편함·마을·보스·타락·대련 방은 함께 지운다(계정 친구 목록 fr 은 남김). */
 let RST=null;
 /* lh·clue: 장기 진행은 남긴다. lv·ex·xv·gd 는 KEEP에 넣지 않아 레벨 1·경험 0·골드 100으로 돌아간다. rstn 도 KEEP에 넣지 않는다(회귀마다 알림을 다시 띄우려고). */
 /* scf(시즌 제작 1회 기록)는 KEEP에 넣지 않는다. 회귀하면 다시 만들 수 있다. */
 /* duSeen·duNt·du·duD 는 KEEP에 넣지 않는다. 회귀하면 대련 신청 표시·진행·일일 보상 횟수가 비워진다. stats.duW/duL/duD 는 rstShape 에서 0으로 맞춘다. */
+/* flags(일반·스토리 플래그 가방)는 시즌 회귀에도 남긴다 — 스토리/해금 진행 유지. */
+/* 친구: fr·fq·fo·fs(워터마크). rel(프로필 관계란)도 유지.
+   사역마: pets(각 lm=친밀도 상한)·pet·petMax(보유 상한)·stats(안에 petMax). */
 const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","egg","petMax",
- "cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
- "fs","rs","gs","nts","ntcSeen","vcSeen","bdSeen","rsn","pn","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
+ "fr","fq","fo","fs","flags","cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last","lh","clue",
+ "rs","gs","nts","ntcSeen","vcSeen","bdSeen","rsn","pn","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
-const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
-const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·친구 목록·대련 전적 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
+const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·친구·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·친구·장기 토벌/단서 진행과 프로필·기록은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
+const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록, 장기 토벌·단서 탐색 진행\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·대련 전적 등\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
 async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
@@ -118,6 +160,9 @@ function rstShape(src,id){const base=JSON.parse(JSON.stringify(src||{})),keep={}
  const next=Object.assign({lv:1,ex:0,xv:3,cl:0,dz:0,b:0,gd:100,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:""},keep,{rsv:id,nt:[],g:(typeof GL==="string"&&GL[0])||"E"});
  next.stats=Object.assign({},next.stats);next.stats.maxGold=Math.max(Number(next.stats.maxGold)||0,Number(next.gd)||0,100);
  next.stats.duW=0;next.stats.duL=0;next.stats.duD=0;
+ /* 사역마 보유 상한: petMax 와 stats.petMax 중 큰 쪽을 맞춘다(허가증 기록 유지). */
+ {const pm=Math.max(Number(next.petMax)||0,Number(next.stats.petMax)||0);if(pm>0){next.petMax=pm;next.stats.petMax=Math.max(Number(next.stats.petMax)||0,pm)}}
+ try{if(typeof flagsEnsure==="function")flagsEnsure(next);else if(!next.flags)next.flags={flag:{},story_flag:{}}}catch(e){}
  const prev=C;C=next;try{if(typeof eggFix==="function")eggFix()}catch(e){}const out=C;C=prev;return out}
 function rstPub(ch){const prev=C;let power=0,pet=null;C=ch;try{power=typeof pw==="function"?pw():0;const q=typeof petCur==="function"?petCur():null;pet=q?{s:q.sp,n:String(q.nm||"").slice(0,10),l:typeof petLv==="function"?petLv(q):1}:null}catch(e){}C=prev;
  return{g:ch.g,a:(ch.a||[]).join(" · "),lv:ch.lv||1,cl:0,ex:ch.ex||0,dz:0,wp:"없음",pw:power,rv:Number(ch.rsv)||0,fc:null,wf:null,fl:null,db:null,dr:null,ev:null,du:{w:0,l:0},hf:ch.healOff?1:0,pet:pet,ts:Date.now()}}
@@ -136,6 +181,7 @@ async function rstWrite(uid,src,R){if(!src||typeof src!=="object")throw new Erro
  /* 개인 회귀: 그 사람의 대련 신청함·구인글만 지운다. 진행 중 xb 방·상대 쪽 xa 는 시즌 초기화에서 통째로 비운다. */
  try{await DB.doc("rooms/xa"+uid).delete()}catch(e){}
  try{await DB.doc("rooms/xr/"+uid).delete()}catch(e){}
+ try{await DB.doc("event_minigame/flanders/rank/"+uid).delete()}catch(e){}
  return{ch,late}}
 async function rstTakeCloud(due){if(!C||!UID||!DB)return false;
  try{const s=await DB.doc("accounts/"+UID).get();const ch=s.exists&&s.data()&&s.data().c;if(!ch||typeof ch!=="object"||(Number(ch.rsv)||0)<due)return false;
@@ -155,7 +201,7 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
   const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
@@ -165,7 +211,7 @@ async function rstWipe(){const done=[],fail=[];
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
 async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
- const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구·마을 경쟁·보스·대련 방/전적이 지금 서버에서 초기화된다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
+ const t=prompt("모든 플레이어의 캐릭터와 채팅·게시판·친구 신청 우편함·마을 경쟁·보스·대련 방/전적·미니게임 랭킹이 지금 서버에서 초기화된다. 계정 친구 목록·사역마 상한은 남는다. 되돌릴 수 없다.\n\n계속하려면 '초기화'라고 입력해 줘.");
  if((t||"").trim()!=="초기화"){msg.textContent="취소했다.";return}
  btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="초기화하는 중이다. 창을 닫지 말자...";
  try{const R={id:Date.now(),ts:Date.now()};C.rst=R;save();await DB.doc("players/"+UID+"/rst").set(R);RST={id:R.id,by:UID};
@@ -183,8 +229,8 @@ async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
  catch(e){msg.style.color="var(--bad)";msg.textContent="초기화를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}btn.disabled=false}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const c=elT("div","card rst-card");c.append(elT("h2","","🌑 시즌 초기화 (운영자 전용)"),
-  elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
-  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 목록과 신청·공명·선물, 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
+  elT("p","hint","버튼을 누르면 등록된 모든 캐릭터를 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
+  elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계와 기여 순위, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
  const b=elT("button","btn rst-go","시즌 초기화 실행"),m=elT("p","msg","");b.type="button";b.onclick=()=>rstRun(b,m);c.append(b,m);box.appendChild(c);
@@ -199,11 +245,70 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
  rc.append(rb,rm);box.appendChild(rc);
  const pc=elT("div","card rst-card rst-one");pc.style.marginTop="12px";pc.append(elT("h2","","👤 개인 회귀 (운영자 전용)"),
-  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+  elT("p","hint","UID 한 명의 캐릭터만 시즌 초기화와 같이 지금 서버에서 되돌린다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록, 장기 토벌·단서 진행은 남고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
   elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스·공용 대련 방과 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
  const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);pc.append(row,pm);box.appendChild(pc);
+ const fc=elT("div","card rst-card");fc.style.marginTop="12px";fc.append(elT("h2","","☍ 유령 친구 정리 (운영자 전용)"),
+  elT("p","hint","캐릭터 이름(c/n)이 없는 계정을 유령으로 본다. 다른 사람의 친구·신청 칸(fr·fq·fo)에서 빼고, 계약직 명부(who)·공개 카드(players)·대련 roster 고아 칸도 지운다. 탈퇴 누락분 정리용이다."),
+  elT("p","hint","접속 중인 사람은 새로고침·재로그인 후 친구 목록이 맞춰진다. 캐시된 계약직 목록은 잠시 뒤·명부 다시 열면 갱신된다."));
+ const fb=elT("button","btn","유령 친구·명부 정리"),fm=elT("p","msg","");fb.type="button";fb.onclick=()=>frGhostRun(fb,fm);fc.append(fb,fm);box.appendChild(fc);
  drawAdmGrant(box)}
+/* 유령: accounts 에 c/n 이 없는 UID.
+   1) accounts shallow → c/n 있는 것만 생존
+   2) 생존 계정 fr·fq·fo 에서 유령 peer PATCH
+   3) who/players/duel/roster 에만 남은 고아 UID 삭제 (계약직 명부 잔재) */
+/* 생존 = accounts/.../c/n 이 있음. 읽기 실패는 생존으로 본다(오삭제 방지).
+   목록은 accounts 루트 shallow(운영자만 규칙 허용). who/players 우회 목록은 쓰지 않는다. */
+async function frGhostAlive(){let keys=[];
+ try{keys=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
+ keys=keys.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u));
+ const alive={};const chunk=40;let unsure=0,named=0;
+ for(let i=0;i<keys.length;i+=chunk){const part=keys.slice(i,i+chunk);
+  await Promise.all(part.map(async uid=>{
+   try{const s=await DB.doc("accounts/"+uid+"/c/n").get();const n=s.exists?s.data():null;
+    if(n!=null&&n!==""){alive[uid]=1;named++}
+   }catch(e){alive[uid]=1;unsure++}}))}
+ return{alive,unsure,scanned:keys.length,named,src:"accounts"}}
+async function frGhostFix(uid,alive){const body={},take=async(path,prefix)=>{const s=await DB.doc("accounts/"+uid+"/c/"+path).get();const v=s.exists?s.data():null;if(!v||typeof v!=="object")return;
+  Object.keys(v).forEach(p=>{if(p&&!alive[p])body["c/"+prefix+"/"+p]=null})};
+ await take("fr","fr");await take("fq","fq");await take("fo","fo");
+ const n=Object.keys(body).length;if(!n)return 0;
+ body.ts=Date.now();body.sid="fr-ghost";
+ await DB.doc("accounts/"+uid).patch(body);
+ if(uid===UID&&C){Object.keys(body).forEach(k=>{const m=String(k).match(/^c\/(fr|fq|fo)\/(.+)$/);if(!m)return;C[m[1]]=C[m[1]]||{};delete C[m[1]][m[2]]});try{updNav()}catch(e){}try{save()}catch(e){}}
+ return n}
+/* who·players·duel/roster 고아 + 빈 accounts 껍질 삭제. */
+async function frGhostRoster(alive){let whoK=[],plK=[],accK=[];
+ try{whoK=Object.keys((await DB.doc("who").peek())||{})}catch(e){}
+ try{plK=Object.keys((await DB.doc("players").peek())||{})}catch(e){}
+ try{accK=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
+ const bag={};whoK.concat(plK).concat(accK).forEach(u=>{if(/^[A-Za-z0-9]{8,128}$/.test(u)&&!alive[u])bag[u]=1});
+ const ids=Object.keys(bag);let gone=0,fail=0,at=0;
+ async function worker(){for(;;){const i=at++;if(i>=ids.length)return;const uid=ids[i];
+  try{await Promise.allSettled([DB.doc("who/"+uid).delete(),DB.doc("players/"+uid).delete(),DB.doc("duel/roster/"+uid).delete(),DB.doc("accounts/"+uid).delete()]);gone++}catch(e){fail++}}}
+ if(ids.length)await Promise.all(Array.from({length:Math.min(6,ids.length)},worker));
+ try{if(typeof plClear==="function")plClear()}catch(e){}
+ return{gone,fail,n:ids.length}}
+async function frGhostRun(btn,msg){if(!ADM[UID]||!XON()||!DB)return;
+ const t=prompt("탈퇴·삭제된 계정이 친구 목록·신청 칸·계약직 명부(who)에 남은 것을 지금 서버에서 지운다.\n이름이 있는 정상 계정은 지우지 않는다.\n캐릭터 본문은 받지 않는다.\n\n계속하려면 '정리'라고 입력해 줘.");
+ if((t||"").trim()!=="정리"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
+ btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="생존 계정을 모으는 중(이름 확인)…";
+ let alive={},unsure=0,scanned=0,src="";
+ try{const r=await frGhostAlive();alive=r.alive||{};unsure=r.unsure||0;scanned=r.scanned||0;src=r.src||""}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
+ const ids=Object.keys(alive);
+ if(!scanned){msg.style.color="var(--bad)";msg.textContent="accounts 목록을 읽지 못했다. 운영자만 accounts 루트 읽기가 열려 있는지 규칙을 게시한 뒤 다시 하자.";btn.disabled=false;return}
+ if(!ids.length){msg.style.color="var(--bad)";msg.textContent="accounts "+scanned+"개 중 이름이 있는 계정을 확인하지 못했다. 정리하지 않았다.";btn.disabled=false;return}
+ let at=0,cleared=0,touched=0,fail=0;const total=ids.length;
+ async function worker(){for(;;){const i=at++;if(i>=total)return;const uid=ids[i];if(i%6===0)msg.textContent="유령 친구 정리 중... "+i+" / "+total+" (칸 "+cleared+", 실패 "+fail+")";
+  try{const n=await frGhostFix(uid,alive);cleared+=n;if(n)touched++}catch(e){fail++}}}
+ try{await Promise.all(Array.from({length:Math.min(6,total)},worker));
+  msg.textContent="계약직 명부·공개 카드 고아를 지우는 중…";
+  const rost=await frGhostRoster(alive);
+  msg.style.color="var(--mu)";msg.textContent="정리했다. 검사 "+total+"명 · 친구 칸 "+cleared+"개 · 명부 고아 "+rost.gone+"/"+rost.n+"개"+(fail||rost.fail?" · 실패 "+(fail+(rost.fail||0)):"")+".";
+  alertBox("☍ 유령 친구·명부 정리","친구/신청: 검사 "+total+"명 · 손본 "+touched+"명 · 지운 칸 "+cleared+"개\n계약직 명부·카드: 고아 "+rost.n+"명 중 "+rost.gone+"명 삭제"+(unsure?"\n이름 읽기 실패(보존) "+unsure+"명":"")+(fail||rost.fail?"\n실패 "+(fail+(rost.fail||0))+"건":"")+"\n\n접속 중인 사람은 새로고침·재로그인 후 친구 목록이 맞춰진다. 계약직 명부는 다시 열어 보자.")}
+ catch(e){msg.style.color="var(--bad)";msg.textContent="정리를 끝내지 못했다. 인터넷 연결을 확인하고 다시 시도해 보자."}
+ btn.disabled=false}
 async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(inp.value||"").trim();
  if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
  let name="";try{const s=await DB.doc("players/"+uid+"/n").get();if(s.exists&&typeof s.data()==="string")name=s.data().replace(/👑/g,"").trim().slice(0,20)}catch(e){}
@@ -247,11 +352,16 @@ function admGrantPatchBody(r){const body={ts:Date.now(),sid:"admin-grant"};
  if(r.m)body["c/inv/mana"]=admGrantInc(r.m);
  Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;body["c/inv/"+id]=admGrantInc(n)});
  return body}
+/* 등록자 UID 목록: accounts 루트 shallow. 운영자 accounts .read 규칙이 필요하다(who 우회 없음). */
 async function admGrantIds(){let ids=[];
  try{ids=Object.keys((await DB.doc("accounts").peek())||{})}catch(e){}
- if(!ids.length){try{ids=Object.keys((await DB.doc("who").peek())||{})}catch(e){}}
- if(!ids.length){try{ids=Object.keys((await DB.doc("players").peek())||{})}catch(e){}}
  return ids.filter(u=>/^[A-Za-z0-9]{8,128}$/.test(u))}
+/* 전체 보상용. who.dm=1(휴면·화원)은 빼고, accounts 본문은 받지 않는다.
+   시즌 회귀(rstRun)는 admGrantIds 전체(휴면 포함)를 쓴다. */
+async function admGrantActiveIds(){const ids=await admGrantIds();let dm={};
+ try{const sn=typeof plAll==="function"?await plAll(0):null;(sn&&sn.docs||[]).forEach(d=>{const p=d.data()||{};if(Number(p.dm)===1)dm[d.id]=1})}catch(e){
+  try{const sn=await once(DB.collection("who"));(sn.docs||[]).forEach(d=>{const p=d.data()||{};if(Number(p.dm)===1)dm[d.id]=1})}catch(e2){}}
+ return ids.filter(u=>!dm[u])}
 async function admGrantSave(uid,r){if(uid===UID&&C){admGrantOnChar(C,r);try{if(typeof titleState==="function")titleState()}catch(e){}try{save();await saveCloud(true)}catch(e){throw e||new Error("save")}return "self"}
  /* 존재만 확인(이름 칸). 본문 전체는 받지 않는다. */
  const nm=await DB.doc("accounts/"+uid+"/c/n").get();if(!nm.exists||nm.data()==null||nm.data()==="")throw new Error("empty");
@@ -268,14 +378,14 @@ async function admGrantRun(btn,msg,getR){if(!ADM[UID]||!XON()||!DB)return;const 
  const preview=admGrantTxt(r);const t=prompt("등록된 모든 캐릭터에 아래 보상을 지금 서버에 더한다. 접속 중이 아니어도 적용된다.\n\n"+preview+"\n\n계속하려면 '지급'이라고 입력해 줘.");
  if((t||"").trim()!=="지급"){msg.style.color="var(--mu)";msg.textContent="취소했다.";return}
  btn.disabled=true;msg.style.color="var(--mu)";msg.textContent="등록자를 모으는 중...";
- let ids=[];try{ids=await admGrantIds()}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
+ let ids=[];try{ids=await admGrantActiveIds()}catch(e){msg.style.color="var(--bad)";msg.textContent="등록자 목록을 읽지 못했다.";btn.disabled=false;return}
  if(!ids.length){msg.style.color="var(--bad)";msg.textContent="지급할 등록자가 없다.";btn.disabled=false;return}
  let at=0,ok=0,empty=0,fail=0;const total=ids.length;
  async function worker(){for(;;){const i=at++;if(i>=total)return;const uid=ids[i];if(i%6===0)msg.textContent="지급하는 중... "+i+" / "+total+" (성공 "+ok+", 실패 "+fail+")";
   try{await admGrantSave(uid,r);ok++}catch(e){String(e&&e.message||e)==="empty"?empty++:fail++}}}
  await Promise.all(Array.from({length:Math.min(6,total)},worker));
- msg.style.color="var(--mu)";msg.textContent="지급했다. 대상 "+total+"명 · 성공 "+ok+"명"+(empty?" · 기록 없음 "+empty+"명":"")+(fail?" · 실패 "+fail+"명":"")+".";
- alertBox("🎁 전체 보상 지급","보상: "+preview+"\n\n"+msg.textContent+(fail?"\n\n실패한 계정은 데이터베이스 규칙(운영자 계정 읽기·쓰기)을 확인해 보자.":"")+"\n\n접속 중인 사람은 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.");
+ msg.style.color="var(--mu)";msg.textContent="지급했다. 대상 "+total+"명(휴면 제외) · 성공 "+ok+"명"+(empty?" · 기록 없음 "+empty+"명":"")+(fail?" · 실패 "+fail+"명":"")+".";
+ alertBox("🎁 전체 보상 지급","보상: "+preview+"\n\n"+msg.textContent+(fail?"\n\n실패한 계정은 데이터베이스 규칙(운영자 계정 읽기·쓰기)을 확인해 보자.":"")+"\n\n휴면(화원) 계정은 제외했다. 접속 중인 사람은 탭을 다시 보이거나 잠시 뒤 기록이 맞춰질 수 있다.");
  btn.disabled=false}
 async function admGrantOne(btn,msg,getR,uidInp){if(!ADM[UID]||!XON()||!DB)return;const uid=String(uidInp&&uidInp.value||"").trim();
  if(!/^[A-Za-z0-9]{8,128}$/.test(uid)){msg.style.color="var(--bad)";msg.textContent="UID는 영문과 숫자 8자 이상이어야 한다.";return}
@@ -314,7 +424,7 @@ function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"�
 function drawAdmGrant(box){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
  const gc=elT("div","card rst-card adm-grant");gc.style.marginTop="12px";
  gc.append(elT("h2","","🎁 전체 보상 지급 (운영자 전용)"),
-  elT("p","hint","accounts 에 캐릭터가 있는 모든 등록자에게 보상을 바로 더한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
+  elT("p","hint","accounts 에 캐릭터가 있는 등록자에게 보상을 바로 더한다. 휴면(화원)은 제외한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
   elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다."));
  const getAll=admGrantFields(gc);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);gc.append(gb,gm);box.appendChild(gc);
  const pc=elT("div","card rst-card adm-grant");pc.style.marginTop="12px";

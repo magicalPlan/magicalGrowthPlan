@@ -1,19 +1,15 @@
 /* =============================================================================
    장기 의뢰 — 공통 양식 (수치·보상·규칙)
+   상세 인수인계: data/event/HANDOFF.md
    -----------------------------------------------------------------------------
-   인수인계
-   · 다음 이벤트에서 테마(이름·문구·보스·기간)만 바꿀 때는 data/event/pack.js 만 고친다.
-   · 이 파일은 밸런스·보상 구조가 바뀔 때만 손댄다. 로직(js/event-boss/*)은 건드리지 않는다.
-   · 로드 순서: data/game.js · data/craft.js → 이 파일 → data/event/pack.js → js/event-boss/*
-   · pack.js 가 EBOSS / CLP / CLUE / CLUE_LOG / CLUE_EXTRA 전역을 조립한다.
-     로직은 예전과 같이 그 전역만 본다.
+   · 시즌 일정: data/event/seasons.js. 테마: pack.js EVENT_PACKS.
+   · 이 파일은 밸런스·보상 구조가 바뀔 때만. js/event-boss/* 로직은 그대로.
+   · 로드: craft.js → 이 파일 → seasons.js → pack.js → js/event-boss/*
 
-   동기화 (Functions)
-   · 출정 서버 굴림의 단서 기간·확률: functions/account/drops.js 의 CLP
-     (id / from / to / drop.x_ok·x_fail). pack 의 piece 와 맞춘 뒤 Functions 배포.
-   · 스토리·알(PET_EV*)은 별 트랙. 장기 의뢰 팩과 기간이 겹칠 수 있으니 따로 확인.
+   Functions: seasons.js → (predeploy pack-event-seasons.js) → event-seasons.js
+   · drops / boost 가 require. EVENT_FORCE 없음.
 
-   UTC 시각
+   UTC
    · Date.UTC(y, m0, d, h) — 월은 0부터. KST = UTC+9.
      예) 11/22 18:00 KST → Date.UTC(2026,10,22,9)
    ============================================================================= */
@@ -34,10 +30,10 @@ const EBOSS_FORM={
  drop:[["m_ore",1],["m_dew",1]]
 };
 
-/* 단서 조각 공통. 명칭·이모지·설명·기간·단계 이름은 pack.piece.
-   drop: x_ok/x_fail 출정, lh 장기 토벌(시간마다), clue 단서 탐색, eb 보스 토벌 확정.
-   ms: [합계 비율, 보상] — 이름은 pack 에서 붙인다.
-   보상 키: g 골드, m 마력석, it 아이템, mat 재료, evEgg 이벤트 알 개수. */
+/* 단서 조각 기본값. 팩이 clp:{goal,ms,drop} 을 주면 그 시즌만 덮어쓴다(pack.eventClpMerge).
+   명칭·기간: pack.piece + seasons. 단계 표시명: piece.msNames.
+   drop: x_ok/x_fail·lh·clue·eb (출정 서버 x_ok/x_fail 는 seasons.drop 도 맞춤).
+   ms: [합계 비율, 보상]. 보상 키: g,m,it,mat,evEgg(활성 egg.inv). */
 const CLP_FORM={
  goal:10000,
  drop:{x_ok:.35,x_fail:.1,lh:.35,clue:{base:2,extra:.5,fail:.5,early:.5},eb:3},

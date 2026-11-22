@@ -2,21 +2,23 @@
    메뉴와 알림은 friends 를, 프로필은 frBtn 과 frDo 를 그대로 부른다.
    공명은 sendF 를 쓰고, 친구 소식은 실행 중에 rqRetry 와 resHeard 를 부른다.
    소식과 친구의 플레이어 기록은 친구 화면을 열 때만 한 번 읽는다. 실시간으로 지켜보지 않고, 목록은 20명씩 받는다. */
-/* 친구: 신청 -> 수락의 양방향 구조. 친구 목록은 내 계정에 저장하고, 신청/수락/삭제 알림은 서버의 fmsg(받는 사람만 읽을 수 있음)로 주고받는다. */
+/* 친구: 신청 -> 수락의 양방향 구조. 친구 목록은 내 계정에 저장하고, 신청/수락/삭제/취소 알림은 서버의 fmsg(받는 사람만 읽을 수 있음)로 주고받는다.
+   t=cx: 보낸 사람이 대기 중 신청을 취소. fr 은 건드리지 않고 fq/fo 만 지운다(Function fmsgFriend). */
 const sendF=(to,t)=>DB.doc("fmsg/"+to+"/"+UID).set({t,ts:{".sv":"timestamp"},n:nmOf()});
 async function frDo(a,u,nm){C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
  if(a==="req"){await sendF(u,"req");C.fo[u]={ts:Date.now(),n:String(nm||"").slice(0,20)}}
  else if(a==="ok"){await sendF(u,"ok");C.fr[u]=C.fq[u]||nm||"";delete C.fq[u]}
+ else if(a==="cx"){await sendF(u,"cx");delete C.fo[u]}
  else if(a==="del"){await sendF(u,"del");delete C.fr[u]}
  save();updNav();checkTitles()}
 function frBtn(uid,name){const b=$("#pff");C.fr=C.fr||{};C.fq=C.fq||{};C.fo=C.fo||{};
  // 공명은 친구에게만 할 수 있다.
  $("#pfr").hidden=uid===UID;resBtn(uid);b.hidden=uid===UID||!AUTH.uid;b.disabled=false;b.dataset.n=name||"";$("#pfg").hidden=!(C.fr[uid]&&uid!==UID&&AUTH.uid);
- if(C.fr[uid]){b.textContent="친구 삭제";b.dataset.a="del"}else if(C.fq[uid]){b.textContent="친구 신청 수락";b.dataset.a="ok"}else if(C.fo[uid]){b.textContent="친구 신청을 보냈다";b.disabled=true;b.dataset.a=""}else{b.textContent="친구 추가";b.dataset.a="req"}}
+ if(C.fr[uid]){b.textContent="친구 삭제";b.dataset.a="del"}else if(C.fq[uid]){b.textContent="친구 신청 수락";b.dataset.a="ok"}else if(C.fo[uid]){b.textContent="신청 취소";b.dataset.a="cx"}else{b.textContent="친구 추가";b.dataset.a="req"}}
 $("#pff").onclick=async()=>{const u=pfU,b=$("#pff"),a=b.dataset.a,nm=b.dataset.n,m=$("#pfm");if(!u||!a)return;
  if(a==="del"&&!confirm("친구를 삭제할까? 상대의 친구 목록에서도 사라진다."))return;
  b.disabled=true;
- try{await frDo(a,u,nm);m.style.color="var(--mu)";m.textContent=a==="req"?"친구 신청을 보냈다.":a==="ok"?"친구가 되었다.":"친구를 삭제했다."}
+ try{await frDo(a,u,nm);m.style.color="var(--mu)";m.textContent=a==="req"?"친구 신청을 보냈다.":a==="ok"?"친구가 되었다.":a==="cx"?"친구 신청을 취소했다.":"친구를 삭제했다."}
  catch(e){m.style.color="var(--bad)";m.textContent="지금은 할 수 없다. 잠시 뒤에 다시 시도해야 한다."}
  frBtn(u,nm)};
 /* 나에게 온 친구·공명 소식을 확인한다. 친구 화면을 열 때만 한 번 GET(실시간 감시 없음).
@@ -26,6 +28,7 @@ async function syncFr(){if(!AUTH.uid||!C||!DB)return;try{rqRetry();const s=await
  s.docs.map(d=>[d.id,d.data()]).filter(([f,v])=>v&&v.ts>(C.fs[f]||0)).sort((a,b)=>a[1].ts-b[1].ts).forEach(([f,v])=>{C.fs[f]=v.ts;ch=true;const n=String(v.n||"누군가"),fts=Number(v.ts)||0;
   if(v.t==="req"){if(C.fr[f])sendF(f,"ok").catch(()=>{});else if(C.fo[f]){C.fr[f]=n;delete C.fo[f];sendF(f,"ok").catch(()=>{});(notes.push(n+"님과 친구가 되었다"),note("fr",n+"님과 친구가 되었다.",f,"fr:okpair:"+f+":"+fts))}else{C.fq[f]=n;(notes.push(n+"님이 친구 신청을 보냈다"),note("fr",n+"님이 친구 신청을 보냈다.",f,"fr:req:"+f+":"+fts))}}
   else if(v.t==="ok"){C.fr[f]=n;delete C.fo[f];delete C.fq[f];(notes.push(n+"님이 친구 신청을 수락했다"),note("fr",n+"님이 친구 신청을 수락했다.",f,"fr:ok:"+f+":"+fts))}
+  else if(v.t==="cx"){delete C.fq[f];delete C.fo[f];(notes.push(n+"님이 친구 신청을 취소했다"),note("fr",n+"님이 친구 신청을 취소했다.",f,"fr:cx:"+f+":"+fts))}
   else if(v.t==="del"){delete C.fr[f];delete C.fq[f];delete C.fo[f];(notes.push(n+"님과 친구가 끊어졌다"),note("fr",n+"님과 친구가 끊어졌다.",f,"fr:del:"+f+":"+fts))}
   else if(v.t==="rok"||v.t==="rno")resHeard(f,v,n,notes)});
  if(!ch)return;save();updNav();checkTitles();
@@ -53,7 +56,7 @@ function paintFriends(msg){const fm=$("#fm");if(typeof msg==="string"){fm.style.
  let more=$("#fr-more");
  if(ids.length>show.length){if(!more){more=document.createElement("button");more.id="fr-more";more.type="button";more.className="btn g";more.onclick=()=>frMore();l.insertAdjacentElement("afterend",more)}more.hidden=false;more.textContent="친구 "+Math.min(FR_PAGE,ids.length-show.length)+"명 더 보기"}
  else if(more)more.hidden=true;
- fill(o,Object.keys(C.fo).map(u=>row(u,foNm(u),[])),"보낸 신청이 없다.");fFilter()}
+ fill(o,Object.keys(C.fo).map(u=>row(u,foNm(u),[["취소하기",act("cx",u,foNm(u))]])),"보낸 신청이 없다.");fFilter()}
 async function friends(msg){const fresh=$("#v-friends").hidden;show("friends");updNav();
  if(!AUTH.uid){$("#fql").innerHTML=$("#ffl").innerHTML=$("#fol").innerHTML="";const more=$("#fr-more");if(more)more.hidden=true;rqDraw();const fm=$("#fm");fm.style.color="var(--mu)";fm.textContent="로그인해야 친구를 만들 수 있다.";return}
  if(fresh){frShown=FR_PAGE;fPl={}}

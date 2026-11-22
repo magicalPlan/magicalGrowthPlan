@@ -10,12 +10,19 @@ const cfName=id=>{const m=MATM[id];if(m)return m[2]+" "+m[1];const x=ITM.find(t=
 const cfNm=id=>{const m=MATM[id];if(m&&typeof ITEM_IMG!=="undefined"&&ITEM_IMG[id])return m[1];return cfName(id)};
 const cfHave=id=>((C.inv||{})[id]||0);
 
+/* 개수 칸: 숫자면 그대로, [min,max]면 그 구간 균등(서버 functions/account/drops.js rollQty 와 같음). */
+function matQty(n){if(Array.isArray(n)){const lo=Math.floor(Number(n[0])||1),hi=Math.floor(Number(n[1])||lo);if(hi<=lo)return Math.max(0,lo);return lo+Math.floor(Math.random()*(hi-lo+1))}return Math.max(0,Math.floor(Number(n)||0))}
+/* 정기 출정 성공·실패에 쓸 MAT_DROP 표 목록. functions/account/drops.js marchDropTables 와 맞춘다.
+   ★→x_s1, ★★→x_s2, ★★★→x_hi+x_s3, 심연→x_hi+x_ab(심연의 조각 포함). */
+function marchDropTables(r){if(!r)return[];if(!r.ok)return["x_fail"];const rw=Number(r.rw)||1;if(r.ab)return["x_ok","x_hi","x_ab"];if(rw>=1.4)return["x_ok","x_hi","x_s3"];if(rw>=1)return["x_ok","x_s2"];return["x_ok","x_s1"]}
 /* 재료 얻기: MAT_DROP 의 표 이름 목록을 받아 줄마다 굴린다. times 가 있으면 그 표를 그만큼 반복한다(장기 토벌의 시간마다).
    C.inv 에만 더하고 저장은 하지 않는다. 부른 쪽이 원래 하던 대로 저장한다. 얻은 것이 없으면 빈 글자를 돌려준다. */
 function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonus=MAT_VIL[C.v];
- (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+n})});
+ (tables||[]).filter(Boolean).forEach(k=>{const tb=MAT_DROP[k]||[];for(let i=0;i<(times||1);i++)tb.forEach(([id,n,p])=>{if(Math.random()<p)got[id]=(got[id]||0)+matQty(n)})});
  // 북극광 순록(기간 한정 사역마): 장기 토벌 시간마다 재료 1개 더
  if(times&&(tables||[]).includes("lh_hr")&&typeof petEff==="function"){const pe=petEff("lhmat"),ids=(MAT_DROP.lh_hr||[]).map(x=>x[0]);for(let i=0;i<times;i++)if(Math.random()<pe){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}
+ /* 특성 mat(공방 재료 획득률): 이번에 굴린 표의 재료 후보 중 하나를 추가 확률로 1개. */
+ if(typeof petEff==="function"){const mp=petEff("mat");if(mp>0){const ids=[];(tables||[]).filter(Boolean).forEach(k=>{(MAT_DROP[k]||[]).forEach(r=>{if(r&&r[0]&&ids.indexOf(r[0])<0)ids.push(r[0])})});if(ids.length&&Math.random()<mp){const id=ids[Math.floor(Math.random()*ids.length)];got[id]=(got[id]||0)+1}}}
  if(bonus&&got[bonus])got[bonus]++;
  const ks=Object.keys(got);if(!ks.length)return "";
  ks.forEach(id=>{C.inv[id]=(C.inv[id]||0)+got[id]});C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+ks.reduce((s,id)=>s+got[id],0);
@@ -30,11 +37,16 @@ function cfMax(r){let n=cfCap(r);Object.entries(r[3]).forEach(([id,k])=>{n=Math.
 
 // 마을 공방 단계를 읽어 온 뒤 다시 그린다. 상점과 같은 방식으로 탭을 열 때 한 번만 묻는다.
 async function craftRead(){if(craftBusy||!C||!XON()||typeof loadFac!=="function")return;craftBusy=true;try{await loadFac()}catch(e){}finally{craftBusy=false}if(!$("#v-craft").hidden)craft()}
+/* 재료 란 접기. 기본 펼침. "0" 이면 접힘(mgr_craft_mat). */
+const craftMatOpen=()=>{try{return localStorage.getItem("mgr_craft_mat")!=="0"}catch(e){return true}};
+function craftMatFold(open){const b=$("#cfmtog"),box=$("#cfmbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_craft_mat",open?"1":"0")}catch(e){}}
 
 function craft(msg){if(!C)return;C.inv=C.inv||{};const fresh=$("#v-craft").hidden,again=!fresh,y=window.scrollY;show("craft");if(again)window.scrollTo(0,y);
  const lv=facLv("workshop"),vb={A:"A마을 주민은 제작 골드가 10% 싸다.",B:"B마을 주민은 치유의 약초를 1개 더 얻는다.",C:"C마을 주민은 제작할 때 "+Math.round(CRAFT_C_BONUS*100)+"% 확률로 하나를 더 만든다.",D:"D마을 주민은 절망의 재를 1개 더 얻는다."}[C.v]||"";
  $("#cfh").textContent=(VL[C.v]?VL[C.v].n+" ":"")+"공방 "+lv+"단계. 마을 사람들이 공방을 지을수록 만들 수 있는 것이 늘어난다. "+vb;
  const mm=$("#cfmsg");mm.style.color="var(--mu)";mm.textContent=msg||"";if(msg&&again)toast(msg);
+ {const t=$("#cfmtog");if(t&&!t._cfMatFold){t._cfMatFold=1;t.onclick=()=>craftMatFold(!!$("#cfmbox")&&!!$("#cfmbox").hidden)}}
+ craftMatFold(craftMatOpen());
  // 가진 재료
  const ml=$("#cfm");ml.innerHTML="";MAT.forEach(m=>{const c=elT("button","chip cf-mat");c.type="button";c.title=m[3]+" 얻는 곳: "+m[4];c.onclick=()=>{mm.style.color="var(--mu)";mm.textContent=m[2]+" "+m[1]+": "+m[3]+" 얻는 곳: "+m[4]+"."};
   c.append(itIc(m[0],"sm")||elT("span","cf-ic",m[2]),elT("b",null,m[1]),elT("span","cf-n",String(cfHave(m[0]))));c.setAttribute("aria-label",m[1]+" "+cfHave(m[0])+"개. "+m[3]+" 얻는 곳: "+m[4]);ml.appendChild(c)});
@@ -81,9 +93,19 @@ function prismBox(){const box=elT("div","card prism-box"),own=C.a||[],free=AT.fi
 function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.includes(p.from)||own.includes(p.to)||!AT.some(t=>t[0]===p.to))return;
  if((C.inv.prism||0)<1)return;if(C.fall){bag("타락한 동안에는 프리즘이 빛을 굴절시키지 못한다.");$("#bgm").style.color="var(--bad)";return}
  if(!confirm("속성 「"+p.from+"」을(를) 「"+p.to+"」(으)로 바꿀까?\n\n· 「"+p.from+"」의 효과와 마법은 사라진다\n· 되돌릴 수 없다 (다시 바꾸려면 프리즘이 하나 더 필요하다)\n· 절망도가 "+PRISM_DZ+" 오른다"))return;
- C.inv.prism--;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
+ C.inv=C.inv||{};C.inv.prism=(C.inv.prism||0)-1;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
  try{if(typeof dexSkAttr==="function"&&dexSkAttr(p.to))note("dex","도감에 새 마법이 기록되었다: "+((SK[p.to]||{}).nm||p.to))}catch(e){}
- const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
+ const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);
+ /* 공방·변광석과 같이 바뀐 칸만 바로 PATCH. 일반 saveCloud(600ms·accSync)만 타면 속성 a 가 서버 옛값으로 돌아갈 수 있다. */
+ const fields={a:C.a.slice(),"inv/prism":C.inv.prism||0,"stats/attrChanges":C.stats.attrChanges,dz:C.dz};
+ if(C.stats.maxDespair!=null)fields["stats/maxDespair"]=C.stats.maxDespair;
+ if(C.edge!=null)fields.edge=C.edge;
+ if(C.stats.reachedZero)fields["stats/reachedZero"]=1;
+ if(C.stats.edgeHope)fields["stats/edgeHope"]=1;
+ const sk=typeof SK!=="undefined"&&SK[p.to];if(sk&&C.dex&&C.dex.sk&&C.dex.sk[sk.id])fields["dex/sk/"+sk.id]=C.dex.sk[sk.id];
+ if(C.fall){fields.fall=C.fall;if(C.fallT)fields.fallT=C.fallT;if(C.stats.falls!=null)fields["stats/falls"]=C.stats.falls}
+ if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
+ regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}
 
 /* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 를 바꾼다.

@@ -11,7 +11,11 @@ const WF_GOLD = .05;
 const WF_CALM = .05;
 const WAND_EX = .08;
 const SCY_DZ = 2;
-const PET_LV = [0, 20, 50, 90, 140];
+/* 클라 data/pets.js 와 동일: 다음 칸 +10×(i+2), 기본 상한 5, 밀크로 15. */
+const PET_LV = (() => { const a = [0]; for (let i = 0; i < 14; i++) a.push(a[i] + 10 * (i + 2)); return a; })();
+const PET_LV_DEF = 5, PET_LV_HARD = 15;
+/* 종 효과 스케일 상한. 클라 data/pets.js PET_EFF_LV 와 동일. */
+const PET_EFF_LV = 10;
 const DIS = ["fire", "flood", "storm", "quake", "frost", "eclipse"];
 const DIS_MS = 6 * 3600000;
 const DIS_P = .6;
@@ -49,25 +53,47 @@ function facLvFromRec(rec) {
   return facLvOf(rec.sum);
 }
 
+function petLvCap(q) {
+  if (!q) return PET_LV_DEF;
+  const n = Math.floor(Number(q.lm));
+  return Math.min(PET_LV_HARD, Math.max(PET_LV_DEF, isFinite(n) ? n : PET_LV_DEF));
+}
 function petLv(q) {
   if (!q) return 0;
   const xp = Number(q.xp) || 0;
-  return PET_LV.filter(n => xp >= n).length;
+  return Math.min(petLvCap(q), PET_LV.filter(n => xp >= n).length);
+}
+function petXpCap(q) {
+  return PET_LV[Math.max(0, petLvCap(q) - 1)] || 0;
 }
 function petCur(c) {
   if (!c || !Array.isArray(c.pets)) return null;
   const id = c.pet;
   return c.pets.find(q => q && q.id === id) || null;
 }
-/* gd/ex 만. 클라 js/pet/effect.js 와 동일. */
-function petEff(q, k) {
+function petEffLv(q) {
+  return Math.min(PET_EFF_LV, petLv(q));
+}
+/* 종 효과. 클라 js/pet/effect.js petEffSp 와 동일. 특성은 petTraitEff 가 더한다. */
+function petEffSp(q, k) {
   if (!q) return 0;
-  const L = petLv(q), sp = q.sp;
+  const L = petEffLv(q), sp = q.sp;
   if (k === "ex") return sp === "rabbit" ? .02 * L : sp === "hope" ? .02 * L : 0;
   if (k === "gd") return sp === "sparrow" ? .02 * L : sp === "hope" ? .02 * L : sp === "dragon" ? .03 * L : 0;
   if (k === "dz") return sp === "jelly" ? .02 * L : sp === "hope" ? .02 * L : 0;
   if (k === "mana") return sp === "crow" ? .03 * L : 0;
+  /* 클라 js/pet/effect.js 와 맞춤. 출정 재료(mat)는 xpay 가 petEff 로 합산. */
+  if (k === "mat") return sp === "blackcat" ? .03 * L : 0;
   return 0;
+}
+/* 종 + 특성. functions/account/pet-traits.js 와 맞춤. */
+function petEff(q, k) {
+  let t = 0;
+  try {
+    const {petTraitEff} = require("./pet-traits");
+    t = petTraitEff(q, k) || 0;
+  } catch (e) { t = 0; }
+  return petEffSp(q, k) + t;
 }
 function hasAttr(seat, c, name) {
   if (attrsOf(c).includes(name)) return true;
@@ -82,12 +108,12 @@ function armedCharm(c) {
 }
 const PET_XP_RUN = 1;
 const PET_DROP_X = .02;
-const PET_EV = {from: Date.UTC(2026, 9, 31, 15), to: Date.UTC(2026, 10, 22, 15)};
-const PET_EV2 = {from: Date.UTC(2026, 10, 22, 15), to: Date.UTC(2026, 11, 20, 9)};
+/* 이벤트 알 창. data/event/seasons.js → event-seasons.js (predeploy). HANDOFF.md §8. */
+const {PET_EV, PET_EV2} = require("./event-seasons");
 const SOLO_RW_MP = .5;
 const COLLECTOR_P = .3;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
-const PET_XP_CAP = PET_LV[PET_LV.length - 1];
+const PET_XP_CAP = PET_LV[PET_LV_HARD - 1];
 function petEvOn(now) {
   const t = now == null ? Date.now() : now;
   return t >= PET_EV.from && t < PET_EV.to;
@@ -369,9 +395,9 @@ async function loadMarchBoost(db, uid, seat, now, cache) {
 }
 
 module.exports = {
-  FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
+  FAC_LV, WF_LV, WF_SHARE, WF_EXP, WF_GOLD, WF_CALM, WAND_EX, SCY_DZ, PET_LV, PET_LV_DEF, PET_LV_HARD, PET_EFF_LV, PET_XP_RUN, PET_DROP_X, PET_XP_CAP,
   DIS_GOAL, VL_DZ, WP_PILE, SK_NM, SOLO_RW_MP, COLLECTOR_P,
-  facLvOf, facLvFromRec, petLv, petCur, petEff, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
+  facLvOf, facLvFromRec, petLv, petLvCap, petXpCap, petEffLv, petCur, petEff, petEffSp, armedCharm, armedItem, hasAttr, todayStr, wpPile, gainDzMod, gainExMod, petEvOn, petEv2On,
   disSlot, disInfo, disLive, disMine, wfLvOf, wfPack, wfLvFrom, rnLv,
   marchMuls, marchSide, loadMarchBoost, ensureShared, loadFacKeys
 };

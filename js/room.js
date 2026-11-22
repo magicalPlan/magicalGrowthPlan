@@ -99,10 +99,15 @@ async function join(c){if(!DB)return rmsg("방 기능을 쓸 수 없다.");c=Str
 function enter(c){code=c;room=null;myV=null;holdN=0;choiceK="";roomBye=false;if(holdT){clearTimeout(holdT);holdT=null}clearInterval(cdT);cdT=setInterval(cdTick,500);$("#chv").hidden=true;unL&&unL();unL=null;show("room");$("#lg").hidden=true;$("#lg").dataset.m="";$("#rrm").textContent="";unR&&unR();unR=null;watchRoom()}
 /* 방에 연결해 두고, 참가·준비·진행처럼 내용이 바뀔 때만 받는다. 연결이 거절되면 20초마다 방을 통째로 묻는다.
    잠깐 묻기가 실패해도 문구를 남기지 않는다(마을 쪽 감시와 같다). 방 화면이 열려 있을 때만 안내하고, 다시 받으면 지운다. */
-function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;const m=$("#rrm");if(m)m.textContent="";if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>{const m=$("#rrm");if(m&&$("#v-room")&&!$("#v-room").hidden)m.textContent="연결이 끊겼다."},POLL_HUB)}
+function watchRoom(){if(!code||!DB||unR)return;const c=code;unR=rref(c).live().onSnapshot(s=>{if(code!==c)return;const m=$("#rrm");if(m)m.textContent="";if(!s.exists){const wd=room&&room.st==="done";leave();const h=$("#hm");h.style.color="var(--mu)";h.textContent=wd?"출정이 끝나 방이 정리되었다.":"출정 방이 사라졌다.";return}room=s.data();room.seq=room.seq||[];room.rd=room.rd||{};draw()},e=>{const m=$("#rrm");if(m&&$("#v-room")&&!$("#v-room").hidden)m.textContent="연결이 끊겼다."},POLL_HUB,{stale:1})}
 /* 진행 중에도 방 연결을 유지한다. 문장은 서버에 다시 쓰지 않고 시각으로 드러낸다. */
 function armChoice(){if(code&&DB&&!unR)watchRoom()}
-function stopRoom(){unR&&unR();unR=null;if(holdT){clearTimeout(holdT);holdT=null}holdN=0;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;const m=$("#rrm");if(m)m.textContent=""}
+/* 방 live 가 반쯤 죽은 채 unR 만 남아 있으면 watchRoom 이 재연결을 건너뛴다.
+   탭 복귀·출발 직후 seq 공백 고착 때 unR 을 끊고 다시 붙인다. askCalc 도 다시 깨운다. */
+let roomWakeAt=0,roomSeqKickAt=0;
+function wakeRoom(){if(!code||!DB||document.hidden)return;const wall=Date.now();if(wall-roomWakeAt<3000){if(room&&room.st!=="lobby")paintRun();return}roomWakeAt=wall;
+ unR&&unR();unR=null;watchRoom();if(room&&room.st==="run"){askCalc.key="";paintRun()}}
+function stopRoom(){unR&&unR();unR=null;if(holdT){clearTimeout(holdT);holdT=null}holdN=0;clearInterval(tick);tick=null;clearInterval(cdT);cdT=null;room=null;code=null;roomWakeAt=0;roomSeqKickAt=0;const m=$("#rrm");if(m)m.textContent=""}
 function leave(){stopRoom();hub()}
 $("#rx").onclick=async()=>{if(room&&DB&&room.st==="lobby"){try{if(room.host===UID||Object.keys(room.pl).length<=1)await rref(code).delete();else{delete room.pl[UID];delete room.rd[UID];await rref(code).set(room)}}catch(e){}}
  // 끝난 방: 방장이 나가면 파티원들이 결과를 받을 시간을 10초 준 뒤 지운다.
@@ -219,10 +224,14 @@ function paintRun(){if(!room||$("#v-room").hidden||room.st==="lobby")return;cons
  $("#rs").textContent=v.mode==="choice"?"선택의 순간":v.mode==="resolve"?"표를 세는 중":fin?"출정 종료":"출정 중";
  if(v.mode==="choice"&&v.ch&&EVM[v.ch.id]){const k=room.code+"_"+v.ch.k;if(choiceK!==k){choiceK=k;drawChoice(room)}}else if(choiceK){choiceK="";$("#chv").hidden=true}
  const t=document.querySelector("#chv .choice-t");if(t&&v.mode==="choice"&&v.ch){const left=Math.max(0,Math.ceil((v.until-Date.now())/1000));t.textContent=(myV&&myV.k===v.ch.k?"선택을 마쳤다. 다시 고를 수 없다. ":"")+"남은 시간 "+left+"초 · 파티원이 함께 고른다. 표가 갈리면 무작위로 정해진다."}
- /* seq 비어 있는 출발 직후도 반드시 깨운다. 예전에는 phaseAt 만 있어 lines 로 남고 askCalc 가 영영 안 불렸다. */
+ /* seq 비어 있는 출발 직후도 반드시 깨운다. 예전에는 phaseAt 만 있어 lines 로 남고 askCalc 가 영영 안 불렸다.
+    seq 가 오래 비면 calc 만으로는 부족하다 — live 수신이 죽었을 수 있어 20초마다 wakeRoom. */
+ if(room.st==="run"&&!(room.seq||[]).length){const wall=Date.now();if(!roomSeqKickAt||wall-roomSeqKickAt>=20000){roomSeqKickAt=wall;wakeRoom();return}}
+ else roomSeqKickAt=0;
  if(room.st==="done"||v.mode==="resolve"||v.mode==="finish"||!(room.seq||[]).length||typeof room.phaseAt!=="number")advanceRoom()}
 function cdTick(){paintRun()}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)paintRun()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)wakeRoom()});
+window.addEventListener("focus",()=>{if(!document.hidden)wakeRoom()});
 
 function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(i=>r.rd[i]);
  $("#rt").textContent="출정 방 "+(r.pub?"(공개)":"(비공개 코드 "+r.code+")");
@@ -280,7 +289,9 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
    if(!serverPay&&fx.wp){const wr=[["칼",{ex:10}],["총",{gd:20}],["낫",{ex:15}],["방패",{dz:-8}],["오브",{dz:-5}],["완드",{ex:12}],["스태프",{mm:1}]][C.wp]||["맨손",{gd:10}],e=wr[1];xe+=e.ex||0;xz+=e.dz||0;if(e.gd)C.gd=(C.gd||0)+e.gd;if(e.mm)C.inv.mana=(C.inv.mana||0)+e.mm;tn.push("무기 더미("+wr[0]+")"+fxTxt(e))}
    if(!serverPay&&fx.dh&&(Number(mine.dz)||0)>=70){xz+=fx.dh;tn.push("절망의 거울: 절망도 "+(fx.dh>0?"+":"")+fx.dh)}
    if(r.ok){if(!serverPay)C.cl++;titleState();C.stats.huntsWon=(C.stats.huntsWon||0)+1;
-    if(!serverPay){const pe=petDrop("x");if(pe)tn.push(pe);const mt=matGain(["x_ok",(r.rw||1)>=1.4?"x_hi":null,r.ab?"x_ab":null]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:1});if(cp)tn.push(cp)};petXp(PET_XP_RUN)}
+    if(!serverPay){const pe=petDrop("x");if(pe)tn.push(pe);const mt=matGain(typeof marchDropTables==="function"?marchDropTables(r):["x_ok",(r.rw||1)>=1.4?"x_hi":null,r.ab?"x_ab":null]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:1});if(cp)tn.push(cp)};petXp(PET_XP_RUN)}
+    /* 매지컬 마치(serverPay): 참가 자리의 무기(w)가 없으면 맨손 클리어로 센다. 히든 칭호 s_phys. */
+    if(serverPay){const ww=mine.w!=null?Number(mine.w):Number(C.wp);if(!(ww>=0))C.stats.marchBare=(C.stats.marchBare||0)+1}
     if((C.dz||0)>=90)C.stats.clutch=1;if(new Date(Date.now()+9*3600000).getUTCHours()===3)C.stats.dawnWin=1;if(r.solo){const sg=SOLO_RW.g;if(!serverPay){const sm=Math.random()<SOLO_RW.mp?1:0;C.gd=(C.gd||0)+sg;if(sm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+sm}tn.push("고독의 보상: 골드 +"+sg+(sm?", 마력석 +1":""))}else tn.push("고독의 보상"+(pay&&pay.soloM?", 마력석 +1":""));C.stats.soloWins=(C.stats.soloWins||0)+1;if(r.ab)C.stats.soloAbyss=1}
    if(r.ab){C.stats.abyssWins=(C.stats.abyssWins||0)+1;if(!(C.wp>=0))C.stats.abyssBare=1;tn.push("심연을 끝까지 걸어 나왔다")}
     if(!serverPay){C.gd=(C.gd||0)+Math.round((30+10*base)*m*(C.t==="행운"?1.1:1)*(1+.05*facLv("workshop"))*(disMine()==="eclipse"?.7:1)*(1+.05*rnLv("luck"))*(wfLv()>=2?1+WF_GOLD:1)*(1+petEff("gd")));if(C.t==="행운")tn.push("행운: 골드 10% 증가");if(C.t==="수집가"&&Math.random()<.3){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("수집가: 마력석 1개를 주웠다")}if(petEff("mana")&&Math.random()<petEff("mana")){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("밤까마귀가 마력석 1개를 물어 왔다")}}

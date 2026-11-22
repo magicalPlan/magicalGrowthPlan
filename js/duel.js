@@ -5,7 +5,9 @@ let unDu=null,DUI=[],duVer={},duBusy=false;
 // 대련 중 표시: 대련을 시작하면 내 플레이어 기록에 시작 시각(db)을 남기고, 끝나면 0으로 지운다.
 // 표시가 DU_BUSY(30분)보다 오래되면(창을 그냥 닫은 경우 등) 대련 중이 아닌 것으로 본다.
 const duOn=()=>!!(C&&C.du&&!C.du.fin),duBusyOf=p=>!!p&&Number(p.db)>0&&Date.now()-Number(p.db)<DU_BUSY;
-function duMark(){if(!DB||!AUTH.uid)return;DB.doc("players/"+UID+"/db").set(duOn()?(C.du.t0||Date.now()):0).catch(()=>{})}
+function duMark(){if(!DB||!AUTH.uid)return;const db=duOn()?(C.du.t0||Date.now()):0;DB.doc("players/"+UID+"/db").set(db).catch(()=>{});
+ if(C&&typeof duRosterBody==="function"){const d=duRosterBody();d.db=db;DB.doc("duel/roster/"+UID).patch(d).catch(()=>{})}
+ else DB.doc("duel/roster/"+UID+"/db").set(db).catch(()=>{})}
 const duEl=()=>DU_SPS[(C&&C.a&&C.a[0])]?C.a[0]:"불";
 async function duHash(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 const duArr=v=>Array.isArray(v)?v:v&&typeof v==="object"?Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]):[];
@@ -22,7 +24,7 @@ function duReplay(me,op){const S=[{hp:DU_HP,mp:DU_MP0,sp:0,e:DU_SPS[me.e]?me.e:"
  const r=log.length,over=S[0].hp<=0||S[1].hp<=0||r>=DU_ROUNDS;let win=0;if(over)win=S[0].hp>S[1].hp?1:S[0].hp<S[1].hp?-1:0;return{S,log,r,over,win}}
 function duAvail(){return ONL.filter(p=>p.u!==UID)}
 async function duChallenge(u,n){if(!C||!XON()||!u||u===UID)return;if(C.fall){toast("타락한 동안에는 대련할 수 없다.");return}if(C.du&&!C.du.fin){toast("이미 대련 중이다.");arena();return}
- try{const ps=await DB.doc("players/"+u).get(),pp=ps.data();if(duBusyOf(pp)){toast(String(n||"상대")+"님은 지금 다른 대련 중이다. 끝난 뒤에 다시 신청하자.");return}}catch(e){}
+ try{const ps=await DB.doc("duel/roster/"+u).get(),pp=ps.data();if(duBusyOf(pp)){toast(String(n||"상대")+"님은 지금 다른 대련 중이다. 끝난 뒤에 다시 신청하자.");return}}catch(e){}
  const mid=UID+"_"+u+"_"+Date.now().toString(36);C.du={mid,o:u,on:String(n||"상대").slice(0,20),t0:Date.now(),ch:1};save();
  try{await DB.doc("rooms/xb"+mid+"/"+UID).set({n:nmOf(),e:duEl(),ts:Date.now()});await DB.doc("rooms/xa"+u+"/"+UID).set({n:nmOf(),mid,e:duEl(),ts:Date.now()})}
  catch(e){C.du=null;save();toast("대련을 신청하지 못했다. 인터넷 연결을 확인하자.");return}
@@ -49,20 +51,34 @@ async function duTick(data){const d=C&&C.du;if(!d||d.fin)return duDraw();const m
   const R=duReplay(d.me,op);if(R.over)return duFinish(R.win,R.win>0?"승리!":R.win<0?"패배.":"무승부.")}
  duDraw()}
 const devOn=()=>Date.now()>=DEV.t0&&Date.now()<DEV.t1;
-function devAdd(win,o){if(!devOn()||!C||!o)return 0;if(!C.dev||C.dev.id!==DEV.id)C.dev={id:DEV.id,pt:0,w:0,n:0,t:0,pp:{}};const day=today();if(!C.dev.pp||C.dev.pp.d!==day)C.dev.pp={d:day};
- const used=C.dev.pp[o]||0;if(used>=DEV.PAIR)return 0;C.dev.pp[o]=used+1;const p=win>0?DEV.PT.w:win<0?DEV.PT.l:DEV.PT.d;C.dev.pt+=p;C.dev.n++;if(win>0)C.dev.w++;C.dev.t=Date.now();return p}
-// 순위: 점수 → 승리 수 → 먼저 그 점수에 도달한 사람 순.
-async function devRank(maxAge){let docs=[];try{docs=(await plAll(maxAge)).docs}catch(e){}const L=[];docs.forEach(x=>{const p=x.data();if(p&&p.ev&&p.ev.id===DEV.id&&Number(p.ev.pt)>0)L.push({u:x.id,n:p.n,pt:Number(p.ev.pt)||0,w:Number(p.ev.w)||0,c:Number(p.ev.n)||0,t:Number(p.ev.t)||0})});
+/* 낙관적 점수: 화면·알림은 즉시. 확정·순위·페어 제한은 서버(duel/q → duelDevScore). */
+function devAdd(win,o,mid){if(!devOn()||!C||!o)return 0;if(!C.dev||C.dev.id!==DEV.id)C.dev={id:DEV.id,pt:0,w:0,n:0,t:0,pp:{}};const day=today();if(!C.dev.pp||C.dev.pp.d!==day)C.dev.pp={d:day};
+ const used=C.dev.pp[o]||0;if(used>=DEV.PAIR)return 0;C.dev.pp[o]=used+1;const p=win>0?DEV.PT.w:win<0?DEV.PT.l:DEV.PT.d;C.dev.pt+=p;C.dev.n++;if(win>0)C.dev.w++;C.dev.t=Date.now();
+ const key=String(mid||("x"+Date.now().toString(36))).replace(/[\/.#$\[\]]/g,"").slice(0,80);
+ if(DB&&UID&&key)DB.doc("duel/q/"+UID+"/"+key).set({o:String(o),win:Number(win)||0,ts:Date.now()}).catch(()=>{});
+ return p}
+// 순위: 점수 → 승리 수 → 먼저 그 점수에 도달한 사람 순. roster.ev 는 서버가 굳힌다.
+async function devRank(maxAge){let docs=[];try{docs=(await duAll(maxAge)).docs}catch(e){}const L=[];docs.forEach(x=>{const p=x.data();if(p&&p.ev&&p.ev.id===DEV.id&&Number(p.ev.pt)>0)L.push({u:x.id,n:p.n,pt:Number(p.ev.pt)||0,w:Number(p.ev.w)||0,c:Number(p.ev.n)||0,t:Number(p.ev.t)||0})});
  if(C&&C.dev&&C.dev.id===DEV.id&&C.dev.pt>0){const me=L.find(x=>x.u===UID),mine={u:UID,n:C.n,pt:C.dev.pt,w:C.dev.w,c:C.dev.n,t:C.dev.t};if(me)Object.assign(me,mine);else L.push(mine)}
  return L.sort((a,b)=>b.pt-a.pt||b.w-a.w||a.t-b.t)}
 const devRwTxt=r=>"골드 "+r.g+(r.m?", 마력석 "+r.m:"");
 let devBusy=false;
-async function devClaim(){if(!C||!AUTH.uid||devBusy||Date.now()<DEV.t1+DEV.GRACE)return;C.cmp=C.cmp||{};const k=DEV.id+"-rw";if(C.cmp[k])return;devBusy=true;try{
- const mine=C.dev&&C.dev.id===DEV.id?C.dev:null;if(!mine||!mine.n){C.cmp[k]=-1;save();return}
- const L=await devRank(0);if(!L.length)return;const i=L.findIndex(x=>x.u===UID),rk=i+1;C.cmp[k]=Date.now();const got=[];
- if(rk>=1&&rk<=DEV.RW.length){const r=DEV.RW[rk-1];giveRw(r);C.devR=rk;got.push(rk+"위 보상: "+devRwTxt(r))}
- if(mine.n>=DEV.JOIN.n){giveRw({g:DEV.JOIN.g});got.push("참가 보상: 골드 "+DEV.JOIN.g)}
- save();regPlayer();checkTitles();if(got.length){note("duel",DEV.nm+" 결과 "+(rk?rk+"위":"")+" · "+got.join(" · "));setTimeout(()=>alertBox("⚔ "+DEV.nm+" 결과","최종 순위: "+(rk>0?rk+"위":"순위 밖")+" (점수 "+mine.pt+")\n\n"+got.join("\n")),700)}}finally{devBusy=false}}
+/* 순위 보상: 서버(duel/claim → duelDevClaim). 요청 직후 결과를 기다려 바로 보여 준다. */
+async function devClaim(){if(!C||!AUTH.uid||!DB||devBusy||Date.now()<DEV.t1+DEV.GRACE)return;C.cmp=C.cmp||{};const k=DEV.id+"-rw";if(C.cmp[k])return;devBusy=true;
+ try{const mine=C.dev&&C.dev.id===DEV.id?C.dev:null;
+  try{await DB.doc("duel/claim/"+UID).set({id:DEV.id,ts:Date.now()})}catch(e){toast("보상 요청을 보내지 못했다.");return}
+  toast("⚔ 순위 보상을 확인하는 중…");
+  let rw=null;
+  for(let i=0;i<40;i++){await new Promise(r=>setTimeout(r,350));
+   try{const s=await DB.doc("duel/claim/"+UID).get(),v=s.exists?s.data():null;if(v&&v.done){rw=v.rw||null;break}}catch(e){}
+   try{const s=await DB.doc("accounts/"+UID+"/c/devRw").get(),v=s.exists?s.data():null;if(v&&v.id===DEV.id&&Number(v.ts)>0){rw=v;break}}catch(e){}}
+  if(typeof accSoftSync==="function")try{await accSoftSync()}catch(e){}
+  C.cmp=C.cmp||{};
+  /* 골드·마력석은 서버가 이미 넣었다. 클라는 표시·칭호만. */
+  if(rw&&Array.isArray(rw.got)&&rw.got.length){C.cmp[k]=Date.now();if(rw.rk>0)C.devR=rw.rk;titleState();save();checkTitles();
+   setTimeout(()=>alertBox("⚔ "+DEV.nm+" 결과","최종 순위: "+(rw.rk>0?rw.rk+"위":"순위 밖")+" (점수 "+(rw.pt||(mine&&mine.pt)||0)+")\n\n"+rw.got.join("\n")),400)}
+  else if(rw||C.cmp[k]){C.cmp[k]=C.cmp[k]||-1;save()}
+  else toast("보상 확인이 늦어지고 있다. 잠시 뒤 대련장에 다시 들어와 보자.")}finally{devBusy=false}}
 function devLeft(){const ms=DEV.t1-Date.now(),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000);return h>=24?Math.floor(h/24)+"일 "+(h%24)+"시간":h>0?h+"시간 "+m+"분":m+"분"}
 async function devDraw(){const box=$("#dev");if(!box||!C)return;const now=Date.now();if(now<DEV.t0||now>DEV.t1+7*86400000){box.innerHTML="";return}
  const L=await devRank(30000);if($("#v-arena").hidden)return;box.innerHTML="";const c=elT("div","card");c.style.marginBottom="14px";const end=new Date(DEV.t1-1);
@@ -74,7 +90,7 @@ async function devDraw(){const box=$("#dev");if(!box||!C)return;const now=Date.n
  box.appendChild(c)}
 function duFinish(win,why){const d=C.du;if(!d||d.fin)return duDraw();d.fin=1;d.res={win,why};const day=today();if(!C.duD||C.duD.d!==day)C.duD={d:day,n:0};let rw=0;
  if(C.duD.n<DU_DAY){C.duD.n++;rw=win>0?DU_RW.w:DU_RW.l;C.gd=(C.gd||0)+rw}d.rw=rw;titleState();if(win>0)C.stats.duW=(C.stats.duW||0)+1;else if(win<0)C.stats.duL=(C.stats.duL||0)+1;else C.stats.duD=(C.stats.duD||0)+1;
- const ep=devAdd(win,d.o);note("duel",d.on+"님과의 대련: "+why+(rw?" (골드 +"+rw+")":"")+(ep?" · 이벤트 점수 +"+ep:""));save();duMark();regPlayer();checkTitles();if(unDu){unDu();unDu=null}
+ const ep=devAdd(win,d.o,d.mid);note("duel",d.on+"님과의 대련: "+why+(rw?" (골드 +"+rw+")":"")+(ep?" · 이벤트 점수 +"+ep:""));save();duMark();regPlayer();checkTitles();if(unDu){unDu();unDu=null}
  setTimeout(()=>{DB.doc("rooms/xb"+d.mid+"/"+UID).delete().catch(()=>{});if(d.ch)duDelInv(d.o,d.mid)},15000);duDraw()}
 function duGiveUp(){const d=C.du;if(!d||d.fin||!confirm("기권할까? 패배로 기록된다."))return;const me=Object.assign({},d.me||{},{gv:1});duWrite(me).catch(()=>{});duFinish(-1,"기권했다.")}
 function duWatch(){if(unDu){unDu();unDu=null}const d=C&&C.du;if(!d||d.fin||!DB)return;const mid=d.mid;unDu=DB.doc("rooms/xb"+mid).onSnapshot(s=>{if(C.du&&C.du.mid===mid)duTick(s.data()||{})},()=>{},POLL_FAST)}
@@ -99,7 +115,7 @@ function duFind(){const gl=$("#dusr");if(!gl||!C)return;gl.innerHTML="";const q=
  if(!DUP.length){gl.appendChild(elT("p","hint","플레이어 목록을 불러오는 중…"));return}
  const hit=DUP.filter(p=>p.u!==UID&&String(p.n||"").toLowerCase().includes(q)).sort((a,b)=>(isOn(b)-isOn(a))||String(a.n||"").localeCompare(String(b.n||""),"ko")).slice(0,20);
  if(!hit.length){gl.appendChild(elT("p","hint","'"+duQ.trim()+"'(이)라는 이름을 찾지 못했다."));return}
- hit.forEach(p=>{const on=isOn(p),bz=duBusyOf(p),b=elT("button","chip du-cand"+(on?" on":""));b.type="button";b.append(elT("b","",(on?"● ":"○ ")+cn(p.u,p.n)),elT("small","",(p.g||"?")+"등급 · "+String(p.a||"").split(" · ")[0]+" 속성 · "+(bz?"⚔ 대련 중":on?"접속 중":"접속 안 함")));
+ hit.forEach(p=>{const on=isOn(p),bz=duBusyOf(p),dw=Number(p.du&&p.du.w)||0,dl=Number(p.du&&p.du.l)||0,b=elT("button","chip du-cand"+(on?" on":""));b.type="button";b.append(elT("b","",(on?"● ":"○ ")+cn(p.u,p.n)),elT("small","",dw+"승 "+dl+"패 · "+(bz?"⚔ 대련 중":on?"접속 중":"접속 안 함")));
   b.disabled=!!C.fall||bz||duOn();b.onclick=()=>{if(!on&&!confirm(String(p.n||"상대")+"님은 지금 접속 중이 아니다. 신청은 2분 안에 수락하지 않으면 사라진다. 그래도 신청할까?"))return;duChallenge(p.u,p.n)};gl.appendChild(b)})}
 document.addEventListener("focusin",e=>{if(e.target&&(e.target.id==="dusq"||e.target.id==="durm"))duFoc=true});document.addEventListener("focusout",e=>{if(e.target&&(e.target.id==="dusq"||e.target.id==="durm"))setTimeout(()=>{const a=document.activeElement;duFoc=!!a&&(a.id==="dusq"||a.id==="durm")},0)});let DUR=[],durT=0,duRM="",durBusy=false;
 async function duRecLoad(force){if(!C||!XON()||durBusy)return;if(!force&&Date.now()-durT<15000)return;durBusy=true;durT=Date.now();
@@ -117,12 +133,12 @@ function duRecDraw(){const rb=$("#durb");if(!rb||!C)return;const keepF=document.
  rb.appendChild(me);const others=DUR.filter(x=>x.u!==UID);
  if(!others.length){rb.appendChild(elT("p","hint","지금 대련 상대를 찾는 사람이 없다. 이름을 올려 두면 다른 사람이 신청할 수 있다."));return}
  const pmap={};(typeof DUP!=="undefined"?DUP:[]).forEach(p=>pmap[p.u]=p);
- others.slice(0,20).forEach(x=>{const p=pmap[x.u]||{},on=isOn(p),bz=duBusyOf(p),w=elT("div","dq"),cp=elT("div","dq-copy");
-  cp.append(elT("b","",(on?"● ":"○ ")+cn(x.u,x.n)+" · "+(x.g||"?")+"등급 · "+(x.e||"?")+" 속성"),elT("small","",(x.m?"「"+x.m+"」 · ":"")+agoTxt(x.ts)+" 올림"+(bz?" · ⚔ 대련 중":on?"":" · 접속 안 함")));
+ others.slice(0,20).forEach(x=>{const p=pmap[x.u]||{},on=isOn(p),bz=duBusyOf(p),dw=Number(p.du&&p.du.w)||0,dl=Number(p.du&&p.du.l)||0,w=elT("div","dq"),cp=elT("div","dq-copy");
+  cp.append(elT("b","",(on?"● ":"○ ")+cn(x.u,x.n)+(x.e?" · "+x.e+" 속성":"")),elT("small","",(x.m?"「"+x.m+"」 · ":"")+(dw||dl?dw+"승 "+dl+"패 · ":"")+agoTxt(x.ts)+" 올림"+(bz?" · ⚔ 대련 중":on?"":" · 접속 안 함")));
   const b=elT("button","chip","대련 신청");b.type="button";b.disabled=!!C.fall||bz||duOn();b.onclick=()=>duChallenge(x.u,x.n);w.append(cp,b);rb.appendChild(w)})}
 setInterval(()=>{if(C&&!$("#v-arena").hidden&&!duOn())duRecLoad()},15000);
 let DUP=[];
-let DUB=[],dubT=0;async function duBoard(){if(!XON()||Date.now()-dubT<60000)return;dubT=Date.now();try{const sn=await plAll();DUP=sn.docs.map(x=>Object.assign({u:x.id},x.data()||{})).filter(p=>p&&p.n);DUB=DUP.filter(p=>p.du&&Number(p.du.w)>0).sort((a,b)=>b.du.w-a.du.w).slice(0,5);if(!$("#v-arena").hidden&&!(C.du&&!C.du.fin)){if(duFoc)duFind();else duDraw()}}catch(e){}}
+let DUB=[],dubT=0;async function duBoard(){if(!XON()||Date.now()-dubT<60000)return;dubT=Date.now();try{const sn=await duAll();DUP=sn.docs.map(x=>Object.assign({u:x.id},x.data()||{})).filter(p=>p&&p.n);DUB=DUP.filter(p=>p.du&&Number(p.du.w)>0).sort((a,b)=>b.du.w-a.du.w).slice(0,5);if(!$("#v-arena").hidden&&!(C.du&&!C.du.fin)){if(duFoc)duFind();else duDraw()}}catch(e){}}
 function duDraw(){const box=$("#dua");if(!box||!C)return;box.innerHTML="";const d=C.du;
  if(d){const c=elT("div","card du-card");box.appendChild(c);
   if(d.fin){const R=d.res||{};c.append(elT("h2","du-res "+(R.win>0?"w":R.win<0?"l":"d"),R.win>0?"🏆 승리":R.win<0?"패배":"무승부"),elT("p","hint",(R.why||"")+(d.rw?" · 골드 +"+d.rw:" · 오늘 보상 횟수("+DU_DAY+"번)를 다 써서 보상은 없다")));

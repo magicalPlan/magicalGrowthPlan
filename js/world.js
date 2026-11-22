@@ -107,9 +107,11 @@ function worldEvent() {
    if (!root) return;
    root.replaceChildren();
 
+   /* 전역 open:true 이거나 계정 story_flag[id] 가 있으면 연다(flanders-side3 등). */
    const openIds = {};
    (typeof WORLD_STORY_OPEN !== "undefined" ? WORLD_STORY_OPEN : []).forEach(r => {
-      if (r && r.open && r.id) openIds[r.id] = 1
+      if (!r || !r.id) return;
+      if (r.open || (typeof sflagHas === "function" && sflagHas(r.id))) openIds[r.id] = 1
    });
    if (!Object.keys(openIds).length) {
       root.append(elT("p","world-lead","이 기억은 아직 잠겨 있다."), elT("p", "hint", "장기 의뢰의 단서 조각이 모이면, 그 칸에서 이야기를 볼 수 있다."));

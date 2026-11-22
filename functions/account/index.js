@@ -5,6 +5,7 @@ const xp = require("./xp");
 const write = require("./write");
 const drops = require("./drops");
 const boost = require("./boost");
+const petTraits = require("./pet-traits");
 
 module.exports = {
   lvOf: xp.lvOf,
@@ -21,5 +22,9 @@ module.exports = {
   loadMarchBoost: boost.loadMarchBoost,
   marchMuls: boost.marchMuls,
   marchSide: boost.marchSide,
-  todayStr: boost.todayStr
+  todayStr: boost.todayStr,
+  grantPetTraits: petTraits.grantPetTraits,
+  petTraitEff: petTraits.petTraitEff,
+  petEff: boost.petEff,
+  MAT_DROP: drops.MAT_DROP
 };

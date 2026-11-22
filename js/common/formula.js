@@ -38,7 +38,8 @@ const wup=i=>wlv(i)*(i===0?2:1);
    + 함께하는 사역마의 전투력
    매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
    권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다. */
-const pw=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");
+/* pwp(전투력 %)는 평탄 합 뒤에 곱한다. 올베르스네이크 등. */
+const pw=(()=>{const base=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");return()=>{const b=base(),pct=_petEff("pwp");return pct?Math.round(b*(1+pct)):b}})();
 /* 허브 프로필용 임시 전투력 증가량. 조건 보너스와 오늘만 붙는 임시 증가량을 합산해 표시한다. */
 function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
 function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}

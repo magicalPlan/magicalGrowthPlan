@@ -1,10 +1,15 @@
 /* 사진 없는 명부(who). players 전체에는 프로필 사진이 들어 있어 받지 않는다.
-   대련 검색과 이벤트 순위, 그리고 등록자 탭에서 이름을 입력했을 때만 명부를 받는다.
+   등록자 탭에서 이름을 입력했을 때만 명부를 받는다.
+   대련 검색·전적·이벤트 순위는 duel/roster(이름·전적·순위만)를 쓴다.
    보스 체력은 전투력 1위 한 명만 받는다. 명부는 5분 동안 다시 받지 않는다. */
 let PLC=null,PLT=0,PLP=null;
 const PL_TTL=300000;
 function plAll(maxAge){if(PLC&&Date.now()-PLT<(maxAge==null?PL_TTL:maxAge))return Promise.resolve(PLC);if(PLP)return PLP;
  PLP=once(DB.collection("who")).then(sn=>{PLC=sn;PLT=Date.now();PLP=null;return sn},e=>{PLP=null;throw e});return PLP}
+/* 대련 슬림 명부(duel/roster). who 전체 대신 n·du·ev·on·db 만. */
+let DUC=null,DUT=0,DUAP=null;
+function duAll(maxAge){if(DUC&&Date.now()-DUT<(maxAge==null?PL_TTL:maxAge))return Promise.resolve(DUC);if(DUAP)return DUAP;
+ DUAP=once(DB.collection("duel/roster")).then(sn=>{DUC=sn;DUT=Date.now();DUAP=null;return sn},e=>{DUAP=null;throw e});return DUAP}
 function plSince(since){return once(DB.collection("who").by("on").from(Number(since)||0))}
 /* 등록자 탭의 이름 검색. 글자가 이름 어딘가에 들어간 사람을 사진 없는 명부에서 고른다.
    목록을 열 때는 부르지 않고, 이름을 입력했을 때만 부른다. */
@@ -19,4 +24,4 @@ let TOPC=null,TOPT=0,TOPP=null;
 /* 전투력 1위. players 는 pw 순 찾기가 되어 있어 맨 끝 한 명만 받는다. 5분 동안 다시 쓰지 않는다. */
 function plTop(){if(TOPC&&Date.now()-TOPT<PL_TTL)return Promise.resolve(TOPC);if(TOPP)return TOPP;
  TOPP=once(DB.collection("players").by("pw").limit(1)).then(sn=>{const d=(sn.docs||[])[0],p=d?d.data()||{}:{};TOPC={u:d?d.id:"",pw:Math.max(0,Number(p.pw)||0),lv:Math.max(1,Number(p.lv)||1)};TOPT=Date.now();TOPP=null;return TOPC},()=>{TOPP=null;return null});return TOPP}
-function plClear(){PLC=null;PLT=0;WINC=null;WINSsince=Infinity;WINT=0;TOPC=null;TOPT=0;TOPP=null}
+function plClear(){PLC=null;PLT=0;DUC=null;DUT=0;WINC=null;WINSsince=Infinity;WINT=0;TOPC=null;TOPT=0;TOPP=null}

@@ -1,0 +1,5 @@
+// who.la = 마지막 활동(휴면 판정). 서버 dormantSweep 이 orderByChild("la") 로 조회한다.
+// Firebase RTDB 규칙 who 의 .indexOn 에 "la" 를 반드시 넣는다. (기존 "on" 유지)
+    "who": {
+      ".indexOn": ["on", "la"]
+    },

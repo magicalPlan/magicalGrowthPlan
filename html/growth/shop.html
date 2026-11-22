@@ -1,0 +1,28 @@
+<!-- 무인 상점. 성장 기록 하위.
+     전환: js/growth/growth.js · 접기: js/growth/shop.js
+     사역마 출정 본문(#gsrbox): js/growth/raid.js 의 drawPex 가 채움.
+     표·대사 data/pet-raid.js · 서버 functions/pex.js · 스타일 css/polish.css (.pex-* · .gs-flavor).
+     UI: 안내+용량 / 출정 중 / 보내기(select·맵·버튼). 마크업은 JS 가 생성. -->
+<!-- 처음엔 main 흐름에 붙었다가, shop.js 가 #gr-shop 안으로 옮긴다. -->
+<div id="gr-shop-inner" hidden>
+<h2 class="fold-h">사역마 출정<button class="chip fold-btn" id="gsrtog" type="button" aria-expanded="true" aria-controls="gsrbox">접기 ▲</button></h2>
+<div id="gsrbox"><p class="hint">불러오는 중…</p></div>
+<h2 class="fold-h">♏︎❍︎◻︎⧫︎⍓︎ ◻︎●︎♋︎♍︎♏︎<button class="chip fold-btn" id="gsctog" type="button" aria-expanded="true" aria-controls="gscbox">접기 ▲</button></h2>
+<div id="gscbox">
+<div class="gs-flavor" aria-label="장비 제작 분위기">
+<p>어째서인지, 이 곳에는 잡다한 쓰레기들과 너저분한 먼지 뭉치만이 굴러다니고 있다.</p>
+<p class="gs-flavor-beat">... ...</p>
+<p>인간과 교류하는 마수나 요정들의 등장으로 인해 무언가를 팔아보려다 실패한 누군가가 있었던 듯 하다.</p>
+</div>
+<div class="gs-soon"><span class="gs-soon-ic">🔒</span><div><b>준비 중</b><small>??? ? ??? ????</small></div></div>
+</div>
+<h2 class="fold-h">❄︎♒︎♏︎❒︎♏︎ ⬥︎♋︎⬧︎ ⬧︎□︎❍︎♏︎⧫︎♒︎♓︎■︎♑︎ ♒︎♏︎❒︎♏︎<button class="chip fold-btn" id="gsetog" type="button" aria-expanded="true" aria-controls="gsebox">접기 ▲</button></h2>
+<div id="gsebox">
+<div class="gs-flavor" aria-label="장비 강화 분위기">
+<p>원리도 알 수 없는 복잡한 기계가 있다... 이게 대체 뭐지?</p>
+<p class="gs-flavor-beat">... ...</p>
+<p>그나마 형체를 알아볼 수 있는 용광로 속에는 과장된 광고지가 들어있다...</p>
+</div>
+<div class="gs-soon"><span class="gs-soon-ic">🔒</span><div><b>준비 중</b><small>??? ? ??? ????</small></div></div>
+</div>
+</div>

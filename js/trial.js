@@ -21,7 +21,7 @@ function trBtnPaint(bt){if(!bt||!C||typeof need!=="function")return;const lv=typ
 /* 시작·성공은 낙관적(로컬 즉시) + saveNow(즉시 PATCH). save() 600ms 지연은 나가기·새로고침에 약하다. */
 function trStart(){if(T.started)return;T.started=true;C.trT=Date.now();
  if(useItem("candle")){T.cd+=5;T.l.push("계약의 촛불에 불을 붙였다. 이번 시험의 판정에 +5가 더해진다.")}
- if(C.tcb){T.cd+=C.tcb;T.l.push("여왕의 표식이 빛난다. 이번 시험의 판정에 +"+C.tcb+"이(가) 더해진다.");C.tcb=0}{const ob=petEff("trial");if(ob){T.cd+=ob;T.l.push("지혜부엉이가 어깨 위에서 조용히 속삭인다. 판정 +"+ob+".")}}
+ if(C.tcb){T.cd+=C.tcb;T.l.push("여왕의 표식이 빛난다. 이번 시험의 판정에 +"+C.tcb+"이(가) 더해진다.");C.tcb=0}{const ob=petEff("trial");if(ob){T.cd+=ob;const q=typeof petCur==="function"?petCur():null,sp=q&&q.sp,owl=sp==="owl";T.l.push((owl?"지혜부엉이가 어깨 위에서 조용히 속삭인다.":"사역마의 특성이 판정을 돕는다.")+" 판정 +"+ob+".")}}
  if(typeof saveNow==="function")saveNow();else save()}
 $("#tb").onclick=()=>{if(T&&T.started&&!T.end&&!confirm("지금 나가면 이번 시험은 끝나고, "+trCdTxt()+" 뒤에야 다시 볼 수 있다. 나갈까?"))return;if(typeof pact==="function")pact();else hub()};
 function tr(msg){const done=T.end;$("#tc").innerHTML="<h2>"+(T.f+1>T.n?"":(T.f+1===T.n?"마지막 층: 여왕님":(T.f+1)+"층"))+"</h2><dl class='kv'><dt>판정</dt><dd>"+(pw()+VL[C.v].tb+(C.a.includes("땅")?4:0)+(T.cd||0)+(C.t==="집중"?3:0)+facLv("library"))+" + 운(0~19)</dd>"+(T.f<T.n?"<dt>이번 층 목표</dt><dd>"+trGoal()+" 이상</dd>":"")+"<dt>실패 허용</dt><dd>"+Math.max(0,TRIAL_LIVES-(T.fails||0))+"번 남음</dd>"+((()=>{const a=[armed("seal")?"여왕의 인장":"",!T.started&&armed("candle")?"계약의 촛불":"",!T.started&&C.tcb?"여왕의 표식 +"+C.tcb:""].filter(Boolean);return a.length?"<dt>준비</dt><dd>"+a.join(", ")+"</dd>":""})())+"<dt>절망도</dt><dd>"+C.dz+"/100</dd></dl>";
