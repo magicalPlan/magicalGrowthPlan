@@ -16,9 +16,7 @@ async function saveNowOk(){if(!AUTH.uid||!DB){await saveNow();return true}const 
 /* 잠깐 실패해도 몇 번 다시 올린다. 장기 토벌처럼 알림을 저장 성공 뒤에 두려면 이걸 쓴다. */
 async function saveNowRetry(n,gap){n=n||4;gap=gap||2500;for(let i=0;i<n;i++){if(await saveNowOk())return true;if(i<n-1)await new Promise(r=>setTimeout(r,gap*(i+1)))}return false}
 function myUid(){let u=null;try{u=localStorage.getItem("mgr_uid")}catch(e){}if(!u){u="u"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem("mgr_uid",u)}catch(e){}}return u}
-function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st];
- if(st===0||st===2||st===4){const b=document.createElement("button");b.type="button";b.className="btn g";b.style.cssText="width:auto;margin:6px 0 0;padding:6px 12px;font-size:.85rem";b.textContent="서버 주소 설정";
-  b.onclick=()=>{const u=prompt("Firebase Realtime Database 주소를 입력한다.\n예: https://프로젝트이름-default-rtdb.firebaseio.com");if(u&&/^https:\/\//.test(u.trim())){try{localStorage.setItem("mgr_fb",u.trim())}catch(e){}location.reload()}};m.appendChild(b)}}
+function mode(st){const m=$("#mode");m.textContent=["서버에 연결되지 않았다. 지금은 이 브라우저 안에서만 동작한다. ","온라인 서버에 연결되었다."+(AUTH.name?" 로그인: "+AUTH.name:""),"서버에 연결하지 못했다. 주소나 데이터베이스 규칙을 확인해야 한다. ","서버 연결을 확인하는 중이다.","로그인이 필요하다."][st]}
 // jc: 서버 규칙이 첫 저장 때 확인하는 비밀 코드(계정을 만들 때 입력한 값). 그 기기에 계정별로 기억한다.
 const AUTH={uid:null,tok:null,rt:null,name:"",key:"",jc:""};
 const EM=n=>n.toLowerCase()+"@magic-growth.local";
@@ -191,8 +189,12 @@ async function rstDueRemote(){if(!AUTH.uid||!DB)return 0;let due=0;
 async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=await rstDueRemote();if(!(due>(Number(C.rsv)||0)))return false;
  try{clearPend()}catch(e){}
  try{const full=await DB.doc("accounts/"+AUTH.uid).get();if(!full.exists)return true;const d=full.data()||{},ch=d.c;
-  /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선. */
-  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));accSeen=Number(d.ts)||Date.now();accMark(ch);accReady=true;
+  /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선.
+     장기·단서는 서버본에 남아 있어도 강제 취소(진행·완료 미수령 포함, 보상 없음).
+     알 부화·재고는 0(옛 서버본에 남아 있어도). */
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}
+   try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
+   accSeen=Number(d.ts)||Date.now();accMark(C);accReady=true;
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}
    try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
  }catch(e){}
@@ -212,11 +214,17 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  C=JSON.parse(JSON.stringify(rem));keepMerge(C,mine);
  /* 일반: C.b max 보호. 회귀: 서버본 b 그대로(더 큰 로컬 b 되살리기 금지). */
  if(!rstNewer)keepPwBonus(C,mine);
- /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
- if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
- if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
- C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot);
- if(rstNewer){try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
+ /* 회귀: 장기 토벌·단서 강제 취소. pickTrip 으로 옛 탭 진행(완료 미수령 포함)을 되살리지 않는다.
+    알: 부화·재고 전부 0(옛 탭·keepMerge 되살리기 금지). */
+ if(rstNewer){C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};
+  try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
+  try{lhDefer=null}catch(e){}
+  try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
+ else{
+  /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
+  if(mine.lhGot&&typeof mine.lhGot==="object")C.lhGot=Object.assign({},mine.lhGot,C.lhGot||{});
+  if(mine.clueGot&&typeof mine.clueGot==="object")C.clueGot=Object.assign({},mine.clueGot,C.clueGot||{});
+  C.lh=pickTrip(mine.lh,rem.lh,C.lhGot);C.clue=pickTrip(mine.clue,rem.clue,C.clueGot)}
  /* 이 탭이 그 시드를 이미 정산(got)했는데 서버만 옛 진행이면, 보상을 서버 옛값으로 되돌리지 않는다.
     (진행 없음+서버만 있음은 정산이 아님 → pickTrip 이 서버 진행을 살림) */
  const claimed=!rstNewer&&(tripClaimed(mine.lh,rem.lh,mine.lhGot)||tripClaimed(mine.clue,rem.clue,mine.clueGot));
@@ -343,8 +351,8 @@ function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOf
   if(n>1)note("quest","쉬는 동안 마음이 가라앉았다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}else save()}
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
-function boot(){natHeal();if(C){try{if(typeof flagsBoot==="function")flagsBoot(C)}catch(e){}if(typeof ntTrim==="function"&&ntTrim())save();const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles();try{if(typeof flandersSideUnlock==="function")flandersSideUnlock()}catch(e){}}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
- C?hub():(show("create"),rc());try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
+function boot(){natHeal();if(C){try{if(typeof flagsBoot==="function")flagsBoot(C)}catch(e){}if(typeof ntTrim==="function"&&ntTrim())save();const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles();try{if(typeof flandersSideUnlock==="function")flandersSideUnlock()}catch(e){}try{if(typeof flandersConcoursUnlock==="function")flandersConcoursUnlock()}catch(e){}}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
+ C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */
 let verTag=null,verShown=false;
@@ -473,7 +481,7 @@ function lmode(mail) {
    if (fp) fp.hidden =!!signup;
    if (lpw) {
       lpw.autocomplete = signup ? "new-password" : "current-password";
-      lpw.placeholder = signup ? "8자 이상, 영문·숫자":"6자 이상"
+      lpw.placeholder = signup ? "8자 이상, 영문·숫자" : "6자 이상"
    }
  $("#lhint").textContent=signup?"아이디와 비밀번호, 비밀 코드로 계정을 만든다. 이메일은 선택이다.":lmailMode?"연동해 둔 이메일과 비밀번호로 로그인한다.":"아이디와 비밀번호로 로그인하면 캐릭터가 계정에 저장되어 어느 기기에서든 이어서 할 수 있다."}
 function drawLogin(){const form=$("#lform"),box=$("#lfp-box"),lt=$("#lt"),hint=$("#lhint"),m=$("#lm");
@@ -505,10 +513,10 @@ function logOut(){keep("mgr_rt","");location.reload()}
 let FBU="";
 (async()=>{await null;try{DB=await claude.use("db");const u=await claude.use("user");UID=String(await u.id())}catch(e){DB=null}
  if(DB){mode(1);boot();return}
- // 서버를 옮겼을 때: 이 브라우저에 남은 예전 서버의 주소, 키, 로그인 정보, 캐릭터를 지우고 새 서버로 새로 시작한다.
- if(lget("mgr_proj")!==FB_URL){["mgr_fb","mgr_key","mgr_rt","mgr"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});C=null;keep("mgr_proj",FB_URL)}
- let url=lget("mgr_fb")||FB_URL;
- if(url){FBU=url;await startAuth();return}
+ // 서버를 옮겼을 때: 이 브라우저에 남은 예전 키·로그인·캐릭터를 지우고 새 서버로 새로 시작한다.
+ try{localStorage.removeItem("mgr_fb")}catch(e){}
+ if(lget("mgr_proj")!==FB_URL){["mgr_key","mgr_rt","mgr"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});C=null;keep("mgr_proj",FB_URL)}
+ if(FB_URL){FBU=FB_URL;await startAuth();return}
  showLogin();const lm=$("#lm");if(lm)lm.textContent="서버 주소가 없어 입장할 수 없다."})();
 let curView="";
 /* 같은 화면을 다시 그리는 동안 내용이 잠깐 비면(목록을 지우고 다시 채울 때) 휴대폰 브라우저가 화면을 위로 끌어올린다.
@@ -781,29 +789,29 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
  return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
 /* ── 선물 동기화 ─────────────────────────────────────────────
-   [권위] 받은 함 목록·알림·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
-   [지금 이중 경로] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
-                 giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
+   [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
+   [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
+   [한도] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
                gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
    [소모] rgUse: 효과·목록·절망/경험치를 낙관 반영 후 ginbox 삭제·계정 저장은 백그라운드.
                삭제 실패 시에만 그 칸 효과를 되돌린다. ginPendDel 로 live 가 잠깐 다시 채우지 않게 한다.
    [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
-       COMPAT_GIFT_PULL(ginPullGift·giftBellWatch), 보내기의 gift/ 쓰기,
+       COMPAT_GIFT_PULL(ginPullGift), 보내기의 gift/ 쓰기,
        rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
    TODO(선물 한도→서버): 일일 GIFT_DAY 한도는 아직 RTDB gift/ 칸 규칙 + 클라 C.gsl 뿐이다.
        Cloud Functions(또는 동등 서버)로 이관해 ginbox 쓰기와 함께 강제하고, 그다음 gift/
-       경로·규칙·클라 giftSlot/gsl·COMPAT pull·giftn 을 제거한다. 구현 코드는 아직 없음.
+       경로·규칙·클라 giftSlot/gsl·COMPAT pull 을 제거한다. 구현 코드는 아직 없음.
    ─────────────────────────────────────────────────────────── */
 const ginPath=id=>"ginbox/"+UID+"/"+id;
 const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot);
 const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||"");
-let giftBell=0,unGift=null,giftGen=0,ginPullBusy=false,ginPendDel=new Set();
+let ginPullBusy=false,ginPendDel=new Set();
 /* ginbox·gift 공통 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
 async function giftDbDel(path){if(!DB||!path)return false;for(let i=0;i<3;i++){try{await DB.doc(path).delete();return true}catch(e){const c=String(e&&e.message||e);if(c==="404")return true;if(i<2)await new Promise(r=>setTimeout(r,200*(i+1)))}}return false}
 function giftWatch(){applyGift()}
-/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) giftn·gift pull. */
-async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();giftBellWatch();try{await ginPullGift()}catch(e){}}
+/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) gift/→ginbox pull. */
+async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();try{await ginPullGift()}catch(e){}}
 /* 계정에 남던 옛 받은 함(c.rg)을 ginbox 로 한 번만 옮긴다. ginboxV>=1 이면 끝. */
 async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||ginMigBusy)return;ginMigBusy=true;
  try{const puts=[],seen={};
@@ -813,7 +821,7 @@ async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||gi
   if(puts.length)await Promise.all(puts);
   C.ginboxV=1;C.rg=[];if(typeof saveNow==="function")saveNow();else save()}finally{ginMigBusy=false}}
 /* COMPAT_GIFT_PULL: 구버전·미게시 규칙으로 ginbox 에만 빠진 칸을 gift/ 에서 보충.
-   후일 ginbox 단독 시 이 함수·호출(applyGift·giftBellWatch)을 제거한다. */
+   허브·가방 진입 때 한 번. 후일 ginbox 단독 시 이 함수·호출을 제거한다. */
 async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!puts&&ginPullBusy)return;const own=!puts;if(own){ginPullBusy=true;puts=[];seen={}}
  try{C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const s=await once(DB.collection("gift/"+UID));let bump=false;
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
@@ -825,18 +833,13 @@ async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!pu
    Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>add(f+"_"+k,Number(k),v[k]))});
   if(own){if(puts.length)await Promise.all(puts);if(bump){if(typeof saveNow==="function")saveNow();else save()}}}
  catch(e){}finally{if(own)ginPullBusy=false}}
-/* COMPAT: giftn 벨 → ginPullGift. 신버전은 ginWatch 만으로도 충분. 후일 제거 후보. */
-function giftBellWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unGift)return;const gen=++giftGen;
- const take=sn=>{if(gen!==giftGen||!AUTH.uid||!C)return;const p=sn.exists?sn.data():null,ts=p&&typeof p.ts==="number"?p.ts:0;if(!ts||ts<=giftBell)return;giftBell=ts;ginPullGift()};
- DB.doc("giftn/"+UID).get().then(take).catch(()=>{});
- unGift=DB.doc("giftn/"+UID).live().onSnapshot(take,()=>{},30000)}
-/* 본선: ginbox live. 목록·토스트·내비의 유일한 권위 구독. ginbox 단독 이후에도 유지. */
+/* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
  const take=sn=>{if(gen!==ginGen||!AUTH.uid||!C)return;ginApply(sn.docs||[])};
  try{once(DB.collection("ginbox/"+UID)).then(take).catch(()=>{})}catch(e){}
  unGin=DB.collection("ginbox/"+UID).live().onSnapshot(take,()=>{},30000)}
-function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
+function ginApply(docs){const items=[];
  (docs||[]).forEach(d=>{const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object"||GV[v.g]==null)return;
   const id=d.id;if(!id||ginPendDel.has(id))return;items.push({id,g:v.g,n:String(v.n||"누군가").slice(0,20),u:String(v.u||""),ts:Number(v.ts)||0})});
  items.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));
@@ -844,13 +847,7 @@ function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
  if(items.length>cap&&!ginTrimBusy){ginTrimBusy=true;const drop=items.slice(0,items.length-cap);
   Promise.all(drop.map(x=>DB.doc(ginPath(x.id)).delete().catch(()=>{}))).finally(()=>{ginTrimBusy=false})}
  ginList=items.length>cap?items.slice(-cap):items;ginIds=ginList.map(x=>x.id).join("|");ginReady=true;
- updNav();if(!$("#v-bag").hidden)drawRG();
- /* 첫 스냅샷은 이미 있던 함이라 알림 안 울림. 그 다음부터 새로 생긴 id 만 알림·토스트. */
- if(ready&&ginIds!==prev){const had=new Set(prev.split("|").filter(Boolean)),fresh=ginList.filter(x=>!had.has(x.id));
-  if(fresh.length){const rs=fresh.map(x=>x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 보냈다");
-   fresh.forEach(x=>note("gift",x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",x.u));
-   toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
-   if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}}}
+ updNav();if(!$("#v-bag").hidden)drawRG()}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
@@ -899,10 +896,9 @@ $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;r
   const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
   try{const body={g:sel,ts:{".sv":"timestamp"},n:nmOf()};
-   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. giftn = COMPAT 벨. 후일 한도 이관 후 gift·giftn 쓰기 제거. */
+   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. 알림은 giftNtin→ntin. */
    await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set(body);
    await DB.doc("ginbox/"+u+"/"+ginSlotId(UID,g.i)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"},slot:g.i});
-   try{await DB.doc("giftn/"+u).set({u:UID,g:sel,n:nmOf(),ts:{".sv":"timestamp"}})}catch(e){}
    C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
    C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
   catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}

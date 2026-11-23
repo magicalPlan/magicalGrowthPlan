@@ -26,8 +26,14 @@
 
    
    /* 앱 버전(APP_VER)은 js/common/include.js 에 있다. 화면 HTML 캐시와 설정 화면이 그 값을 쓴다. */
-   // 온라인 서버 설정: Firebase Realtime Database 주소를 여기에 적거나, 화면 위쪽 '서버 주소 설정' 버튼으로 입력한다.
+   // 온라인 서버: Firebase Realtime Database 주소.
    const FB_URL="https://magical-growth-default-rtdb.asia-southeast1.firebasedatabase.app";
+   /* 회원 탈퇴 Cloud Function (asia-southeast1). js/setting/setting.js leaveAccount 가 호출. */
+   const FB_LEAVE_URL="https://asia-southeast1-magical-growth.cloudfunctions.net/accountLeave";
+   /* 등록자 미러 강제 맞춤 (운영자). js/notice.js rosterMirrorCall. 캐릭터는 안 바꿈. */
+   const FB_ROSTER_MIRROR_URL="https://asia-southeast1-magical-growth.cloudfunctions.net/rosterMirrorSync";
+   /* 회귀: 계정당 되돌림+명부 한 흐름 (운영자). js/notice.js accountRstCall. */
+   const FB_ACCOUNT_RST_URL="https://asia-southeast1-magical-growth.cloudfunctions.net/accountRst";
    /* POLL_FAST 는 서버와 연결(EventSource)을 연다. 채팅·대련처럼 바로 반영되어야 하는 곳만 쓴다.
       정기 출정 참가 자리(rooms/xm)는 매지컬 마치 목록이 펼쳐져 보일 때만 묶음 prefix 한 live() 로 지킨다. 거절되면 POLL_FAST 묻기로 받고, 목록을 접거나 화면을 벗어나면 끊는다.
       타락 명단은 마을에 들어올 때 raid 칸을 한 번 읽고, 머무는 동안은 연결로 바뀐 것만 받는다. 마을을 벗어나면 닫는다. 사람마다 체력을 따로 읽지 않는다.
@@ -77,9 +83,10 @@
       const HEAL_MS=600000,HEAL_DZ=10;
 
 
-      /* 계정 만들기 비밀 코드: 코드 자체는 파일에 적지 않고, 바꾼 값(해시)만 적어 둔다. 가입 화면에서 받은 뒤 authDigest 로 맞춰 본다.
-         코드를 바꾸려면 새 코드의 SHA-256 값으로 이 줄을 고친다. AUTO_JC 는 안내용 평문이다. 가입 화면에서는 직접 입력받는다. */
-      const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f",AUTO_JC="희망하라";
+      /* 계정 만들기 비밀 코드: 브라우저에서 입력값을 SHA-256 해 이 해시와 맞춘다(UI 게이트).
+         해시·검증이 클라이언트에만 있으면 소스로 우회할 수 있다. 진짜 제한은 서버(Functions 등)에서 해야 한다.
+         코드를 바꾸려면 새 코드의 SHA-256(hex)으로 이 줄을 고친다. */
+      const SIGNUP_CODE_HASH="1b83fc8e623c6ce0b7e9c3a18bd155b6727c2ede7ce4d8ad3236e3948975638f";
       /* 재계약 시험 대기. 시작한 시각(C.trT)부터 이 시간이 지나야 다시 볼 수 있다. */
       const TRIAL_CD=12*3600000;
 
@@ -114,18 +121,20 @@
    // 나에게 온 공명 요청을 확인해서 받은 공명 목록에 넣는다.
    /* 공명 수락·거절: 친구가 청한 공명은 '받은 공명'(C.rqIn)에 쌓이고, 받아들이면 절망도가 내려간다. 수락·거절은 친구 소식(fmsg)으로 상대에게 알린다.
       RQ_TTL(24시간)이 지난 공명은 저절로 사라진다.
-      알림은 서버 push 가 아니라 친구 화면에서 res·fmsg 를 읽을 때 note 한다. C.rss/C.fs/C.rkT 워터마크로 옛 알림 부활을 막는다. */
+      알림(note)은 ntin live(resNtin·fmsg rok/rno). 친구 화면 applyRes·syncFr 는 목록·절망만. C.rss/C.fs/C.rkT 워터마크. */
    const RQ_TTL=86400000;
 
 
    /* 가방, 무기 강화, 선물 */
    // 아이템: [id, 이름, 설명, 가격]. 마력석은 무기 강화 재료이고, g로 시작하는 id는 친구에게 보내는 선물이다. 숫자는 임시 값이다.
-   const ITM=[["mana","마력석","무기를 강화할 때 쓰는 재료.",40],["charm","결계 부적","다음 출정에서 오르는 절망도가 절반으로 줄어든다. 하루에 3개까지 살 수 있다.",50],["map","마수 사냥 지도","다음 출정의 전투 횟수가 3번으로 고정된다. 보상은 원래 정해진 횟수대로 받는다.",70],["flag","용기의 깃발","다음 출정에서 파티 전원의 전투력이 5 오른다.",60],["seal","여왕의 인장","재계약 시험에서 한 번 실패해도 절망도가 오르지 않는다.",120],["candle","계약의 촛불","다음 재계약 시험의 판정에 +5를 더한다. 한 번에 1개까지만 가질 수 있다.",90],["whet","보호의 숫돌","준비해 두면 강화에 실패했을 때 마력석 대신 숫돌이 깨진다(마력석을 돌려받는다). 실패했을 때만 사라진다.",100],["hope","희망의 결정","가방에서 사용하면 내 절망도가 바로 30 내려간다. 타락 중에는 쓸 수 없다.",300],["pfcandy","보라 꽃 설탕 절임","사용하면 절망도 +10, 오늘 하루 절망도 하한 +10 및 전투력 +25. 하루 최대 2개. 조금 더 강해진 듯한 기분이 든다. 「무슨 꽃잎이냐고? 후후...궁금하니?」",0],["g1","작은 꽃다발","친구에게 선물하면, 친구가 원할 때 열어 절망도를 8 낮출 수 있다.",30],["g2","별빛 쿠키","친구에게 선물하면, 친구가 원할 때 열어 절망도를 15 낮출 수 있다.",60],["g3","달빛 편지","친구에게 선물하면, 친구가 원할 때 열어 절망도를 3 낮출 수 있다.",20],["prism","속성의 프리즘","공방에서만 만들 수 있다. 가방에서 사용하면 지금 가진 속성(불·물·바람·땅·빛·어둠) 하나를 아직 없는 다른 속성으로 바꾼다. 되돌릴 수 없고, 사용하면 절망도가 10 오른다.",0],["g4","꿈꾸는 오르골","공방에서만 만들 수 있는 선물. 태엽을 감으면 매지컬 랜드의 자장가가 흐른다. 친구에게 선물하면, 친구가 원할 때 열어 절망도를 25 낮추고 경험치를 30 얻는다.",0],["license","사역마 조련 허가증","가방에서 사용하면 데리고 있을 수 있는 사역마가 1마리 늘어난다(최대 6마리). 여왕의 허가는 시간에 구애되지 않는다.",0],["vtown","마을 이동권","절망을 갈아 잉크를 만들고, 조각을 깎아 각오를 다진다. 지금 설 곳은 당신이 있을 곳이 아니다. 당신은 어디로든 갈 수 있다. 떠나자. 떠나서. 떠나서...",0],["bond","유대의 증거","보내 준 사역마가 마지막으로 남기고 간 작은 증표. 함께한 시간이 길수록 많이 남긴다. 사역마 출정 기본 보상으로도 얻을 수 있다. 상점에서는 팔지 않는다.",0],["milk","매지컬 밀크","마법의 힘을 담은 우유. 먹으면 정말로 키가 클지도 모른다. 단, 사람은 먹지 마시오. 가방에서 사역마에게 주면 그 사역마의 친밀도 상한이 1 오른다(최대 15).",0],["petcan","냠냠 통조림","익숙한 꼬순내가 나는 통조림. 고양이 사역마가 무척 좋아한다.",0],["petfeast","펫 푸드 특식","인간도 먹을 수 있다는 고급 특식. 어쩌면 내가 먹는 것보다 좋은 재료로 만들어졌을지도.",0],["trcyan","청록 변광석","청록빛 변광석. 어둠 속에서 보아도 흐리게 빛난다. 가능성을 바꾸는 가장 여린 빛이다. 사역마의 특성 중 첫 번째를 변경할 수 있다.",0],["trblue","파랑 변광석","파랑빛 변광석. 눈을 감는다 한들 파도 소리가 사라지는 것은 아니다. 가능성을 바꾸는 평온한 소리이다. 사역마의 특성 중 두 번째를 바꿀 수 있다.",0],["trcast","주조 변광석","주조 변광석. 단단하고 굳건하여, 길을 헤맬 때 주저하지 않을 용기를 준다. 사역마의 특성 중 세 번째를 변경한다. 기적을 굴절하여 희망을 빚는다.",0]];
+   const ITM=[["mana","마력석","무기를 강화할 때 쓰는 재료.",40],["charm","결계 부적","다음 출정에서 오르는 절망도가 절반으로 줄어든다. 하루에 3개까지 살 수 있다.",50],["map","마수 사냥 지도","다음 출정의 전투 횟수가 3번으로 고정된다. 보상은 원래 정해진 횟수대로 받는다.",70],["flag","용기의 깃발","다음 출정에서 파티 전원의 전투력이 5 오른다.",60],["seal","여왕의 인장","재계약 시험에서 한 번 실패해도 절망도가 오르지 않는다.",120],["candle","계약의 촛불","다음 재계약 시험의 판정에 +5를 더한다. 한 번에 1개까지만 가질 수 있다.",90],["whet","보호의 숫돌","준비해 두면 강화에 실패했을 때 마력석 대신 숫돌이 깨진다(마력석을 돌려받는다). 실패했을 때만 사라진다.",100],["hope","희망의 결정","가방에서 사용하면 내 절망도가 바로 30 내려간다. 타락 중에는 쓸 수 없다.",300],["pfcandy","보라 꽃 설탕 절임","사용하면 절망도 +10, 오늘 하루 절망도 하한 +10 및 전투력 +25. 하루 최대 2개. 조금 더 강해진 듯한 기분이 든다. 「무슨 꽃잎이냐고? 후후...궁금하니?」",0],["g1","작은 꽃다발","친구에게 선물하면, 친구가 원할 때 열어 절망도를 8 낮출 수 있다.",30],["g2","별빛 쿠키","친구에게 선물하면, 친구가 원할 때 열어 절망도를 15 낮출 수 있다.",60],["g3","달빛 편지","친구에게 선물하면, 친구가 원할 때 열어 절망도를 3 낮출 수 있다.",20],["prism","속성의 프리즘","공방에서만 만들 수 있다. 가방에서 사용하면 지금 가진 속성(불·물·바람·땅·빛·어둠) 하나를 아직 없는 다른 속성으로 바꾼다. 되돌릴 수 없고, 사용하면 절망도가 10 오른다.",0],["g4","꿈꾸는 오르골","공방에서만 만들 수 있는 선물. 태엽을 감으면 매지컬 랜드의 자장가가 흐른다. 친구에게 선물하면, 친구가 원할 때 열어 절망도를 25 낮추고 경험치를 30 얻는다.",0],["license","사역마 조련 허가증","가방에서 사용하면 데리고 있을 수 있는 사역마가 1마리 늘어난다(최대 9마리). 여왕의 허가는 시간에 구애되지 않는다.",0],["vtown","마을 이동권","절망을 갈아 잉크를 만들고, 조각을 깎아 각오를 다진다. 지금 설 곳은 당신이 있을 곳이 아니다. 당신은 어디로든 갈 수 있다. 떠나자. 떠나서. 떠나서...",0],["bond","유대의 증거","보내 준 사역마가 마지막으로 남기고 간 작은 증표. 함께한 시간이 길수록 많이 남긴다. 사역마 출정 기본 보상으로도 얻을 수 있다. 상점에서는 팔지 않는다.",0],["milk","매지컬 밀크","마법의 힘을 담은 우유. 먹으면 정말로 키가 클지도 모른다. 단, 사람은 먹지 마시오. 가방에서 사역마에게 주면 그 사역마의 친밀도 상한이 1 오른다(최대 15).",0],["petcan","냠냠 통조림","익숙한 꼬순내가 나는 통조림. 고양이 사역마가 무척 좋아한다.",0],["petfeast","펫 푸드 특식","인간도 먹을 수 있다는 고급 특식. 어쩌면 내가 먹는 것보다 좋은 재료로 만들어졌을지도.",0],["trcyan","청록 변광석","청록빛 변광석. 어둠 속에서 보아도 흐리게 빛난다. 가능성을 바꾸는 가장 여린 빛이다. 사역마의 특성 중 첫 번째를 변경할 수 있다.",0],["trblue","파랑 변광석","파랑빛 변광석. 눈을 감는다 한들 파도 소리가 사라지는 것은 아니다. 가능성을 바꾸는 평온한 소리이다. 사역마의 특성 중 두 번째를 바꿀 수 있다.",0],["trcast","주조 변광석","주조 변광석. 단단하고 굳건하여, 길을 헤맬 때 주저하지 않을 용기를 준다. 사역마의 특성 중 세 번째를 변경한다. 기적을 굴절하여 희망을 빚는다.",0]];
    /* 아이템 도트 그림(32×32): assets/items/{id}.png. 그림이 있는 아이템만 적는다. 그림을 바꾸면 ITEM_IMG_V 를 올려 브라우저가 새로 받게 한다.
       id와 파일 이름이 다르면 ITEM_FILE 에 적는다. 유대의 증거는 bond_gem.png, 검은 왕관의 조각은 piece_of_black_crown.png, 꿈꾸는 오르골은 dream_music_box.png, 조련 허가증은 they_look_very_polite.png, 마을 이동권은 move_to_other_town.png.
-      삼림·해안·골짜기·심연 조각은 grass_fragile·coast_fragile·valley_fragile·abyss_fragile. */
-   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,m_forest:1,m_coast:1,m_valley:1,m_abyss:1,bond:1},ITEM_IMG_V=6;
-   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy",m_forest:"grass_fragile",m_coast:"coast_fragile",m_valley:"valley_fragile",m_abyss:"abyss_fragile"};
+      삼림·해안·골짜기·심연 조각은 grass_fragile·coast_fragile·valley_fragile·abyss_fragile.
+      청록·파랑·주조 변광석은 green_variable·blue_variable·red_variable.
+      매지컬 밀크·냠냠 통조림·펫 푸드 특식은 magical_milk·nyam_can·special_pet_food. */
+   const ITEM_IMG={mana:1,charm:1,map:1,flag:1,seal:1,candle:1,whet:1,hope:1,pfcandy:1,g1:1,g2:1,g3:1,g4:1,prism:1,license:1,vtown:1,m_shard:1,m_herb:1,m_ore:1,m_dew:1,m_ash:1,m_crown:1,m_forest:1,m_coast:1,m_valley:1,m_abyss:1,bond:1,trcyan:1,trblue:1,trcast:1,milk:1,petcan:1,petfeast:1},ITEM_IMG_V=8;
+   const ITEM_FILE={bond:"bond_gem",m_crown:"piece_of_black_crown",g4:"dream_music_box",prism:"elemental_prism",license:"they_look_very_polite",vtown:"move_to_other_town",pfcandy:"purple_flower_candy",m_forest:"grass_fragile",m_coast:"coast_fragile",m_valley:"valley_fragile",m_abyss:"abyss_fragile",trcyan:"green_variable",trblue:"blue_variable",trcast:"red_variable",milk:"magical_milk",petcan:"nyam_can",petfeast:"special_pet_food"};
    const GV={g1:8,g2:15,g3:3,g4:25},HOPE_DZ=30;
    /* 공방에서만 만드는 아이템(상점에 나오지 않는다)과, 선물을 열 때 함께 얻는 경험치. 제작법은 data/craft.js 의 RCP. 숫자만 고치면 바뀐다. */
    const CRAFT_ONLY={g4:1,prism:1,license:1,vtown:1,milk:1,petcan:1,petfeast:1,trcyan:1,trblue:1,trcast:1},MERCHANT_ONLY={pfcandy:1},GIFT_EX={g4:30};
@@ -141,8 +150,8 @@
    // 받은 선물: 보낸 친구가 정한 선물 종류만 인정하고, 한 번에 최대 40까지 절망도를 낮춘다.
    /* 선물: 같은 친구에게 하루(24시간)에 GIFT_DAY개까지 보낼 수 있다.
       [권위] ginbox/{받는이}/{id}: 받은 함·열기·화면. 계정 c.rg 안 씀. c.gs 는 개봉·이관 워터마크.
-      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. giftn/{받는이}: 도착 벨(호환 pull).
-      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·giftn·COMPAT pull 제거 → ginbox 단독.
+      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. 알림은 ntin, 목록은 ginbox.
+      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·COMPAT pull 제거 → ginbox 단독.
       TODO(선물 한도→서버): 한도 서버 이관 로직은 아직 없음. Functions 등으로 ginbox 송신과
          함께 GIFT_DAY 를 강제한 뒤 gift/ 규칙·클라 gsl 을 걷어낸다.
       규칙: ginbox 는 $to 읽기/지우기·호환 이관, 보낸이(u) 쓰기. validate 에 auth==$to 허용 필요. */
@@ -443,8 +452,9 @@
 
 
    /* 교류 게시판: 글, 댓글, 대댓글(댓글에 다는 답글 한 단계).
-      단체 채팅과 같은 저장 공간(chat)을 쓴다. 새 글 목록은 "bp_"(제목·미리보기·댓글 수), 본문은 "bb_", 그 글의 댓글은 "bc_글_" 이다.
-      목록을 열 때는 bp_ 만 받고, 글을 열 때 본문과 그 글의 댓글을 받는다. 예전 글·댓글은 "b_"에 섞여 있다.
+      글 목록·본문·사진은 chat(bp_/bb_/bimg_…). 새 댓글·답글·그 수정·지움은 board/c(bc_글_…).
+      예전 댓글은 chat/bc_·b_ 에 남아 있고, 글을 열 때 함께 읽는다.
+      댓글 알림은 Functions boardCmtNotify 가 ntin/{받는이}/{댓글id} 에 넣고, 클라 ntin live 가 note("board") 한다.
       그 공간은 서버가 '본인 이름으로 새로 쓰기'만 허락하므로 남의 글을 고치거나 지울 수 없다. 삭제는 '지움 표시'를 남기는 방식이고, 글쓴이 본인과 운영자의 지움 표시만 인정한다.
       글 {bt:"p", ti:제목, pv:미리보기, cc:댓글 수}, 본문 {bt:"body", x:내용}, 댓글 {bt:"c", p:글, r:부모 댓글 또는 ""}, 지움 {bt:"d", ref:대상}. 숫자만 고치면 바뀐다. */
    const BD_MAX=800,BD_TITLE=40,BD_BODY=1000,BD_CMT=300,BD_GAP=8000;

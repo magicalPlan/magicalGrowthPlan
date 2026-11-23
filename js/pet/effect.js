@@ -1,6 +1,6 @@
 /* 사역마가 전투와 보상에 보태는 값. main.js · data/pet-traits.js 다음에 불러야 한다.
    전투력, 경험치, 상점, 강화는 petEff 를 그대로 부른다.
-   특성 합산은 js/pet/trait.js 의 petTraitEff(이 파일보다 뒤에 로드). mat·wave 는 특성만 있다. */
+   특성 합산은 js/pet/trait.js 의 petTraitEff(이 파일보다 뒤에 로드). */
 /* 친밀도 상한: 기본 PET_LV_DEF, 매지컬 밀크(q.lm)로 PET_LV_HARD까지. */
 const petLvCap=q=>{const d=typeof PET_LV_DEF==="number"?PET_LV_DEF:5,h=typeof PET_LV_HARD==="number"?PET_LV_HARD:15;if(!q)return d;const n=Math.floor(Number(q.lm));return Math.min(h,Math.max(d,isFinite(n)?n:d))};
 /* 친밀도 단계: XP 문턱 개수, 단 상한(petLvCap)을 넘지 않는다. */
@@ -8,14 +8,21 @@ const petLv=q=>{if(!q)return 0;const cap=petLvCap(q);return Math.min(cap,PET_LV.
 const petXpCap=q=>PET_LV[Math.max(0,petLvCap(q)-1)]||0;
 // 지금 '함께하기'로 고른 사역마. 없으면 null.
 const petCur=()=>C&&Array.isArray(C.pets)?C.pets.find(q=>q&&q.id===C.pet)||null:null;
+/* 효과 계산용 단계: 친밀도는 PET_LV_HARD까지지만 종 효과는 PET_EFF_LV에서 멈춘다. */
+const petEffLv=q=>Math.min(typeof PET_EFF_LV==="number"?PET_EFF_LV:10,petLv(q));
 /* 종 효과만(특성 제외). */
-function petEffSp(k){const q=petCur();if(!q)return 0;const L=petLv(q),sp=q.sp;
+function petEffSp(k){const q=petCur();if(!q)return 0;const L=petEffLv(q),sp=q.sp;
  if(k==="ex")return sp==="rabbit"?.02*L:sp==="hope"?.02*L:0;if(k==="gd")return sp==="sparrow"?.02*L:sp==="hope"?.02*L:sp==="dragon"?.03*L:0;
  if(k==="dz")return sp==="jelly"?.02*L:sp==="hope"?.02*L:0;if(k==="pw")return sp==="fox"||sp==="dragon"?3*L:sp==="hope"?2*L:0;
  if(k==="heal")return sp==="cat"?(L>=5?2:L>=3?1:0):0;if(k==="lh")return sp==="turtle"||sp==="dragon"||sp==="reindeer"?.02*L:0;if(k==="lhmat")return sp==="reindeer"?.1*L:0;if(k==="boss")return sp==="mirror"?.04*L:0;if(k==="raid")return sp==="rose"?.05*L:0;
  if(k==="gift")return sp==="sheep"?.1*L:0;if(k==="shop")return sp==="mouse"?.02*L:0;if(k==="trial")return sp==="owl"?L:0;if(k==="mana")return sp==="crow"?.03*L:0;
- if(k==="up")return sp==="hedgehog"?2*L:0;if(k==="res")return sp==="butterfly"?2*L:sp==="rose"?L:0;return 0}
-/* 함께하는 사역마가 보태는 값 = 종 효과 + 특성(petTraitEff). L 은 친밀도 단계.
+ if(k==="up")return sp==="hedgehog"?2*L:0;if(k==="res")return sp==="butterfly"?2*L:sp==="rose"?L:0;
+ if(k==="mat")return sp==="blackcat"?.03*L:0;
+ if(k==="wave")return sp==="magicalhound"?.04*L:0;
+ /* pwp: 전투력 비율. formula.js pw() 가 (1+pwp) 를 곱한다. 올베르스네이크: 절망도≥60 일 때 +1%×L */
+ if(k==="pwp")return sp==="olberssnake"&&(Number(C&&C.dz)||0)>=60?.01*L:0;
+ return 0}
+/* 함께하는 사역마가 보태는 값 = 종 효과 + 특성(petTraitEff). L 은 min(친밀도, PET_EFF_LV).
    ex  토끼·희망: 경험치 +2% × L
    gd  참새·희망 +2% × L, 용 +3% × L
    dz  젤리·희망: 절망도 감소 +2% × L
@@ -28,7 +35,9 @@ function petEffSp(k){const q=petCur();if(!q)return 0;const L=petLv(q),sp=q.sp;
    mana 까마귀: 마력석 확률 +3% × L
    up  고슴도치: 강화 확률 +2% × L
    res 나비: 공명 절망도 감소 +2 × L, 얼음장미 +1 × L
+   mat 검은 고양이: 출정 재료 +3% × L (특성 mat 과 합산)
+   wave 매지컬 하운드: 몬스터 웨이브 피해 +4% × L (특성 wave 와 합산)
+   pwp 올베르스네이크: 절망도≥60 이면 전투력 +1% × L
    (기간 한정) lh 북극광 순록 +2% × L, lhmat 순록: 장기 토벌 시간마다 재료 1개 더 10% × L
-   boss 거울파편 요정: 보스 레이드 피해 +4% × L / raid 얼음장미 정령: 타락 레이드 피해 +5% × L
-   mat·wave: 특성만(data/pet-traits.js) */
+   boss 거울파편 요정: 보스 레이드 피해 +4% × L / raid 얼음장미 정령: 타락 레이드 피해 +5% × L */
 function petEff(k){return petEffSp(k)+(typeof petTraitEff==="function"?petTraitEff(k):0)}

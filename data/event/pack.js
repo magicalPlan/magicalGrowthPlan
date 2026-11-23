@@ -12,13 +12,18 @@
    · eventPick / eventLive — HANDOFF §2
 
    번들 필드 (EVENT_PACKS[key]) — 일정 제외
-   · key, ord, piece(nm·ic·ds·msNames), boss, clue, egg(…), storyLock({id,n,at?,mg?}), titles
-   · clp (선택) { goal, ms, drop } — 없으면 common.js CLP_FORM 기본값.
-     ms: [[비율, 보상], …] 길이·순서는 msNames 와 맞출 것. drop 은 클라 조각 드롭(출정 x_ok/x_fail 는 seasons.drop).
+   · key, ord, piece(nm·ic·ds·msNames·img?), boss, clue, egg(…), storyLock({id,at?,mg?}), titles
+   · steps (권장) [n1,n2,n3,n4] — 물감/조각 단계 공통값. eventBindSteps 가
+     storyLock[i].n 과 clp.goal·단계 비율에 같이 넣는다. 숫자 바꿀 때는 여기만.
+   · piece.img (선택) — assets/event_items/{img}.png. 장기 의뢰 단서 칸·탐색 칩·획득 문구.
+   · ord.introShard (선택) — 장기 의뢰 제목 옆 ▶ 로 재생할 스토리 shard id.
+     있으면 #ord-intro-play 표시, 없으면 hidden. 예: flanders → "flanders-1".
+     스토리가 아직 chapters 에 없어도 필드는 두어도 되고, 클릭 시 "아직 없다" 안내만 난다.
+   · clp (선택) { ms, drop } — 보상·드롭만. goal·단계 개수는 steps 가 채움(없으면 CLP_FORM).
    ============================================================================= */
 
 /* 로컬/테스트 전용. 배포 빌드에서는 반드시 null. */
-const EVENT_FORCE="flanders";
+const EVENT_FORCE=null;
 
 const EVENT_PACKS={
  snow:{
@@ -32,6 +37,7 @@ const EVENT_PACKS={
   piece:{
    nm:"단서 조각",
    ic:"🧩",
+   img:"wt_puzzle_piece",
    ds:"서리 드래곤이 감춘 진실의 한 조각. 혼자서는 아무것도 알 수 없지만, 모두의 조각이 모이면 숨겨진 이야기가 드러난다.",
    msNames:["첫 번째 실마리","흩어진 기억","얼음 속의 목소리","드러난 진실"]
   },
@@ -75,12 +81,14 @@ const EVENT_PACKS={
     ["heart","얼지 않은 심장","침소 가장 깊은 곳. 차갑지 않은 것이 하나, 아직 뛰고 있다.",.12,12]
    ]
   },
-  egg:{nm:"서리 드래곤의 알",ic:"❄️",ds:"얼음 궁전 깊은 곳, 서리 드래곤이 품고 있던 알. 차갑게 반짝이지만, 귀를 대면 작은 심장 소리가 들린다.",leg:.03,lim:.18,rare:.30},
+  egg:{nm:"서리 드래곤의 알",ic:"❄️",ds:"얼음 궁전 깊은 곳, 서리 드래곤이 품고 있던 알. 차갑게 반짝이지만, 귀를 대면 작은 심장 소리가 들린다.",leg:.03,lim:.18,rare:.30,ids:["reindeer","mirror","rose"]},
+  /* 단계 공통값 → storyLock.n · CLP 목표/단계 (eventBindSteps). */
+  steps:[2500,5000,7500,10000],
   storyLock:[
-   {id:"shard-1",n:2500},
-   {id:"shard-2",n:5000,at:Date.UTC(2026,10,3,15)},
-   {id:"shard-3",n:7500,at:Date.UTC(2026,10,6,15)},
-   {id:"shard-4",n:10000,at:Date.UTC(2026,10,9,15)}
+   {id:"shard-1"},
+   {id:"shard-2",at:Date.UTC(2026,10,3,15)},
+   {id:"shard-3",at:Date.UTC(2026,10,6,15)},
+   {id:"shard-4",at:Date.UTC(2026,10,9,15)}
   ],
   titles:[
    ["pet_snow","서리 속의 손님","2026년 겨울, 서리 드래곤의 알에서 기간 한정 사역마를 깨웠다.",c=>(c.pets||[]).some(q=>q&&(q.sp==="reindeer"||q.sp==="mirror"||q.sp==="rose"))||(c.stats?.petEv||0)>=1]
@@ -92,12 +100,15 @@ const EVENT_PACKS={
   ord:{
    kicker:"🎨 기간 한정 장기 의뢰",
    title:"플랜더스의 개",
+   /* 제목 옆 ▶. chapters/flanders.json 의 shard id. 없으면 버튼 hidden. */
+   introShard:"flanders-1",
    lead:"제 형태를 잃고 망집에 휘말린 동물들을 찾는다. 마법을 이용해, 동물들을 집으로 돌려보내자.",
    clueHelp:"마을 여기저기를 탐험하며 집으로 돌아가길 바라는 동물들을 찾는다. 떠나 있는 동안 게임을 꺼 두어도 되고, 그 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 중간에 돌아가면 지난 시간만큼의 절반만 받는다. 끝까지 가면 추가 조사를 발견할 수 있다. 단서 조각이 가장 많이 나오는 곳이다."
   },
   piece:{
    nm:"물감",
    ic:"🖌️",
+   img:"yellow_paint_fd",
    ds:"여린 동물을 덮친 집착. 물감의 형태로 화한 것을 덜어내고 모으자.",
    msNames:["마수를 닮은 짐승","귀갓길","나는 닿을 수 없어.","집착의 색"]
   },
@@ -142,18 +153,21 @@ const EVENT_PACKS={
     ["nechromancer","새로운 주인, 가족.","조금 더 살아갈 수 있게 된 동물들은 자발적으로 이 결계를 지키고 있다",.12,12]
    ]
   },
-  egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:0,rare:.30,ids:[]},
-  /* storyLock: n=물감 합계, at=열림 시각(UTC), mg=모두 합친 밑그림 장수(event_minigame/flanders/total_amount).
-     flanders-3: 물감 10000 + 12/25 0시 + 밑그림 총합 5000. */
+  egg:{nm:"금이 간 알",ic:"🎨",ds:"이미 부서져 태어날 가능성 없던 알에, 당신과 화가의 마력이 깃들었다.",leg:.03,lim:.18,rare:.30,ids:["magicalhound","olberssnake"]},
+  /* 단계 공통값 → storyLock.n · CLP 목표/단계 (eventBindSteps). 숫자 변경은 여기만. */
+  steps:[5000,10000,15000,20000],
+  /* storyLock: at=열림 시각(UTC), mg=밑그림 총합(event_minigame/flanders/total_amount). n 은 steps. */
   storyLock:[
-   {id:"flanders-2",n:5000},
-   {id:"flanders-3",n:10000,at:Date.UTC(2026,11,24,15),mg:5000},
-   {id:"flanders-4",n:15000,at:Date.UTC(2026,11,27,15)},
-   {id:"flanders-5",n:20000,at:Date.UTC(2026,11,30,15)}
+   {id:"flanders-2"},
+   {id:"flanders-3",at:Date.UTC(2026,11,24,15),mg:5000},
+   {id:"flanders-4",at:Date.UTC(2026,11,27,15)},
+   {id:"flanders-5",at:Date.UTC(2026,11,30,15)}
   ],
   titles:[
    ["flanders_mg","플랜더스의","특별 의뢰 '플랜더스의 밑그림'을 한 번 그려 보았다.",c=>!!(c.stats&&c.stats.mgFlanders)],
    ["flanders_mg100","그림쟁이","플랜더스의 밑그림을 100번 이상 플레이했다. 『너도 화가에 관심 있어?』",c=>(c.stats&&c.stats.mgFlanders||0)>=100],
+   /* 모두 합쳐(total_amount)≥200 인 뒤 한 판을 마치면 stats.mgFlandersConcours=1 → 칭호. 스토리 flanders-side. */
+   ["flanders_concours","콩쿠르 입상","모두 합쳐 밑그림이 200장을 넘긴 뒤 플랜더스의 밑그림을 그렸다.",c=>!!(c.stats&&c.stats.mgFlandersConcours)],
    ["pet_flanders","포기하는 게 아니야","더 먼 세상을 여행하길 바라며. 금이 간 알에 생명을 불어넣었다.",c=>{const ids=typeof PET_EV2!=="undefined"&&Array.isArray(PET_EV2.ids)?PET_EV2.ids:[];return (c.stats&&c.stats.petEv2||0)>=1||(c.pets||[]).some(q=>q&&ids.indexOf(q.sp)>=0)}]
   ]
  }
@@ -169,7 +183,23 @@ function eventBindSeasons(){
   p.egg=p.egg||{};p.egg.inv=s.eggInv
  })
 }
+/* steps[n1..n4] → storyLock[i].n + clp.goal·단계 비율. 보상 칸(ms[1])·drop 은 clp/CLP_FORM 유지. */
+function eventBindSteps(){
+ Object.keys(EVENT_PACKS).forEach(function(key){
+  const p=EVENT_PACKS[key],raw=p&&p.steps;if(!Array.isArray(raw)||!raw.length)return;
+  const nums=raw.map(function(x){return Math.max(0,Number(x)||0)});
+  const goal=nums[nums.length-1]||0;
+  if(Array.isArray(p.storyLock))p.storyLock.forEach(function(lock,i){if(lock&&nums[i]!=null)lock.n=nums[i]});
+  const base=typeof CLP_FORM!=="undefined"?CLP_FORM:{ms:[]};
+  const o=p.clp||{},msSrc=Array.isArray(o.ms)&&o.ms.length?o.ms:(base.ms||[]);
+  const ms=msSrc.length===nums.length&&goal>0
+   ?msSrc.map(function(row,i){return [Math.min(1,nums[i]/goal),row[1]]})
+   :o.ms;
+  p.clp=Object.assign({},o,{goal:goal},ms?{ms:ms}:{});
+ })
+}
 eventBindSeasons();
+eventBindSteps();
 
 function eventPackList () {
   return Object.keys(EVENT_PACKS).map(
@@ -216,7 +246,7 @@ var PET_EV2=eventEggOf("eggsEv2")||{from:0,to:0,nm:"이벤트 알",ic:"🥚",ds:
 /* 장기 의뢰 스토리 잠금 — 표시 중인 팩 기준. */
 var STORY_LOCK=(EVENT&&Array.isArray(EVENT.storyLock)?EVENT.storyLock:[]).slice();
 
-/* 팩 clp 덮어쓰기 + CLP_FORM 기본. o: {goal?, ms?, drop?} */
+/* 팩 clp + CLP_FORM. goal·단계 비율은 보통 eventBindSteps(steps)가 이미 채움. */
 function eventClpMerge(pack){
  const o=pack&&pack.clp||{},base=CLP_FORM;
  const goal=o.goal!=null?Number(o.goal):base.goal;
@@ -238,6 +268,7 @@ const CLP=Object.assign({},CLP_FORM,{
  id:EVENT&&EVENT.piece?EVENT.piece.id:"clue-none",
  nm:EVENT&&EVENT.piece?EVENT.piece.nm:"단서 조각",
  ic:EVENT&&EVENT.piece?EVENT.piece.ic:"🧩",
+ img:EVENT&&EVENT.piece&&EVENT.piece.img?EVENT.piece.img:"",
  ds:EVENT&&EVENT.piece?EVENT.piece.ds:"",
  from:EVENT?EVENT.from:0,
  to:EVENT?EVENT.to:0,
@@ -245,6 +276,8 @@ const CLP=Object.assign({},CLP_FORM,{
  drop:_clp.drop,
  ms:_clp.ms
 });
+/* 획득 문구의 CLP.ic 를 그림으로 바꿀 때 쓴다(js/event-boss/piece.js clpImgHtml). */
+const CLP_MARK=CLP.ic;
 const CLUE=CLUE_FORM.map(function(row,i){return Object.assign({},row,EVENT&&EVENT.clue&&EVENT.clue.rows&&EVENT.clue.rows[i]||{})});
 const CLUE_LOG=EVENT&&EVENT.clue&&EVENT.clue.log||[];
 const CLUE_EXTRA=EVENT&&EVENT.clue&&EVENT.clue.extra||[];

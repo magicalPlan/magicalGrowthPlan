@@ -93,9 +93,19 @@ function prismBox(){const box=elT("div","card prism-box"),own=C.a||[],free=AT.fi
 function prismUse(){const p=prismPick||{},own=C.a||[];if(!p.from||!p.to||!own.includes(p.from)||own.includes(p.to)||!AT.some(t=>t[0]===p.to))return;
  if((C.inv.prism||0)<1)return;if(C.fall){bag("타락한 동안에는 프리즘이 빛을 굴절시키지 못한다.");$("#bgm").style.color="var(--bad)";return}
  if(!confirm("속성 「"+p.from+"」을(를) 「"+p.to+"」(으)로 바꿀까?\n\n· 「"+p.from+"」의 효과와 마법은 사라진다\n· 되돌릴 수 없다 (다시 바꾸려면 프리즘이 하나 더 필요하다)\n· 절망도가 "+PRISM_DZ+" 오른다"))return;
- C.inv.prism--;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
+ C.inv=C.inv||{};C.inv.prism=(C.inv.prism||0)-1;C.a=own.map(a=>a===p.from?p.to:a);C.stats=C.stats||{};C.stats.attrChanges=(C.stats.attrChanges||0)+1;prismOn=false;prismPick=null;titleState();
  try{if(typeof dexSkAttr==="function"&&dexSkAttr(p.to))note("dex","도감에 새 마법이 기록되었다: "+((SK[p.to]||{}).nm||p.to))}catch(e){}
- const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);save();regPlayer();checkTitles();
+ const dz0=C.dz||0;note("quest","속성의 프리즘: 속성이 「"+p.from+"」에서 「"+p.to+"」(으)로 바뀌었다.");gain(0,PRISM_DZ);
+ /* 공방·변광석과 같이 바뀐 칸만 바로 PATCH. 일반 saveCloud(600ms·accSync)만 타면 속성 a 가 서버 옛값으로 돌아갈 수 있다. */
+ const fields={a:C.a.slice(),"inv/prism":C.inv.prism||0,"stats/attrChanges":C.stats.attrChanges,dz:C.dz};
+ if(C.stats.maxDespair!=null)fields["stats/maxDespair"]=C.stats.maxDespair;
+ if(C.edge!=null)fields.edge=C.edge;
+ if(C.stats.reachedZero)fields["stats/reachedZero"]=1;
+ if(C.stats.edgeHope)fields["stats/edgeHope"]=1;
+ const sk=typeof SK!=="undefined"&&SK[p.to];if(sk&&C.dex&&C.dex.sk&&C.dex.sk[sk.id])fields["dex/sk/"+sk.id]=C.dex.sk[sk.id];
+ if(C.fall){fields.fall=C.fall;if(C.fallT)fields.fallT=C.fallT;if(C.stats.falls!=null)fields["stats/falls"]=C.stats.falls}
+ if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
+ regPlayer();checkTitles();
  const up=Math.max(0,(C.dz||0)-dz0),t=AT.find(x=>x[0]===p.to);alertBox("✦ 속성의 프리즘","프리즘을 들어 올리자 계약의 빛이 갈라졌다.\n"+p.from+"의 힘이 스러지고, "+p.to+"의 힘이 몸에 스며든다.\n\n「"+p.from+"」 → 「"+p.to+"」\n"+(t?t[2]:"")+"\n\n대가로 절망도가 "+up+" 올랐다.");bag()}
 
 /* 마을 이동권: 가방에서 '사용'을 누르면 아래 상자가 열린다. A·B·C·D 중 지금과 다른 마을을 고르고 확인하면 C.v 를 바꾼다.

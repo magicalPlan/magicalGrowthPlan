@@ -1,7 +1,8 @@
 /* 교류 게시판. main.js 다음에 불러야 한다. 글, 댓글, 답글, 사진, 고정과 작성 중인 초안.
    메뉴와 알림함은 board 를 그대로 부른다.
    목록은 가벼운 칸만 읽는다. 새 글은 bp_(제목·미리보기·작성자·댓글 수), 예전 글은 이관된 bx_ 칸이다.
-   본문(bb_ 또는 예전 b_ 본문)과 댓글(bc_ / 예전 글의 b_ 댓글)과 사진은 글을 눌렀을 때만 받는다.
+   본문(bb_ 또는 예전 b_ 본문)과 댓글(board/c 의 bc_ · 예전 chat/bc_ · b_ 댓글)과 사진은 글을 눌렀을 때만 받는다.
+   댓글 알림은 서버(boardCmtNotify)가 ntin/{받는이} 에 넣고, 클라 ntin live 가 note("board") 한다.
    예전에는 목록을 채우려고 b_ 를 훑다 댓글·수정 기록까지 함께 받아 왔다. 이제 그 스캔은 백그라운드 이관(bdMigrate)에서만
    한 번씩 돌고, 글만 bx_ 로 옮겨 둔 뒤에는 목록이 b_ 를 다시 읽지 않는다. 이관 진행은 chat/bd_mig 에 남긴다.
    목록이나 글을 보고 있는 동안 연결을 붙들어 두지 않는다. 새 글은 '새 글 확인'으로 받는다. 목록은 약 45초 메모리에 둔다. */
@@ -72,7 +73,9 @@ async function bdLegacyThread(id,gen){let cursor=id,guard=0;while(guard++<25){if
   if(keep.length)bdTake(keep.map(bdWrap),true);if((sn.docs||[]).length<40)return}}
 async function bdRead(id){const gen=++bdReadGen,p=BD.find(m=>m.id===id);if(!p)return;
  try{if(p.x==null){const key=String(id).indexOf("bp_")===0?"bb_"+id:id;const d=await DB.doc("chat/"+key).get();if(gen!==bdReadGen||bdOpen!==id)return;const v=d.data()||{};p.x=typeof v.x==="string"?v.x:(p.pv||"")}
-  const sn=await once(DB.collection("chat").prefix("bc_"+id+"_").limit(200));if(gen!==bdReadGen||bdOpen!==id)return;bdTake(sn.docs||[],true);bdNotify((sn.docs||[]).map(d=>Object.assign({id:d.id},d.data()||{})));
+  const pre="bc_"+id+"_";const snNew=await once(DB.collection("board/c").prefix(pre).limit(200));if(gen!==bdReadGen||bdOpen!==id)return;
+  const snOld=await once(DB.collection("chat").prefix(pre).limit(200));if(gen!==bdReadGen||bdOpen!==id)return;
+  const docs=(snNew.docs||[]).concat(snOld.docs||[]);bdTake(docs,true);bdNotify(docs.map(d=>Object.assign({id:d.id},d.data()||{})));
   if(!p._th&&String(id).indexOf("bp_")!==0)await bdLegacyThread(id,gen);if(gen!==bdReadGen||bdOpen!==id)return;p._th=1}
  catch(e){const m=$("#bdm");if(m&&bdOpen===id){m.style.color="var(--bad)";m.textContent="글과 댓글을 불러오지 못했다. 잠시 뒤에 다시 눌러 보자."}}
  if(gen===bdReadGen&&bdOpen===id&&!$("#v-board").hidden)drawBoard()}
@@ -92,10 +95,10 @@ function bdPins(){const last={};BD.filter(m=>m.bt==="p"&&m.pin).forEach(m=>{last
 let bdEdit=null;
 function bdEdits(){const by={};BD.forEach(m=>{by[m.id]=m});const ed={};BD.filter(m=>m.bt==="e"&&by[m.ref]&&by[m.ref].u===m.u&&typeof m.x==="string").sort((a,b)=>a.ts-b.ts).forEach(m=>{ed[m.ref]={x:m.x,ts:m.ts}});return ed}
 function bdDead(){const by={};BD.forEach(m=>{by[m.id]=m});const dead={};BD.filter(m=>m.bt==="d"&&by[m.ref]&&(by[m.ref].u===m.u||ADM[m.u])).forEach(m=>dead[m.ref]=1);return dead}
-// 내 글에 달린 댓글, 내 댓글에 달린 답글을 알려 준다.
+/* 글을 열 때 워터마크만 맞춘다. 알림함 board 줄은 ntin live→note. 보고 있는 글의 새 댓글은 토스트만. */
 function bdNotify(list){if(!C)return;const first=C.bdSeen==null,seen=C.bdSeen||0,dead=bdDead(),by={};BD.forEach(m=>by[m.id]=m);let mx=seen,n=0;
  (list||[]).filter(m=>m&&m.bt==="c"&&m.u!==UID&&m.ts>seen&&!dead[m.id]).forEach(m=>{mx=Math.max(mx,m.ts);const post=by[m.p],par=m.r?by[m.r]:null;if(!post||dead[m.p])return;
-  if(!first&&((par&&par.u===UID)||(!par&&post.u===UID))){n++;note("board",String(m.n||"누군가")+"님이 "+(par?"내 댓글에 답글을":"내 글 「"+String(post.ti||"").slice(0,20)+"」에 댓글을")+" 달았다: "+String(m.x||"").slice(0,40),m.p)}});
+  if(!first&&((par&&par.u===UID)||(!par&&post.u===UID)))n++});
  if(first||mx>seen){C.bdSeen=Math.max(mx,first?Date.now():0);save()}if(n){toast("📝 게시판에 새 댓글 "+n+"개");ding()}}
 function bdReload(){if(!XON()||bdBusy)return;bdLoadGen++;BD=[];bdResetPage();bdStop();bdAt=0;const m=$("#bdm");if(m)m.textContent="";drawBoard();bdOpenLoad()}
 function board(post){const fresh=$("#v-board").hidden;show("board");if(post!==undefined)bdOpen=post;$("#bdm").textContent="";
@@ -110,7 +113,9 @@ function bdShrink(file,cb){if(!file||!/^image\//.test(file.type))return cb(null,
 async function bdImgLoad(id){if(BDIC[id]!==undefined)return BDIC[id];try{const v=(await DB.doc("chat/bimg_"+id).get()).data();BDIC[id]=v&&typeof v.im==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(v.im)?v.im:null}catch(e){return null}return BDIC[id]}
 async function bdWrite(doc,okMsg,fixedId){const m=$("#bdm");if(Date.now()-bdLast<BD_GAP){m.style.color="var(--bad)";m.textContent="너무 빨리 쓰고 있다. 잠시 뒤에 다시 쓰자.";return false}
  const id=fixedId||bdId(),d=Object.assign({u:UID,n:nmOf(),ts:Date.now()},tiName(C.ti)?{tn:tiName(C.ti)}:{},doc);
- try{await DB.doc("chat/"+id).set(d);bdLast=Date.now();bdSeen[id]=1;BD.push(Object.assign({id},d));bdAt=Date.now();if(okMsg){m.style.color="var(--mu)";m.textContent=okMsg}return id}
+ /* 댓글·답글·그 글타래의 수정·지움(bc_)은 board/c. 글·고정·본문 등은 chat. */
+ const path=String(id).indexOf("bc_")===0?"board/c/"+id:"chat/"+id;
+ try{await DB.doc(path).set(d);bdLast=Date.now();bdSeen[id]=1;BD.push(Object.assign({id},d));bdAt=Date.now();if(okMsg){m.style.color="var(--mu)";m.textContent=okMsg}return id}
  catch(e){m.style.color="var(--bad)";m.textContent="올리지 못했다. 캐릭터가 서버에 저장돼 있는지(위쪽 경고)와 인터넷 연결을 확인해야 한다.";return false}}
 function bdBump(pid,dlt){const p=BD.find(m=>m.id===pid);if(!p)return;const dead=bdDead(),loaded=BD.filter(m=>m.bt==="c"&&m.p===pid&&!dead[m.id]).length;
  p.cc=Math.max(0,loaded,(Number(p.cc)||0)+dlt);DB.doc(bdCardPath(pid)).patch({cc:p.cc}).catch(()=>{});if(String(pid).indexOf("bp_")!==0)DB.doc("chat/"+pid).patch({cc:p.cc}).catch(()=>{})}

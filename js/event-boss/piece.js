@@ -7,6 +7,10 @@
 let CLPN=0,CLPTOP=[],clpBusy=false,clpAt=0,clpMigBusy=false,clpMigDone=false;
 const clpOn=()=>typeof eventLive==="function"?!!eventLive():(Date.now()>=CLP.from&&Date.now()<CLP.to);
 const clpMine=()=>{if(!C)return{id:CLP.id,n:0,got:{}};if(!C.clp||C.clp.id!==CLP.id)C.clp={id:CLP.id,n:0,got:{}};C.clp.got=C.clp.got||{};return C.clp};
+/* 단서 조각/물감 도트. pack.piece.img → assets/event_items/{img}.png. 없으면 이모지(CLP.ic)만. */
+const clpImgSrc=()=>{const f=CLP&&CLP.img?String(CLP.img).replace(/[^\w.-]/g,""):"";return f?"assets/event_items/"+f+".png":""};
+function clpImg(cls){const src=clpImgSrc();if(!src)return null;const i=document.createElement("img");i.src=src;i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="clp-ic-img"+(cls?" "+cls:"");return i}
+function clpImgHtml(){const src=clpImgSrc();return src?'<img class="clp-ic-img inline" src="'+src+'" alt="" width="32" height="32" decoding="async">':(CLP&&CLP.ic||"")}
 const clpPath=()=>"tally/clue/"+CLP.id;
 /* COMPAT: 예전 우회로 칸. 이관(clpMigrateAlt)에만 읽고, 새로 쓰지 않는다. */
 const clpAlt=()=>"tally/dr/"+CLP.id;
@@ -110,12 +114,12 @@ function clpStories(host){if(!host||typeof STORY_LOCK==="undefined"||typeof stor
 
 /* 장기 의뢰의 단서 조각 칸. 이벤트 전에는 예고만, 기간 중에는 진행도, 끝난 뒤에는 결과와 남은 보상을 보여 준다.
    위: 모두의 합계(큰 숫자)와 단계 표시가 달린 막대 · 가운데: 단계 보상 2×2 · 아래: 내 조각, 많이 찾은 사람, 찾는 곳.
-   제목 옆 퍼즐 칸은 assets/event_items/wt_puzzle_piece.png. 조각을 찾았다는 문구(clpGain)는 CLP.ic 이모티콘을 그대로 쓴다. */
+   제목 옆 그림은 pack.piece.img(assets/event_items). 없으면 CLP.ic. 획득 문구는 CLP_MARK→clpImgHtml. */
 /* KST 벽시계 문구. pack 의 from/to 를 UI에 그대로 쓴다. */
 function clpWhen(t){const d=new Date(Number(t)+9*36e5);const mi=d.getUTCMinutes();return (d.getUTCMonth()+1)+"월 "+d.getUTCDate()+"일 "+d.getUTCHours()+"시"+(mi?String(mi).padStart(2,"0")+"분":"");}
 function clpDraw(noFetch){const box=$("#clp");if(!box||!C)return;const now=Date.now(),me=clpMine(),live=clpOn(),before=!live&&now<CLP.from,after=!live&&now>=CLP.to;box.innerHTML="";
  const c=elT("div","card clp-card");box.appendChild(c);
- const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=document.createElement("img");im.src="assets/event_items/wt_puzzle_piece.png";im.alt="";im.width=32;im.height=32;im.decoding="async";im.className="clp-ic-img";ic.appendChild(im);hd.append(ic,(()=>{const t=elT("div","clp-ht");const tag=before?clpWhen(CLP.from)+" 시작":after?"종료":(live&&(now<CLP.from||now>=CLP.to))?"미리보기":"남은 시간 "+cdTxt(Math.max(0,CLP.to-now));t.append(elT("p","boss-tag","서버 공동 이벤트 · "+tag),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
+ const hd=elT("div","clp-hd"),ic=elT("span","clp-ic"),im=clpImg();if(im)ic.appendChild(im);else ic.textContent=CLP.ic||"";hd.append(ic,(()=>{const t=elT("div","clp-ht");const tag=before?clpWhen(CLP.from)+" 시작":after?"종료":(live&&(now<CLP.from||now>=CLP.to))?"미리보기":"남은 시간 "+cdTxt(Math.max(0,CLP.to-now));t.append(elT("p","boss-tag","서버 공동 이벤트 · "+tag),elT("h2","",CLP.nm+" 모으기"));return t})());c.appendChild(hd);
  c.appendChild(elT("p","clp-ds",CLP.ds));
  if(before){c.appendChild(elT("p","hint",clpWhen(CLP.from)+"부터 "+clpWhen(CLP.to)+"까지 출정, 장기 토벌, 단서 탐색, 이벤트 보스 토벌에서 찾을 수 있다. 단서 탐색에서 가장 많이 나온다. 모두가 찾은 조각이 하나로 모여 목표 "+CLP.goal.toLocaleString()+"개에 도전한다."));if(typeof ordMarks==="function")ordMarks();return}
  const pct=Math.min(1,CLPN/CLP.goal),big=elT("div","clp-big");

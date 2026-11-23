@@ -223,16 +223,29 @@ main{flex:1 0 auto;width:100%}
 .site-foot:not(:has(#doom:not([hidden]))){display:none}
 #doom{position:static;z-index:auto;width:min(420px,100%);margin:0}
 .doom-card{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:8px 12px 10px;border-radius:14px;
- border:1px solid #7d1a2e;background:radial-gradient(140% 120% at 100% 0%,#5a0f2255,transparent 60%),linear-gradient(180deg,#22091a,#120712);box-shadow:0 0 24px #7d1a2e33,inset 0 0 0 1px #00000066;overflow:hidden}
+ border:1px solid #7d1a2e;background:radial-gradient(140% 120% at 100% 0%,#5a0f2255,transparent 60%),linear-gradient(180deg,#22091a,#120712);box-shadow:0 0 24px #7d1a2e33,inset 0 0 0 1px #00000066;overflow:hidden;transition:border-color .35s ease,background .35s ease,box-shadow .35s ease}
 .doom-card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,#ffffff04 22px 23px);pointer-events:none}
-.doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:.78rem;letter-spacing:.18em;color:#ff8da0}
-.doom-s{margin:2px 0 0;font-size:.72rem;line-height:1.35;color:#d9b3bd}
-.doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.45rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000}
+.doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:.78rem;letter-spacing:.18em;color:#ff8da0;transition:color .35s ease}
+.doom-s{margin:2px 0 0;font-size:.72rem;line-height:1.35;color:#d9b3bd;transition:color .35s ease}
+.doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.45rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000;transition:color .35s ease,text-shadow .35s ease}
 .doom-bar{grid-column:1/-1;height:6px;margin-top:8px;background:#ffffff12}
 .doom-bar i{background:linear-gradient(90deg,#6b1a2c,#e0405a,#ffb36b)!important}
+/* 낮: 따뜻한 호박·살구. 밤: 차가운 남청·은빛. 시계 표시만. */
+.doom-card.day{border-color:#c47a2e;background:radial-gradient(130% 110% at 100% 0%,#e8a04044,transparent 55%),radial-gradient(90% 80% at 0% 100%,#ffcf6a22,transparent 50%),linear-gradient(180deg,#2a1808,#140c06);box-shadow:0 0 26px #c47a2e33,inset 0 0 0 1px #00000055}
+.doom-card.day .doom-t{color:#ffc878}.doom-card.day .doom-s{color:#e6c9a0}
+.doom-card.day .doom-n{color:#fff0d4;text-shadow:0 0 18px #e8a04099,0 2px 0 #000}
+.doom-card.day .doom-bar i{background:linear-gradient(90deg,#8a4a12,#e8a040,#ffe29a)!important}
+.doom-card.night{border-color:#3d5a8a;background:radial-gradient(130% 110% at 100% 0%,#6a8ec855,transparent 55%),radial-gradient(90% 80% at 0% 100%,#1a284822,transparent 50%),linear-gradient(180deg,#0a1220,#060810);box-shadow:0 0 26px #3d5a8a44,inset 0 0 0 1px #00000066}
+.doom-card.night .doom-t{color:#a8c4ef}.doom-card.night .doom-s{color:#8fa0b8}
+.doom-card.night .doom-n{color:#e8f0ff;text-shadow:0 0 18px #6a8ec899,0 2px 0 #000}
+.doom-card.night .doom-bar i{background:linear-gradient(90deg,#1e3a5c,#6a8ec8,#c8d8f0)!important}
 .doom-card.near{border-color:#e0405a;animation:doomPulse 2.4s ease-in-out infinite}
+.doom-card.day.near{border-color:#e07030}.doom-card.night.near{border-color:#7a9fd0}
 .doom-card.dday .doom-n{color:#ffcf6a;text-shadow:0 0 22px #ff6a3d}
 @keyframes doomPulse{50%{box-shadow:0 0 34px #e0405a77,inset 0 0 0 1px #00000066}}
+@keyframes doomPulseDay{50%{box-shadow:0 0 34px #e8a04077,inset 0 0 0 1px #00000066}}
+@keyframes doomPulseNight{50%{box-shadow:0 0 34px #6a8ec877,inset 0 0 0 1px #00000066}}
+.doom-card.day.near{animation-name:doomPulseDay}.doom-card.night.near{animation-name:doomPulseNight}
 @media (prefers-reduced-motion:reduce){.doom-card.near{animation:none}}
 .doom-card.off{border-style:dashed;opacity:.8}.doom-card.off .doom-n{color:var(--mu);text-shadow:none}
 .doom-set{flex:none!important;min-width:0!important;margin-top:8px;padding:6px 12px!important;font-size:.85rem}
@@ -243,6 +256,12 @@ html[data-theme="light"] .doom-form input[type=date]{color-scheme:light}
 html[data-theme="light"] .doom-card{border-color:#c46a7a;background:radial-gradient(140% 120% at 100% 0%,#f5c6cf88,transparent 60%),linear-gradient(180deg,#fff3f4,#fbe7ea);box-shadow:0 4px 18px #a8283f1a}
 html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{color:#7a4450}
 html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
+html[data-theme="light"] .doom-card.day{border-color:#c48a30;background:radial-gradient(140% 120% at 100% 0%,#ffe2a888,transparent 60%),linear-gradient(180deg,#fff8ec,#f7ebda);box-shadow:0 4px 18px #c47a2e22}
+html[data-theme="light"] .doom-card.day .doom-t{color:#9a5a10}html[data-theme="light"] .doom-card.day .doom-s{color:#7a5a30}
+html[data-theme="light"] .doom-card.day .doom-n{color:#7a3e08}
+html[data-theme="light"] .doom-card.night{border-color:#5a7aaa;background:radial-gradient(140% 120% at 100% 0%,#c8d8f088,transparent 60%),linear-gradient(180deg,#eef3fa,#dde6f2);box-shadow:0 4px 18px #3d5a8a22}
+html[data-theme="light"] .doom-card.night .doom-t{color:#2e4a78}html[data-theme="light"] .doom-card.night .doom-s{color:#4a5e78}
+html[data-theme="light"] .doom-card.night .doom-n{color:#1e3458}
 @media (max-width:440px){.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s{font-size:.68rem}}
 html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}
 
@@ -395,11 +414,11 @@ html[data-theme="light"] .rel-av{border-color:#9a7a36;background:#f8f3ea}
 html[data-theme="light"] #v-ord #clue .dq{background:var(--ord-light-clue-bg);border-color:var(--ord-light-clue-border)}
 html[data-theme="light"] #v-ord #clue .dq.clue-on{border-color:var(--ord-light-clue-on)}
 
-/* 기간 한정 사역마 · 서리 여왕의 알 */
-.pet-r4{color:#9fd8ff;text-shadow:0 0 10px rgba(140,200,255,.55)}
-.pet-card.pet-ev{border-color:#8cc8ff88!important;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.16),transparent 70%),var(--card,#14121f)}
-html[data-theme="light"] .pet-r4{color:#1f6fa8;text-shadow:none}
-html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;background:linear-gradient(180deg,#eef5fb,#f6f0e5)!important}
+/* 기간 한정(이벤트) 사역마 · 시즌 공통(겨울·그림 등 테마색 없음) */
+.pet-r4{color:#e8a8c8;text-shadow:0 0 10px rgba(220,140,180,.45)}
+.pet-card.pet-ev{border-color:#d090b088!important;background:radial-gradient(circle at 50% 0,rgba(220,140,180,.14),transparent 70%),var(--card,#14121f)}
+html[data-theme="light"] .pet-r4{color:#a83870;text-shadow:none}
+html[data-theme="light"] .pet-card.pet-ev{border-color:#c06090!important;background:linear-gradient(180deg,#fbf0f5,#f7f2ea)!important}
 #pet-dex{margin-top:28px}
 #pet-dex .wgrid{margin:0 0 8px}
 .pet-dex-it{cursor:default}
@@ -409,13 +428,13 @@ html[data-theme="light"] .pet-card.pet-ev{border-color:#5a9fd4!important;backgro
 #dex-list .pet-dex-it.lock>small:last-child{display:block}
 #dex-list .pet-dex-it.lim.lock{opacity:1}
 .pet-dex-it .pet-dex-fx{color:#d8c79a}
-.pet-dex-lim-h{color:#9fd8ff;border-bottom-color:#8cc8ff55}
-.pet-dex-it.lim{border-color:#8cc8ff88;background:radial-gradient(circle at 50% 0,rgba(140,200,255,.2),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #8cc8ff33}
-.pet-dex-it.lim .dex-tag{color:#9fd8ff!important}
-.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(140,200,255,.08) 0 8px,transparent 8px 16px),#14121f}
-html[data-theme="light"] .pet-dex-lim-h{color:#1f6fa8;border-bottom-color:#5a9fd4}
-html[data-theme="light"] .pet-dex-it.lim{border-color:#5a9fd4;background:linear-gradient(180deg,#eef5fb,#f6f0e5);box-shadow:none}
-html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(90,159,212,.16) 0 8px,transparent 8px 16px),#f4f8fc}
+.pet-dex-lim-h{color:#e8a8c8;border-bottom-color:#d090b055}
+.pet-dex-it.lim{border-color:#d090b088;background:radial-gradient(circle at 50% 0,rgba(220,140,180,.18),transparent 72%),#14121f;box-shadow:inset 0 0 0 1px #d090b033}
+.pet-dex-it.lim .dex-tag{color:#e8a8c8!important}
+.pet-dex-it.lim.lock{opacity:1;background:repeating-linear-gradient(-45deg,rgba(220,140,180,.08) 0 8px,transparent 8px 16px),#14121f}
+html[data-theme="light"] .pet-dex-lim-h{color:#a83870;border-bottom-color:#c06090}
+html[data-theme="light"] .pet-dex-it.lim{border-color:#c06090;background:linear-gradient(180deg,#fbf0f5,#f7f2ea);box-shadow:none}
+html[data-theme="light"] .pet-dex-it.lim.lock{background:repeating-linear-gradient(-45deg,rgba(192,96,144,.14) 0 8px,transparent 8px 16px),#faf4f7}
 html[data-theme="light"] .pet-dex-it .pet-dex-fx{color:#6b5216}
 
 /* 단서 조각 (장기 의뢰 맨 위, 서버 공동 이벤트) — 색은 #v-ord 변수 */
@@ -439,7 +458,14 @@ html[data-theme="light"] #v-ord .clp-ms .dq.clp-ready{border-color:var(--ord-lig
 .ord-hero{position:relative;margin:4px 0 14px;padding:18px 20px;border-radius:16px;border:1px solid var(--ord-border-soft);overflow:hidden;background:var(--ord-hero-bg)}
 .ord-hero::after{content:var(--ord-hero-mark);position:absolute;right:16px;top:6px;font-size:64px;opacity:.08;pointer-events:none}
 .ord-kicker{margin:0;font-size:.78rem;letter-spacing:.12em;color:var(--ord-accent)}
-.ord-title{margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:var(--ord-hero-title)}
+.ord-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px;border:0!important;padding:0!important;font-size:1.45rem;color:var(--ord-hero-title)}
+/* 장기 의뢰 인트로 ▶. EVENT_ORD.introShard 있을 때만 표시(ordPaint). 수상한 상인 .shady-play 와 같은 역할. */
+#v-ord .ord-intro-play{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:0;border:1px solid color-mix(in srgb,var(--ord-accent,#b89b5e) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ord-hero-bg,#120f20) 70%,#000 30%);cursor:pointer;vertical-align:middle}
+#v-ord .ord-intro-play[hidden]{display:none!important}
+#v-ord .ord-intro-play img{display:block;width:16px;height:16px;filter:brightness(0) saturate(100%) invert(86%) sepia(28%) saturate(679%) hue-rotate(358deg) brightness(97%) contrast(92%)}
+#v-ord .ord-intro-play:hover,#v-ord .ord-intro-play:focus-visible{border-color:var(--ord-accent,#e6c56a);background:color-mix(in srgb,var(--ord-accent,#e6c56a) 18%,transparent)}
+html[data-theme="light"] #v-ord .ord-intro-play{background:#fffaf0;border-color:color-mix(in srgb,var(--ord-light-accent,#c4a15a) 70%,transparent)}
+html[data-theme="light"] #v-ord .ord-intro-play:hover,html[data-theme="light"] #v-ord .ord-intro-play:focus-visible{border-color:var(--ord-light-accent,#7a5f22)}
 .ord-lead{margin:0;color:var(--mu);font-size:.92rem;line-height:1.6}
 .ord-tabs{display:flex;gap:6px;margin:0 0 12px;padding:6px;border-radius:14px;background:#0e0c18e6;backdrop-filter:blur(6px);border:1px solid var(--ln)}
 .ord-tabs button{flex:1;position:relative;padding:10px 6px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--mu);font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
@@ -469,6 +495,7 @@ html[data-theme="light"] #v-ord .clp-ms .dq.clp-ready{border-color:var(--ord-lig
 .clp-hd{display:flex;align-items:center;gap:12px}
 .clp-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--ord-clp-ic);border:1px solid var(--ord-border)}
 .clp-ic-img{display:block;width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges}
+.clp-ic-img.inline,.clue-chip .clp-ic-img{display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-right:2px}
 .clp-ht h2{margin:2px 0 0!important;border:0!important;padding:0!important;font-size:1.2rem}
 .clp-ht .boss-tag{margin:0}
 .clp-ds{margin:10px 0 12px;color:var(--mu);font-size:.86rem;line-height:1.55}
@@ -800,8 +827,8 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 @media (prefers-reduced-motion:reduce){.vn-float{transition:none}}
 
 /* 특별 의뢰 › 플랜더스의 밑그림(js/act/mini/demo.js). 미니게임 칸은 점선 대신 카드로. */
-.sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px}
-.mg-preview{display:block;width:100%;max-width:420px;margin:0 auto 12px;border-radius:var(--r);border:1px solid var(--ln)}
+.sp-mini-root.mg-root{border:1px solid var(--ln);background:var(--pn);padding:14px;max-width:100%;box-sizing:border-box;overflow-x:hidden}
+.mg-preview{display:block;width:100%;max-width:min(420px,100%);height:auto;max-height:min(42vh,420px);object-fit:contain;margin:0 auto 12px;border-radius:var(--r);border:1px solid var(--ln)}
 .mg-lead{margin:0 0 8px;font-weight:700}
 .mg-rules{margin:0 0 12px;padding-left:18px;color:var(--mu);font-size:.86rem;line-height:1.55}
 .mg-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -812,9 +839,10 @@ html[data-theme="light"] .vn-sil-name{color:#5c4510}
 .mg-lv{padding:2px 9px;border:1px solid var(--ln);border-radius:999px;font-size:.78rem;color:var(--mu)}
 .mg-cnt{font-size:1.05rem;color:var(--gold,var(--hi));min-width:3.5em;text-align:right}
 .mg-bar{height:6px;margin:0 0 10px}
-.mg-cv-wrap{position:relative;width:100%;max-width:520px;margin:0 auto;aspect-ratio:1/1;border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;
+/* 판: 가로·세로 뷰포트 안에 맞게. canvas 비트맵(600×dpr)이 레이아웃을 밀지 않도록 절대배치. */
+.mg-cv-wrap{position:relative;width:min(100%,520px,72dvh);max-width:100%;margin:0 auto;aspect-ratio:1/1;border:1px solid var(--ln);border-radius:var(--r);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
  background:linear-gradient(color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,linear-gradient(90deg,color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px) 0 0/30px 30px,color-mix(in srgb,var(--pn) 70%,#fff 6%)}
-.mg-cv{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.mg-cv{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
 .mg-say{margin:8px 0 0;text-align:center;font-size:.88rem;color:var(--mu);min-height:1.3em}
 .mg-result{text-align:center;padding:6px 0 4px}
 .mg-res-k{margin:0;color:var(--mu);font-weight:700}

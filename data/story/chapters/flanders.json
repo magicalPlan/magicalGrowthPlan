@@ -9,17 +9,22 @@
       "cast": {
         "???": {
           "name": "???",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         },
         "nero_default": {
           "name": "네로",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "nero_hah": {
+          "name": "네로",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         },
         "flanders_artist_default": {
           "name" : "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         }
     },
@@ -97,15 +102,15 @@
       "flanders_artist_0": {
         "lines": [
           {
-            "who": "nero_default",
+            "who": "nero_hah",
             "text": "아아, 이렇게 설명하지 말랬는데! 미안미안!"
           },
           {
-            "who": "nero_default",
+            "who": "nero_hah",
             "text": "나는..."
           },
           {
-            "who": "nero_default",
+            "who": "flanders_artist_default",
             "text": "마인, '플랜더스의 화가'라고 해!"
           },
           {
@@ -458,7 +463,12 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "flanders_artist_hah": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         }
       },
@@ -520,7 +530,7 @@
             },
             {
               "who": "",
-              "text": "",
+              "text": "...",
               "fx": "dark"
             }
           ],
@@ -557,11 +567,11 @@
               "text": "악마든 천사든 알 게 뭐야?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "가난뱅이 소년에게 선택지가 어딨어…"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "내가 나쁜 짓을 한 것도 아니잖아."
             },
             {
@@ -583,7 +593,7 @@
         "people_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그들이 고통스러워해서, 뭐?"
             },
             {
@@ -604,11 +614,11 @@
         "animals_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…그들이 돌아가고 싶어한다고?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…"
             }
           ],
@@ -617,31 +627,31 @@
         "too_late_4": {
           "lines": [
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그렇게 말해봤자, 이미 늦었어."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "난 포기하지 않아."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "얼마나 더 나에게 포기하라고 말해야 적성이 풀리는 거야?"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "세상이 원하길래 꿈도 희망도 포기했는데."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "파트라슈만 있어도 된다고, 기도했는데."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "하나 남은 것조차 포기하라고 한다면…"
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "…나는."
             },
             {
@@ -658,7 +668,7 @@
       "cast": {
         "nero_default": {
           "name": "네로",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         }
       },
@@ -680,6 +690,90 @@
             },
             {
               "who": "nero_default",
+              "text": "있지, 예술은 정말 사람들의 말처럼 모두의 것이라고 생각해?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "응.",
+              "next": "yes_side1"
+            },
+            {
+              "label": "아니.",
+              "next": "no_side1"
+            }
+          ]
+        },
+        "yes_side1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "...꽤나 밝은 세상 속에서 살아왔구나."
+            },
+            {
+              "who": "nero_default",
+              "text": "좋겠다."
+            }
+          ],
+          "next": "go_to_sad"
+        },
+        "no_side1": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "너도 꽤 어두운 세상에서 살아왔나봐?"
+            },
+            {
+              "who": "nero_default",
+              "text": "나랑 의견이 같은 걸 보니 말이야."
+            }
+          ],
+          "next": "go_to_sad"
+        },
+        "go_to_sad": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "파트라슈가 죽은 후, 나는 콩쿠르장에 들어갔어."
+            },
+            {
+              "who": "nero_default",
+              "text": "바보같지."
+            },
+            {
+              "who": "nero_default",
+              "text":  "사랑하는 가족이 죽었는데 고작 콩쿠르나 치르려 하다니 말이야."
+            },
+            {
+              "who": "nero_default",
+              "text": "그리고, 음... 결과를 말하자면."
+            },
+            {
+              "who": "nero_default",
+              "text": "당연하게도 우승 못 했어."
+            },
+            {
+              "who": "nero_default",
+              "text": "아니, 아예 신청도 못 했어."
+            },
+            {
+              "who": "nero_default",
+              "text": "신청료가 없었거든."
+            },
+            {
+              "who": "nero_default",
+              "text": "하늘이 벌을 준 거라기엔 좀... 너무하지 않나."
+            },
+            {
+              "who": "nero_default",
+              "text": "가족도 꿈도 빼앗아 가다니."
+            },
+            {
+              "who": "nero_default",
+              "text": "뭐, 어쨌거니 내 한심한 이야기는 여기까지."
+            },
+            {
+              "who": "nero_default",
               "text": "우승 축하해."
             }
           ]
@@ -690,9 +784,9 @@
       "id": "flanders-5",
       "title" :"플랜더스의 개 - 최종장",
       "cast": {
-        "nero_default": {
-          "name": "네로",
-          "img": "assets/standing/nero_planders.png",
+        "flanders_artist_hah": {
+          "name": "플랜더스의 화가",
+          "img": "assets/standing/fd_artist_hah.png",
           "side": "right"
         },
         "patrasche": {
@@ -702,7 +796,12 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
+          "side": "right"
+        },
+        "nero_default": {
+          "name": "네로",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         }
       },
@@ -727,23 +826,23 @@
               "text": "조금 가까운 현재에, 모든 것을 잃은 '플랜더스의 화가'가 살았습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "...포기 안 해."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "포기 안 할 거야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그 아이를 위해서."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "꿈을 위해서."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "나는, 절대로...!"
             },
             {
@@ -755,7 +854,7 @@
               "text": "절망한 소년의 손을, 새하얀 개가 핥짝였습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "...파트라슈."
             }, 
             {
@@ -767,11 +866,11 @@
               "text": "금방, 금방 줄 테니까..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그런 눈으로."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "그런 눈으로, 보지 마..."
             },
             {
@@ -779,27 +878,27 @@
               "text": "소년은 파트라슈를 꽉 끌어안았습니다."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "포기 안 할게."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "이건, 널 포기하는 게 아니야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "놓아주는 거지..."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "이별은 포기 같은 게 아니야."
             },
             {
-              "who": "flanders_artist_default",
+              "who": "flanders_artist_hah",
               "text": "누군가를 향한 응원일 거야."
             },
             {
@@ -863,182 +962,6 @@
       }
     },
     {
-      "id": "flanders-side2",
-      "title": "마을의 일상 - 네로?1",
-      "cast": {
-        "nero_default": {
-          "name": "네로",
-          "img": "assets/standing/nero_planders.png",
-          "side": "right"
-        },
-        "patrasche": {
-          "name": "파트라슈",
-          "img": "",
-          "side": "left"
-        },
-        "flanders_artist_default": {
-          "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
-          "side": "right"
-        }
-      },
-      "start": "why_im_here",
-      "nodes": {
-        "why_im_here": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "..."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "왜 난 떠나지 않냐고?"
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "하긴, 악당은 이쯤에서 성불할 타이밍이긴 하지?"
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "음... 근데, 난 안 할 거야."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "새로운 꿈이 생겼거든."
-            }
-          ],
-          "choose": [
-            {
-              "label": "꿈?",
-              "next": "yes_dream_p"
-            },
-            {
-              "label": "그냥 가면 안돼?",
-              "next": "just_go_plz"
-            }
-          ]
-        },
-        "yes_dream_p": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "그래, 꿈."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "너희와 함께하겠어."
-            }
-          ],
-          "next": "nono_cute_pet"
-        },
-        "just_go_away": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "하하, 냉정하네."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "조금 상처인 걸."
-            }
-          ],
-          "next": "nono_cute_pet"
-        },
-        "nono_cute_pet": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "여기 내 작업실을 열어보려고 해."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "겸사겸사 네 어깨에 있는 그 친구도 좀 돕고."
-            }
-          ],
-          "choose": [
-            {
-              "label": "내 어깨에?",
-              "next": "idont_know_this_pet"
-            },
-            {
-              "label": "헐 얘 누구야",
-              "next": "isnt_this_your_familliar"
-            }
-          ]
-        },
-        "idont_know_this_pet": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "그래, 네 어깨의 그 아이 말이야."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "'사역마'...라고 했던가?"
-            }
-          ],
-          "next": "hwan_yeong5"
-        },
-        "isnt_this_your_familliar": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "아, 키우는 애가 아니야...?"
-            }
-          ],
-          "next": "hwan_yeong5"
-        },
-        "hwan_yeong5": {
-          "lines": [
-            {
-              "who": "flanders_artist_default",
-              "text": "하하, 어쨌든... 네 곁의 사역마를 강하게 하고 싶다면, 언제든 날 찾아와."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "물론, 이제 타르타로스의 힘은 쓰지 않으니 안심하고."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "아무래도 타르타로스의 영향 때문에, 회귀해도 난 기억을 잃지 않는 모양이거든..."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "...꿈이란 건 멋진 거야. 그렇지?"
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "놓아줘도 괜찮아. 놓은 주먹에 새로운 꿈을 쥘 수 있으니까."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "그러니까..."
-            },
-            {
-              "who": "flanders_artist_default",
-              "text": "꿈이 있다는 건 정말 좋은 일이야, 그렇지?"
-            },
-            {
-              "who": "",
-              "text": "소년은 모든 걸 잃었지만,"
-            },
-            {
-              "who": "",
-              "text": "결코 텅 비어 있진 않았답니다."
-            },
-            {
-              "who": "patrasche",
-              "text": "(화가의 다리에 머리를 부비며)"
-            },
-            {
-              "who": "patrasche",
-              "text": "멍멍!"
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": "flanders-side3",
       "title": "플랜더스의 개 - 기억의...?",
       "cast": {
@@ -1054,14 +977,170 @@
         },
         "flanders_artist_default": {
           "name": "플랜더스의 화가",
-          "img": "assets/standing/nero_planders.png",
+          "img": "assets/standing/fd_artist_default.png",
           "side": "right"
         }
       },
       "start": "glad_to_see_u",
-      "nodes": [
-        
-      ]
+      "nodes": {
+        "glad_to_see_u": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "와, 오랜만이야!"
+            },
+            {
+              "who": "nero_default",
+              "text": "뭐하고 있었어?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "놀고 있었어.",
+              "next": "playplay2"
+            },
+            {
+              "label": "쉬고 있었어.",
+              "next": "take_a_rest"
+            },
+            {
+              "label": "아무것도 안 하고 있었어.",
+              "next": "do_nothing"
+            }
+          ]
+        },
+        "playplay2": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "그래, 잘 노는 건 중요하지!"
+            },
+            {
+              "who": "nero_default",
+              "text": "나도 그림을 그리다 지치면 파트라슈랑 같이 즐겁게 놀곤 해!"
+            }
+          ],
+          "next": "draw_a_pic"
+        },
+        "take_a_rest": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "휴식은 중요해! 너무 무리하면 안되는 건 기본 중에 기본이야!"
+            },
+            {
+              "who": "nero_default",
+              "text": "언제나 잊으면 안돼?"
+            }
+          ],
+          "next": "draw_a_pic"
+        },
+        "do_nothing": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "에엣, 그렇게 가만히 있으면 뒤쳐진다?"
+            }
+          ],
+          "next": "draw_a_pic"
+        },
+        "draw_a_pic": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "난 그림을 그리고 있었어!"
+            },
+            {
+              "who": "nero_default",
+              "text": "(본인의 캔버스를 보여주며) 짠! 내 그림 멋지지?"
+            },
+            {
+              "who": "nero_default",
+              "text": "언젠가 난 반드시 일류 화가가 될 테니까!"
+            },
+            {
+              "who": "nero_default",
+              "text": "...마을 사람들 말처럼은 되지 않을 거야."
+            },
+            {
+              "who": "nero_default",
+              "text": "사람들이 말이야. 난 절대로 일류 화가가 될 수 없을 거래."
+            },
+            {
+              "who": "nero_default",
+              "text": "뭐, 나도 납득은 해. 그림은 한 번도 제대로 배워본 적 없고..."
+            },
+            {
+              "who": "nero_default",
+              "text": "경험도 부족한 데다가, 노력할 만한 시간도 많지 않지."
+            },
+            {
+              "who": "nero_default",
+              "text": "..."
+            },
+            {
+              "who": "nero_default",
+              "text": "하지만 꺾일 순 없어."
+            },
+            {
+              "who": "nero_default",
+              "text": "그야, 꿈조차 없으면 어떻게 살아가야 할지 모르겠으니까."
+            },
+            {
+              "who": "nero_default",
+              "text": "응원해 줄 거지?"
+            }
+          ],
+          "choose": [
+            {
+              "label": "응.",
+              "next": "sure_side2"
+            },
+            {
+              "label": "아니.",
+              "next": "no_side2"
+            }
+          ]
+        },
+        "sure_side2": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "역시, 너라면 그렇게 말해줄 줄 알았어!"
+            },
+            {
+              "who": "nero_default",
+              "text": "난 아직 네가 누구인지조차 모르지만 말이야!"
+            }
+          ],
+          "next": "ran_out_of_paint"
+        },
+        "no_side2": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "그래? 음, 아쉽네."
+            },
+            {
+              "who": "nero_default",
+              "text": "괜찮아, 파트라슈가 응원해 주니까!"
+            },
+            {
+              "who": "nero_default",
+              "text": "네가 내 시련이어도 괜찮을 것 같아."
+            }
+          ],
+          "next": "ran_out_of_paint"
+        },
+        "ran_out_of_paint": {
+          "lines": [
+            {
+              "who": "nero_default",
+              "text": "...이런, 물감이 또 떨어졌네."
+            }
+          ]
+        }
+      }
     }
   ]
 }

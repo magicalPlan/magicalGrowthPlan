@@ -6,7 +6,7 @@
 
    ── 규칙 ───────────────────────────────────────────────
    · 1분 동안 흐릿한 안내선(밑그림)을 따라 그린다. 잘 따라 그리면 1장 완성, 다음 선이 나온다.
-   · 완성 장수가 늘수록 어려워진다(3·6·9·10번째 장부터 단계 상승). 선이 복잡해지고 안내선이 옅어지며 허용 오차가 줄어든다.
+   · 완성 장수가 늘수록 어려워진다(3·6·9번째 장부터 단계 상승). 선이 복잡해지고 안내선이 옅어지며 허용 오차가 줄어든다.
    · 장수·난이도 단계·완성 기준·미리 그려 둔 밑그림(shapes)은 data/act/mini/flanders.js 의 MG_FLANDERS.
      그 파일이 없으면 아래 MG_DEF(무작위 선만)로 돈다. 단계는 next() 때만 바뀌고, 그리던 장을 도중에 바꾸지 않는다.
    · 서버 통신(기록용)은 시작·종료·랭킹 읽기뿐이다. rank·total_amount 는 클라가 직접 쓰지 않는다.
@@ -22,7 +22,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
  const MG_W = 600;                  // 캔버스 내부 좌표 크기(정사각형). 데이터의 tol 도 이 크기 기준.
  /* 데이터 파일이 없을 때 쓰는 기본값(무작위 선만). 실제 값은 data/act/mini/flanders.js */
  const MG_DEF = { sec: 60, path: "event_minigame/flanders", top: 10, pass: { cover: .82, acc: .72 },
-  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 3, tol: 26, alpha: .36, pick: ["bend"] }, { at: 6, tol: 22, alpha: .30, pick: ["curve"] }, { at: 9, tol: 19, alpha: .24, pick: ["zig"] }, { at: 10, tol: 16, alpha: .18, pick: ["wave"] }],
+  levels: [{ at: 0, tol: 30, alpha: .42, pick: ["line"] }, { at: 3, tol: 26, alpha: .36, pick: ["bend"] }, { at: 6, tol: 22, alpha: .30, pick: ["curve"] }, { at: 9, tol: 17, alpha: .20, pick: ["zig", "wave"] }],
   shapes: {} };
  const MG = (() => { const d = typeof MG_FLANDERS !== "undefined" && MG_FLANDERS && typeof MG_FLANDERS === "object" ? MG_FLANDERS : {};
   const lv = Array.isArray(d.levels) && d.levels.length ? d.levels.filter(x => x && Array.isArray(x.pick) && x.pick.length).sort((a, b) => (a.at || 0) - (b.at || 0)) : MG_DEF.levels;
@@ -213,7 +213,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   cv.width = MG_W * dpr; cv.height = MG_W * dpr;
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
+  st = { token, gameId: mgId, t0: performance.now(), count: 0, L: 0, guide: null, drawn: [], down: false, ptr: null, flash: 0, flashOk: false, raf: 0, dead: false, ended: false };
   /* 장 번호 = 완성한 수 + 1. 단계는 여기서만 올리고, 그리던 장을 도중에 바꾸지 않는다. */
   const next = () => {
    st.L = lvAt(st.count + 1);
@@ -227,22 +227,45 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const ink = (css.getPropertyValue("--ink") || "#eee").trim() || "#eee";
   const hi = (css.getPropertyValue("--gold") || css.getPropertyValue("--hi") || "#c9a96a").trim() || "#c9a96a";
 
-  const pos = ev => { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) / r.width * MG_W, y: (ev.clientY - r.top) / r.height * MG_W } };
-  cv.addEventListener("pointerdown", ev => { if (!here(token) || st.ended) return; ev.preventDefault(); try { cv.setPointerCapture(ev.pointerId) } catch (e) {} st.down = true; st.drawn = [pos(ev)] });
-  cv.addEventListener("pointermove", ev => { if (!st || st.token !== token || !st.down) return; ev.preventDefault(); const p = pos(ev), l = st.drawn[st.drawn.length - 1]; if (!l || Math.hypot(p.x - l.x, p.y - l.y) > 2) st.drawn.push(p) });
+  /* 표시 크기 기준으로 MG_W 좌표로. 모바일 스크롤 훔침 막으려면 passive:false + preventDefault. */
+  const pos = ev => {
+   const r = cv.getBoundingClientRect(), w = r.width || 1, h = r.height || 1;
+   return {
+    x: Math.max(0, Math.min(MG_W, (ev.clientX - r.left) / w * MG_W)),
+    y: Math.max(0, Math.min(MG_W, (ev.clientY - r.top) / h * MG_W))
+   }
+  };
+  const pe = {passive: false};
+  cv.addEventListener("pointerdown", ev => {
+   if (!here(token) || st.ended || !ev.isPrimary) return;
+   ev.preventDefault();
+   try { cv.setPointerCapture(ev.pointerId) } catch (e) {}
+   st.down = true; st.ptr = ev.pointerId; st.drawn = [pos(ev)]
+  }, pe);
+  cv.addEventListener("pointermove", ev => {
+   if (!st || st.token !== token || !st.down || ev.pointerId !== st.ptr) return;
+   ev.preventDefault();
+   const p = pos(ev), l = st.drawn[st.drawn.length - 1];
+   if (!l || Math.hypot(p.x - l.x, p.y - l.y) > 1.5) st.drawn.push(p)
+  }, pe);
   const up = ev => {
-   if (!st || st.token !== token || !st.down) return; st.down = false; if (st.ended) return;
+   if (!st || st.token !== token || !st.down) return;
+   if (ev && ev.pointerId != null && st.ptr != null && ev.pointerId !== st.ptr) return;
+   st.down = false; st.ptr = null; if (st.ended) return;
    const r = judge(st.guide, st.drawn, MG_LV[st.L].tol);
   if (r.ok) {
     st.count++;
     cnt.textContent = "완성 " + st.count; 
     say.textContent = ["빠른데?", "힘내보자.", "열정이 대단하잖아.", "나도 이렇게 그림을 연습했던 적이 있었지.", "파트라슈..."][st.count % 5];
     st.flash = performance.now();
-    st.flashOk = true; next()
+    st.flashOk = true;
+    try { if (typeof sfx === "function") sfx("assets/raw/minigame_complete.mp3") } catch (e) {}
+    next()
   } else {
-    say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [] }
+    say.textContent = r.cover < PASS_COVER ? "선을 끝까지 따라가 보자. (" + Math.round(r.cover * 100) + "%)" : "조금 더 선 가까이! (" + Math.round(r.acc * 100) + "%)"; st.flash = performance.now(); st.flashOk = false; st.drawn = [];
+    try { if (typeof sfx === "function") sfx("assets/raw/mg_fail.mp3") } catch (e) {} }
   };
-  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("pointerup", up, pe); cv.addEventListener("pointercancel", up, pe);
 
   const draw = now => {
    if (!st || st.token !== token || st.dead) return;
@@ -298,7 +321,8 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   st = null;
 
   /* 한 판 플레이(완성 0이어도) → stats.mgFlanders 횟수.
-     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side → 허브. 100회: 「그림쟁이」. */
+     1회: 칭호「플랜더스의」+ dialog 닫으면 flanders-side3 → 허브. 100회: 「그림쟁이」.
+     모두 합쳐≥200 뒤 한 판: 칭호「콩쿠르 입상」+ flanders-side (mgMaybeConcours). */
   try {
    if (typeof C !== "undefined" && C) {
     C.stats = C.stats || {};
@@ -306,7 +330,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     let fresh = [];
     try { if (typeof checkTitles === "function") fresh = checkTitles() || [] } catch (e) {}
     const gotFirst = fresh.some(t => t && t[0] === "flanders_mg");
-    /* 칭호가 있으면 세계관 탭에 flanders-side 가 열린 것처럼 story_flag 를 켠다. */
+    /* 칭호가 있으면 세계관 탭에 flanders-side3 가 열린 것처럼 story_flag 를 켠다. */
     try { if (typeof flandersSideUnlock === "function") flandersSideUnlock(false) } catch (e) {}
     if (gotFirst && typeof alertBox === "function") {
      setTimeout(() => {
@@ -315,7 +339,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
        if (typeof storyLoad !== "function" || typeof vnOpen !== "function") { goHub(); return }
        storyLoad().then(book => {
         const list = Array.isArray(book && book.shards) ? book.shards : [];
-        const story = list.find(s => s && s.id === "flanders-side");
+        const story = list.find(s => s && s.id === "flanders-side3");
         if (!story || !story.start) { goHub(); return }
         vnOpen(story, { onClose: goHub })
        }).catch(goHub)
@@ -327,7 +351,11 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
    }
   } catch (e) {}
 
-  if (!n) return;
+  /* 콩쿠르 입상: total_amount≥200 이면 칭호·flanders-side.
+     제출이 있으면 확정(합계 반영) 뒤에, 완성 0장이면 지금 합계만 보고 판정. */
+  const stillHere = () => !!(msg.isConnected && root.isConnected);
+  const afterPlay = () => { mgMaybeConcours(stillHere) };
+  if (!n) { afterPlay(); return }
   if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL || !UID || typeof C === "undefined" || !C) { msg.textContent = "서버에 연결되어 있지 않아 기록을 남기지 못했다."; return }
   /* rank·total_amount 는 클라가 쓰지 않는다. go 확정 전엔 재시작 잠금(play 덮어쓰기 방지). */
   again.disabled = true;
@@ -335,7 +363,6 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
   const c = Math.max(0, Math.min(40, Math.floor(Number(n) || 0)));
   const reqId = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
   const goPath = MG_PATH + "/go/" + UID + "/" + reqId;
-  const stillHere = () => !!(msg.isConnected && root.isConnected);
   (async () => {
    const fail = (head, detail) => {
     const d = String(detail || "").replace(/\s+/g, " ").trim();
@@ -345,7 +372,7 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
     await DB.doc(goPath).set({c, n: String(nm || "?").slice(0, 20), ts: Date.now()});
     const out = await mgWait(goPath, 25000);
     if (!stillHere()) return;
-    if (!out) { fail("확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자.", "timeout 25s · " + goPath); return }
+    if (!out) { fail("확정이 늦다. 잠시 뒤 랭킹에서 확인해 보자.", "timeout 25s · " + goPath); afterPlay(); return }
     if (!out.ok) {
      const why = String(out.why || "");
      const err = String(out.err || "");
@@ -358,18 +385,58 @@ var SP_MINI = window.SP_MINI || (window.SP_MINI = {});
       : why === "err" ? "서버 처리 중 오류가 났다."
       : "기록을 남기지 못했다.";
      fail(head, "why=" + (why || "?") + (err ? " · " + err : "") + " · c=" + c + " · req=" + reqId);
+     afterPlay();
      return
     }
     const got = Math.max(0, Math.floor(Number(out.c) || c));
     const run = Math.max(0, Math.floor(Number(out.run) || c));
     msg.textContent = out.best ? ("신기록! 최고 " + got + "장.") : ("이번 " + run + "장. 최고 기록은 " + got + "장.");
-    showRank(root, got)
+    showRank(root, got);
+    afterPlay()
    } catch (e) {
-    if (stillHere()) fail("기록을 남기지 못했다.", (e && e.message || "오류") + " · " + goPath)
+    if (stillHere()) fail("기록을 남기지 못했다.", (e && e.message || "오류") + " · " + goPath);
+    afterPlay()
    } finally {
     if (stillHere()) again.disabled = false
    }
   })()
+ }
+
+ /* 모두 합쳐(total_amount)≥200 이면「콩쿠르 입상」+ flanders-side.
+    stillHere: 결과 화면이 살아 있을 때만 팝업(이탈 시 칭호·플래그만 남김). */
+ async function mgMaybeConcours(stillHere) {
+  if (typeof C === "undefined" || !C) return;
+  if ((C.titles || []).includes("flanders_concours") || (C.stats && C.stats.mgFlandersConcours)) return;
+  if (typeof DB === "undefined" || !DB || typeof LOCAL !== "undefined" && LOCAL) return;
+  let tot = 0;
+  try {
+   const s = await DB.doc(MG_PATH + "/total_amount").get();
+   tot = s.exists ? Number(s.data()) || 0 : 0
+  } catch (e) { return }
+  if (!(tot >= 200)) return;
+  C.stats = C.stats || {};
+  C.stats.mgFlandersConcours = 1;
+  let fresh = [];
+  try { if (typeof checkTitles === "function") fresh = checkTitles() || [] } catch (e) {}
+  try { if (typeof flandersConcoursUnlock === "function") flandersConcoursUnlock(false) } catch (e) {}
+  if (typeof save === "function") try { save() } catch (e) {}
+  const got = fresh.some(t => t && t[0] === "flanders_concours");
+  if (!got || typeof alertBox !== "function") return;
+  if (typeof stillHere === "function" && !stillHere()) return;
+  setTimeout(() => {
+   if (typeof stillHere === "function" && !stillHere()) return;
+   alertBox("✦ 새 칭호", "「콩쿠르 입상」\n모두 합쳐 밑그림이 200장을 넘긴 뒤 그려 보았다.\n\n칭호 보관함에서 장착할 수 있다.", () => {
+    const goHub = () => { try { if (typeof hub === "function") hub() } catch (e) {} };
+    if (typeof storyLoad !== "function" || typeof vnOpen !== "function") { goHub(); return }
+    storyLoad().then(book => {
+     const list = Array.isArray(book && book.shards) ? book.shards : [];
+     const story = list.find(s => s && s.id === "flanders-side");
+     if (!story || !story.start) { goHub(); return }
+     vnOpen(story, { onClose: goHub })
+    }).catch(goHub)
+   });
+   try { ding() } catch (e) {}
+  }, 400)
  }
 
  /* 랭킹: 버튼을 누르거나 기록을 남긴 뒤에만 한 번 읽는다. */
