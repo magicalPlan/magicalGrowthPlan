@@ -408,19 +408,31 @@ async function rstOne(btn,inp,msg){if(!ADM[UID]||!XON())return;const uid=String(
 /* ── 전체·개인 보상 지급 (운영자 전용) ──
    공지 탭 하단. 전체는 accounts 등록자 전원, 개인은 UID 한 명. 접속 여부와 상관없이 서버 기록에 바로 더한다.
    골드·경험치·마력석·사역마 알·이벤트 알·가방 아이템·재료(이벤트 재료 포함)를 고르고 개수를 정한다.
+   이벤트 알: shadyEvEgg()/eventLive() 로 현 시점 칸(eggsEv|eggsEv2). 시즌 밖이면 일반 알. 서버 통신 없음.
    원격 지급: 캐릭터 통째 GET/PATCH 금지. 이름·(경험 시)ex·nt 만 읽고, 재화·가방은 increment 칸 PATCH. */
 function admGrantNum(v,max){const n=Math.floor(Number(v)||0);if(!isFinite(n)||n<=0)return 0;return Math.min(max||999999,n)}
+/* 상점 shadyEvEgg 와 동일. notice 가 merchant 보다 먼저 로드되므로 폴백을 둔다(Date.now·팩 표만, 통신 없음). */
+function admGrantEvEgg(){if(typeof shadyEvEgg==="function")return shadyEvEgg();
+ const live=typeof eventLive==="function"?eventLive():null,inv=live&&live.egg&&live.egg.inv;
+ if(inv==="eggsEv2")return{inv:"eggsEv2",meta:typeof PET_EV2!=="undefined"?PET_EV2:null};
+ if(inv==="eggsEv")return{inv:"eggsEv",meta:typeof PET_EV!=="undefined"?PET_EV:null};
+ return null}
+function admGrantEvNm(){const e=admGrantEvEgg();return e&&e.meta&&e.meta.nm?e.meta.nm:(e?"시즌 알":"사역마의 알")}
 function admGrantTxt(r){const a=[];if(r.g)a.push("골드 +"+r.g);if(r.ex)a.push("경험치 +"+r.ex);if(r.m)a.push("마력석 +"+r.m);if(r.eggs)a.push("사역마의 알 +"+r.eggs);
- if(r.eggsEv)a.push((typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알")+" +"+r.eggsEv);
+ if(r.eggsEv)a.push(admGrantEvNm()+" +"+r.eggsEv);
  Object.entries(r.inv||{}).forEach(([id,n])=>{if(!(n>0))return;const it=typeof ITM!=="undefined"&&ITM.find(t=>t[0]===id);if(it){a.push(it[1]+" +"+n);return}
   const mat=typeof MAT!=="undefined"&&MAT.find(t=>t[0]===id);a.push((mat?mat[1]:id)+" +"+n)});
  return a.join(", ")||"없음"}
+function admGrantApplyEv(ch,n){n=n|0;if(!(n>0)||!ch)return;const e=admGrantEvEgg();
+ if(e&&e.inv==="eggsEv2"){ch.eggsEv2=(Number(ch.eggsEv2)||0)+n;return}
+ if(e&&e.inv==="eggsEv"){ch.eggsEv=(Number(ch.eggsEv)||0)+n;return}
+ ch.eggs=(Number(ch.eggs)||0)+n}
 function admGrantOnChar(ch,r){const prev=C;C=ch;try{
   if(typeof xpMigrate==="function")xpMigrate();
   if(r.ex){C.ex=(Number(C.ex)||0)+r.ex;C.lv=typeof lvOf==="function"?lvOf(C.ex):(C.lv||1);C.xv=3}
   if(r.g){C.gd=(Number(C.gd)||0)+r.g;C.stats=C.stats||{};C.stats.maxGold=Math.max(Number(C.stats.maxGold)||0,Number(C.gd)||0)}
   C.inv=C.inv||{};if(r.m)C.inv.mana=(Number(C.inv.mana)||0)+r.m;
-  if(r.eggs)C.eggs=(Number(C.eggs)||0)+(r.eggs|0);if(r.eggsEv)C.eggsEv=(Number(C.eggsEv)||0)+(r.eggsEv|0);
+  if(r.eggs)C.eggs=(Number(C.eggs)||0)+(r.eggs|0);if(r.eggsEv)admGrantApplyEv(C,r.eggsEv);
   Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;C.inv[id]=(Number(C.inv[id])||0)+n});
   const txt=admGrantTxt(r);C.nt=Array.isArray(C.nt)?C.nt:[];C.nt.unshift({k:"gift",t:("운영자 보상: "+txt).slice(0,160),u:"",ts:Date.now(),r:false});
   try{if(typeof ntTrim==="function")ntTrim()}catch(e){}try{if(typeof eggFix==="function")eggFix()}catch(e){}
@@ -428,7 +440,12 @@ function admGrantOnChar(ch,r){const prev=C;C=ch;try{
 /* 원격 지급용. 골드·알·가방은 increment. 캐릭터 통째 GET/PATCH 하지 않는다. */
 function admGrantInc(n){return typeof apiInc==="function"?apiInc(n):{".sv":{"increment":Math.trunc(Number(n)||0)}}}
 function admGrantPatchBody(r){const body={ts:Date.now(),sid:"admin-grant"};
- if(r.g)body["c/gd"]=admGrantInc(r.g);if(r.eggs)body["c/eggs"]=admGrantInc(r.eggs|0);if(r.eggsEv)body["c/eggsEv"]=admGrantInc(r.eggsEv|0);
+ if(r.g)body["c/gd"]=admGrantInc(r.g);let eggs=r.eggs|0;
+ if(r.eggsEv){const e=admGrantEvEgg();
+  if(e&&e.inv==="eggsEv2")body["c/eggsEv2"]=admGrantInc(r.eggsEv|0);
+  else if(e&&e.inv==="eggsEv")body["c/eggsEv"]=admGrantInc(r.eggsEv|0);
+  else eggs+=(r.eggsEv|0)}
+ if(eggs)body["c/eggs"]=admGrantInc(eggs);
  if(r.m)body["c/inv/mana"]=admGrantInc(r.m);
  Object.entries(r.inv||{}).forEach(([id,n])=>{n=n|0;if(!id||n<=0)return;body["c/inv/"+id]=admGrantInc(n)});
  return body}
@@ -484,11 +501,11 @@ function admGrantRow(opts,aria){const row=elT("div","row");row.style.cssText="ma
  opts.forEach(([id,nm])=>{const o=elT("option");o.value=id;o.textContent=nm;sel.appendChild(o)});
  const qty=elT("input");qty.type="number";qty.min="0";qty.max="9999";qty.step="1";qty.value="0";qty.placeholder="개수";qty.setAttribute("aria-label",aria+" 개수");qty.style.cssText="width:88px;flex:0 0 auto";
  row.append(sel,qty);return{row,sel,qty}}
-function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
+function admGrantFields(gc){const evNm=admGrantEvNm(),evOn=!!admGrantEvEgg();
  const mkNum=(label,aria)=>{const wrap=elT("label","");wrap.style.cssText="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.88rem;color:var(--mu)";
   const sp=elT("span","",label);sp.style.cssText="flex:0 0 7.5em";const inp=elT("input");inp.type="number";inp.min="0";inp.max="999999";inp.step="1";inp.value="0";inp.setAttribute("aria-label",aria);inp.style.cssText="flex:1;min-width:0";
   wrap.append(sp,inp);return{wrap,inp}};
- const gIn=mkNum("골드","지급 골드"),exIn=mkNum("경험치","지급 경험치"),mIn=mkNum("마력석","지급 마력석"),egIn=mkNum("사역마 알","지급 사역마 알"),evIn=mkNum("이벤트 알","지급 "+evNm);
+ const gIn=mkNum("골드","지급 골드"),exIn=mkNum("경험치","지급 경험치"),mIn=mkNum("마력석","지급 마력석"),egIn=mkNum("사역마 알","지급 사역마 알"),evIn=mkNum(evOn?evNm:"시즌 알(종료→일반)", "지급 "+evNm);
  gc.append(gIn.wrap,exIn.wrap,mIn.wrap,egIn.wrap,evIn.wrap);
  const itBox=elT("div");itBox.style.marginTop="10px";itBox.appendChild(elT("p","hint","가방 아이템"));const itRows=[];
  const itOpts=(typeof ITM!=="undefined"?ITM:[]).filter(t=>t[0]!=="mana").map(t=>[t[0],t[1]]);
@@ -501,14 +518,14 @@ function admGrantFields(gc){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"�
  return()=>{const inv={};const take=(rows)=>{rows.forEach(({sel,qty})=>{const id=String(sel.value||"");const n=admGrantNum(qty.value,9999);if(!id||!n)return;inv[id]=(inv[id]||0)+n})};
   take(itRows);take(matRows);const r={g:admGrantNum(gIn.inp.value),ex:admGrantNum(exIn.inp.value),m:admGrantNum(mIn.inp.value),eggs:admGrantNum(egIn.inp.value,9999),eggsEv:admGrantNum(evIn.inp.value,9999),inv};
   if(!r.g&&!r.ex&&!r.m&&!r.eggs&&!r.eggsEv&&!Object.keys(inv).length)return null;return r}}
-function drawAdmGrant(box){const evNm=typeof PET_EV!=="undefined"?PET_EV.nm:"이벤트 알";
+function drawAdmGrant(box){const evNm=admGrantEvNm(),evOn=!!admGrantEvEgg();
  const all=rstFoldCard("🎁 전체 보상 지급 (운영자 전용)","grant_all","adm-grant",false);
  all.box.append(elT("p","hint","accounts 에 캐릭터가 있는 등록자에게 보상을 바로 더한다. 휴면(화원)은 제외한다. 접속 여부와 상관없다. 알림함에도 '운영자 보상'이 남는다."),
-  elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다."));
+  elT("p","hint","골드·경험치·마력석·사역마 알·"+(evOn?evNm:"시즌 알(기간 밖이면 일반 알)")+"·가방 아이템·재료를 고르고 개수를 정한 뒤 지급한다. 시즌 알은 현 시점 eventLive 칸(eggsEv/eggsEv2)으로 들어간다."));
  const getAll=admGrantFields(all.box);const gb=elT("button","btn","전체에게 지급"),gm=elT("p","msg","");gb.type="button";gb.style.marginTop="12px";gb.onclick=()=>admGrantRun(gb,gm,getAll);all.box.append(gb,gm);box.appendChild(all.c);
  const one=rstFoldCard("🎁 개인 보상 지급 (운영자 전용)","grant_one","adm-grant",false);
  one.box.append(elT("p","hint","UID 한 명의 캐릭터에만 보상을 더한다. 접속 중이 아니어도 서버 기록에 바로 반영된다. 보상 종류는 전체 지급과 같다."),
-  elT("p","hint","골드·경험치·마력석·사역마 알·"+evNm+"·가방 아이템·재료를 고르고 개수를 정한 뒤, 대상 UID를 넣고 지급한다."));
+  elT("p","hint","골드·경험치·마력석·사역마 알·"+(evOn?evNm:"시즌 알(기간 밖이면 일반 알)")+"·가방 아이템·재료를 고르고 개수를 정한 뒤, 대상 UID를 넣고 지급한다."));
  const urow=elT("div","row");urow.style.cssText="margin-top:8px;gap:6px";const uinp=elT("input");uinp.type="text";uinp.maxLength=128;uinp.placeholder="계정 UID";uinp.setAttribute("aria-label","보상 받을 계정 UID");uinp.autocomplete="off";uinp.spellcheck=false;uinp.style.flex="1";urow.appendChild(uinp);one.box.appendChild(urow);
  const getOne=admGrantFields(one.box);const pb=elT("button","btn","이 사람에게 지급"),pm=elT("p","msg","");pb.type="button";pb.style.marginTop="12px";pb.onclick=()=>admGrantOne(pb,pm,getOne,uinp);one.box.append(pb,pm);box.appendChild(one.c)}
 (()=>{const t=$("#ntctog");if(t)t.onclick=()=>ntcListFold($("#ntcbox")&&$("#ntcbox").hidden);
