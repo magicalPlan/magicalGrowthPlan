@@ -36,11 +36,18 @@ function normalizeNt(cur) {
   }
   return [];
 }
-async function pushMarchNote(root, text) {
+/* grantKey 가 있으면 id 로 한 번만 넣는다(병렬 grantMarchCore 이중 알림 방지). */
+async function pushMarchNote(root, text, grantKey) {
   const t = String(text || "").slice(0, 160);
   if (!t) return;
+  const id = grantKey ? ("march:" + String(grantKey).replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64)) : "";
   const entry = {k: "march", t, u: "", ts: Date.now(), r: false};
-  await root.child("c/nt").transaction(cur => [entry].concat(normalizeNt(cur)).slice(0, 60));
+  if (id) entry.id = id;
+  await root.child("c/nt").transaction(cur => {
+    const list = normalizeNt(cur);
+    if (id && list.some(n => n && n.id === id)) return;
+    return [entry].concat(list).slice(0, 60);
+  });
 }
 
 /* pay 필드 → 계정(매지컬 마치 서버 지급의 최종 쓰기).
@@ -182,7 +189,7 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
 
   if (noteText) {
     try {
-      await pushMarchNote(root, noteText);
+      await pushMarchNote(root, noteText, gk);
       await root.update({ts: Date.now(), sid: "xpay"});
     } catch (e) { /* 보상은 이미 반영. 알림만 실패해도 지급은 유지 */ }
   }

@@ -35,7 +35,7 @@ function scaleHp(k, lv, pw) {
   if (!(lv > 0 && pw > 0)) return 0;
   const core = lv + pw * (pw - lv);
   const ratio = pw / lv;
-  const scale = k === "d" ? 1.1 : k === "e" ? EBOSS_HP_X : 1;
+  const scale = k === "d" ? 1.7 : k === "e" ? EBOSS_HP_X : 1;
   return Math.round(k === "w" ? core * ratio : core / (ratio / scale));
 }
 

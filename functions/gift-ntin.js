@@ -13,6 +13,9 @@ const RTDB = {
   memory: "256MiB"
 };
 
+/* data/game.js ITM 선물 이름과 맞춘다. */
+const GIFT_NM = {g1: "작은 꽃다발", g2: "별빛 쿠키", g3: "달빛 편지", g4: "꿈꾸는 오르골"};
+
 function createGiftNtin(getDatabase) {
   return onValueWritten({
     ref: "/ginbox/{to}/{id}",
@@ -25,12 +28,14 @@ function createGiftNtin(getDatabase) {
     const after = event.data.after.val() || {};
     const from = String(after.u || "");
     const name = String(after.n || "누군가").slice(0, 20);
+    const gid = String(after.g || "");
+    const gift = GIFT_NM[gid] || "선물";
     const ts = Number(after.ts);
     const at = Number.isFinite(ts) && ts > 0 ? ts : Date.now();
     try {
       await pushNtin(getDatabase(), to, "gift:" + id, {
         k: "gift",
-        t: (name + "님이 선물을 선물했다. 가방의 받은 선물함에 넣어 두었다.").slice(0, TEXT_MAX),
+        t: (name + "님이 「" + gift + "」을(를) 보냈다. 가방의 받은 선물함에 넣어 두었다.").slice(0, TEXT_MAX),
         u: from,
         ts: at
       });

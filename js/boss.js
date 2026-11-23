@@ -16,7 +16,7 @@ function bossTopShown(){bossTopAsk();const mine=typeof pw==="function"&&C?pw():0
 async function bossTopPw(){let n=bossTopN;if(DB&&typeof plTop==="function"){try{const t=await plTop();n=Math.max(0,Number(t&&t.pw)||0);bossTopN=n;bossTopLv=Math.max(1,Number(t&&t.lv)||1)}catch(e){}}const mine=typeof pw==="function"&&C?pw():0;return Math.max(mine,n||0)}
 const dHpNow=()=>Math.round(witchHpOf(bossTopShown().pw)*D_HP_X);
 const bFirst=list=>list.slice().sort((a,b)=>(Number(a.t0||a.ts)||0)-(Number(b.t0||b.ts)||0))[0];
-/* 새 보스 HP 공식. 오전·오후 = (레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1).
+/* 새 보스 HP 공식. 오전·오후 = (레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.7).
    주간 = (레벨 + 전투력 × (전투력 - 레벨)) × (전투력 ÷ 레벨). 정수 HP로 반올림한다.
    화면의 '약' 추정만 클라가 같은 식으로 그린다. 실제 hp0·sum 은 Functions(bossHitHp)가
    players 전투력 1위(또는 더 센 공격자)로 계산해 wboss/{id}/_hp 에 굳힌다. */
@@ -25,7 +25,7 @@ function bossHpEst (k) {
    const {lv, pw} = bossTopShown();
    if (!(lv > 0 && pw > 0)) return 0;
    const core = lv + pw * (pw - lv), ratio = pw / lv;
-   const scale = k === "d" ? 1.1 : k === "e" ? EBOSS.hpX : 1;
+   const scale = k === "d" ? 1.7 : k === "e" ? EBOSS.hpX : 1;
    return Math.round(k === "w" ? core * ratio : core / (ratio / scale))
 }
 
@@ -99,7 +99,7 @@ function drawBoss(k,b,list){const c=$("#bs-"+k);if(!c||!C)return;bossDay();const
       const scaled = bScaled(k,b.id);
       const wait = bossTopN == null && !list.length;
       const est = scaled ? bossHpEst(k) : dHpNow()
-      const rule = scaled && k === "d" ? "(레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.1)":"첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배";
+      const rule = scaled && k === "d" ? "(레벨 + 전투력 × (전투력 - 레벨)) ÷ ((전투력 ÷ 레벨) ÷ 1.7)":"첫 공격 때 전투력 1위가 절망의 마인이 되었을 때 체력의 "+D_HP_X+"배";
    }
    c.appendChild(elT("p","boss-info","공격 1번: 피해 전투력×2~3(대응에 따라 ×0.5~1.8), 골드 +"+cfg.hit+", 절망도 +"+cfg.dz+"(🛡 방어 태세면 0) · 처치 보상: "+rwTxt(cfg.kill)+", 피해 1위는 마력석 +"+cfg.mvp+" 추가"))}
 /* 공격 중 hitBusy. await 동안 drawBoss 가 버튼을 다시 그려도 잠가 둔다. 연타 시 기록·meta 가 두 번 쓰이는 일을 막는다.

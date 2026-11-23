@@ -69,11 +69,14 @@ async function wvAttack(){const {cur:w}=wvAt(Date.now()),m=$("#wvm"),now=Date.no
 async function wvClaim(){if(!C||!XON())return;const {cur:w}=wvAt(Date.now());if(!w||Date.now()<w.T1||!(C.wvj&&C.wvj[w.id])||(C.wvc&&C.wvc[w.id]))return;
  if(!(wvListId===w.id&&wvReady))await loadWave(w,true);if(wvListId!==w.id)return;const list=WVL.slice(),st=wvState(list.reduce((a,v)=>a+(Number(v.d)||0),0)),top=list.slice().sort((a,b)=>(b.d||0)-(a.d||0))[0],mvp=!!top&&top.u===UID;if(C.wvc&&C.wvc[w.id])return;C.wvc=keepIds(C.wvc,w.id);
  const r={g:WV_RW.g*st.cleared,m:Math.floor(st.cleared/WV_RW.mEvery)+(mvp?WV_RW.mvp:0)};giveRw(r);if(st.cleared)gain(WV_RW.ex*st.cleared,0);titleState();C.stats.waveBest=Math.max(C.stats.waveBest||0,st.cleared);if(st.cleared>=WV_N)C.stats.waveFull=(C.stats.waveFull||0)+1;
- note("wave","몬스터 웨이브 종료: "+st.cleared+" / "+WV_N+"웨이브를 막아 냈다. 보상 "+(rwTxt(r)||"없음")+(st.cleared?", 경험치 "+WV_RW.ex*st.cleared:"")+(mvp?" (피해 1위!)":""));toast("⚔ 몬스터 웨이브 종료 · "+st.cleared+"웨이브 방어 · "+(rwTxt(r)||"보상 없음"));save();checkTitles()}
-// 알림: 시작 10분 전, 시작할 때
+ const endT="몬스터 웨이브 종료: "+st.cleared+" / "+WV_N+"웨이브를 막아 냈다. 보상 "+(rwTxt(r)||"없음")+(st.cleared?", 경험치 "+WV_RW.ex*st.cleared:"")+(mvp?" (피해 1위!)":"");
+ const ok=typeof note==="function"&&note("wave",endT,"","wave:end:"+w.id);if(ok)toast("⚔ 몬스터 웨이브 종료 · "+st.cleared+"웨이브 방어 · "+(rwTxt(r)||"보상 없음"));else save();checkTitles()}
+/* 알림: 시작 10분 전·시작. C.wvn* 만으로는 sync 시 다시 울 수 있어 note id 로도 막는다. */
+const wvToastTold={};
 function wvAlert(){if(!C||!XON())return;const now=Date.now(),{cur,next}=wvAt(now);
- if(next&&next.T0-now<=600000&&C.wvn1!==next.id){C.wvn1=next.id;save();toast("⚔ 10분 뒤 몬스터 웨이브가 몰려온다! ("+String(next.h).padStart(2,"0")+":00)")}
- if(cur&&now<cur.T1&&C.wvn2!==cur.id){C.wvn2=cur.id;save();const t="⚔ 몬스터 웨이브가 시작되었다! 30분 동안 함께 막아 내자.";note("wave",t);toast(t,waveView);ding()}}
+ if(next&&next.T0-now<=600000&&C.wvn1!==next.id){C.wvn1=next.id;const tid="wave:soon:"+next.id;if(!wvToastTold[tid]){wvToastTold[tid]=1;toast("⚔ 10분 뒤 몬스터 웨이브가 몰려온다! ("+String(next.h).padStart(2,"0")+":00)")}save()}
+ if(cur&&now<cur.T1&&C.wvn2!==cur.id){C.wvn2=cur.id;const t="⚔ 몬스터 웨이브가 시작되었다! 30분 동안 함께 막아 내자.",ok=typeof note==="function"&&note("wave",t,"","wave:open:"+cur.id);
+  if(ok){toast(t,waveView);ding()}else save()}}
 function wvTxt(ms){const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+"시간 "+m+"분":m+":"+String(s).padStart(2,"0")}
 function hubWave(){const box=$("#hwv");if(!box||!C)return;box.innerHTML="";if(!XON()){box.appendChild(elT("p","hint","서버에 연결되어야 참가할 수 있다."));return}
  const now=Date.now(),{cur,next}=wvAt(now),live=cur&&now<cur.T1,w=elT("div","dq wv"+(live?" done":"")),cp=elT("div","dq-copy");
