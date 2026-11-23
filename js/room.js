@@ -237,7 +237,7 @@ function draw(){const r=room,ids=Object.keys(r.pl),all=ids.length>=1&&ids.every(
  $("#rt").textContent="출정 방 "+(r.pub?"(공개)":"(비공개 코드 "+r.code+")");
  const pm=ids.some(i=>r.pl[i].m),pf=ids.some(i=>r.pl[i].f);$("#rs").textContent=r.st==="lobby"?"파티 "+ids.length+"/3 · 전투 "+(pm?"3번 (사냥 지도)":r.total+"번 예정")+(pf?" · 용기의 깃발 +5":""):"출정 중";
  const l=$("#pl");l.innerHTML="";ids.forEach(i=>{const p=r.pl[i],d=document.createElement("div");d.className="chip";d.style.textAlign="left";
-  if(i!==UID){d.tabIndex=0;d.setAttribute("role","button");d.style.cursor="pointer";d.onclick=()=>openProfile(i)}d.textContent=cn(i,p.n)+(i===UID?" (나)":"")+" · "+p.g+"등급 "+p.a+" · 전투력 "+p.p+(r.rd[i]?" · 준비 완료":"");l.appendChild(d)});
+  if(i!==UID){d.tabIndex=0;d.setAttribute("role","button");d.style.cursor="pointer";d.onclick=e=>{e.preventDefault();e.stopPropagation();openProfile(i)};d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProfile(i)}}}d.textContent=cn(i,p.n)+(i===UID?" (나)":"")+" · "+p.g+"등급 "+p.a+" · 전투력 "+p.p+(r.rd[i]?" · 준비 완료":"");l.appendChild(d)});
  $("#rd").hidden=r.st!=="lobby";$("#rd").textContent=r.rd[UID]?"준비 취소":"준비 완료";
  $("#st").hidden=!(r.st==="lobby"&&r.host===UID);$("#st").disabled=!all;$("#bt").hidden=!(LOCAL&&r.st==="lobby"&&ids.length<3);
  if(r.st!=="lobby"){$("#rx").textContent="마을로 돌아가기";paintRun()}else{choiceK="";$("#chv").hidden=true}armChoice()}

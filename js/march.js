@@ -412,14 +412,14 @@ function xTick(){const j=C&&C.mj;if(!j||!XON()||xNow()<j.T0){stopXr();xXrKickAt=
  xXrKickAt=0;watchXr(j.s,j.i);xGrant(x)}
 /* 표시만. wait/Wd 는 서버 xr, 내 표는 xv. 마을 복귀 때 키·표를 비우지 않는다. */
 function xView(){xClock();if(C&&C.mj)xAuto=C.mj.id;show("xm");$("#xpl").dataset.k="";if(XR)XR.drawn=-1;if(xWatchOn())watchX(xWatchSlot());xRender()}
-function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){if(typeof hub==="function")hub();else show("hub");return}
+function xRender(){if($("#v-xm").hidden)return;const now=xNow(),mj=C.mj,X=XR&&(!mj||XR.id===mj.id)?XR:null,x=X?X.x:mj?xInfo(mj.s,mj.i):null;if(!x){/* 프로필이 열린 채 허브로 쫓기지 않게 한다(동기화로 mj 가 비는 순간 등). */if(pfU&&$("#pfo")&&!$("#pfo").hidden)return;if(typeof hub==="function")hub();else show("hub");return}
  $("#xq").hidden=!xQuitOpen(x);
  $("#xt").textContent=x.nm+" · "+XDF[x.d].n;
  let pl,ids;
  if(X&&X.pl){pl=X.pl;ids=Object.keys(pl)}
  else{pl=xFace(x);ids=xParty(x,pl)}
  const l=$("#xpl"),key=(X&&X.pl?"f":"l")+"|"+ids.map(u=>{const p=pl[u]||{};return u+":"+(p.n||"")+"."+(p.g||"")+"."+(p.p||0)}).join(",");
- if(l.dataset.k!==key){l.dataset.k=key;l.innerHTML="";ids.forEach(u=>{const p=pl[u]||{},stat=p.g||p.a||p.p?" · "+(p.g||"-")+"등급 "+(p.a||"")+" · 전투력 "+(p.p||0):"",d=elT("div","chip",(p.tn?"「"+String(p.tn).slice(0,20)+"」 ":"")+cn(u,p.n)+(u===UID?" (나)":"")+stat);d.style.textAlign="left";if(u!==UID){d.style.cursor="pointer";d.onclick=()=>openProfile(u)}l.appendChild(d)})}
+ if(l.dataset.k!==key){l.dataset.k=key;l.innerHTML="";ids.forEach(u=>{const p=pl[u]||{},stat=p.g||p.a||p.p?" · "+(p.g||"-")+"등급 "+(p.a||"")+" · 전투력 "+(p.p||0):"",d=elT("div","chip",(p.tn?"「"+String(p.tn).slice(0,20)+"」 ":"")+cn(u,p.n)+(u===UID?" (나)":"")+stat);d.style.textAlign="left";if(u!==UID){d.style.cursor="pointer";d.setAttribute("role","button");d.tabIndex=0;d.onclick=e=>{e.preventDefault();e.stopPropagation();openProfile(u)};d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProfile(u)}}}l.appendChild(d)})}
  const g=$("#xlg"),cv=$("#xch");
  if(!X||!X.res){const why=X&&X.gone?(X.why||"이번 출정에는 참가하지 못했다."):"",who=xWho(ids,pl);
   /* xr 오기 전 대기 문구. 「다시 받기」 버튼 없이, 경과·연결 상태로만 구분한다.

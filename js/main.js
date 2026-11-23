@@ -663,7 +663,10 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){accSoftSy
 setInterval(()=>{if(!document.hidden&&(lhOn()||lhDefer||savePending))accSoftSync()},60000);
 
 /* 프로필과 공명: 친구의 프로필에서 '공명하기'로 공명을 청하고, 친구가 받아들이면 둘 다 절망도가 내려간다. 같은 상대에게는 3시간에 한 번이다. */
-let pfU=null;
+let pfU=null,pfOpenAt=0;
+/* 칩·목록을 누른 직후 같은 포인터가 방금 열린 #pfo 배경에 닿아 바로 닫히는 고스트 클릭을 막는다.
+   (매지컬 마치 파티 칩처럼 큰 행에서 특히 자주 난다. get 은 성공해도 pfU 가 비어 본문을 그리지 않는다.) */
+const PF_GUARD_MS=450;
 /* 크게 보기용 사진: 내 사진을 320픽셀로 줄여 wboss/pic/{나}에 따로 올려 둔다. 목록(players)에는 작은 사진만 있어서 데이터를 아끼고,
    누군가 사진을 눌러 크게 볼 때만 이 큰 사진 한 장을 받아 온다(사람마다 한 번만 받고 기억한다). */
 const PICC={},PICM={};
@@ -720,7 +723,7 @@ function pubFall(){if(!DB||!C||!UID)return;const on=!!C.fall;DB.doc("players/"+U
 function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()}catch(e){}thumb(C.img,im=>{try{const body=pubCard();body.im=im||"";body.ts=Date.now();const prev=pubLast,next=pubCopy(body);pubLast=next;DB.doc("players/"+UID).patch(body).catch(()=>{if(pubLast===next)pubLast=prev});whoPut(true)}catch(e){}})}
 /* 운영자 프로필용. C.born(캐릭터 생성 ms)을 한국 시각 날짜 문구로. */
 function admBornTxt(ms){const t=Number(ms);if(!Number.isFinite(t)||!(t>0))return "";const k=new Date(t+9*3600000);return k.getUTCFullYear()+"년 "+(k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일"}
-function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
+function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
  DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
   const hero=document.createElement("div");hero.className="profile-hero";
@@ -753,8 +756,8 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;$("#pfo").hidden=false;$("
   /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
   Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
   e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
-$("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null};
-$("#pfo").onclick=e=>{if(e.target===$("#pfo"))$("#pfc").click()};
+$("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null;pfOpenAt=0};
+$("#pfo").onclick=e=>{if(e.target!==$("#pfo"))return;if(Date.now()-pfOpenAt<PF_GUARD_MS)return;$("#pfc").click()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$("#pfc").click()});
 
 /* 받은 선물함(ginbox) 캐시. updNav·가방이 참조하므로 내비보다 위에 둔다. */
