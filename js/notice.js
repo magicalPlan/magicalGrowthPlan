@@ -258,11 +258,11 @@ async function rstWipe(){const done=[],fail=[];
  for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["board","게시판 댓글"],["ntin","알림 벨"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["tally/wf","희망의 등대 합계"],["tally/dr","재해 진압 합계"],["tally/seed","등대·시설 시드 자물쇠"],["score","시설·등대·재해 기여 카드"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
  try{if(typeof WFD==="object"){WFD={sum:0,v:{},top:[]}}if(typeof FACD==="object")FACD={};if(typeof facSrv==="object")facSrv={};if(typeof facFly==="object")facFly={};if(typeof vfacReady==="object")vfacReady={};if(typeof DRP==="object"){for(const k of Object.keys(DRP))delete DRP[k]}if(typeof scoreSig!=="undefined")scoreSig="";if(typeof facAt!=="undefined")facAt=0}catch(e){}
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
- const rtdbGet=async path=>{const h=AUTH.tok?{"Authorization":"Bearer "+AUTH.tok}:{};const r=await fetch(FBU.replace(/\/+$/,"")+"/"+path+".json?shallow=true",{cache:"no-store",headers:h});if(!r.ok)throw new Error(r.status);return r.json()};
- try{const all=Object.keys((await rtdbGet("rooms"))||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);
+  const all=Object.keys((await r.json())||{}),xd=all.filter(k=>String(k).indexOf("xd")===0),du=all.filter(k=>{const s=String(k);return s.indexOf("xa")===0||s.indexOf("xb")===0||s==="xr"});
   let bad=0;for(const k of xd){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("1:1 방 목록 "+bad+"/"+xd.length+"개");else done.push("1:1 방 목록 "+xd.length+"개");
   bad=0;for(const k of du){try{await DB.doc("rooms/"+k).delete()}catch(e){bad++}}if(bad)fail.push("대련 방 "+bad+"/"+du.length+"개");else done.push("대련 방 "+du.length+"개")}catch(e){fail.push("1:1·대련 방 ("+String(e&&e.message||e)+")")}
- try{const ks=Object.keys((await rtdbGet("wboss"))||{}).filter(k=>!["pic","picm","clk"].includes(k));
+ try{const r=await fetch(FBU.replace(/\/+$/,"")+"/wboss.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);const ks=Object.keys((await r.json())||{}).filter(k=>!["pic","picm","clk"].includes(k));
   let bad=0;for(const k of ks){try{await DB.doc("wboss/"+k).delete()}catch(e){bad++}}if(bad)fail.push("보스·웨이브 기록 "+bad+"/"+ks.length+"개");else done.push("보스·웨이브 기록 "+ks.length+"개")}catch(e){fail.push("보스·웨이브 기록 ("+String(e&&e.message||e)+")")}
  return {done,fail}}
 async function rstRun(btn,msg){if(!ADM[UID]||!XON())return;
