@@ -27,8 +27,11 @@ function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toas
 function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.hr):1;
  for(let i=0;i<n&&log.length;i++){const e=log[Math.floor(g()*log.length)];if(!evs.includes(e))evs.push(e)}
  const found=[];if(done)(CLUE_EXTRA||[]).forEach(x=>{if(L.hr>=x[4]&&g()<x[3])found.push(x)});return{evs,found}}
+/* 단서 탐색 보상. 장기 토벌 lhClaim 과 같음: natHeal → gain(완주 절망) → 저장.
+   밀린 자연 회복을 먼저 반영한 뒤 가산한다. sync 는 accSyncIfNewer 의 dDz·claimed 가 지킨다. */
 async function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 돌아갈까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
+ try{if(typeof natHeal==="function")natHeal()}catch(e){}
  const sd=h.sd;if(typeof tripGot==="function"&&tripGot("clueGot",sd)){clueNtClear();C.clue=null;clueDraw();toast("이미 받은 탐색이다.");if(typeof saveNowRetry==="function")void saveNowRetry(4,1500);return}
  const g=rng(hs32("clue"+sd)),hrs=done?L.hr:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L.pw||1),mul=done?(ok?1:.5):CLUE_EARLY,st=L.st||1;
  const gd=Math.round(L.g*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L.ex*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L.dz*(L.hr?hrs/L.hr:0)+(done&&!ok?CLUE_FAIL_DZ:0)),mm=done&&ok?L.m+(g()<.3?1:0):0,pick=cluePick(g,L,done);

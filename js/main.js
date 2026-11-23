@@ -202,8 +202,11 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
 const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
-   경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
-   sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
+   경험·골드·절망(dz): 서버본 절대값 + (이 탭 C − accBase) 미저장 증감. 옛 절대값으로 덮지 않는다.
+   절망 예: 로컬만 50→0 회복(미저장), 서버는 아직 50인데 ts 만 오른 경우(마치 xpay·다른 탭 등).
+     dDz=0−50 → 서버본에 −50 을 더해 회복분을 지킨다. 지키지 않으면 장기 토벌·마치 직후 회복이 되살아난다.
+   이미 정산한 장기/단서(claimed)는 보상 직후 수치(dz·dzT·gd·ex…)를 통째로 이 탭 값을 쓴다.
+   sid 가 ACC_SID_SERVER(예: xpay)이면 '다른 기기' 토스트만 생략(합치기 규칙은 같다). */
 async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return false;
  let remoteTs=0;try{const sn=await DB.doc("accounts/"+AUTH.uid+"/ts").get();remoteTs=sn.exists?Number(sn.data())||0:0}catch(e){return false}
  if(!(remoteTs>Number(accSeen)))return false;
@@ -229,15 +232,19 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
     (진행 없음+서버만 있음은 정산이 아님 → pickTrip 이 서버 진행을 살림) */
  const claimed=!rstNewer&&(tripClaimed(mine.lh,rem.lh,mine.lhGot)||tripClaimed(mine.clue,rem.clue,mine.clueGot));
  if(claimed){
+  /* 정산 직후: 서버에 옛 lh/clue 가 남아 있어도 보상·절망은 이 탭(mine)이 맞다. dzT 도 같이 둔다. */
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
   if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;if(mine.egg!==undefined)C.egg=mine.egg;
-  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;
+  if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.dzT!=null)C.dzT=mine.dzT;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){
-  const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0);
+  /* 미저장 증감. 절망 dDz가 음수면 자연 회복·공명 등으로 이 탭만 내린 분. 서버 옛 dz 로 덮지 않는다.
+     (탭 숨김이면 saveCloud 가 PATCH 를 미루므로, 장기 토벌·마치 xpay sync 때 특히 필요하다.) */
+  const dEx=(Number(mine.ex)||0)-(Number(base.ex)||0),dGd=(Number(mine.gd)||0)-(Number(base.gd)||0),dDz=(Number(mine.dz)||0)-(Number(base.dz)||0);
   if(dEx){C.ex=Math.max(0,(Number(C.ex)||0)+dEx);C.lv=typeof lvOf==="function"?lvOf(C.ex):(mine.lv||C.lv);if(mine.xv!=null)C.xv=mine.xv}
-  if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd)}
+  if(dGd)C.gd=Math.max(0,(Number(C.gd)||0)+dGd);
+  if(dDz){const floor=typeof dzFloorToday==="function"?dzFloorToday():0;C.dz=Math.max(floor,Math.min(100,(Number(C.dz)||0)+dDz));if(mine.dzT!=null)C.dzT=Math.max(Number(C.dzT)||0,Number(mine.dzT)||0)}}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
  /* 회귀: accBase=서버본(낮은 b 포함). 일반: accBase=rem, C.b 만 더 크면 rem.b 기준으로 PATCH 되살림. */
@@ -354,8 +361,11 @@ function saveCloud(now){
    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
   if(now)go();else sct=setTimeout(()=>go(),600)})}
-// 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다).
+/* 자연 회복 켜고 끄기: 꺼 둔 동안에는 절망도가 저절로 내려가지 않는다. 다시 켜면 그때부터 10분을 새로 센다(꺼 둔 시간은 소급되지 않는다). */
 function healToggle(){if(!C)return;C.healOff=!C.healOff;C.dzT=Date.now();save();toast(C.healOff?"절망도 자연 회복을 껐다.":"절망도 자연 회복을 켰다. 10분마다 다시 내려간다.");if(!$("#v-hub").hidden)hub()}
+/* 자연 회복: HEAL_MS마다 healAmt만큼 C.dz를 내린다. 꺼 둔 동안·타락 중에는 안 한다.
+   장기 토벌·단서 보상(lhClaim/clueClaim) 직전에도 한 번 불러, 밀린 틱을 가산 전에 반영한다.
+   저장이 밀린 채 sync 가 와도 accSyncIfNewer 의 dDz 가 이 회복분을 지킨다. */
 function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOff){C.dzT=now;return}
  const n=Math.floor((now-C.dzT)/HEAL_MS);if(n>0){C.dzT+=n*HEAL_MS;const b0=C.dz||0;if(b0>0){C.dz=Math.max(dzFloorToday(),b0-healAmt()*n);titleState();if(C.dz===0)C.stats.reachedZero=true;save();checkTitles();
   if(!$("#v-hub").hidden){const bar=$("#hc .hc-dz .bar"),fill=bar&&bar.querySelector("i");if(bar)bar.style.setProperty("--dz-floor",dzFloorToday()+"%");if(fill)fill.style.width=C.dz+"%";$("#hc .hc-dz b").textContent=C.dz;const fb=$("#fbar");if(fb&&C.dz<90)fb.innerHTML="";try{if(typeof paintPw==="function")paintPw()}catch(e){}}
@@ -602,8 +612,13 @@ function tripNtLoad(kind){const k=tripNtKey(kind);if(!k)return{};try{const o=JSO
 function tripNtSave(kind,o){const k=tripNtKey(kind);if(!k||!o)return;try{const ks=Object.keys(o);if(ks.length>40)ks.slice(0,ks.length-40).forEach(x=>delete o[x]);localStorage.setItem(k,JSON.stringify(o))}catch(e){}}
 function tripNtHad(kind,sd){const s=String(sd||"");return!!(s&&tripNtLoad(kind)[s])}
 function tripNtMark(kind,sd){const s=String(sd||"");if(!s)return;const o=tripNtLoad(kind);o[s]=1;tripNtSave(kind,o)}
+/* 장기 토벌 보상.
+   · 순서: natHeal(밀린 자연 회복) → 시드 정산 → gain(경험·완주 절망) → 저장.
+   · 절망: 먼저 회복된 C.dz 위에 완주분(+L[6] 등)만 더한다. 회복분이 되살아나면 안 된다.
+   · 저장 중 accSyncIfNewer 가 와도 dDz·claimed 로 이 탭 절망을 지킨다(위 sync 주석). */
 async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
+ try{natHeal()}catch(e){}
  const sd=h.sd;if(tripGot("lhGot",sd)){lhNtClear();C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
  const g=rng(hs32("lh"+sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),mul=done?(ok?1:.5):LH_EARLY,st=L[9]||1;
  const gd=Math.round(L[4]*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L[5]*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L[6]*(L[2]?hrs/L[2]:0)+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;

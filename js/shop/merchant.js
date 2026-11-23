@@ -6,7 +6,8 @@
 const SHADY_COST=2000,SHADY_N=10,SHADY_UNIT=SHADY_COST/SHADY_N;
 /* 등급 뽑기 확률(합 100%). 칸마다 독립. 등급 안 아이템은 균등. */
 const SHADY_TIER_P=[.67,.28,.04,.01];
-/* [등급0..][보상]. k: inv(가방·재료)·gd·eggs·eggsEv. n: 개수. 기존 보상은 유지하고 추가·수량만 고친다. */
+/* [등급0..][보상]. k: inv(가방·재료)·gd·eggs·eggsEv. n: 개수. 기존 보상은 유지하고 추가·수량만 고친다.
+   eggsEv = 활성 시즌 알(eventLive().egg.inv → eggsEv / eggsEv2). 시즌 밖이면 일반 알. */
 const SHADY_POOL=[
  [{k:"inv",id:"mana",n:2},{k:"inv",id:"charm",n:1},{k:"inv",id:"map",n:1},{k:"inv",id:"flag",n:1},{k:"inv",id:"seal",n:1},{k:"inv",id:"hope",n:1},{k:"inv",id:"g2",n:1},{k:"gd",n:50},{k:"inv",id:"m_forest",n:1},{k:"inv",id:"m_coast",n:1},{k:"inv",id:"m_valley",n:1}],
  [{k:"inv",id:"m_shard",n:2},{k:"inv",id:"m_herb",n:2},{k:"inv",id:"m_ore",n:2},{k:"inv",id:"m_dew",n:2},{k:"inv",id:"m_ash",n:10},{k:"inv",id:"m_crown",n:1},{k:"gd",n:500},{k:"inv",id:"petcan",n:3},{k:"inv",id:"m_abyss",n:2}],
@@ -14,6 +15,11 @@ const SHADY_POOL=[
  [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1},{k:"inv",id:"milk",n:1}]
 ];
 let shadyBusy=false,shadyBuilt=false;
+/* 활성 시즌 알. inv: eggsEv|eggsEv2|null. meta: PET_EV / PET_EV2. */
+function shadyEvEgg(){const live=typeof eventLive==="function"?eventLive():null,inv=live&&live.egg&&live.egg.inv;
+ if(inv==="eggsEv2")return{inv:"eggsEv2",meta:typeof PET_EV2!=="undefined"?PET_EV2:null};
+ if(inv==="eggsEv")return{inv:"eggsEv",meta:typeof PET_EV!=="undefined"?PET_EV:null};
+ return null}
 function shadyOpen(){try{return localStorage.getItem("mgr_shop_shd")!=="0"}catch(e){return true}}
 function shadyFold(open){const b=$("#shdtog"),box=$("#shdbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_shd",open?"1":"0")}catch(e){}
  shopShady()}
@@ -25,7 +31,7 @@ function shadyRollPack(){const a=[];for(let i=0;i<SHADY_N;i++)a.push(shadyRollOn
 function shadyName(r){
  if(r.k==="gd")return "골드";
  if(r.k==="eggs")return"사역마의 알";
- if(r.k==="eggsEv")return typeof PET_EV!=="undefined"?PET_EV.nm:"시즌 알";
+ if(r.k==="eggsEv"){const e=shadyEvEgg();return e&&e.meta&&e.meta.nm?e.meta.nm:(e?"시즌 알":"사역마의 알")}
  if(typeof ITM!=="undefined"){const x=ITM.find(t=>t[0]===r.id);if(x)return x[1]}
  if(typeof MAT!=="undefined"){const x=MAT.find(t=>t[0]===r.id);if(x)return x[1]}
  return r.id||"?"}
@@ -39,17 +45,20 @@ function shadyPaintGrid(list){const grid=$("#shdgrid");if(!grid)return;
   cell.className="shady-cell"+(r?" t"+r.tier:" empty");cell.innerHTML="";
   if(!r){cell.appendChild(elT("span","shady-q","?"));continue}
   if(r.k==="inv"&&typeof itIc==="function"){const ic=itIc(r.id,"sm");if(ic)cell.appendChild(ic)}
-  else if(r.k==="eggs"||r.k==="eggsEv")cell.appendChild(elT("span","shady-ic",r.k==="eggsEv"&&typeof PET_EV!=="undefined"?PET_EV.ic:"🥚"));
+  else if(r.k==="eggs"||r.k==="eggsEv"){const e=r.k==="eggsEv"?shadyEvEgg():null;cell.appendChild(elT("span","shady-ic",e&&e.meta&&e.meta.ic?e.meta.ic:"🥚"))}
   else if(r.k==="gd"){const i=document.createElement("img");i.src="assets/items/gold.png"+(typeof ITEM_IMG_V!=="undefined"?"?v="+ITEM_IMG_V:"");i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic sm";cell.appendChild(i)}
   cell.appendChild(elT("b","",shadyName(r)));cell.appendChild(elT("small","","×"+r.n))}}
 function shadySnap(){const inv={};C.inv=C.inv||{};Object.keys(C.inv).forEach(k=>{inv[k]=C.inv[k]});
- return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,inv,mats:(C.stats&&C.stats.mats)||0,shadyBoxes:(C.stats&&C.stats.shadyBoxes)||0,shadyT1:(C.stats&&C.stats.shadyT1)||0,shadyT4:(C.stats&&C.stats.shadyT4)||0}}
-function shadyRestore(s){if(!s||!C)return;C.gd=s.gd;C.eggs=s.eggs;C.eggsEv=s.eggsEv;C.inv=Object.assign({},s.inv);
+ return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,eggsEv2:C.eggsEv2||0,inv,mats:(C.stats&&C.stats.mats)||0,shadyBoxes:(C.stats&&C.stats.shadyBoxes)||0,shadyT1:(C.stats&&C.stats.shadyT1)||0,shadyT4:(C.stats&&C.stats.shadyT4)||0}}
+function shadyRestore(s){if(!s||!C)return;C.gd=s.gd;C.eggs=s.eggs;C.eggsEv=s.eggsEv;C.eggsEv2=s.eggsEv2;C.inv=Object.assign({},s.inv);
  C.stats=C.stats||{};C.stats.mats=s.mats;C.stats.shadyBoxes=s.shadyBoxes;C.stats.shadyT1=s.shadyT1;C.stats.shadyT4=s.shadyT4}
 function shadyApplyOne(r,fields,inc){if(!r||!C)return;
  if(r.k==="gd"){C.gd=(C.gd||0)+r.n;inc.gd=(Number(inc.gd)||0)+r.n;return}
  if(r.k==="eggs"){C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
- if(r.k==="eggsEv"){C.eggsEv=(C.eggsEv||0)+r.n;fields.eggsEv=C.eggsEv;return}
+ if(r.k==="eggsEv"){const e=shadyEvEgg();
+  if(e&&e.inv==="eggsEv2"){C.eggsEv2=(C.eggsEv2||0)+r.n;fields.eggsEv2=C.eggsEv2;return}
+  if(e&&e.inv==="eggsEv"){C.eggsEv=(C.eggsEv||0)+r.n;fields.eggsEv=C.eggsEv;return}
+  C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
  if(r.k==="inv"&&r.id){C.inv=C.inv||{};C.inv[r.id]=(C.inv[r.id]||0)+r.n;fields["inv/"+r.id]=C.inv[r.id];
   try{if(typeof dexAdd==="function"){if(typeof MATM!=="undefined"&&MATM[r.id])dexAdd("mat",r.id);else dexAdd("it",r.id)}}catch(e){}
   if(typeof MATM!=="undefined"&&MATM[r.id]){C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+r.n;fields["stats/mats"]=C.stats.mats}}}

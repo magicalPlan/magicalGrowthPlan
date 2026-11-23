@@ -44,7 +44,9 @@ async function pushMarchNote(root, text) {
 }
 
 /* pay 필드 → 계정(매지컬 마치 서버 지급의 최종 쓰기).
-   · 절망: pay.dz 를 읽어 c/dz 만 서버가 올린다. 클라는 settle(serverPay) 에서 gain(…, dz) 금지.
+   · 절망: 지금 서버 c/dz 를 읽어 pay.dz 를 더한 절대값으로 쓴다(0~100). increment 금지·클라 gain 병행 금지.
+   · 클라: settle(serverPay) 는 절망을 올리지 않는다. 지급 후 accSyncIfNewer 가 서버본을 받되,
+     이 탭에만 있던 자연 회복분(dDz)은 클라 sync 가 합쳐 지킨다(js/main.js accSyncIfNewer).
    · grantKey: accounts/{uid}/xpay/{key}=1 과 보상을 같은 update 에 넣어 재시도·이중 호출에도 한 번만.
    · sid:"xpay": 클라 accSync 가 '다른 기기' 토스트를 생략하고 서버본을 받게 한다.
    · noteText: 지급 성공 시에만 c/nt 에 march 알림(이미 xpay 된 재시도에서는 넣지 않음). */
@@ -88,7 +90,7 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
   if (pay.eggEv > 0) { bump["c/eggsEv"] = ServerValue.increment(pay.eggEv); any = true; }
   if (pay.eggEv2 > 0) { bump["c/eggsEv2"] = ServerValue.increment(pay.eggEv2); any = true; }
 
-  /* 절망은 increment 가 아니라 읽은 뒤 절대값으로 쓴다(0~100 클램프). 클라 gain 과 병행하면 안 된다. */
+  /* 절망: 읽은 curDz+pay.dz → 절대값. 클라 gain 과 병행하면 이중 가산. 미저장 회복은 클라 dDz sync 가 보정. */
   const dzAdd = Math.round(Number(pay.dz) || 0);
   const tc = Math.max(0, Math.floor(Number(pay.tc) || 0));
   const day = String(pay.day || todayStr()).slice(0, 12);

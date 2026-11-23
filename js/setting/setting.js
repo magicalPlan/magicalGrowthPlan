@@ -87,7 +87,7 @@ function oddsShady(){if(typeof SHADY_TIER_P==="undefined"||typeof SHADY_POOL==="
  box.appendChild(elT("p","set-odd-sub","등급 확률"));
  box.appendChild(oddsTable(SHADY_TIER_P.map((p,i)=>[(i+1)+"등급",p]),["등급","확률"]));
  const items=[];SHADY_POOL.forEach((pool,ti)=>{const tp=Number(SHADY_TIER_P[ti])||0,len=(pool&&pool.length)||1;
-  (pool||[]).forEach(r=>{const nm=r&&r.k==="eggsEv"?"이벤트 알":(typeof shadyName==="function"?shadyName(r):(r&&r.id)||"?");items.push([nm+(r&&r.n?" ×"+r.n:"")+" · "+(ti+1)+"등급",tp/len])})});
+  (pool||[]).forEach(r=>{const nm=typeof shadyName==="function"?shadyName(r):(r&&r.k==="eggsEv"?"이벤트 알":(r&&r.id)||"?");items.push([nm+(r&&r.n?" ×"+r.n:"")+" · "+(ti+1)+"등급",tp/len])})});
  box.appendChild(elT("p","set-odd-sub","보상별 확률"));
  box.appendChild(oddsTable(items,["보상","확률"]));return box}
 /* 사역마 특성: 효과×등급 표. 머리글에 등급 확률. data/pet-traits.js 와 맞춤. */
