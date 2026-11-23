@@ -106,8 +106,8 @@ function petTrAsk(q){
   return wait();
  }).catch(()=>{toast("특성 요청에 실패했다. 연결을 확인하고 다시 눌러 보자.")}).finally(()=>{petTrAskBusy[id]=0});
 }
-/* 변광석(가방): 클라가 즉시 굴림 → confirm → 예일 때만 특성·아이템 PATCH.
-   첫 받기(pettr)와 달리 변경은 프리즘처럼 즉시 반영. 확률표는 PET_TR_RATE 와 동일. */
+/* 변광석(가방): 굴림 때 돌 1개 소모 → confirm(적용) → 취소 시 재확인(돌 미복구).
+   첫 받기(pettr)와 달리 변경은 클라 PATCH. 확률표는 PET_TR_RATE 와 동일. */
 let petTrStoneOn=null,petTrStonePick=null;
 function petTrStoneSlotLine(slot){if(!slot)return "-";return typeof petTrTxt==="function"?petTrTxt(slot.c,slot.r):("코드 "+slot.c)}
 function petTrStonePets(lv){return (C.pets||[]).filter(q=>{if(!q||!PETS[q.sp])return false;const tr=petTrMap(q);return !!tr[String(lv)]})}
@@ -141,24 +141,36 @@ function petTrStoneBox(itemId){
  if(q)box.appendChild(elT("p","hint","지금 "+lv+"단계: "+petTrStoneSlotLine(petTrMap(q)[String(lv)])));
  const b=elT("button","btn"+(ok?"":" g"),ok?q.nm+"의 "+lv+"단계 특성 바꾸기":"사역마를 골라야 한다");b.type="button";b.disabled=!ok;
  b.onclick=()=>petTrStoneRerollAsk(q,itemId);box.appendChild(b);return box}
-/* 예: 특성 PATCH + 돌 1개 소모. 아니오: 아무 것도 안 씀. */
+/* 굴림과 동시에 돌 소모(PATCH). 예→특성 적용. 아니오→재확인 후 취소(돌 미복구). */
 function petTrStoneRerollAsk(q,itemId){
  if(!q||!q.id||!itemId||!C)return;
  const lv=typeof PET_TR_STONE!=="undefined"?PET_TR_STONE[itemId]:0;if(!lv)return;
  const old=petTrMap(q)[String(lv)];if(!old)return bag("이 단계 특성이 없다.");
  if(((C.inv&&C.inv[itemId])||0)<1)return bag("변광석이 없다.");
  const neu=petTrRollNew(q,lv);if(!neu)return bag("바꿀 수 있는 특성이 남지 않았다.");
- if(!confirm(q.nm+"의 새로운 가능성이 떠올랐다.\n"+petTrStoneSlotLine(old)+" → "+petTrStoneSlotLine(neu)+"\n바꾸시겠습니까?"))return;
  const i=(C.pets||[]).findIndex(x=>x&&x.id===q.id);if(i<0)return;
  C.inv=C.inv||{};C.inv[itemId]=(C.inv[itemId]||0)-1;if(C.inv[itemId]<1)delete C.inv[itemId];
- q.tr=q.tr&&typeof q.tr==="object"?q.tr:{};q.tr[String(lv)]={c:neu.c,r:neu.r};
- const fields={};fields["inv/"+itemId]=C.inv[itemId]||0;fields["pets/"+i+"/tr/"+lv]={c:neu.c,r:neu.r};
- const line=petTrStoneSlotLine(neu);
- note("quest",q.nm+"의 "+lv+"단계 특성: "+line+" (변광석)");
- if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
- toast(q.nm+" · "+lv+"단계 → "+line);
- petTrStoneOn=null;petTrStonePick=null;
- if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets();
+ const invFields={};invFields["inv/"+itemId]=C.inv[itemId]||0;
+ if(typeof apiAccountWrite==="function")apiAccountWrite(invFields).catch(()=>{try{save()}catch(e){}});else save();
  if(typeof bag==="function")bag();
+ const ask=()=>{
+  if(confirm(q.nm+"의 새로운 가능성이 떠올랐다.\n"+petTrStoneSlotLine(old)+" → "+petTrStoneSlotLine(neu)+"\n바꾸시겠습니까?")){
+   q.tr=q.tr&&typeof q.tr==="object"?q.tr:{};q.tr[String(lv)]={c:neu.c,r:neu.r};
+   const fields={};fields["pets/"+i+"/tr/"+lv]={c:neu.c,r:neu.r};
+   const line=petTrStoneSlotLine(neu);
+   note("quest",q.nm+"의 "+lv+"단계 특성: "+line+" (변광석)");
+   if(typeof apiAccountWrite==="function")apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});else save();
+   toast(q.nm+" · "+lv+"단계 → "+line);
+   petTrStoneOn=null;petTrStonePick=null;
+   if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets();
+   if(typeof bag==="function")bag();
+   return;
+  }
+  if(!confirm("정말 취소하시겠습니까? 소모된 변광석은 복구되지 않습니다.")){ask();return}
+  toast("특성 변경을 취소했다. 변광석은 소모되었다.");
+  petTrStoneOn=null;petTrStonePick=null;
+  if(typeof bag==="function")bag();
+ };
+ ask();
 }
 

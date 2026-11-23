@@ -5,7 +5,7 @@
    · 같은 사역마에 동일 코드(c) 중복 금지.
    · 저장: q.tr[lv] = { c, r }. 효과 숫자는 여기 표에서 파생(서버에도 동일 상수를 둔다).
    · 받기: 자동 요청 없음. 성장 기록 › 사역마의 '특성 받기' 버튼만 pettr 요청.
-   · 변경: 변광석(trcyan·trblue·trcast)은 가방에서 즉시 굴림→confirm→예일 때만 tr·inv PATCH(첫 받기 pettr 과 별개).
+   · 변경: 변광석(trcyan·trblue·trcast)은 가방에서 굴림 때 inv 소모→confirm(적용). 취소 재확인 시 돌 미복구(첫 받기 pettr 과 별개).
    · 단위 pp: 값 N → 효과 N/100 (배율·확률 가산). 단위 n: 값 그대로(판정·강화%p·회복·전투력 등).
    숫자를 고치면 클라·Functions 양쪽을 맞춘 뒤 Functions 를 배포한다. */
 
