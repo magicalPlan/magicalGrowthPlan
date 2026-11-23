@@ -1,9 +1,9 @@
 /* 사역마 출정 서버 권위.
    · 표·대사는 data/pet-raid.js 와 맞춘다. 고치면 양쪽 + Functions 배포.
    · 출발: pex/go/{uid}/{reqId} → c/pex/{runId} 스탬프만(타이머 스케줄 없음).
-   · 귀환: pex/take/{uid}/{runId} → 시드 굴림 · 지급 · c/pex 제거. 롤백 없음.
+   · 귀환: pex/take/{uid}/{runId} → 시드 굴림 · 지급 · c/pex 제거 · c/dex/px/{제목키}=1. 롤백 없음.
    · 이중 지급 방지: accounts/{uid}/pexpay/{sd}=1 을 보상과 같은 update 에.
-   · sid:"pex" → 클라 accSync 가 서버 지급으로 받는다. */
+   · 도감 px 는 서버만 씀(클라 PATCH 금지). sid:"pex" → 클라 accSync 가 서버 지급·도감을 받는다. */
 "use strict";
 
 const {ServerValue} = require("firebase-admin/database");
@@ -20,6 +20,10 @@ const PEX = [
   ["downh", "D마을", 8, {id: "bond", n: 2}, {id: "m_shard", n: 1}, {g: 500}, {id: "m_abyss", n: 1}, {id: "m_crown", n: 1}, {id: "m_shard", n: 10}]
 ];
 const PEXM = Object.fromEntries(PEX.map(x => [x[0], x]));
+/* 도감 c/dex/px 키. RTDB 경로 금지 문자(. # $ [ ]) → _. data/pet-raid.js pexDexId 와 동일. */
+function pexDexId(ti) {
+  return String(ti || "").replace(/[.#$\[\]]/g, "_").slice(0, 80);
+}
 
 const PEX_EV = [
   ["힘냇멍", "${사역마이름}(이)가 입에 약초를 문 채 신나게 달려왔다! 귀엽지만, 아무래도 약으로 쓰기에는 힘들 것 같다. ${사역마이름}(을)를 쓰다듬어주었다."],
@@ -285,6 +289,9 @@ async function applyPexClaim(db, uid, runIdKey, body) {
   }, 0);
   if (matN > 0) bump["c/stats/mats"] = ServerValue.increment(matN);
   if (!early) bump["c/stats/pexDone"] = ServerValue.increment(1);
+  /* 도감 사역마 출정(px): 클라는 쓰지 않는다. 이번 귀환 대사 제목을 서버가 기록. */
+  const pxId = pay.sc && pay.sc.ti ? pexDexId(pay.sc.ti) : "";
+  if (pxId) bump["c/dex/px/" + pxId] = 1;
 
   await root.update(bump);
 
