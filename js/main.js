@@ -192,7 +192,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
   /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선.
      장기·단서는 서버본에 남아 있어도 강제 취소(진행·완료 미수령 포함, 보상 없음).
      알 부화·재고는 0(옛 서버본에 남아 있어도). */
-  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}try{lhNtClear()}catch(e){}try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
    try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
    accSeen=Number(d.ts)||Date.now();accMark(C);accReady=true;
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}
@@ -218,7 +218,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
     알: 부화·재고 전부 0(옛 탭·keepMerge 되살리기 금지). */
  if(rstNewer){C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};
   try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
-  try{lhDefer=null}catch(e){}
+  try{lhDefer=null}catch(e){}try{lhNtClear()}catch(e){}try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
   try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
  else{
   /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
@@ -352,7 +352,7 @@ function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOf
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
 function boot(){natHeal();if(C){try{if(typeof flagsBoot==="function")flagsBoot(C)}catch(e){}if(typeof ntTrim==="function"&&ntTrim())save();const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles();try{if(typeof flandersSideUnlock==="function")flandersSideUnlock()}catch(e){}try{if(typeof flandersConcoursUnlock==="function")flandersConcoursUnlock()}catch(e){}}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
- C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
+ C?hub():(show("create"),rc());try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */
 let verTag=null,verShown=false;
@@ -593,11 +593,11 @@ function tripNtHad(kind,sd){const s=String(sd||"");return!!(s&&tripNtLoad(kind)[
 function tripNtMark(kind,sd){const s=String(sd||"");if(!s)return;const o=tripNtLoad(kind);o[s]=1;tripNtSave(kind,o)}
 async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
- const sd=h.sd;if(tripGot("lhGot",sd)){if(lhNtT){clearTimeout(lhNtT);lhNtT=null}lhUiClear();C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
+ const sd=h.sd;if(tripGot("lhGot",sd)){lhNtClear();C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
  const g=rng(hs32("lh"+sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),mul=done?(ok?1:.5):LH_EARLY,st=L[9]||1;
  const gd=Math.round(L[4]*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L[5]*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L[6]*(L[2]?hrs/L[2]:0)+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
- if(lhNtT){clearTimeout(lhNtT);lhNtT=null}lhUiClear();tripNtMark("lh",sd);C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
+ lhNtClear();tripNtMark("lh",sd);C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz,tag=done?(ok?"성공":"실패"):"철수";
  /* 낙관적: 결과 팝업을 먼저 보여 주고, PATCH 는 뒤에서 여러 번 시도한다. 실패해도 로컬 보상은 되돌리지 않는다. */
@@ -607,23 +607,19 @@ async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;c
  try{if(!await saveNowRetry(4,1500)){toast("보상은 반영했다. 서버 저장을 계속 시도한다.");accSoftSync()}}
  finally{lhBusy=false;hubLH()}}
 function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const now=Date.now(),sm=$("#lhsum");if(sm)sm.textContent=lhOn()?(now>=C.lh.t1?"· 귀환! 보상 받기":"· "+lhOf(C.lh.k)[1]+" "+cdTxt(C.lh.t1-now)+" 남음"):"";
- if(lhOn()){try{lhNtArm()}catch(e){}const h=C.lh,L=lhOf(h.k),done=now>=h.t1,w=elT("div","dq lh-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
+ if(lhOn()){const h=C.lh,L=lhOf(h.k),done=now>=h.t1,w=elT("div","dq lh-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
   f.style.width=Math.min(100,(now-h.t0)/(h.t1-h.t0)*100)+"%";bar.appendChild(f);
   const wait=lhBusy||(lhDefer&&lhDefer.kind==="start");
   cp.append(elT("b","","🗺 "+L[1]+(done?" · 귀환!":" · 토벌 중")),elT("small","",done?"토벌을 마치고 돌아왔다. 보상을 받자.":(wait?"서버에 남기는 중 · ":"")+"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L[3])*100)+"%"),bar);
   const b=elT("button","chip",done?"보상 받기":"철수");b.type="button";b.disabled=!!lhBusy;b.onclick=()=>lhClaim(!done);w.append(cp,b);box.appendChild(w);
-  if(!done){box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."+(lhDefer?" 아직 서버에 남기지 못한 변경이 있어, 연결되면 다시 맞춘다.":"")));lhUiArm()}else lhUiClear();return}
- lhUiClear();
+  if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."+(lhDefer?" 아직 서버에 남기지 못한 변경이 있어, 연결되면 다시 맞춘다.":"")));return}
  if(typeof clueOn==="function"&&clueOn())box.appendChild(elT("p","hint","단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다."));
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]),st=L[9]||1;
   cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
   const b=elT("button","chip",lhBusy?"저장 중...":"출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn())||lhBusy;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
-/* 귀환 알림: t1 시각에 setTimeout 한 번. 30초 폴링으로 알림을 반복하지 않는다. */
-let lhNtT=null,lhUiT=null;
-function lhUiClear(){if(lhUiT){clearTimeout(lhUiT);lhUiT=null}}
-/* 허브가 열려 있을 때만, cdTxt 가 바뀌는 다음 경계에 setTimeout 한 번(알림과 분리). */
-function lhUiArm(){lhUiClear();if(!C||!lhOn()||$("#v-hub").hidden)return;const left=C.lh.t1-Date.now();if(left<=0)return;
- lhUiT=setTimeout(()=>{lhUiT=null;if(C&&lhOn()&&!$("#v-hub").hidden)hubLH()},typeof cdUiDelay==="function"?cdUiDelay(left):Math.min(Math.max(1000,left),60000))}
+/* 귀환 알림: t1 에 setTimeout 한 번(tripNt dedup). UI 남은 시간은 아래 30초 폴링(알림과 분리). */
+let lhNtT=null;
+function lhNtClear(){if(lhNtT){clearTimeout(lhNtT);lhNtT=null}}
 async function lhNtFire(){if(!C||!lhOn()||!UID||lhNtBusy)return;const h=C.lh,sd=h.sd,L=lhOf(h.k);if(!L)return;
  if(Date.now()<h.t1){lhNtArm();return}
  if(typeof tripNtHad==="function"&&tripNtHad("lh",sd)){h.nt=1;return}
@@ -631,10 +627,12 @@ async function lhNtFire(){if(!C||!lhOn()||!UID||lhNtBusy)return;const h=C.lh,sd=
   const ok=await saveNowOk();if(!ok){lhDefer={kind:"nt",nm:L[1],sd};accSoftSync();return}
   lhDefer=null;note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.","","lh:ret:"+sd);toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
  finally{lhNtBusy=false;if(!$("#v-hub").hidden)hubLH()}}
-function lhNtArm(){if(lhNtT){clearTimeout(lhNtT);lhNtT=null}if(!C||!lhOn()||!UID)return;const h=C.lh;
+function lhNtArm(){lhNtClear();if(!C||!lhOn()||!UID)return;const h=C.lh;
  if(typeof tripNtHad==="function"&&tripNtHad("lh",h.sd)){h.nt=1;return}
  if(Date.now()>=h.t1){lhNtFire();return}
  lhNtT=setTimeout(()=>{lhNtT=null;lhNtFire()},Math.min(Math.max(0,h.t1-Date.now())+250,86400000))}
+/* 허브에 있을 때만 남은 시간 UI 갱신. 알림·저장은 하지 않는다. */
+setInterval(()=>{if(C&&lhOn()&&!$("#v-hub").hidden)hubLH()},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){accSoftSync();try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}try{if(!$("#v-hub").hidden)hubLH()}catch(e){}try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}}});
 setInterval(()=>{if(!document.hidden&&(lhOn()||lhDefer||savePending))accSoftSync()},60000);
 

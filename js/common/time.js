@@ -11,5 +11,3 @@ const agoTxt=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"방금":m<
 
 // 남은 밀리초를 "2시간 3분" 또는 "4분 5초" 또는 "6초" 로 만든다. 1시간은 3600초, 1분은 60초.
 const cdTxt=ms=>{ms=Number(ms);if(!isFinite(ms))return "";const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+"시간 "+m+"분":m?m+"분 "+s+"초":Math.max(0,s)+"초"};
-/* cdTxt 표시가 바뀌는 다음 시각까지 대기(ms). 1시간↑: 분 경계, 미만: 초 경계. 폴링 대신 setTimeout arm 용. */
-const cdUiDelay=ms=>{ms=Math.max(0,Number(ms)||0);if(ms<=0)return 0;const t=Math.ceil(ms/1000);if(t>=3600){const n=Math.floor((t-1)/60)*60;return Math.min(Math.max(50,ms-n*1000)+50,86400000)}return Math.min(Math.max(50,ms-(t-1)*1000)+50,86400000)};

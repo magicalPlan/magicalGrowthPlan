@@ -228,6 +228,8 @@ async function rosterForceRun(btn,msg){if(!ADM[UID]||!XON()||!DB)return;
  btn.disabled=false}
 /* 회귀 본선은 서버 accountRst(계정당 되돌림+명부). 클라 rstWrite 는 쓰지 않는다. */
 function rstClearTripUI(){try{lhDefer=null}catch(e){}
+ try{if(typeof lhNtClear==="function")lhNtClear()}catch(e){}
+ try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
  try{if(typeof hubLH==="function")hubLH()}catch(e){}
  try{if(typeof clueDraw==="function")clueDraw()}catch(e){}
  try{if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets()}catch(e){}
