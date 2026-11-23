@@ -376,7 +376,8 @@ function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc
    · 왜: 결과 기록(xr)은 endAt 보다 먼저 오고, 서버는 done 직후 이미 지급한다. serverPay 없이 settle 하면
      연출 중 동기화로 한 번, 종료 settle 로 또 한 번 절망이 오른다.
    · pay: rooms/xr…/pay/{uid} 영수증. 있으면 문구에 서버가 준 양을 그대로 적는다(클라 재계산 금지).
-   · accSyncIfNewer: 서버 ts 가 앞서면 저장 전에 맞춘다(알림함·수치). */
+   · accSyncIfNewer: 서버 xpay(ts↑) 뒤 수치·알림을 맞춘다. 절망은 서버본 + 이 탭 미저장 회복분(dDz)을
+     합친다(js/main.js). 로컬만 내려간 회복이 서버 옛 dz 로 되살아나지 않게 한다. */
 function xGrant(x){const doc=XR&&XR.id===x.id?XR.res:null;if(!doc||!doc.done||XR.fin||xNow()<Number(doc.endAt))return;
  const pay=doc.pay&&UID&&doc.pay[UID]?doc.pay[UID]:null;
  let h="";try{h=settle(doc.r,{serverPay:true,pay})}catch(e){h="<p>결과를 정리하는 중에 문제가 생겼다.</p>"}XR.fin=h||"<p>이미 결과를 받은 출정이다.</p>";const ss=x.s,ii=x.i;
