@@ -367,8 +367,12 @@ function watchXr(s,i){const key=s+"_"+i;if(xrKey===key&&(unXr||xrPoll))return;st
    if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=DB.doc(path).onSnapshot(onDoc,()=>{},POLL_FAST,X_XR_KEEP);
    if(xrRetryT)clearTimeout(xrRetryT);xrRetryT=setTimeout(()=>{if(xrKey!==key||!C||!C.mj||C.mj.s!==s||C.mj.i!==i)return;if(xrPoll){try{xrPoll()}catch(e){}}xrPoll=null;armLive()},X_XR_CD)},0,X_XR_KEEP)};
  armLive()}
+/* 출발 토스트: mj.st 만 보면 sync·재구독으로 st 가 빠질 때 같은 출정이 또 울린다. 세션 칸으로 id 당 1회. */
+const xStartTold={};
+function xDepartToast(x){if(!x||!x.id||xStartTold[x.id])return false;xStartTold[x.id]=1;xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.");return true}
 function xApplyDoc(x,doc){if(!XR||XR.id!==x.id)XR={id:x.id,x,pl:null,picks:[],pc:0,fin:"",drawn:-1};XR.pl=doc.r.pl||{};XR.picks=xNormPicks(doc.picks);XR.pc=typeof doc.pc==="number"?doc.pc:XR.picks.filter(v=>v!=null).length;XR.res=doc;const j=C&&C.mj;
- if(j&&j.id===x.id&&!j.st){j.st=1;save();xSound("start");toast("⚑ "+x.nm+" 출정 출발! 파티와 함께 마수를 향해 나아간다.")}
+ if(j&&j.id===x.id&&!j.st){j.st=1;save();xDepartToast(x)}
+ else if(j&&j.id===x.id&&j.st)xStartTold[x.id]=1;
  xGrant(x)}
 /* 매지컬 마치 결과 반영(방어).
    · 권한: 골드·경험·절망·재료·소모·펫·보상 알림(c/nt)은 Functions 만(afterExpeditionDone → grantMarchCore → applyMarchPay).

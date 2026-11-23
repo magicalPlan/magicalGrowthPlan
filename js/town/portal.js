@@ -23,11 +23,14 @@ function pState(x,d){d=d||{};const j=d.j||{},hh=d.h||{},now=pNow();
 async function pFetch(x){try{const s=await DB.doc("portal/"+x.id).get();pData[x.id]=(s.exists&&s.data())||{};return pData[x.id]}catch(e){return null}}
 // 참가한 포탈의 결과 보상(한 번만)
 function pClaim(x,st){if(!C||!C.pj||!C.pj[x.id]||(C.pc&&C.pc[x.id])||pNow()<x.G)return;C.pc=keepIds(C.pc,x.id);titleState();
- if(st.win){C.gd=(C.gd||0)+50;C.stats.portalWins=(C.stats.portalWins||0)+1;gain(30,5);guardAdd(30);note("portal",x.nm+" 토벌 성공! "+st.joined.length+"명이 함께했다. 골드 50, 마을 점수 30")}
- else{C.gd=(C.gd||0)+10;gain(10,8);guardAdd(5);note("portal",x.nm+"에 정원이 모이지 않아 주민 "+st.W+"명이 다쳤다. 치유를 도와주자. (골드 10, 마을 점수 5)")}
+ if(st.win){C.gd=(C.gd||0)+50;C.stats.portalWins=(C.stats.portalWins||0)+1;gain(30,5);guardAdd(30);note("portal",x.nm+" 토벌 성공! "+st.joined.length+"명이 함께했다. 골드 50, 마을 점수 30","","portal:win:"+x.id)}
+ else{C.gd=(C.gd||0)+10;gain(10,8);guardAdd(5);note("portal",x.nm+"에 정원이 모이지 않아 주민 "+st.W+"명이 다쳤다. 치유를 도와주자. (골드 10, 마을 점수 5)","","portal:fail:"+x.id)}
  save();checkTitles()}
 function pBtn(){const b=$("#b-portal");if(!b||!C)return;const now=pNow(),list=pCur(),g=list.find(x=>now<x.G),hl=list.find(x=>{if(!pSeen[x.id])return false;const st=pState(x,pData[x.id]);return !st.gather&&st.left>0});b.textContent=g?"마수 포탈 (열림! "+xFmt(g.G-now)+")":hl?"마수 포탈 (치유 필요)":"마수 포탈"}
-function pNote(){if(!C||!XON())return;const now=pNow();pCur().forEach(x=>{if(now>=x.G||(C.pn&&C.pn[x.id]))return;C.pn=keepIds(C.pn,x.id);save();const t="☄ "+x.nm+"이(가) 열렸다! "+xHM(x.G)+"까지 "+x.need+"명이 모여야 한다.";note("portal",t);toast(t,portalView);ding()});pBtn()}
+/* 열림 알림: C.pn + note id 로 한 번만. pTick·단계 전환·포탈 화면이 겹쳐도 토스트·알림함 중복 금지. */
+function pNote(){if(!C||!XON())return;const now=pNow();pCur().forEach(x=>{if(now>=x.G||(C.pn&&C.pn[x.id]))return;C.pn=keepIds(C.pn,x.id);
+ const t="☄ "+x.nm+"이(가) 열렸다! "+xHM(x.G)+"까지 "+x.need+"명이 모여야 한다.",ok=typeof note==="function"&&note("portal",t,"","portal:open:"+x.id);
+ if(ok){toast(t,portalView);ding()}else if(typeof save==="function")save()});pBtn()}
 let pWatch={},pWatchKey="",pWatchGen=0,pWarm={},pSeen={},pMiss={},pAct="",pJoinPend={},pRefreshing=false,pPhHydrated=false;
 const P_PH_SS="mgr_pph";
 /* C.ph 만 sessionStorage 에 바로 둔다. 전체 save 보다 가볍고, 새로고침 직후에도 치유 타이머를 이어 갈 수 있다. */

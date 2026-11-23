@@ -20,11 +20,12 @@ async function disAct(){const now=Date.now(),x=disInfo(disSlot(now)),m=$("#hm");
  DRP[x.id]=Math.max(DRP[x.id]||0,0)+add;toast(x.ic+" "+VL[x.v].n+" "+x.nm+" 대응! 진압 +"+add+(add>1?" ("+x.el+" 속성 보너스)":"")+" · 골드 +"+DIS_HIT.g);if(typeof tallyDr==="function")tallyDr(x.id,add);if(typeof pubScore==="function")pubScore();disPaint()}
 // 진압되면 기여한 사람에게 보상을 주고 알린다(한 번만).
 function disCheck(){const x=disInfo(disSlot(Date.now()));if(!x||!C||!disDone(x))return;if(C.drw===x.id)return;C.drw=x.id;
- if(C.dr&&C.dr.id===x.id&&C.dr.pts>0){giveRw(DIS_WIN);note("disaster",VL[x.v].n+"의 "+x.nm+"이(가) 진압되었다! 함께 막아 낸 보상: "+rwTxt(DIS_WIN));toast(x.ic+" "+x.nm+" 진압! 보상 "+rwTxt(DIS_WIN))}
- else if(x.v===C.v)note("disaster",VL[x.v].n+"의 "+x.nm+"이(가) 진압되었다. 마을이 다시 평온해졌다.");save()}
-// 새 재해가 닥치면 한 번 알린다.
-function disAlert(){const now=Date.now(),x=disInfo(disSlot(now));if(!x||!C||now<x.T0||now>=x.T1||C.drn===x.id||disDone(x))return;C.drn=x.id;save();
- const t=x.ic+" "+VL[x.v].n+"에 "+x.nm+"이(가) 닥쳤다! "+(x.v===C.v?"우리 마을이다. ":"")+"효과: "+x.ef;note("disaster",t);toast(t);if(x.v===C.v)ding()}
+ if(C.dr&&C.dr.id===x.id&&C.dr.pts>0){giveRw(DIS_WIN);const ok=note("disaster",VL[x.v].n+"의 "+x.nm+"이(가) 진압되었다! 함께 막아 낸 보상: "+rwTxt(DIS_WIN),"","disaster:win:"+x.id);if(ok)toast(x.ic+" "+x.nm+" 진압! 보상 "+rwTxt(DIS_WIN))}
+ else if(x.v===C.v)note("disaster",VL[x.v].n+"의 "+x.nm+"이(가) 진압되었다. 마을이 다시 평온해졌다.","","disaster:done:"+x.id);save()}
+// 새 재해가 닥치면 한 번 알린다. hub·disPaint 가 겹쳐도 note id 로 한 번만.
+function disAlert(){const now=Date.now(),x=disInfo(disSlot(now));if(!x||!C||now<x.T0||now>=x.T1||C.drn===x.id||disDone(x))return;C.drn=x.id;
+ const t=x.ic+" "+VL[x.v].n+"에 "+x.nm+"이(가) 닥쳤다! "+(x.v===C.v?"우리 마을이다. ":"")+"효과: "+x.ef;
+ const ok=typeof note==="function"&&note("disaster",t,"","disaster:open:"+x.id);if(ok){toast(t);if(x.v===C.v)ding()}else if(typeof save==="function")save()}
 function hubDis(){const box=$("#hdi");if(!box||!C)return;box.innerHTML="";const now=Date.now(),x=disInfo(disSlot(now));
  if(!x||now<x.T0||now>=x.T1){const nx=(disSlot(now)+1)*6-9,d=new Date(nx*3600000);box.appendChild(elT("p","hint","지금은 평온하다. 다음 날씨는 "+String((d.getUTCHours()+9)%24).padStart(2,"0")+"시에 바뀐다."));return}
  const done=disDone(x),pts=Math.min(DIS_GOAL,disPts(x)),w=elT("div","dq dis"+(done?" got":x.v===C.v?" mine":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
