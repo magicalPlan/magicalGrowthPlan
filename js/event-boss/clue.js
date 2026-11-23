@@ -4,11 +4,12 @@
 const clueOf=id=>(CLUE||[]).find(x=>x.id===id);
 const clueOn=()=>!!(C&&C.clue&&clueOf(C.clue.k));
 function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==="function")setTimeout(ordMarks,0);if(C.clue&&!clueOf(C.clue.k))C.clue=null;box.innerHTML="";const now=Date.now();
- if(clueOn()){const h=C.clue,L=clueOf(h.k),done=now>=h.t1,w=elT("div","dq clue-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
+ if(clueOn()){try{clueNtArm()}catch(e){}const h=C.clue,L=clueOf(h.k),done=now>=h.t1,w=elT("div","dq clue-on"+(done?" got":"")),cp=elT("div","dq-copy"),bar=elT("div","bar"),f=elT("i");
   f.style.width=Math.min(100,(now-h.t0)/Math.max(1,h.t1-h.t0)*100)+"%";bar.appendChild(f);
   cp.append(elT("b","","🔍 "+L.nm+(done?" · 귀환!":" · 탐색 중")),elT("small","",done?"탐색을 마치고 돌아왔다. 보상을 받자.":"남은 시간 "+cdTxt(h.t1-now)+" · 성공 확률 약 "+Math.round(lhChance(h.pw,L.pw||1)*100)+"%"),bar);
   const b=elT("button","chip",done?"보상 받기":"돌아가기");b.type="button";b.onclick=()=>clueClaim(!done);w.append(cp,b);box.appendChild(w);
-  if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 장기 토벌과 정기 출정에는 참가할 수 없다."));return}
+  if(!done){box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 장기 토벌과 정기 출정에는 참가할 수 없다."));clueUiArm()}else clueUiClear();return}
+ clueUiClear();
  if(typeof lhOn==="function"&&lhOn())box.appendChild(elT("p","hint","장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다."));
  else if(C.mj&&Date.now()<C.mj.T0)box.appendChild(elT("p","hint","정기 출정에 참가 신청한 동안에는 떠날 수 없다."));
  // 탐색 고르기: 카드 격자. 위에 이름과 시간, 가운데 설명, 아래에 성공 확률과 보상을 작은 칩으로 보여 준다.
@@ -23,16 +24,16 @@ function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toas
  if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
  if(!confirm(L.nm+"("+L.hr+"시간)을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw||1)*100)+"%"))return;
  const t0=Date.now();C.clue={k:id,t0,t1:t0+L.hr*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();
- note("quest",L.nm+"을(를) 떠났다. "+L.hr+"시간 뒤에 돌아온다.");toast("🔍 "+L.nm+" 출발! "+L.hr+"시간 뒤에 돌아온다.");clueDraw()}
+ note("quest",L.nm+"을(를) 떠났다. "+L.hr+"시간 뒤에 돌아온다.","","clue:go:"+C.clue.sd);toast("🔍 "+L.nm+" 출발! "+L.hr+"시간 뒤에 돌아온다.");clueNtArm();clueDraw()}
 function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.hr):1;
  for(let i=0;i<n&&log.length;i++){const e=log[Math.floor(g()*log.length)];if(!evs.includes(e))evs.push(e)}
  const found=[];if(done)(CLUE_EXTRA||[]).forEach(x=>{if(L.hr>=x[4]&&g()<x[3])found.push(x)});return{evs,found}}
 async function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 돌아갈까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
- if(typeof tripGot==="function"&&tripGot("clueGot",h.sd)){C.clue=null;clueDraw();toast("이미 받은 탐색이다.");if(typeof saveNowRetry==="function")void saveNowRetry(4,1500);return}
- const g=rng(hs32("clue"+h.sd)),hrs=done?L.hr:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L.pw||1),mul=done?(ok?1:.5):CLUE_EARLY,st=L.st||1;
+ const sd=h.sd;if(typeof tripGot==="function"&&tripGot("clueGot",sd)){if(clueNtT){clearTimeout(clueNtT);clueNtT=null}clueUiClear();C.clue=null;clueDraw();toast("이미 받은 탐색이다.");if(typeof saveNowRetry==="function")void saveNowRetry(4,1500);return}
+ const g=rng(hs32("clue"+sd)),hrs=done?L.hr:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L.pw||1),mul=done?(ok?1:.5):CLUE_EARLY,st=L.st||1;
  const gd=Math.round(L.g*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L.ex*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L.dz*(L.hr?hrs/L.hr:0)+(done&&!ok?CLUE_FAIL_DZ:0)),mm=done&&ok?L.m+(g()<.3?1:0):0,pick=cluePick(g,L,done);
- C.clue=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done)C.stats.clueDone=(C.stats.clueDone||0)+1;
+ if(clueNtT){clearTimeout(clueNtT);clueNtT=null}clueUiClear();if(typeof tripNtMark==="function")tripNtMark("clue",sd);C.clue=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done)C.stats.clueDone=(C.stats.clueDone||0)+1;
  if(pick.found.length)C.stats.clueFound=(C.stats.clueFound||0)+pick.found.length;
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));
  if(done&&ok){const pe=petDrop("lh");if(pe)pick.evs.push(pe)}
@@ -41,8 +42,24 @@ async function clueClaim(early){const h=C.clue,L=h&&clueOf(h.k);if(!L)return;con
  const head=!done?"중간에 돌아왔다.":ok?"탐색 성공!":"단서는 놓쳤지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz;
  const lines=pick.evs.map(e=>"· "+e).concat(pick.found.map(x=>"· 추가 조사 — "+x[1]+"\n  "+x[2]));
  /* 낙관적: 결과 팝업 먼저, PATCH 는 뒤에서 재시도. 실패해도 로컬 보상은 되돌리지 않는다. */
- note("quest",L.nm+": "+head+" ("+rw+")");checkTitles();
+ note("quest",L.nm+": "+head+" ("+rw+")","","clue:claim:"+sd);checkTitles();
  alertBox("🔍 "+L.nm+" · "+(done?(ok?"성공":"실패"):"귀환"),head+"\n\n"+lines.join("\n")+"\n\n"+rw);clueDraw();
  if(typeof saveNowRetry==="function"){if(!await saveNowRetry(4,1500)){toast("보상은 반영했다. 서버 저장을 계속 시도한다.");try{if(typeof accSoftSync==="function")accSoftSync()}catch(e){}}}
  else saveNow()}
-setInterval(()=>{if(!C||!clueOn())return;const h=C.clue;if(Date.now()>=h.t1&&!h.nt){h.nt=1;saveNow();const L=clueOf(h.k);note("quest",L.nm+"에서 돌아왔다! 장기 의뢰에서 보상을 받자.");toast("🔍 "+L.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}if($("#v-ord")&&!$("#v-ord").hidden)clueDraw()},30000);
+/* 귀환 알림: t1 에 setTimeout 한 번(lh 와 동일). 30초마다 알림을 보내지 않는다.
+   sync 로 h.nt 가 사라져도 tripNt(localStorage) 로 같은 sd 는 다시 울리지 않는다. */
+let clueNtT=null,clueUiT=null,clueNtBusy=false;
+function clueUiClear(){if(clueUiT){clearTimeout(clueUiT);clueUiT=null}}
+/* 장기 의뢰 화면이 열려 있을 때만, cdTxt 가 바뀌는 다음 경계에 setTimeout 한 번. */
+function clueUiArm(){clueUiClear();if(!C||!clueOn()||!$("#v-ord")||$("#v-ord").hidden)return;const left=C.clue.t1-Date.now();if(left<=0)return;
+ clueUiT=setTimeout(()=>{clueUiT=null;if(C&&clueOn()&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()},typeof cdUiDelay==="function"?cdUiDelay(left):Math.min(Math.max(1000,left),60000))}
+function clueNtFire(){if(!C||!clueOn()||!UID||clueNtBusy)return;const h=C.clue,sd=h.sd,L=clueOf(h.k);if(!L)return;
+ if(Date.now()<h.t1){clueNtArm();return}
+ if(typeof tripNtHad==="function"&&tripNtHad("clue",sd)){h.nt=1;return}
+ clueNtBusy=true;try{if(typeof tripNtMark==="function")tripNtMark("clue",sd);h.nt=1;saveNow();
+  note("quest",L.nm+"에서 돌아왔다! 장기 의뢰에서 보상을 받자.","","clue:ret:"+sd);toast("🔍 "+L.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
+ finally{clueNtBusy=false;if($("#v-ord")&&!$("#v-ord").hidden)clueDraw()}}
+function clueNtArm(){if(clueNtT){clearTimeout(clueNtT);clueNtT=null}if(!C||!clueOn()||!UID)return;const h=C.clue;
+ if(typeof tripNtHad==="function"&&tripNtHad("clue",h.sd)){h.nt=1;return}
+ if(Date.now()>=h.t1){clueNtFire();return}
+ clueNtT=setTimeout(()=>{clueNtT=null;clueNtFire()},Math.min(Math.max(0,h.t1-Date.now())+250,86400000))}
