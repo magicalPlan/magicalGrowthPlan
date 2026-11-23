@@ -206,17 +206,21 @@ function drawPeers(){const l=$("#pl2");if(!l||!C)return;const fr=C.fr||{};
 setInterval(()=>{if(C&&!$("#v-chat").hidden&&ct==="d"&&$("#cpick")&&!$("#cpick").hidden)drawPeers()},60000);
 /* 1:1 본문 세션 캐시. 같은 상대를 다시 열면 메모리로 바로 그리고, 서버는 뒤에서 갱신한다(단체 chatCache 와 같음).
    방 키(k)가 같은 말만 합친다. 다른 방의 화면 버퍼를 새 방에 섞지 않는다. */
-const DM_PAGE=30;let dmOlderBusy=false,dmOlderDone=false,dmCache={};
+const DM_PAGE=30,DM_DEDUP_MS=60000;let dmOlderBusy=false,dmOlderDone=false,dmCache={};
 const dmKey=(a,b)=>[a,b].sort().join("_");
 const dmOfKey=(m,k)=>!(!m||(m.k&&m.k!==k));
+/* 같은 말인지. 보낸 직후 화면용(_id)과 서버 말이 시계 차이로 갈라져도 한 줄로 본다(기기 시계 30~40초 어긋남 대비). */
+const dmSame=(a,b)=>!!(a&&b&&((a._id&&b._id&&a._id===b._id)||(a.u===b.u&&String(a.x||"")===String(b.x||"")&&Math.abs((Number(a.ts)||0)-(Number(b.ts)||0))<DM_DEDUP_MS)));
+function dmDedupe(ms){const out=[];(ms||[]).forEach(m=>{if(!m)return;const i=out.findIndex(s=>dmSame(s,m));if(i<0)out.push(m);else if(m._id&&!out[i]._id)out[i]=m;else if(m._id&&out[i]._id&&(Number(m.ts)||0)>=(Number(out[i].ts)||0))out[i]=m});return out}
 function dmCachePut(k,ms){if(!k||!ms)return;dmCache[k]={ms:ms.filter(m=>dmOfKey(m,k)).slice(),at:Date.now()}}
 function dmCacheTake(k){const hit=dmCache[k];if(!hit||!hit.ms||!hit.ms.length)return null;const ms=hit.ms.filter(m=>dmOfKey(m,k));if(!ms.length)return null;if(ms.length!==hit.ms.length)dmCachePut(k,ms);return ms}
 function dmMsgs(sn){return(sn.docs||[]).map(d=>{const m=d.data();return m&&!m.bt?Object.assign({_id:d.id},m):null}).filter(Boolean).sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0)||String(a._id||"").localeCompare(String(b._id||"")))}
-function dmPaint(ms,k,pinTop){const el=$("#dl"),same=!!(el&&el.dataset.th===k),mine=(same?el._ms||[]:[]).filter(m=>m&&m.u===UID&&dmOfKey(m,k)&&!ms.some(s=>s&&s.u===m.u&&s.x===m.x&&Math.abs((Number(s.ts)||0)-(Number(m.ts)||0))<15000));paint(el,ms.concat(mine),k,pinTop);if(k&&el&&el._ms)dmCachePut(k,el._ms)}
+function dmPaint(ms,k,pinTop){const el=$("#dl"),same=!!(el&&el.dataset.th===k),mine=(same?el._ms||[]:[]).filter(m=>m&&m.u===UID&&dmOfKey(m,k)&&!ms.some(s=>dmSame(s,m)));paint(el,dmDedupe(ms.concat(mine)),k,pinTop);if(k&&el&&el._ms)dmCachePut(k,el._ms)}
 function dmLoad(id,quiet){if(!DB)return;const k=dmKey(UID,id),el=$("#dl"),have=quiet&&el&&el.dataset.th===k?(el._ms||[]).length:0,want=quiet?Math.max(DM_PAGE,have):DM_PAGE,gen=quiet?dmOpenGen:++dmOpenGen;
  if(!quiet){dmOlderBusy=false;dmOlderDone=false;el._ms=[];el.dataset.th="";el.innerHTML="<div class='cm-empty'><p>대화를 불러오는 중...</p></div>"}
  return apiDmThread(k,want).then(sn=>{if(gen!==dmOpenGen||peer!==id||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;let ms=dmMsgs(sn);
-  if(quiet&&el.dataset.th===k&&(el._ms||[]).length){const cut=ms.length?Number(ms[0].ts)||0:0;const older=(el._ms||[]).filter(m=>m&&dmOfKey(m,k)&&(Number(m.ts)||0)<cut);ms=older.concat(ms)}
+  /* quiet 병합: 화면의 예전 말(ts<cut)을 붙일 때, 방금 보낸 낙관적 말이 cut 보다 작으면 서버 말과 겹친다. dmDedupe 로 한 줄만 남긴다. */
+  if(quiet&&el.dataset.th===k&&(el._ms||[]).length){const cut=ms.length?Number(ms[0].ts)||0:0;const older=(el._ms||[]).filter(m=>m&&dmOfKey(m,k)&&(Number(m.ts)||0)<cut);ms=dmDedupe(older.concat(ms))}
   if(!quiet)dmOlderDone=ms.length<DM_PAGE;else if(ms.length<DM_PAGE)dmOlderDone=true;dmPaint(ms,k)},e=>{if(!quiet&&gen===dmOpenGen)cmsg("대화를 불러오지 못했다. (오류 "+String(e&&e.message||e).replace(/\D/g,"").slice(0,3)+")")})}
 function dmLoadOlder(){if(!DB||!peer||dmOlderBusy||dmOlderDone||$("#v-chat").hidden||ct!=="d"||$("#dt").hidden)return;const el=$("#dl"),have=(el._ms||[]).length;if(have<1||el.dataset.th!==dmKey(UID,peer))return;
  const id=peer,k=dmKey(UID,id),gen=dmOpenGen;dmOlderBusy=true;
@@ -256,7 +260,7 @@ function send(){const box=$("#ci"),x=box.value.trim();if(!x)return;if(Date.now()
  lastSend=Date.now();box.value="";$("#cm2").textContent="";clockSync();
  /* 단체 g_…, 마을 c_{마을}_…. 게시판(bp_/bx_/…)과 키 구간을 나눠 목록 쿼리가 섞이지 않게 한다. 1:1(dm)은 접두 없음. */
  const id=(ct==="d"?"":ct==="v"?"c_"+C.v+"_":"g_")+srvNow().toString(36)+Math.random().toString(36).slice(2,6),d={u:UID,n:C.n,x:x,ts:{".sv":"timestamp"}};if(ct==="v")d.vc=C.v;if(tiName(C.ti))d.t=tiName(C.ti);const to=ct==="d"?peer:null;if(to)d.k=[UID,to].sort().join("_");
- apiPostMessage(ct==="d"?"dm":"chat",id,d).then(()=>{const fields={};if(to){const tk=dmKey(UID,to),msg={u:UID,n:C.n,x,ts:Date.now(),k:tk};if(d.t)msg.t=d.t;dmTouch(to,msg.ts);if(C.dml&&C.dml[to])fields["dml/"+to]=C.dml[to];apiDmBell(to,x);if(peer===to&&$("#dt")&&!$("#dt").hidden){const el=$("#dl");paint(el,(el.dataset.th===tk?el._ms||[]:[]).concat([msg]),tk);if(el&&el._ms)dmCachePut(tk,el._ms)}}titleState();fields["stats/chats"]=(C.stats.chats||0)+1;apiAccountWrite(fields).catch(()=>{})}).catch(e=>{if(!box.value.trim())box.value=x;const c=String(e&&e.message||e);cmsg(c==="401"||c==="403"?"메시지를 보내지 못했다. 서버 규칙에서 쓰기가 막혀 있다. (오류 "+c+")":"메시지를 보내지 못했다. 인터넷 연결을 확인하고 다시 보내 보자. (오류 "+c+")")})}
+ apiPostMessage(ct==="d"?"dm":"chat",id,d).then(()=>{const fields={};if(to){const tk=dmKey(UID,to),msg={_id:id,u:UID,n:C.n,x,ts:srvNow(),k:tk};if(d.t)msg.t=d.t;dmTouch(to,msg.ts);if(C.dml&&C.dml[to])fields["dml/"+to]=C.dml[to];apiDmBell(to,x);if(peer===to&&$("#dt")&&!$("#dt").hidden){const el=$("#dl"),base=el.dataset.th===tk?el._ms||[]:[];paint(el,dmDedupe(base.concat([msg])),tk);if(el&&el._ms)dmCachePut(tk,el._ms)}}titleState();fields["stats/chats"]=(C.stats.chats||0)+1;apiAccountWrite(fields).catch(()=>{})}).catch(e=>{if(!box.value.trim())box.value=x;const c=String(e&&e.message||e);cmsg(c==="401"||c==="403"?"메시지를 보내지 못했다. 서버 규칙에서 쓰기가 막혀 있다. (오류 "+c+")":"메시지를 보내지 못했다. 인터넷 연결을 확인하고 다시 보내 보자. (오류 "+c+")")})}
 // 목록으로 돌아가면 상대와 받은 시각만 다시 한 번 받는다. 본문은 받지 않는다.
 $("#pchg").onclick=()=>{dmMenu(false);dmOpenGen++;peer=null;$("#dt").hidden=true;$("#cpick").hidden=false;sync();dmList()};
 // 엔터와 보내기 버튼 모두 폼 제출로 처리한다. 휴대폰 한글 키보드에서도 엔터가 확실히 먹는다.
