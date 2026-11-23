@@ -192,7 +192,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
   /* 회귀 서버본으로 통째 교체. keepPwBonus 금지 — 옛 C.b 가 더 커도 회귀 우선.
      장기·단서는 서버본에 남아 있어도 강제 취소(진행·완료 미수령 포함, 보상 없음).
      알 부화·재고는 0(옛 서버본에 남아 있어도). */
-  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}
+  if(ch&&typeof ch==="object"&&(Number(ch.rsv)||0)>=due){C=JSON.parse(JSON.stringify(ch));C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};try{lhDefer=null}catch(e){}try{lhNtClear()}catch(e){}try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
    try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
    accSeen=Number(d.ts)||Date.now();accMark(C);accReady=true;
    try{keep("mgr_rr_"+AUTH.uid,String(due))}catch(e){}
@@ -200,7 +200,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,board:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드: 더 새 서버본 + (이 탭 C − accBase) 미저장 증감. 옛 절대값 max 로 덮지 않는다.
    sid 가 ACC_SID_SERVER(예: 마치 xpay)이면 같은 기기에서 받은 서버 지급으로 보고 토스트만 생략. */
@@ -218,7 +218,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
     알: 부화·재고 전부 0(옛 탭·keepMerge 되살리기 금지). */
  if(rstNewer){C.lh=null;C.clue=null;C.lhGot={};C.clueGot={};
   try{if(typeof eggRstAbort==="function")eggRstAbort(C);else{C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}}catch(e){C.egg=null;C.eggs=0;C.eggsEv=0;C.eggsEv2=0}
-  try{lhDefer=null}catch(e){}
+  try{lhDefer=null}catch(e){}try{lhNtClear()}catch(e){}try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
   try{clearPend()}catch(e){}try{whoLastSent=null;if(typeof whoPut==="function")whoPut(true)}catch(e){}}
  else{
   /* lhGot/clueGot 는 정산 판별에 쓰므로 먼저 합친다(로컬에만 있는 시드 유지). */
@@ -245,6 +245,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
  const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
+ try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
@@ -351,7 +352,7 @@ function natHeal(){if(!C)return;const now=Date.now();if(!C.dzT||C.fall||C.healOf
  const h=$("#hcnext");if(h)h.textContent=healTxt()}
 setInterval(natHeal,15000);
 function boot(){natHeal();if(C){try{if(typeof flagsBoot==="function")flagsBoot(C)}catch(e){}if(typeof ntTrim==="function"&&ntTrim())save();const moved=typeof xpMigrate==="function"&&xpMigrate();titleState();const day=new Date().toISOString().slice(0,10);if(C.stats.lastDay!==day){C.stats.loginDays=(C.stats.loginDays||1)+1;C.stats.lastDay=day;save()}else if(moved)save();checkTitles();try{if(typeof flandersSideUnlock==="function")flandersSideUnlock()}catch(e){}try{if(typeof flandersConcoursUnlock==="function")flandersConcoursUnlock()}catch(e){}}try{if(XON()&&typeof loadDoom==="function")loadDoom();else if(typeof drawDoom==="function")drawDoom()}catch(e){}let rf=0;if(C&&C.inv){const n=Number(C.inv[0]||0);if(n>0){rf=n;C.gd=(C.gd||0)+30*n;C.inv={};save()}}
- C?hub():(show("create"),rc());if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
+ C?hub():(show("create"),rc());try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}if(rf){const h=$("#hm");h.style.color="var(--mu)";h.textContent="상점에서 회복약이 사라져서 가지고 있던 "+rf+"개를 "+30*rf+"골드로 돌려받았다."}}
 /* 새 버전 알림: 10분마다 게임 파일의 '바뀐 시각' 표시만(내용 없이) 확인해서, 운영자가 새 파일을 올렸으면 새로고침하라고 알려 준다.
    예전 파일을 켜 둔 채로 있으면 고친 오류가 그 사람에게는 그대로 남기 때문이다. */
 let verTag=null,verShown=false;
@@ -560,9 +561,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")imgClose()});
 const lhOf=k=>LH.find(x=>x[0]===k),lhOn=()=>!!(C&&C.lh&&lhOf(C.lh.k));
 let lhBusy=false,lhNtBusy=false,lhDefer=null,accSoftBusy=false;
 function lhFlushDefer(){const d=lhDefer;if(!d)return;lhDefer=null;
- if(d.kind==="start"){note("quest",d.nm+"을(를) 떠났다. "+d.hr+"시간 뒤에 돌아온다.");toast("🗺 "+d.nm+" 출발! "+d.hr+"시간 뒤에 돌아온다.")}
- else if(d.kind==="claim"){note("quest",d.nm+": "+d.head+" ("+d.rw+")");checkTitles();alertBox("🗺 "+d.nm+" · "+d.tag,d.head+"\n\n"+(d.evs||[]).map(e=>"· "+e).join("\n")+"\n\n"+d.rw);if(typeof readProg==="function")readProg()}
- else if(d.kind==="nt"){note("quest",d.nm+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+d.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
+ if(d.kind==="start"){note("quest",d.nm+"을(를) 떠났다. "+d.hr+"시간 뒤에 돌아온다.","","lh:go:"+(d.sd||""));toast("🗺 "+d.nm+" 출발! "+d.hr+"시간 뒤에 돌아온다.");lhNtArm()}
+ else if(d.kind==="claim"){note("quest",d.nm+": "+d.head+" ("+d.rw+")","","lh:claim:"+(d.sd||""));checkTitles();alertBox("🗺 "+d.nm+" · "+d.tag,d.head+"\n\n"+(d.evs||[]).map(e=>"· "+e).join("\n")+"\n\n"+d.rw);if(typeof readProg==="function")readProg()}
+ else if(d.kind==="nt"){const sd=d.sd||(C&&C.lh&&C.lh.sd)||"";if(sd)tripNtMark("lh",sd);note("quest",d.nm+"에서 돌아왔다! 마을에서 보상을 받자.","","lh:ret:"+sd);toast("🗺 "+d.nm+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
  try{if(!$("#v-hub").hidden)hubLH()}catch(e){}}
 /* 탭이 다시 보이거나, 진행·미전송이 있을 때 ts 만 먼저 보고 필요하면 맞춘 뒤 저장을 다시 올린다. */
 async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy)return;accSoftBusy=true;
@@ -577,22 +578,30 @@ async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof
  try{try{await accSyncIfNewer()}catch(e){}if(lhOn()){toast("다른 기기·탭에서 이미 장기 토벌 중이다. 그쪽 진행을 이어 받는다.");return}
  /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다. */
  const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
- const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2]};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
-  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.");toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.")}
+ const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2],sd:C.lh&&C.lh.sd};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
+  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.","","lh:go:"+(C.lh&&C.lh.sd||""));toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");lhNtArm()}
  finally{lhBusy=false;hubLH()}}
 /* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
 function tripGot(map,sd){const k=String(sd||"");if(!k)return false;const o=C[map]=C[map]&&typeof C[map]==="object"?C[map]:{};if(o[k])return true;o[k]=1;const ks=Object.keys(o);if(ks.length>30)ks.slice(0,ks.length-30).forEach(x=>delete o[x]);return false}
+/* 귀환 알림 dedup(장기 토벌 lh · 단서 clue · 사역마 pex 와 같은 패턴).
+   sync 로 C.lh/C.clue 의 nt 가 사라져도, 같은 sd 는 localStorage 로 다시 울리지 않는다.
+   알림은 30초마다 보내는 것이 아니라 t1 에 맞춘 setTimeout 한 번(+화면 복귀 시 재장전). */
+function tripNtKey(kind){return UID?"mgr_"+kind+"_nt_"+UID:""}
+function tripNtLoad(kind){const k=tripNtKey(kind);if(!k)return{};try{const o=JSON.parse(localStorage.getItem(k)||"{}");return o&&typeof o==="object"&&!Array.isArray(o)?o:{}}catch(e){return{}}}
+function tripNtSave(kind,o){const k=tripNtKey(kind);if(!k||!o)return;try{const ks=Object.keys(o);if(ks.length>40)ks.slice(0,ks.length-40).forEach(x=>delete o[x]);localStorage.setItem(k,JSON.stringify(o))}catch(e){}}
+function tripNtHad(kind,sd){const s=String(sd||"");return!!(s&&tripNtLoad(kind)[s])}
+function tripNtMark(kind,sd){const s=String(sd||"");if(!s)return;const o=tripNtLoad(kind);o[s]=1;tripNtSave(kind,o)}
 async function lhClaim(early){const h=C.lh,L=h&&lhOf(h.k);if(!L||lhBusy)return;const now=Date.now(),done=now>=h.t1;if(!done&&!early)return;
  if(early&&!confirm("지금 철수할까? 지난 시간만큼의 절반만 받고, 마력석은 받지 못한다."))return;
- if(tripGot("lhGot",h.sd)){C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
- const g=rng(hs32("lh"+h.sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),mul=done?(ok?1:.5):LH_EARLY,st=L[9]||1;
+ const sd=h.sd;if(tripGot("lhGot",sd)){lhNtClear();C.lh=null;hubLH();toast("이미 받은 토벌이다.");void saveNowRetry(4,1500);return}
+ const g=rng(hs32("lh"+sd)),hrs=done?L[2]:Math.max(0,(now-h.t0)/3600000),ok=done&&g()<lhChance(h.pw,L[3]),mul=done?(ok?1:.5):LH_EARLY,st=L[9]||1;
  const gd=Math.round(L[4]*hrs*lhRollPct(st,g)*0.01*mul),ex=Math.round(L[5]*hrs*lhRollPct(st,g)*0.01*mul),dz=Math.round(L[6]*(L[2]?hrs/L[2]:0)+(done&&!ok?LH_FAILDZ:0)),mm=done&&ok?L[7]+(g()<.3?1:0):0;
  const evs=[],n=done?2+Math.min(4,L[2]):1;for(let i=0;i<n;i++){const e=LH_EV[Math.floor(g()*LH_EV.length)];if(!evs.includes(e))evs.push(e)}
- C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
+ lhNtClear();tripNtMark("lh",sd);C.lh=null;C.gd=(C.gd||0)+gd;if(mm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+mm}titleState();if(done){C.stats.lhDone=(C.stats.lhDone||0)+1;if(ok&&L[0]==="abyss")C.stats.lhAbyss=1}
  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd);gain(ex,dz);guardAdd(Math.round(hrs*3));if(done&&ok){const pe=petDrop("lh");if(pe)evs.push(pe)}if(done){const mt=ok?matGain(["lh_hr"],L[2]):matGain(["lh_fail"]);if(mt)evs.push(mt)}if(typeof clpGain==="function"){const cp=clpGain("lh",{ok,done,hr:L[2]});if(cp)evs.push(cp)}
  const head=!done?"중간에 철수했다.":ok?"토벌 성공!":"토벌은 실패했지만 무사히 돌아왔다.",rw="골드 +"+gd+", 경험치 +"+ex+(mm?", 마력석 +"+mm:"")+", 절망도 +"+dz,tag=done?(ok?"성공":"실패"):"철수";
  /* 낙관적: 결과 팝업을 먼저 보여 주고, PATCH 는 뒤에서 여러 번 시도한다. 실패해도 로컬 보상은 되돌리지 않는다. */
- note("quest",L[1]+": "+head+" ("+rw+")");checkTitles();hubLH();
+ note("quest",L[1]+": "+head+" ("+rw+")","","lh:claim:"+sd);checkTitles();hubLH();
  alertBox("🗺 "+L[1]+" · "+tag,head+"\n\n"+evs.map(e=>"· "+e).join("\n")+"\n\n"+rw);if(typeof readProg==="function")readProg();
  lhBusy=true;hubLH();
  try{if(!await saveNowRetry(4,1500)){toast("보상은 반영했다. 서버 저장을 계속 시도한다.");accSoftSync()}}
@@ -608,9 +617,23 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]),st=L[9]||1;
   cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
   const b=elT("button","chip",lhBusy?"저장 중...":"출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn())||lhBusy;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
-// 돌아올 시각이 되면 한 번 알린다. 저장 실패 시 보류했다가 accSoftSync 가 이어 올린다.
-setInterval(async()=>{if(!C||!lhOn())return;const h=C.lh;if(Date.now()>=h.t1&&!h.nt&&!lhNtBusy){h.nt=1;lhNtBusy=true;try{const ok=await saveNowOk();const L=lhOf(h.k);if(!ok){lhDefer={kind:"nt",nm:L[1]};accSoftSync();return}lhDefer=null;note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.");toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}finally{lhNtBusy=false}}if(!$("#v-hub").hidden)hubLH()},30000);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)accSoftSync()});
+/* 귀환 알림: t1 에 setTimeout 한 번(tripNt dedup). UI 남은 시간은 아래 30초 폴링(알림과 분리). */
+let lhNtT=null;
+function lhNtClear(){if(lhNtT){clearTimeout(lhNtT);lhNtT=null}}
+async function lhNtFire(){if(!C||!lhOn()||!UID||lhNtBusy)return;const h=C.lh,sd=h.sd,L=lhOf(h.k);if(!L)return;
+ if(Date.now()<h.t1){lhNtArm();return}
+ if(typeof tripNtHad==="function"&&tripNtHad("lh",sd)){h.nt=1;return}
+ lhNtBusy=true;try{tripNtMark("lh",sd);h.nt=1;
+  const ok=await saveNowOk();if(!ok){lhDefer={kind:"nt",nm:L[1],sd};accSoftSync();return}
+  lhDefer=null;note("quest",L[1]+"에서 돌아왔다! 마을에서 보상을 받자.","","lh:ret:"+sd);toast("🗺 "+L[1]+"에서 돌아왔다! 보상을 받자.");try{ding()}catch(e){}}
+ finally{lhNtBusy=false;if(!$("#v-hub").hidden)hubLH()}}
+function lhNtArm(){lhNtClear();if(!C||!lhOn()||!UID)return;const h=C.lh;
+ if(typeof tripNtHad==="function"&&tripNtHad("lh",h.sd)){h.nt=1;return}
+ if(Date.now()>=h.t1){lhNtFire();return}
+ lhNtT=setTimeout(()=>{lhNtT=null;lhNtFire()},Math.min(Math.max(0,h.t1-Date.now())+250,86400000))}
+/* 허브에 있을 때만 남은 시간 UI 갱신. 알림·저장은 하지 않는다. */
+setInterval(()=>{if(C&&lhOn()&&!$("#v-hub").hidden)hubLH()},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){accSoftSync();try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}try{if(!$("#v-hub").hidden)hubLH()}catch(e){}try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}}});
 setInterval(()=>{if(!document.hidden&&(lhOn()||lhDefer||savePending))accSoftSync()},60000);
 
 /* 프로필과 공명: 친구의 프로필에서 '공명하기'로 공명을 청하고, 친구가 받아들이면 둘 다 절망도가 내려간다. 같은 상대에게는 3시간에 한 번이다. */
@@ -764,29 +787,29 @@ function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let bes
  for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
  return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
 /* ── 선물 동기화 ─────────────────────────────────────────────
-   [권위] 받은 함 목록·알림·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
-   [지금 이중 경로] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
-                 giftn/{나} = 구버전·호환용 도착 벨(pull 트리거).
+   [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
+   [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
+   [한도] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
    [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
                gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
    [소모] rgUse: 효과·목록·절망/경험치를 낙관 반영 후 ginbox 삭제·계정 저장은 백그라운드.
                삭제 실패 시에만 그 칸 효과를 되돌린다. ginPendDel 로 live 가 잠깐 다시 채우지 않게 한다.
    [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
-       COMPAT_GIFT_PULL(ginPullGift·giftBellWatch), 보내기의 gift/ 쓰기,
+       COMPAT_GIFT_PULL(ginPullGift), 보내기의 gift/ 쓰기,
        rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
    TODO(선물 한도→서버): 일일 GIFT_DAY 한도는 아직 RTDB gift/ 칸 규칙 + 클라 C.gsl 뿐이다.
        Cloud Functions(또는 동등 서버)로 이관해 ginbox 쓰기와 함께 강제하고, 그다음 gift/
-       경로·규칙·클라 giftSlot/gsl·COMPAT pull·giftn 을 제거한다. 구현 코드는 아직 없음.
+       경로·규칙·클라 giftSlot/gsl·COMPAT pull 을 제거한다. 구현 코드는 아직 없음.
    ─────────────────────────────────────────────────────────── */
 const ginPath=id=>"ginbox/"+UID+"/"+id;
 const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot);
 const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||"");
-let giftBell=0,unGift=null,giftGen=0,ginPullBusy=false,ginPendDel=new Set();
+let ginPullBusy=false,ginPendDel=new Set();
 /* ginbox·gift 공통 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
 async function giftDbDel(path){if(!DB||!path)return false;for(let i=0;i<3;i++){try{await DB.doc(path).delete();return true}catch(e){const c=String(e&&e.message||e);if(c==="404")return true;if(i<2)await new Promise(r=>setTimeout(r,200*(i+1)))}}return false}
 function giftWatch(){applyGift()}
-/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) giftn·gift pull. */
-async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();giftBellWatch();try{await ginPullGift()}catch(e){}}
+/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) gift/→ginbox pull. */
+async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();try{await ginPullGift()}catch(e){}}
 /* 계정에 남던 옛 받은 함(c.rg)을 ginbox 로 한 번만 옮긴다. ginboxV>=1 이면 끝. */
 async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||ginMigBusy)return;ginMigBusy=true;
  try{const puts=[],seen={};
@@ -796,7 +819,7 @@ async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||gi
   if(puts.length)await Promise.all(puts);
   C.ginboxV=1;C.rg=[];if(typeof saveNow==="function")saveNow();else save()}finally{ginMigBusy=false}}
 /* COMPAT_GIFT_PULL: 구버전·미게시 규칙으로 ginbox 에만 빠진 칸을 gift/ 에서 보충.
-   후일 ginbox 단독 시 이 함수·호출(applyGift·giftBellWatch)을 제거한다. */
+   허브·가방 진입 때 한 번. 후일 ginbox 단독 시 이 함수·호출을 제거한다. */
 async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!puts&&ginPullBusy)return;const own=!puts;if(own){ginPullBusy=true;puts=[];seen={}}
  try{C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const s=await once(DB.collection("gift/"+UID));let bump=false;
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
@@ -808,18 +831,13 @@ async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!pu
    Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>add(f+"_"+k,Number(k),v[k]))});
   if(own){if(puts.length)await Promise.all(puts);if(bump){if(typeof saveNow==="function")saveNow();else save()}}}
  catch(e){}finally{if(own)ginPullBusy=false}}
-/* COMPAT: giftn 벨 → ginPullGift. 신버전은 ginWatch 만으로도 충분. 후일 제거 후보. */
-function giftBellWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unGift)return;const gen=++giftGen;
- const take=sn=>{if(gen!==giftGen||!AUTH.uid||!C)return;const p=sn.exists?sn.data():null,ts=p&&typeof p.ts==="number"?p.ts:0;if(!ts||ts<=giftBell)return;giftBell=ts;ginPullGift()};
- DB.doc("giftn/"+UID).get().then(take).catch(()=>{});
- unGift=DB.doc("giftn/"+UID).live().onSnapshot(take,()=>{},30000)}
-/* 본선: ginbox live. 목록·토스트·내비의 유일한 권위 구독. ginbox 단독 이후에도 유지. */
+/* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
  const take=sn=>{if(gen!==ginGen||!AUTH.uid||!C)return;ginApply(sn.docs||[])};
  try{once(DB.collection("ginbox/"+UID)).then(take).catch(()=>{})}catch(e){}
  unGin=DB.collection("ginbox/"+UID).live().onSnapshot(take,()=>{},30000)}
-function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
+function ginApply(docs){const items=[];
  (docs||[]).forEach(d=>{const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object"||GV[v.g]==null)return;
   const id=d.id;if(!id||ginPendDel.has(id))return;items.push({id,g:v.g,n:String(v.n||"누군가").slice(0,20),u:String(v.u||""),ts:Number(v.ts)||0})});
  items.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));
@@ -827,13 +845,7 @@ function ginApply(docs){const prev=ginIds,ready=ginReady,items=[];
  if(items.length>cap&&!ginTrimBusy){ginTrimBusy=true;const drop=items.slice(0,items.length-cap);
   Promise.all(drop.map(x=>DB.doc(ginPath(x.id)).delete().catch(()=>{}))).finally(()=>{ginTrimBusy=false})}
  ginList=items.length>cap?items.slice(-cap):items;ginIds=ginList.map(x=>x.id).join("|");ginReady=true;
- updNav();if(!$("#v-bag").hidden)drawRG();
- /* 첫 스냅샷은 이미 있던 함이라 알림 안 울림. 그 다음부터 새로 생긴 id 만 알림·토스트. */
- if(ready&&ginIds!==prev){const had=new Set(prev.split("|").filter(Boolean)),fresh=ginList.filter(x=>!had.has(x.id));
-  if(fresh.length){const rs=fresh.map(x=>x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 보냈다");
-   fresh.forEach(x=>note("gift",x.n+"님이 "+((ITM.find(t=>t[0]===x.g)||[])[1]||"선물")+"을(를) 선물했다. 가방의 받은 선물함에 넣어 두었다.",x.u));
-   toast("🎁 "+rs.join(" / ")+" · 가방에 보관했다");
-   if(!$("#v-hub").hidden){const h=$("#hm");if(h){h.style.color="var(--mu)";h.textContent=rs.join(" / ")+" (가방의 받은 선물함에 보관)"}}}}}
+ updNav();if(!$("#v-bag").hidden)drawRG()}
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
@@ -882,10 +894,9 @@ $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;r
   const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
   try{const body={g:sel,ts:{".sv":"timestamp"},n:nmOf()};
-   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. giftn = COMPAT 벨. 후일 한도 이관 후 gift·giftn 쓰기 제거. */
+   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. 알림은 giftNtin→ntin. */
    await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set(body);
    await DB.doc("ginbox/"+u+"/"+ginSlotId(UID,g.i)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"},slot:g.i});
-   try{await DB.doc("giftn/"+u).set({u:UID,g:sel,n:nmOf(),ts:{".sv":"timestamp"}})}catch(e){}
    C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
    C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
   catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}

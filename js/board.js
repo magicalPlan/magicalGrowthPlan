@@ -2,7 +2,7 @@
    메뉴와 알림함은 board 를 그대로 부른다.
    목록은 가벼운 칸만 읽는다. 새 글은 bp_(제목·미리보기·작성자·댓글 수), 예전 글은 이관된 bx_ 칸이다.
    본문(bb_ 또는 예전 b_ 본문)과 댓글(board/c 의 bc_ · 예전 chat/bc_ · b_ 댓글)과 사진은 글을 눌렀을 때만 받는다.
-   댓글 알림은 서버(boardCmtNotify)가 accounts c/nt 에 넣는다. 클라는 note("board") 하지 않는다.
+   댓글 알림은 서버(boardCmtNotify)가 ntin/{받는이} 에 넣고, 클라 ntin live 가 note("board") 한다.
    예전에는 목록을 채우려고 b_ 를 훑다 댓글·수정 기록까지 함께 받아 왔다. 이제 그 스캔은 백그라운드 이관(bdMigrate)에서만
    한 번씩 돌고, 글만 bx_ 로 옮겨 둔 뒤에는 목록이 b_ 를 다시 읽지 않는다. 이관 진행은 chat/bd_mig 에 남긴다.
    목록이나 글을 보고 있는 동안 연결을 붙들어 두지 않는다. 새 글은 '새 글 확인'으로 받는다. 목록은 약 45초 메모리에 둔다. */
@@ -95,8 +95,7 @@ function bdPins(){const last={};BD.filter(m=>m.bt==="p"&&m.pin).forEach(m=>{last
 let bdEdit=null;
 function bdEdits(){const by={};BD.forEach(m=>{by[m.id]=m});const ed={};BD.filter(m=>m.bt==="e"&&by[m.ref]&&by[m.ref].u===m.u&&typeof m.x==="string").sort((a,b)=>a.ts-b.ts).forEach(m=>{ed[m.ref]={x:m.x,ts:m.ts}});return ed}
 function bdDead(){const by={};BD.forEach(m=>{by[m.id]=m});const dead={};BD.filter(m=>m.bt==="d"&&by[m.ref]&&(by[m.ref].u===m.u||ADM[m.u])).forEach(m=>dead[m.ref]=1);return dead}
-/* 글을 열 때 워터마크만 맞춘다. 알림함 board 줄은 서버 boardCmtNotify 가 넣는다(클라 note 금지).
-   지금 보고 있는 글에 새 댓글이 있으면 토스트만 띄운다. */
+/* 글을 열 때 워터마크만 맞춘다. 알림함 board 줄은 ntin live→note. 보고 있는 글의 새 댓글은 토스트만. */
 function bdNotify(list){if(!C)return;const first=C.bdSeen==null,seen=C.bdSeen||0,dead=bdDead(),by={};BD.forEach(m=>by[m.id]=m);let mx=seen,n=0;
  (list||[]).filter(m=>m&&m.bt==="c"&&m.u!==UID&&m.ts>seen&&!dead[m.id]).forEach(m=>{mx=Math.max(mx,m.ts);const post=by[m.p],par=m.r?by[m.r]:null;if(!post||dead[m.p])return;
   if(!first&&((par&&par.u===UID)||(!par&&post.u===UID)))n++});

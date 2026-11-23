@@ -121,7 +121,7 @@
    // 나에게 온 공명 요청을 확인해서 받은 공명 목록에 넣는다.
    /* 공명 수락·거절: 친구가 청한 공명은 '받은 공명'(C.rqIn)에 쌓이고, 받아들이면 절망도가 내려간다. 수락·거절은 친구 소식(fmsg)으로 상대에게 알린다.
       RQ_TTL(24시간)이 지난 공명은 저절로 사라진다.
-      알림은 서버 push 가 아니라 친구 화면에서 res·fmsg 를 읽을 때 note 한다. C.rss/C.fs/C.rkT 워터마크로 옛 알림 부활을 막는다. */
+      알림(note)은 ntin live(resNtin·fmsg rok/rno). 친구 화면 applyRes·syncFr 는 목록·절망만. C.rss/C.fs/C.rkT 워터마크. */
    const RQ_TTL=86400000;
 
 
@@ -150,8 +150,8 @@
    // 받은 선물: 보낸 친구가 정한 선물 종류만 인정하고, 한 번에 최대 40까지 절망도를 낮춘다.
    /* 선물: 같은 친구에게 하루(24시간)에 GIFT_DAY개까지 보낼 수 있다.
       [권위] ginbox/{받는이}/{id}: 받은 함·열기·화면. 계정 c.rg 안 씀. c.gs 는 개봉·이관 워터마크.
-      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. giftn/{받는이}: 도착 벨(호환 pull).
-      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·giftn·COMPAT pull 제거 → ginbox 단독.
+      [지금] gift/{받는이}/{보낸이}/{0~3}: RTDB 일일 한도 + 구버전 큐. 알림은 ntin, 목록은 ginbox.
+      [후일] 구클라·한도를 ginbox/서버로 옮기면 gift·COMPAT pull 제거 → ginbox 단독.
       TODO(선물 한도→서버): 한도 서버 이관 로직은 아직 없음. Functions 등으로 ginbox 송신과
          함께 GIFT_DAY 를 강제한 뒤 gift/ 규칙·클라 gsl 을 걷어낸다.
       규칙: ginbox 는 $to 읽기/지우기·호환 이관, 보낸이(u) 쓰기. validate 에 auth==$to 허용 필요. */
@@ -454,7 +454,7 @@
    /* 교류 게시판: 글, 댓글, 대댓글(댓글에 다는 답글 한 단계).
       글 목록·본문·사진은 chat(bp_/bb_/bimg_…). 새 댓글·답글·그 수정·지움은 board/c(bc_글_…).
       예전 댓글은 chat/bc_·b_ 에 남아 있고, 글을 열 때 함께 읽는다.
-      댓글 알림은 Functions boardCmtNotify 가 글·부모 댓글 작성자 accounts c/nt 에 넣는다(클라 note("board") 금지).
+      댓글 알림은 Functions boardCmtNotify 가 ntin/{받는이}/{댓글id} 에 넣고, 클라 ntin live 가 note("board") 한다.
       그 공간은 서버가 '본인 이름으로 새로 쓰기'만 허락하므로 남의 글을 고치거나 지울 수 없다. 삭제는 '지움 표시'를 남기는 방식이고, 글쓴이 본인과 운영자의 지움 표시만 인정한다.
       글 {bt:"p", ti:제목, pv:미리보기, cc:댓글 수}, 본문 {bt:"body", x:내용}, 댓글 {bt:"c", p:글, r:부모 댓글 또는 ""}, 지움 {bt:"d", ref:대상}. 숫자만 고치면 바뀐다. */
    const BD_MAX=800,BD_TITLE=40,BD_BODY=1000,BD_CMT=300,BD_GAP=8000;

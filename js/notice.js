@@ -1,8 +1,8 @@
 /* 공지. main.js 다음에 불러야 한다. 화면 위 공지 칸, 공지 탭, 운영자의 게시와 내리기.
    공지와 시즌 표시는 공지 탭을 열 때 받는다. 목록은 DAY_MS(하루) 동안 메모리에 두어, 탭을 다시 열면 바로 보여 준다.
    멸망 카운트는 접속할 때 한 번 받아, 진행 중이면 모든 화면 오른쪽 위에 보인다. */
-/* 공지: 운영자(admins 목록에 있는 계정)만 쓸 수 있고, 모든 플레이어의 화면 위쪽에 보인다. 서버 기록: notice/{번호}
-   새 공지가 올라오면 한 번 알림(화면 위 알림·알림함)을 띄운다. 각자 ✕로 닫을 수 있고, 더 새 공지가 오면 다시 보인다. 최근 5개까지만 남긴다. */
+/* 공지: 운영자만 쓰고, 화면 위 배너·공지 탭에 보인다. 기록: players/{운영자}/ntc · notice/{id}.
+   알림함 note 는 noticeNtin → ntin live. loadNotice 는 목록·배너만(클라 note 금지). */
 let NTC=[],ntcShown=10,ntcMark=0,ntcAt=0;// 운영자 한 명당 최근 30개까지 보관. 공지 탭은 한 번에 10개.
 const NTC_PAGE=10,NTC_TTL=DAY_MS;
 // 공지 탭: 최근 공지부터 10개씩. 연 순간 읽은 것으로 표시하고, 더 보기로 연 뒤에도 이번 화면의 새 공지 표시는 남긴다.
@@ -24,9 +24,9 @@ async function loadNotice(){if(!C||!XON())return;if(ntcBusy){ntcAgain=true;retur
  for(const u of Object.keys(ADM)){try{const d=(await DB.doc("players/"+u+"/ntc").get()).data();okAny=true;Object.values(d||{}).forEach(n=>{if(n&&typeof n==="object")all.push(Object.assign({},n,{src:"p",by:u}))})}catch(e){}}
  if(okAny)list=all.filter(n=>typeof n.t==="string"&&n.t.trim()&&Number(n.ts)).sort((a,b)=>Number(b.ts)-Number(a.ts)).slice(0,NTC_KEEP);
  if(!list)return;NTC=list;ntcAt=Date.now();const top=NTC[0];try{updNav();if(!$("#v-ntc").hidden)ntcView(true)}catch(e){}
- // 처음 확인할 때는 이미 있던 공지로 알림을 띄우지 않고, 그 뒤에 올라온 공지부터 알린다.
+ /* 워터마크만. 알림함·토스트는 ntin(noticeNtin). */
  if(C.nts==null){C.nts=top?Number(top.ts)||1:1;save()}
- else if(top&&(Number(top.ts)||0)>C.nts){const first=false;C.nts=Number(top.ts)||Date.now();save();if(!first){note("notice","공지: "+top.t.slice(0,120));toast("📢 공지: "+top.t.slice(0,60),()=>{keep("mgr_ntc_x","");drawNotice()});ding()}}
+ else if(top&&(Number(top.ts)||0)>C.nts){C.nts=Number(top.ts)||Date.now();save()}
  drawNotice()}while(ntcAgain)}finally{ntcBusy=false}}
 function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;const isA=!!(C&&ADM[UID]),top=NTC[0],hid=!!top&&lget("mgr_ntc_x")===String(top.ts),openForm=!!b.querySelector(".ntc-adm:not([hidden]) textarea");
  if(openForm)return;// 운영자가 공지를 쓰는 중이면 다시 그리지 않는다
@@ -228,6 +228,8 @@ async function rosterForceRun(btn,msg){if(!ADM[UID]||!XON()||!DB)return;
  btn.disabled=false}
 /* 회귀 본선은 서버 accountRst(계정당 되돌림+명부). 클라 rstWrite 는 쓰지 않는다. */
 function rstClearTripUI(){try{lhDefer=null}catch(e){}
+ try{if(typeof lhNtClear==="function")lhNtClear()}catch(e){}
+ try{if(typeof clueNtClear==="function")clueNtClear()}catch(e){}
  try{if(typeof hubLH==="function")hubLH()}catch(e){}
  try{if(typeof clueDraw==="function")clueDraw()}catch(e){}
  try{if(typeof drawPets==="function"&&$("#v-growth")&&!$("#v-growth").hidden)drawPets()}catch(e){}
@@ -253,7 +255,7 @@ async function rstCheck(boot){if(!C||!XON())return;const R=await rstLoad(),one=a
 // 서버의 공용 데이터 지우기. 프로필 사진(wboss/pic·picm)과 시계 맞추기(wboss/clk)는 남긴다.
 async function rstWipe(){const done=[],fail=[];
  const del=async(p,label)=>{try{await DB.doc(p).delete();done.push(label)}catch(e){fail.push(label+" ("+String(e&&e.message||e)+")")}};
- for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["board","게시판 댓글"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["tally/wf","희망의 등대 합계"],["tally/dr","재해 진압 합계"],["tally/seed","등대·시설 시드 자물쇠"],["score","시설·등대·재해 기여 카드"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
+ for(const [p,l] of [["chat","단체·마을 채팅과 게시판"],["board","게시판 댓글"],["ntin","알림 벨"],["dm","1:1 채팅"],["dmn","1:1 새 메시지 표시"],["fmsg","친구 신청·소식"],["res","공명 요청"],["gift","선물"],["giftn","선물 도착 표시"],["ginbox","받은 선물함"],["guard","마을 경쟁"],["vfac","마을 시설 단계"],["vfactop","마을 시설 기여 순위"],["tally/wf","희망의 등대 합계"],["tally/dr","재해 진압 합계"],["tally/seed","등대·시설 시드 자물쇠"],["score","시설·등대·재해 기여 카드"],["raid","타락 레이드"],["raidhit","타락 레이드 기록"],["event_minigame/flanders","플랜더스 밑그림 랭킹·합계"]])await del(p,l);
  try{if(typeof WFD==="object"){WFD={sum:0,v:{},top:[]}}if(typeof FACD==="object")FACD={};if(typeof facSrv==="object")facSrv={};if(typeof facFly==="object")facFly={};if(typeof vfacReady==="object")vfacReady={};if(typeof DRP==="object"){for(const k of Object.keys(DRP))delete DRP[k]}if(typeof scoreSig!=="undefined")scoreSig="";if(typeof facAt!=="undefined")facAt=0}catch(e){}
  /* 1:1 방 목록은 rooms/xd{uid}. 대련은 xa(신청)·xb(대련)·xr(구인 게시판, 키 정확히 xr). 출정(xm·xv·xr{묶음}_{번호})은 남긴다. */
  try{const r=await fetch(FBU.replace(/\/+$/,"")+"/rooms.json?shallow=true"+(AUTH.tok?"&auth="+encodeURIComponent(AUTH.tok):""));if(!r.ok)throw new Error(r.status);

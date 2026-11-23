@@ -1,8 +1,7 @@
 /* 공명. friend.js 다음에 불러야 한다. sendF 가 이미 있어야 한다. 친구에게 청하기, 수락·거절, 절망도 감소.
    친구 화면은 applyRes 를, 친구 소식은 rqRetry 와 resHeard 를, 프로필은 resBtn 을 그대로 부른다.
-   알림은 서버 Function 이 아니라, 친구 화면을 열 때 클라가 res·fmsg 를 한 번 읽어 note 한다(추가 폴링 없음).
-   옛/같은 알림 재등장 방지: 보낸이별 워터마크 C.rss(요청)·C.fs(fmsg)·C.rkT(수락 적용) + note 사건 id.
-   rqRetry 가 fmsg ts 를 새로 찍어도, 이미 처리한 수락·거절은 note/toast 를 다시 만들지 않는다. */
+   알림(note·토스트)은 ntin live(resNtin·fmsgFriend rok/rno). applyRes 는 rqIn 목록만, resHeard 는 절망만.
+   옛/같은 처리 방지: 보낸이별 워터마크 C.rss(요청)·C.fs(fmsg)·C.rkT(수락 적용) + ntin id. */
 $("#pfr").onclick=async()=>{const m=$("#pfm"),u=pfU;if(!u||u===UID)return;if(!(C.fr&&C.fr[u])){m.style.color="var(--bad)";m.textContent="친구에게만 공명할 수 있다. 먼저 친구 추가를 해 보자.";return}const last=(C.rl&&C.rl[u])||0,left=RES_CD-(Date.now()-last);
  if(left>0){m.style.color="var(--bad)";m.textContent="같은 상대에게는 3시간에 한 번만 공명할 수 있다. 약 "+Math.ceil(left/3600000)+"시간 뒤에 다시 할 수 있다.";return}
  $("#pfr").disabled=true;
@@ -27,13 +26,11 @@ function rssSeen(f){return Math.max(Number(C&&C.rss&&C.rss[f])||0,Number(C&&C.rs
 function rssBump(f,ts){C.rss=C.rss||{};const t=Number(ts)||0;if(t>(Number(C.rss[f])||0))C.rss[f]=t;
  const ttl=(typeof RQ_TTL==="number"?RQ_TTL:86400000)*2,now=Date.now();
  Object.keys(C.rss).forEach(k=>{if(now-(Number(C.rss[k])||0)>ttl)delete C.rss[k]})}
-async function applyRes(){if(!AUTH.uid||!C||!DB)return;try{const s=await once(DB.collection("res/"+UID)),nm=[];let mx=Number(C.rs)||0;C.rqIn=C.rqIn||{};C.rss=C.rss||{};
+async function applyRes(){if(!AUTH.uid||!C||!DB)return;try{const s=await once(DB.collection("res/"+UID));let mx=Number(C.rs)||0,ch=false;C.rqIn=C.rqIn||{};C.rss=C.rss||{};
  s.docs.forEach(d=>{const v=d.data(),ts=Number(v&&v.ts)||0;if(!v||!(ts>rssSeen(d.id)))return;
-  const n=String(v.n||"누군가");nm.push(n);C.rqIn[d.id]={n,a:Math.min(6,Math.max(0,Number(v.a)||0)),ts};
-  /* 사건 id = 보낸이+요청 ts → 같은 요청은 알림함에 한 번만. */
-  note("res",n+"님이 공명을 청했다. 친구 화면에서 받아들이거나 거절할 수 있다.",d.id,"res:q:"+d.id+":"+ts);
-  rssBump(d.id,ts);mx=Math.max(mx,ts)});
- rqExpire();if(!nm.length)return;C.rs=mx;save();updNav();toast("♡ "+nm.slice(0,2).join(", ")+(nm.length>2?" 외 "+(nm.length-2)+"명":"")+"이(가) 공명을 청했다");if(!$("#v-friends").hidden)rqDraw()}catch(e){}}
+  const n=String(v.n||"누군가");C.rqIn[d.id]={n,a:Math.min(6,Math.max(0,Number(v.a)||0)),ts};
+  rssBump(d.id,ts);mx=Math.max(mx,ts);ch=true});
+ rqExpire();if(!ch){if(!$("#v-friends").hidden)rqDraw();return}C.rs=mx;save();updNav();if(!$("#v-friends").hidden)rqDraw()}catch(e){}}
 function rqExpire(){const now=Date.now();let ch=false;Object.keys(C.rqIn||{}).forEach(f=>{if(now-(C.rqIn[f].ts||0)>RQ_TTL){delete C.rqIn[f];ch=true}});Object.keys(C.rq||{}).forEach(f=>{if(now-(C.rq[f].ts||0)>RQ_TTL+3600000){delete C.rq[f];ch=true}});if(ch)save()}
 function rqAnswer(f,ok){const q=(C.rqIn||{})[f];if(!q)return;delete C.rqIn[f];rqSend(f,ok?"rok":"rno");
  const eid="res:ans:"+(ok?"ok":"no")+":"+f+":"+(Number(q.ts)||Date.now());
@@ -45,22 +42,19 @@ function rqDraw(){const l=$("#rql");if(!l||!C)return;rqExpire();l.innerHTML="";c
   const y=elT("button","chip","수락");y.type="button";y.onclick=()=>rqAnswer(f,true);const n=elT("button","chip","거절");n.type="button";n.onclick=()=>rqAnswer(f,false);w.append(cp,y,n);l.appendChild(w)})}
 /* 청한 쪽에 도착한 수락·거절. 친구 소식(syncFr)이 그대로 부른다.
    rqRetry 로 fmsg 가 다시 써져 ts 만 커져도, 이미 적용·알린 건 fresh/had 로 막아 알림·토스트·절망 재적용을 안 한다. */
+/* 절망·쿨다운만. note·토스트는 ntin(fmsgFriend rok|rno). */
 function resHeard(f,v,n,notes){
  if(v.t==="rok"){
   const q=(C.rq||{})[f];delete(C.rq||{})[f];C.rkT=C.rkT||{};
   const fresh=q||!(C.rkT[f]&&Date.now()-C.rkT[f]<RES_CD);
   if(!fresh)return;
-  const b0=C.dz,ts=Number(v.ts)||Date.now();C.rkT[f]=Date.now();
+  const b0=C.dz;C.rkT[f]=Date.now();
   gain(0,-((q&&q.amt>0?q.amt:rqAmt())+petEff("res")));
-  notes.push(n+"님이 공명을 받아들였다");
-  note("res",n+"님이 공명을 받아들였다."+(C.fall?"":" 절망도가 "+(b0-C.dz)+" 내려갔다."),f,"res:rok:"+f+":"+ts);
-  toast("♡ "+n+"님이 공명을 받아들였다"+(C.fall?"":" · 절망도 -"+(b0-C.dz)));
+  notes.push(n+"님이 공명을 받아들였다"+(C.fall?"":" · 절망도 -"+(b0-C.dz)));
   return}
  if(v.t==="rno"){
   const had=!!(C.rq&&C.rq[f])||!!(C.rl&&C.rl[f]);
   delete(C.rq||{})[f];if(C.rl)delete C.rl[f];
   if(!had)return;
-  const ts=Number(v.ts)||Date.now();
-  notes.push(n+"님이 공명을 거절했다");
-  note("res",n+"님이 공명을 거절했다. 지금 바로 다시 청할 수 있다.",f,"res:rno:"+f+":"+ts)}
+  notes.push(n+"님이 공명을 거절했다")}
 }

@@ -2,7 +2,11 @@
    한 번에 10개만 보여주고, 더 보기로 이전 10개를 이어서 본다.
    출정·마을·친구·공지는 note 를, 하단 메뉴는 inbox 를 그대로 부른다.
    중복: id(사건 키)가 있으면 같은 id 는 한 번만. 없으면 맨 앞과 k·t·u 가 같고 5초 안이면 건너뛴다.
-   (공명 rqRetry·다기기 재처리로 같은 알림이 여러 번 쌓이던 것을 막는다. 서버 부하는 늘지 않는다.) */
+   (공명 rqRetry·다기기 재처리로 같은 알림이 여러 번 쌓이던 것을 막는다. 서버 부하는 늘지 않는다.)
+
+   알림 전용 벨 ntin/{나}/{id} = { k, t, u, ts }.
+   · live 1개로 받아 note 한 뒤 칸을 지운다. 계정 c/nt·accSync 를 기다리지 않는다.
+   · 게시판·공명·친구·선물·공지·1:1 벨이 여기를 쓴다. */
 function note(k,t,u,id){
  if(!C)return false;
  C.nt=Array.isArray(C.nt)?C.nt:[];
@@ -69,7 +73,39 @@ function ntTrim(){if(!C)return false;const prev=Array.isArray(C.nt)?C.nt:[],coun
  for(const n of prev){if(!n||typeof n!=="object")continue;const c=ntCatOf(n.k);if((count[c]||0)>=NT_CAT_MAX)continue;if(list.length>=NT_MAX)break;count[c]=(count[c]||0)+1;list.push(n)}
  if(list.length===prev.length&&list.every((n,i)=>n===prev[i]))return false;C.nt=list;return true}
 const ntIn=(n,cat)=>cat==="all"||ntCatOf(n.k)===cat;
-function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(fresh&&typeof checkDM==="function")checkDM();if(!keep||fresh)ntShown=NT_PAGE;if(ntTrim())save();C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
+/* 서버→클라 알림 벨. 허브·알림함 진입 때 연다. 연결 거절 시 30초 폴링.
+   공명 요청→applyRes, 공명 수락·거절·친구→syncFr, 공지→loadNotice, 1:1→dmHear. note 는 여기서만. */
+let unNtin=null,ntinGen=0,ntinSeen={};
+function ntinToast(k,t,u){const s=String(t||"").slice(0,60);try{
+ if(k==="board"){toast("📝 "+s);ding()}else if(k==="res"){toast("♡ "+s);ding()}
+ else if(k==="gift"){toast("🎁 "+s);ding()}else if(k==="fr"){toast("☍ "+s);ding()}
+ else if(k==="dm"){const n=(String(t).match(/^(.{1,20}?)님/)||[])[1]||"상대";toast("✉ "+s,u?()=>{try{if(typeof goDM==="function")goDM(u,n)}catch(e){}}:undefined);ding()}
+ else if(k==="notice"){toast("📢 "+s,()=>{try{keep("mgr_ntc_x","");if(typeof loadNotice==="function")loadNotice();else if(typeof drawNotice==="function")drawNotice()}catch(e){}});ding()}
+}catch(e){}}
+function ntinSide(k,id,v){const sid=String(id||"");
+ if(k==="notice"){try{if(typeof loadNotice==="function")loadNotice()}catch(e){}return}
+ if(k==="fr"){try{if(typeof syncFr==="function")syncFr()}catch(e){}return}
+ if(k==="dmleft"){const f=v&&v.u;if(f&&typeof dmHear==="function")dmHear(f,{left:1,ts:Number(v.ts)||Date.now()});return}
+ if(k!=="res")return;
+ if(sid.indexOf("res:q:")===0){try{if(typeof applyRes==="function")applyRes()}catch(e){}return}
+ if(sid.indexOf("res:rok:")===0||sid.indexOf("res:rno:")===0){try{if(typeof syncFr==="function")syncFr()}catch(e){}}}
+function ntinApply(docs){if(!AUTH.uid||!C||!DB)return;
+ (docs||[]).forEach(d=>{const id=d&&d.id;if(!id||ntinSeen[id])return;const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object")return;
+  const k=String(v.k||""),t=String(v.t||"");if(!k||!t){ntinSeen[id]=1;DB.doc("ntin/"+UID+"/"+id).delete().catch(()=>{});return}
+  ntinSeen[id]=1;
+  if(k==="dmleft"){ntinSide(k,id,v);DB.doc("ntin/"+UID+"/"+id).delete().catch(()=>{});return}
+  if(k==="dm"){const hear=typeof dmHear==="function"?dmHear(v.u||"",{n:(String(t).match(/^(.{1,20}?)님/)||[])[1]||"",ts:Number(v.ts)||0}):"bell";
+   if(hear==="bell"){const ok=note(k,t,v.u||"",id);if(ok)ntinToast(k,t,v.u||"")}
+   DB.doc("ntin/"+UID+"/"+id).delete().catch(()=>{});return}
+  const ok=note(k,t,v.u||"",id);if(ok)ntinToast(k,t,v.u||"");ntinSide(k,id,v);
+  DB.doc("ntin/"+UID+"/"+id).delete().catch(()=>{})})}
+function ntinWatch(){if(!AUTH.uid||!C||!DB||LOCAL||unNtin)return;const gen=++ntinGen;
+ const take=sn=>{if(gen!==ntinGen||!C)return;ntinApply(sn.docs||[])};
+ try{once(DB.collection("ntin/"+UID)).then(take).catch(()=>{})}catch(e){}
+ unNtin=DB.collection("ntin/"+UID).live().onSnapshot(take,()=>{},30000)}
+function checkNtin(){if(!AUTH.uid||!C||!DB||LOCAL)return;ntinWatch()}
+
+function inbox(keep){const fresh=$("#v-inbox").hidden;show("inbox");if(fresh&&typeof checkNtin==="function")checkNtin();if(!keep||fresh)ntShown=NT_PAGE;if(ntTrim())save();C.nt=Array.isArray(C.nt)?C.nt:[];const l=$("#ntl");l.innerHTML="";
  // 화면을 처음 열 때 안 읽은 알림을 기억해 두고(종류를 바꿔도 '새 알림' 표시가 남게), 바로 읽음으로 바꾼다.
  if(!keep)ntNew=new Set(C.nt.filter(n=>!n.r).map(n=>n.ts+"|"+n.t));
  const cb=$("#ntcat");cb.innerHTML="";NT_CAT.forEach(([k,nm])=>{const all=C.nt.filter(n=>ntIn(n,k)),nw=all.filter(n=>ntNew.has(n.ts+"|"+n.t)).length;if(k==="etc"&&!all.length)return;
