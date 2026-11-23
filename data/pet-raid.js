@@ -13,6 +13,8 @@ const PEX=[
  ["downh","D마을",8,{id:"bond",n:2},{id:"m_shard",n:1},{g:500},{id:"m_abyss",n:1},{id:"m_crown",n:1},{id:"m_shard",n:10}]
 ];
 const PEXM=Object.fromEntries(PEX.map(x=>[x[0],x]));
+/* 도감 C.dex.px 키. RTDB 경로에 . # $ [ ] 불가 → _ 로 바꿈. 서버 pet-raid.js 와 동일. */
+const pexDexId=ti=>String(ti||"").replace(/[.#$\[\]]/g,"_").slice(0,80);
 /* 성공 귀환 공통. 본문의 ${사역마이름} 은 화면·서버가 이름으로 바꾼다. */
 const PEX_EV=[
  ["힘냇멍","${사역마이름}(이)가 입에 약초를 문 채 신나게 달려왔다! 귀엽지만, 아무래도 약으로 쓰기에는 힘들 것 같다. ${사역마이름}(을)를 쓰다듬어주었다."],

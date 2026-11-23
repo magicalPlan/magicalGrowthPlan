@@ -250,8 +250,9 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
  return true}
-/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 도감)은 양쪽을 합친다.
-   예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다. */
+/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
+   예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다.
+   사역마 출정 귀환 직후에도 서버(pex) sync 가 오므로 dex(px 등)를 합치지 않으면 방금 발견한 사건이 지워진다. */
 /* 옛 계정 rg/gs 정리. ginbox 이전 후에는 목록을 계정에 두지 않는다. */
 function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  const v=Math.max(Number(dst.ginboxV)||0,Number(src.ginboxV)||0);
@@ -278,6 +279,16 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
  dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
+ /* 도감(C.dex): 출정·사역마 출정(px) 등 발견 기록. 서버 동기 때 로컬만 있는 칸이 사라지지 않게 합친다.
+    rw(보상 수령)도 합집합. 숫자 칸(bs 만남/처치 등)은 더 큰 쪽. */
+ dst.dex=(()=>{const a=dst.dex&&typeof dst.dex==="object"?dst.dex:{},b=src.dex&&typeof src.dex==="object"?src.dex:{},out={};
+  const keys={};Object.keys(a).forEach(k=>keys[k]=1);Object.keys(b).forEach(k=>keys[k]=1);
+  Object.keys(keys).forEach(k=>{
+   if(k==="rw"){out.rw=Object.assign({},a.rw||{},b.rw||{});return}
+   const aa=a[k]&&typeof a[k]==="object"?a[k]:{},bb=b[k]&&typeof b[k]==="object"?b[k]:{},m=Object.assign({},aa,bb);
+   Object.keys(m).forEach(id=>{const x=Number(aa[id])||0,y=Number(bb[id])||0;m[id]=x>y?x:y||m[id]});
+   out[k]=m});
+  return out})();
  dst.scf=Object.assign({},src.scf||{},dst.scf||{});
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
  dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;

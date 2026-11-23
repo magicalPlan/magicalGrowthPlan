@@ -255,9 +255,9 @@
    빛:{id:"light",nm:"구원의 빛",d:"다음 타락 레이드 공격의 피해가 3배가 된다. 타락한 친구를 되돌릴 때 쓴다.",w:"타락 레이드"},
    어둠:{id:"dark",nm:"그림자 계약",d:"다음 출정에서 파티 전투력이 8 오른다. 대신 내 절망도가 6 더 오른다.",w:"출정"}};
    /* 사역마 출정(무인 상점) 귀환 대사 도감. data/pet-raid.js PEX_EV·PEX_EV_EARLY·PEX_EV_MAP.
-      id=대사 제목(ti). 본문 ${사역마이름} 은 도감에서 '사역마'로 표시. */
+      id=pexDexId(제목)(RTDB 안전 키). nm=원제목. 기록은 서버 pexClaim 이 c/dex/px/{id}=1. */
    const pexDexItems=()=>{const L=[],seen={};const ds=tx=>String(tx||"").replace(/\$\{사역마\s*이름\}/g,"사역마").replace(/\$\{사역마이름\}/g,"사역마");
-    const add=(ti,tx,tag,hint)=>{const id=String(ti||"");if(!id||seen[id])return;seen[id]=1;L.push({id,nm:id,ds:ds(tx),tag,hint})};
+    const add=(ti,tx,tag,hint)=>{const id=typeof pexDexId==="function"?pexDexId(ti):String(ti||"");if(!id||seen[id])return;seen[id]=1;L.push({id,nm:String(ti||id),ds:ds(tx),tag,hint})};
     (typeof PEX_EV!=="undefined"&&PEX_EV||[]).forEach(r=>add(r[0],r[1],"공통","사역마 출정 성공 귀환에서 만날 수 있다."));
     (typeof PEX_EV_EARLY!=="undefined"&&PEX_EV_EARLY||[]).forEach(r=>add(r[0],r[1],"중도 귀환","출정 중 불러오면 만날 수 있다."));
     const maps=typeof PEX_EV_MAP!=="undefined"&&PEX_EV_MAP||{};Object.keys(maps).forEach(k=>{(maps[k]||[]).forEach(r=>{const nm=(typeof PEXM!=="undefined"&&PEXM[k]&&PEXM[k][1])||k;add(r[0],r[1],nm,nm+" 출정에서 만날 수 있다.")})});

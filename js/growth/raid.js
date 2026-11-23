@@ -16,7 +16,8 @@ function pexLootCell(cell){if(!cell||typeof cell!=="object")return"";if(cell.g)r
 /* 맵 칸용 짧은 보상. 기본·조각·특별(+50%)만. */
 function pexLootLite(L){if(!L)return"";const a=[pexLootCell(L[3]),pexLootCell(L[6]),pexLootCell(L[7])].filter(Boolean);const bonus=pexLootCell(L[8]);if(bonus)a.push(bonus+"(50%)");return a.join(" · ")}
 function pexFill(tpl,nm){return String(tpl||"").replace(/\$\{사역마\s*이름\}/g,nm).replace(/\$\{사역마이름\}/g,nm)}
-function pexStripPatch(body){if(!body)return body;Object.keys(body).forEach(k=>{if(k==="c/pex"||k.indexOf("c/pex/")===0||k==="pexpay"||k.indexOf("pexpay/")===0)delete body[k]});return body}
+/* c/pex·pexpay·c/dex/px 는 서버(pexClaim)만 쓴다. 클라 PATCH 로 넣거나 지우지 않는다. */
+function pexStripPatch(body){if(!body)return body;Object.keys(body).forEach(k=>{if(k==="c/pex"||k.indexOf("c/pex/")===0||k==="pexpay"||k.indexOf("pexpay/")===0||k==="c/dex/px"||k.indexOf("c/dex/px/")===0)delete body[k]});return body}
 async function pexSync(){try{if(typeof accSyncIfNewer==="function")await accSyncIfNewer()}catch(e){}
  try{if(!C||!DB||!UID)return;const s=await DB.doc("accounts/"+UID+"/c/pex").get();C.pex=s.exists?s.data():null}catch(e){}}
 /* done 직후 UI를 막고 기다리지 않는다. 계정·가방 sync 는 백그라운드. */
@@ -35,9 +36,10 @@ function pexShowRw(res){if(!res||!res.ok)return;
  const sc=res.sc&&res.sc.tx?("\n\n「"+(res.sc.ti||"")+"」\n"+pexFill(res.sc.tx,res.petNm||"사역마")):"";
  const rw=res.rw||(Array.isArray(res.lines)?res.lines.join(", "):"");
  try{if(res.inv&&typeof dexAdd==="function")Object.keys(res.inv).forEach(id=>{try{if(id==="bond"||id==="g4")dexAdd("it",id);else dexAdd("mat",id)}catch(e){}})}catch(e){}
- /* 사역마 출정 대사(도감 k=px). 제목(ti)이 있으면 발견한 것만 기록. */
- try{const ti=res.sc&&res.sc.ti;if(ti&&typeof dexAdd==="function"&&dexAdd("px",String(ti))){try{if(typeof note==="function")note("dex","도감에 새 사역마 출정 사건이 기록되었다: "+ti)}catch(e){}try{if(typeof save==="function")save()}catch(e){}}}catch(e){}
+ /* 도감 px 는 서버 pexClaim 이 c/dex/px/{pexDexId(ti)}=1. 클라는 저장하지 않고, 화면·알림만 맞춘다(곧 sync). */
+ try{const ti=res.sc&&res.sc.ti;if(ti){const id=typeof pexDexId==="function"?pexDexId(ti):String(ti).replace(/[.#$\[\]]/g,"_");C.dex=C.dex||{};C.dex.px=C.dex.px||{};const neu=!C.dex.px[id];C.dex.px[id]=1;if(neu&&typeof note==="function")note("dex","도감에 새 사역마 출정 사건이 기록되었다: "+ti)}}catch(e){}
  try{if(typeof checkTitles==="function")checkTitles()}catch(e){}
+ try{if(typeof save==="function")save()}catch(e){}
  alertBox("🐾 "+nm+" · "+tag,head+sc+"\n\n"+rw);
  try{if(typeof note==="function")note("quest",nm+": "+head+(rw?" ("+rw+")":""))}catch(e){}}
 async function pexStart(){if(pexBusy||!C||!DB||!UID)return;
