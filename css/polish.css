@@ -227,16 +227,18 @@ main{flex:1 0 auto;width:100%}
 .doom-card::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,#ffffff04 22px 23px);pointer-events:none}
 .doom-t{margin:0;font-family:"Gowun Batang",serif;font-size:.78rem;letter-spacing:.18em;color:#ff8da0;transition:color .35s ease}
 .doom-s{margin:2px 0 0;font-size:.72rem;line-height:1.35;color:#d9b3bd;transition:color .35s ease}
+.doom-r{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;min-width:4.2em}
 .doom-n{margin:0;font-family:"Gowun Batang",serif;font-weight:700;font-size:1.45rem;line-height:1;letter-spacing:.04em;color:#ffe3e8;text-shadow:0 0 18px #e0405a99,0 2px 0 #000;transition:color .35s ease,text-shadow .35s ease}
+.doom-g{margin:0;font-size:.68rem;line-height:1.2;letter-spacing:.04em;color:#d9b3bd;white-space:nowrap;transition:color .35s ease}
 .doom-bar{grid-column:1/-1;height:6px;margin-top:8px;background:#ffffff12}
 .doom-bar i{background:linear-gradient(90deg,#6b1a2c,#e0405a,#ffb36b)!important}
 /* 낮: 따뜻한 호박·살구. 밤: 차가운 남청·은빛. 시계 표시만. */
 .doom-card.day{border-color:#c47a2e;background:radial-gradient(130% 110% at 100% 0%,#e8a04044,transparent 55%),radial-gradient(90% 80% at 0% 100%,#ffcf6a22,transparent 50%),linear-gradient(180deg,#2a1808,#140c06);box-shadow:0 0 26px #c47a2e33,inset 0 0 0 1px #00000055}
-.doom-card.day .doom-t{color:#ffc878}.doom-card.day .doom-s{color:#e6c9a0}
+.doom-card.day .doom-t{color:#ffc878}.doom-card.day .doom-s,.doom-card.day .doom-g{color:#e6c9a0}
 .doom-card.day .doom-n{color:#fff0d4;text-shadow:0 0 18px #e8a04099,0 2px 0 #000}
 .doom-card.day .doom-bar i{background:linear-gradient(90deg,#8a4a12,#e8a040,#ffe29a)!important}
 .doom-card.night{border-color:#3d5a8a;background:radial-gradient(130% 110% at 100% 0%,#6a8ec855,transparent 55%),radial-gradient(90% 80% at 0% 100%,#1a284822,transparent 50%),linear-gradient(180deg,#0a1220,#060810);box-shadow:0 0 26px #3d5a8a44,inset 0 0 0 1px #00000066}
-.doom-card.night .doom-t{color:#a8c4ef}.doom-card.night .doom-s{color:#8fa0b8}
+.doom-card.night .doom-t{color:#a8c4ef}.doom-card.night .doom-s,.doom-card.night .doom-g{color:#8fa0b8}
 .doom-card.night .doom-n{color:#e8f0ff;text-shadow:0 0 18px #6a8ec899,0 2px 0 #000}
 .doom-card.night .doom-bar i{background:linear-gradient(90deg,#1e3a5c,#6a8ec8,#c8d8f0)!important}
 .doom-card.near{border-color:#e0405a;animation:doomPulse 2.4s ease-in-out infinite}
@@ -254,15 +256,15 @@ main{flex:1 0 auto;width:100%}
 .doom-form .hint{margin:8px 0 0}
 html[data-theme="light"] .doom-form input[type=date]{color-scheme:light}
 html[data-theme="light"] .doom-card{border-color:#c46a7a;background:radial-gradient(140% 120% at 100% 0%,#f5c6cf88,transparent 60%),linear-gradient(180deg,#fff3f4,#fbe7ea);box-shadow:0 4px 18px #a8283f1a}
-html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s{color:#7a4450}
+html[data-theme="light"] .doom-t{color:#a8283f}html[data-theme="light"] .doom-s,html[data-theme="light"] .doom-g{color:#7a4450}
 html[data-theme="light"] .doom-n{color:#7d1a2e;text-shadow:none}html[data-theme="light"] .doom-bar{background:#a8283f1a}
 html[data-theme="light"] .doom-card.day{border-color:#c48a30;background:radial-gradient(140% 120% at 100% 0%,#ffe2a888,transparent 60%),linear-gradient(180deg,#fff8ec,#f7ebda);box-shadow:0 4px 18px #c47a2e22}
-html[data-theme="light"] .doom-card.day .doom-t{color:#9a5a10}html[data-theme="light"] .doom-card.day .doom-s{color:#7a5a30}
+html[data-theme="light"] .doom-card.day .doom-t{color:#9a5a10}html[data-theme="light"] .doom-card.day .doom-s,html[data-theme="light"] .doom-card.day .doom-g{color:#7a5a30}
 html[data-theme="light"] .doom-card.day .doom-n{color:#7a3e08}
 html[data-theme="light"] .doom-card.night{border-color:#5a7aaa;background:radial-gradient(140% 120% at 100% 0%,#c8d8f088,transparent 60%),linear-gradient(180deg,#eef3fa,#dde6f2);box-shadow:0 4px 18px #3d5a8a22}
-html[data-theme="light"] .doom-card.night .doom-t{color:#2e4a78}html[data-theme="light"] .doom-card.night .doom-s{color:#4a5e78}
+html[data-theme="light"] .doom-card.night .doom-t{color:#2e4a78}html[data-theme="light"] .doom-card.night .doom-s,html[data-theme="light"] .doom-card.night .doom-g{color:#4a5e78}
 html[data-theme="light"] .doom-card.night .doom-n{color:#1e3458}
-@media (max-width:440px){.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s{font-size:.68rem}}
+@media (max-width:440px){.doom-n{font-size:1.2rem}.doom-t{letter-spacing:.12em}.doom-s,.doom-g{font-size:.68rem}}
 html[data-theme="light"] .doom-card.dday .doom-n{color:#b8302a;text-shadow:0 0 14px #ffb36b88}
 
 /* 시즌 초기화 (운영자 전용) */

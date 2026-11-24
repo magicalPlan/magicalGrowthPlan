@@ -50,27 +50,35 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
    기간은 doom 한 칸뿐이다. 운영자가 다시 저장하면 그 날짜가 이전 날짜를 갈아 끼운다. 로그인한 사람은 읽고, 운영자만 고친다.
    시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
    운영자가 시작일을 고르면 그날이 시작, 현실 28일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐).
-   시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤. */
+   시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤.
+   게임 달력(표시용, 전원): D-14=10월 18일 … D-0(D-DAY)=11월 1일. */
 const DOOM_DAYS = 28;
 const DOOM_REAL_PER_GAME = 2;
+const DOOM_GAME_DAYS = DOOM_DAYS/DOOM_REAL_PER_GAME;
+/* 게임 시작일 고정(연도 무시). D-14 → 10/18, D-0 → 10/18+14일=11/1. */
+const DOOM_GAME_YMD0="2000-10-18";
 let DOOM = null;
 const doomOk = o => !!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
 const doomYmd = t => {
    const d = new Date(t);
    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const doomDay=s=>{const [y,m,d]=String(s).split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)};
+const doomMdTx=day=>{const e=new Date(Date.UTC(1970,0,1)+day*86400000);return(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일"};
+/* gLeft(남은 게임일) → 게임 달력. D-14=10월 18일, D-0=11월 1일. */
+function doomGameTx(gLeft){const n=Math.max(0,Math.min(DOOM_GAME_DAYS,Number(gLeft)||0));return doomMdTx(doomDay(DOOM_GAME_YMD0)+(DOOM_GAME_DAYS-n))}
 function doomState(o){
    if(!doomOk(o))return null;
    const st = doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
-   const e = new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
+   const endTx=doomMdTx(end);
    const [,sm,sd]=o.d.split("-").map(Number);
  /* elapsed: 시작일=0. 홀수째(1,3,…) 현실일 → 낮, 짝수째 → 밤. gLeft: 남은 게임일(표시용). */
    const elapsed=Math.max(0,Math.min(DOOM_DAYS,today-st));
    const nth = elapsed+1;
    const dayPhase = nth % 2 === 1
    const gLeft = left <= 0 ? 0 : Math.ceil(left/DOOM_REAL_PER_GAME)
-   const gDay = Math.min(DOOM_DAYS/DOOM_REAL_PER_GAME , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
-   return {left,gLeft,gDay,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
+   const gDay = Math.min(DOOM_GAME_DAYS , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
+   const gTx=doomGameTx(gLeft);
+   return {left,gLeft,gDay,gTx,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
 
 async function loadDoom(){
    if(!XON())return;
@@ -99,20 +107,21 @@ function drawDoom () {
    const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;
    if(!show)return;
    
-   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마. */
+   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마.
+      제목: 기호 옆에 게임 달력「mm월 dd일 낮/밤」. 본문에는 게임 n일째·날짜 표기 없음. */
    const final=live&&st.gLeft<=1,phase=live&&!final?(st.dayPhase?"day":"night"):"",phaseTx=st&&st.dayPhase?"낮":"밤",phaseMark=st&&st.dayPhase?"☀":"☾";
  const c=elT("div","doom-card"+(live&&(final||st.gLeft<=2)?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off")+(phase?" "+phase:""));
- const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"+" · "+phaseMark));
- if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":final?st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작":st.endTx+" 18:00시 멸망 · 게임 "+st.gDay+"일째 "+phaseTx));
- else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14 · 현실 28일).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t",live?"멸망까지 · "+phaseMark+" "+st.gTx+" "+phaseTx:"멸망까지"));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":st.endTx+" 18:00시 멸망"));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
  c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.gLeft):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
  b.appendChild(c);
  if(isA){const set=elT("button","chip doom-set","⏳ 시작일 설정");set.type="button";
   const f=elT("form","doom-form");f.hidden=true;const inp=elT("input");inp.type="date";inp.value=doomOk(src)?src.d:doomYmd(srvNow());inp.setAttribute("aria-label","카운트다운 시작일");
-  const hint=elT("p","hint","고른 날부터 현실 28일(표시 D-14). 2일=1일, 홀수째 낮·짝수째 밤.");
+  const hint=elT("p","hint","고른 날부터 현실 28일(표시 D-14·게임 10월 18일). 2일=1일, 홀수째 낮·짝수째 밤. D-DAY는 게임 11월 1일.");
   const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
-  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY) · 현실 28일":"날짜를 골라야 한다."};inp.oninput=upd;upd();
+  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14·게임 "+doomGameTx(DOOM_GAME_DAYS)+") → 멸망 "+v.endTx+" (D-DAY·게임 "+doomGameTx(0)+") · 현실 28일":"날짜를 골라야 한다."};inp.oninput=upd;upd();
   f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
   const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;msg.textContent="";
    try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}
