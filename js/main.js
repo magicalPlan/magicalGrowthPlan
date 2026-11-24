@@ -257,6 +257,14 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
+ /* 마치 등은 서버가 fall 을 씀. sync 로 처음 받으면 안내·raid/fl 만(대가 재적용 금지). */
+ try{if(!mine.fall&&C.fall){
+  if(C.fall.w)alertBox("🜏 절망의 마인","일주일 사이 되풀이된 절망이 "+C.n+"을(를) 삼켰다. 절망의 마인이 되었다. 모든 마법소녀가 맞설 수 있다.");
+  else alertBox("타락","절망도가 100에 닿았다. "+C.n+"은(는) 절망에 삼켜져 마수가 되었다.\n친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다.");
+  try{if(typeof putRaid==="function")putRaid()}catch(e){}
+  try{if(typeof pubFall==="function")pubFall()}catch(e){}
+  try{if(typeof hub==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hub()}catch(e){}
+ }}catch(e){}
  return true}
 /* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다.
