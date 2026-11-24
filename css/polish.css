@@ -20,8 +20,8 @@ body:has(#nav:not([hidden])) .sub{margin:0 0 10px;font-size:.8rem;letter-spacing
 #nav button{border:0!important;background:transparent!important;border-radius:10px;color:var(--mu)!important;padding:9px 6px;transition:background .15s,color .15s}
 #nav button:hover{color:var(--ink)!important;background:var(--gold-soft)!important}
 #nav button[aria-pressed=true]{color:var(--gold-hi)!important;background:var(--pn3)!important;font-weight:700;box-shadow:inset 0 -2px 0 var(--gold)}
-#nav .nav-bar>button[data-g]::after{content:"";display:inline-block;width:0;height:0;margin-left:5px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;vertical-align:2px;opacity:.65}
-#nav .nav-bar>button[aria-expanded=true]::after{border-top:0;border-bottom:4px solid currentColor;vertical-align:3px;opacity:1}
+#nav .nav-bar>button[data-g]::after,#nav .nav-sec[data-for=plaza] button[aria-pressed=true]::after{content:"";display:inline-block;width:0;height:0;margin-left:5px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;vertical-align:2px;opacity:.65}
+#nav .nav-bar>button[aria-expanded=true]::after,#nav .nav-sec[data-for=plaza] button[aria-pressed=true][aria-expanded=true]::after{border-top:0;border-bottom:4px solid currentColor;vertical-align:3px;opacity:1}
 #nav .nav-sub,#nav .nav-sec{background:color-mix(in srgb,var(--gold) 10%,var(--pn3))}
 #nav .nav-sec{background:color-mix(in srgb,var(--gold) 6%,var(--pn3))}
 @media (max-width:600px){#nav{top:4px;padding:3px}#nav button{padding:8px 2px!important}}
@@ -150,13 +150,45 @@ body:has(#v-chat:not([hidden])) main{max-width:780px}
 #ct button[aria-pressed=true]{background:var(--pn3)!important;color:var(--gold-hi)!important;font-weight:700;box-shadow:inset 0 -2px 0 var(--gold)}
 #v-chat>.hint:first-of-type{font-size:.78rem!important;margin:0 0 10px!important;opacity:.85}
 
+/* 광장|화원: 현재 채널은 sub 안, 다른 채널은 sub 밖(아래)에 떠 있는 알약 */
+#nav{overflow:visible}
+#nav .nav-sub[data-for=chat]{align-items:flex-start;flex-wrap:nowrap;overflow:visible;position:relative}
+#nav .nav-plaza{display:flex;flex-direction:column;align-items:stretch;flex:0 1 148px;min-width:0;max-width:148px;position:relative;overflow:visible;z-index:2}
+#nav .nav-plaza-gate{flex:0 0 auto;width:100%;min-width:0}
+#nav .nav-sec[data-for=plaza]{display:flex!important;flex-direction:column;width:100%;margin:0;padding:0;border:0;border-radius:0;background:transparent!important;box-shadow:none;overflow:visible;position:static}
+#nav .nav-sec[data-for=plaza][hidden]{display:none!important}
+#nav .nav-sec[data-for=plaza][data-active=g] button[data-ch=g],#nav .nav-sec[data-for=plaza][data-active=h] button[data-ch=h]{order:1}
+#nav .nav-sec[data-for=plaza][data-active=g] button[data-ch=h],#nav .nav-sec[data-for=plaza][data-active=h] button[data-ch=g]{order:2}
+#nav .nav-sec[data-for=plaza]:not(.open) button:not([aria-pressed=true]){display:none!important}
+#nav .nav-sec[data-for=plaza]>button[aria-pressed=true]{flex:none!important;width:100%;min-width:0;padding:9px 6px}
+#nav .nav-sec[data-for=plaza].open>button:not([aria-pressed=true]){position:absolute;left:0;top:calc(100% + 8px);z-index:46;width:100%;min-width:0;margin:0;padding:9px 6px;border:1px solid var(--ln)!important;border-radius:12px!important;background:color-mix(in srgb,var(--pn2) 94%,transparent)!important;backdrop-filter:blur(12px);box-shadow:var(--shadow);color:var(--mu)!important}
+#nav .nav-sec[data-for=plaza].open>button:not([aria-pressed=true]):hover{color:var(--ink)!important;background:color-mix(in srgb,var(--pn3) 88%,transparent)!important;border-color:var(--gold)!important}
+@media (max-width:600px){#nav .nav-plaza{flex:1 1 0;max-width:none}}
+#cg[data-ch=g] #hl,#cg[data-ch=h] #gl,#cg[data-ch=g] #hl-nb,#cg[data-ch=h] #gl-nb{display:none!important}
+
 /* 대화창: 화면 높이에 맞춰 크게, 은은한 배경 */
-#gl,#vcl,#dl,#alg{height:clamp(320px,calc(100dvh - 380px),680px);min-height:0;max-height:none!important;padding:16px 14px 10px;border:1px solid var(--ln)!important;border-left:1px solid var(--ln)!important;border-radius:16px 16px 0 0;
+#gl,#hl,#vcl,#dl,#alg{height:clamp(320px,calc(100dvh - 380px),680px);min-height:0;max-height:none!important;padding:16px 14px 10px;border:1px solid var(--ln)!important;border-left:1px solid var(--ln)!important;border-radius:16px 16px 0 0;
  background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--glow) 10%,transparent),transparent 70%),var(--pn2)!important;display:flex;flex-direction:column;gap:2px}
 #dl,#alg{height:clamp(300px,calc(100dvh - 440px),620px)}
+#gl,#hl{height:clamp(300px,calc(100dvh - 420px),660px)}
+
+/* 모바일 채팅 집중: 로고·연결 안내·멸망(회귀) 타이머를 잠시 가리고, 대화창을 세로로 넓게 */
 @media (max-width:600px){
- #gl,#vcl{height:clamp(420px,calc(100dvh - 250px),760px)}
- #dl,#alg{height:clamp(400px,calc(100dvh - 310px),700px)}
+ body:has(#v-chat:not([hidden])) > main > h1,
+ body:has(#v-chat:not([hidden])) > main > .sub,
+ body:has(#v-chat:not([hidden])) #mode{display:none!important}
+ body:has(#v-chat:not([hidden])) .site-foot{display:none!important}
+ body:has(#v-chat:not([hidden])) main{max-width:100%;padding-top:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+ body:has(#nav:not([hidden])):has(#v-chat:not([hidden])) main{padding-top:8px}
+ body:has(#v-chat:not([hidden])) #v-chat>.hint:first-of-type{display:none}
+ /* 남은 크롬만 빼되, 광장 3단 접힘과 무관하게 대화창 높이는 고정(들쭉날쭉 방지) */
+ #gl,#hl,#vcl{height:calc(100dvh - 228px);min-height:min(360px,65dvh)}
+ #dl,#alg{height:calc(100dvh - 220px);min-height:min(340px,60dvh)}
+ body:has(#v-chat:not([hidden])):has(#ct:not([hidden])) #gl,
+ body:has(#v-chat:not([hidden])):has(#ct:not([hidden])) #hl,
+ body:has(#v-chat:not([hidden])):has(#ct:not([hidden])) #vcl{height:calc(100dvh - 270px)}
+ body:has(#v-chat:not([hidden])):has(#ct:not([hidden])) #dl,
+ body:has(#v-chat:not([hidden])):has(#ct:not([hidden])) #alg{height:calc(100dvh - 262px)}
 }
 #cin{margin-top:0!important;padding:10px;gap:8px;border:1px solid var(--ln);border-top:0;border-radius:0 0 16px 16px;background:var(--pn3)}
 #cin input{border-radius:999px;padding:11px 16px;background:var(--pn2)}

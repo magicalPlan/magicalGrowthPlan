@@ -1,8 +1,8 @@
 /* 채팅이 서버와 주고받는 일. 화면(js/chat.js)은 여기만 부르고, 저장 경로는 이 파일이 안다.
-   단체 말은 키 g_…, 마을은 c_{마을}_…, 게시판 글은 bp_/bx_…, 새 댓글은 board/c(bc_…) 로 구간을 나눈다.
+   광장 말은 키 g_…, 화원은 h_…, 마을은 c_{마을}_…, 게시판 글은 bp_/bx_…, 새 댓글은 board/c(bc_…) 로 구간을 나눈다.
    chat 전체에 .by("ts") 인덱스를 걸면 게시글과 최근 40개가 섞이므로 쓰지 않는다. 접두어+$key 로 자른다. */
 function apiWatchGlobal(onDocs,onErr){
- /* g_ 실시간. 예전(밑줄 없는 키) 단체 말은 g_ 가 40개 미만일 때만 한 번 읽어 합친다. */
+ /* g_ 실시간. 예전(밑줄 없는 키) 광장 말은 g_ 가 40개 미만일 때만 한 번 읽어 합친다. */
  let on=true,legacy=null,live=[],legTried=false;
  const ok=m=>!!(m&&!m.vc&&!m.bt);
  const emit=()=>{if(!on)return;const bag={};const put=(id,m)=>{if(!ok(m))return;bag[id||((Number(m.ts)||0)+":"+(m.u||""))]=m};
@@ -12,6 +12,8 @@ function apiWatchGlobal(onDocs,onErr){
   once(apiCol("chat").limit(60)).then(s=>{if(!on)return;legacy=[];(s.docs||[]).forEach(d=>{const id=d.id,m=d.data();if(id&&id.indexOf("_")<0&&ok(m))legacy.push([id,m])});emit()}).catch(()=>{})};
  const un=apiCol("chat").prefix("g_").limit(40).onSnapshot(s=>{live=(s.docs||[]).map(d=>[d.id,d.data()]);emit();leg()},e=>{if(on&&onErr)onErr(e)},POLL_FAST);
  return()=>{on=false;if(typeof un==="function")un()}}
+/* 화원 h_ 실시간. 광장(g_)·마을(c_)과 키 구간을 나눠 섞이지 않게 한다. */
+function apiWatchGarden(onDocs,onErr){return apiCol("chat").prefix("h_").limit(40).onSnapshot(s=>onDocs((s.docs||[]).map(d=>d.data()).filter(m=>m&&!m.vc&&!m.bt)),onErr,POLL_FAST)}
 function apiWatchVillage(v,onDocs,onErr){return apiCol("chat").prefix("c_"+v+"_").limit(40).onSnapshot(s=>onDocs((s.docs||[]).map(d=>d.data()).filter(m=>m&&m.vc===v&&!m.bt)),onErr,POLL_FAST)}
 
 
