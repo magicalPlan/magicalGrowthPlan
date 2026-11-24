@@ -59,7 +59,7 @@ function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.cre
  // 제작법
  const rl=$("#cfl");rl.innerHTML="";RCP.forEach(r=>{const lock=lv<r[5],mx=lock?0:cfMax(r),k=Math.min(craftQ,mx),g=cfGold(r),b=document.createElement("button");b.type="button";b.className="chip sq cf-r"+(lock?" lock":"");
   const it=ITM.find(t=>t[0]===r[1]),ds=it?it[2]:(MATM[r[1]]||[])[3]||"";
-  {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
+  {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(r[0]==="r_purify"?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
   const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfNm(id)+" "+cfHave(id)+"/"+n);{const ic=itIc(id,"xs");if(ic)s.prepend(ic)}need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
   const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":cfSeasonDone(r)?"이번 시즌에는 이미 만들었다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):(cfSeason(r)?"시즌마다 1개 · 지금 만들 수 있다":"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":""));
   b.appendChild(elT("small",null,st));b.appendChild(elT("small",null,"보유 "+cfHave(r[1])));
