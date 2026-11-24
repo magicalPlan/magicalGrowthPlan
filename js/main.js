@@ -254,6 +254,7 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
+ try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
  return true}
@@ -300,8 +301,10 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
   return out})();
  dst.scf=Object.assign({},src.scf||{},dst.scf||{});
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
- dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
- const tm=Math.max(Number(dst.stats.townMoves)||0,Number(src.stats&&src.stats.townMoves)||0);if(tm)dst.stats.townMoves=tm;
+ /* 일일 의뢰·칭호용 카운터는 max 합친다. 서버 옛 stats 로 resonances 등이 줄어들면
+    「2번 공명하기」 등 진행도가 0으로 되돌아가는 것처럼 난다. */
+ dst.stats=dst.stats||{};const stMax=["chats","townMoves","resonances","gifts","giftsUsed","purchases","huntsWon","huntsLost","bossHits","crafts","upgrades","dqAll","trialWins","lhDone","lhAbyss","duW","duL","duD"];
+ stMax.forEach(k=>{const v=Math.max(Number(dst.stats[k])||0,Number(src.stats&&src.stats[k])||0);if(v)dst.stats[k]=v});
  dst.stats.vSeen=Object.assign({},src.stats&&src.stats.vSeen||{},dst.stats.vSeen||{});
  dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t});
  /* 공명·친구 소식 워터마크는 숫자 max 로만 합친다. 작은 쪽으로 덮이면 옛 알림이 되살아난다. */
@@ -935,7 +938,9 @@ $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;r
   go.disabled=true;
   try{/* LIVE: ginbox 고유 id. gift/·슬롯 덮어쓰기·일일 한도 없음. 알림은 giftNtin→ntin. */
    await DB.doc("ginbox/"+u+"/"+ginNewId(UID)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"}});
-   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다.";gb.hidden=true}
+   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();
+   try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
+   m.style.color="var(--mu)";m.textContent="선물을 보냈다.";gb.hidden=true}
   catch(e){m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}
   go.disabled=false};
  gb.append(row,go)};

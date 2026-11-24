@@ -9,6 +9,8 @@ $("#pfr").onclick=async()=>{const m=$("#pfm"),u=pfU;if(!u||u===UID)return;if(!(C
   // 공명은 '청하기'다. 상대가 받아들이면 그때 나와 상대 모두 절망도가 내려간다. 내 몫은 지금 계산해 두었다가 수락 소식이 오면 적용한다.
   C.rl=C.rl||{};C.rl[u]=Date.now();titleState();C.stats.resonances=(C.stats.resonances||0)+1;const rb=C.rsb?5:0;C.rsb=0;
   C.rq=C.rq||{};C.rq[u]={ts:Date.now(),amt:rqAmt(rb)};save();checkTitles();
+  /* 일일 의뢰「공명하기」는 청한 순간 resonances++. 마을이 열려 있으면 진행 칸을 바로 다시 그린다. */
+  try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
   m.style.color="var(--mu)";m.textContent="공명을 청했다. 상대가 받아들이면 둘 다 절망도가 내려간다. (거절하면 3시간 대기도 풀린다)"}
  catch(e){m.style.color="var(--bad)";m.textContent="지금은 공명할 수 없다. 같은 상대에게는 3시간에 한 번만 가능하다."}
  resBtn(u)};
