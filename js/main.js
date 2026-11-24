@@ -547,7 +547,7 @@ let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
 /* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다.
    plazaOpen: 광장/화원 열에서 현재 채널 아래 다른 채널 펼침. 현재 채널을 다시 누르면 접힌다. */
-let plazaOpen=true;
+let plazaOpen=false;
 const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",pact:"town",trial:"town",craft:"town",growth:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",special:"act",mini:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
 function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
@@ -974,10 +974,10 @@ $("#nav").onclick=e=>{
   if(g==="setting"){if(!here){show("setting");drawSetting()}else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")openRec();else updNav();return}
-  if(g==="chat"){if(curView!=="chat"){ct="g";plazaOpen=true;chat()}else{updNav();navSync("chat",false)}return}
+  if(g==="chat"){if(curView!=="chat"){ct="g";plazaOpen=false;chat()}else{updNav();navSync("chat",false)}return}
   return}
- if(b.dataset.ch){const ch=b.dataset.ch;if(ch!=="g"&&ch!=="h")return;const cur=typeof gCh==="string"&&gCh==="h"?"h":"g";if(curView==="chat"&&ct==="g"&&ch===cur){plazaOpen=!plazaOpen;navSync("chat",false);return}plazaOpen=true;if(curView!=="chat"||ct!=="g"){ct="g";if(typeof gCh!=="undefined")gCh=ch;chat();if(typeof setGCh==="function")setGCh(ch,true)}else if(typeof setGCh==="function")setGCh(ch);else navSync("chat",false);return}
- if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;if(t==="g")plazaOpen=true;ct=t;chat();return}
+ if(b.dataset.ch){const ch=b.dataset.ch;if(ch!=="g"&&ch!=="h")return;const cur=typeof gCh==="string"&&gCh==="h"?"h":"g";if(curView==="chat"&&ct==="g"&&ch===cur){plazaOpen=!plazaOpen;navSync("chat",false);return}plazaOpen=false;if(curView!=="chat"||ct!=="g"){ct="g";if(typeof gCh!=="undefined")gCh=ch;chat();if(typeof setGCh==="function")setGCh(ch,true)}else if(typeof setGCh==="function")setGCh(ch);else navSync("chat",false);return}
+ if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;if(t==="g")plazaOpen=false;ct=t;chat();return}
  if(v==="hub")hub();
  if(v==="rooms"&&typeof openRooms==="function")openRooms();
  if(v==="shop")shop();
