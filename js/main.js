@@ -260,7 +260,9 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
 /* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다.
    사역마 출정 귀환 직후에도 서버(pex) sync 가 오므로 dex(px 등)를 합치지 않으면 방금 발견한 사건이 지워진다. */
-/* 옛 계정 rg/gs 정리. ginbox 이전 후에는 목록을 계정에 두지 않는다. */
+/* TODO(선물 LEGACY 제거): gift/·c.rg 잔여가 없어지면 giftBoxMerge 전체를 지우거나
+   ginboxV 고정·rg=[] 만 남긴다. i<4 는 구 슬롯 0~3 gs 키(이관 잔여용). */
+/* LEGACY: 옛 계정 rg/gs 기기 합치기. ginboxV>=1 이면 rg 비우고 gs 워터마크만 합친다. */
 function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  const v=Math.max(Number(dst.ginboxV)||0,Number(src.ginboxV)||0);
  dst.gs=dst.gs&&typeof dst.gs==="object"?dst.gs:{};src.gs=src.gs&&typeof src.gs==="object"?src.gs:{};
@@ -821,36 +823,33 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
  bagWeapons();
  const bm=$("#bgm");if(bm){bm.style.color="var(--mu)";bm.textContent=msg||""}if(fresh)applyGift()}
-// 이 친구에게 쓸 수 있는 빈 칸 번호와, 다 찼다면 가장 빨리 비는 시각
-/* TODO(선물 한도→서버): 클라 추정용. 진짜 한도는 gift/ RTDB 규칙. 서버 이관 후 이 함수·C.gsl 재검토. */
-function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let best=-1,soon=Infinity;
- for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
- return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
 /* ── 선물 동기화 ─────────────────────────────────────────────
-   [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
-   [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
-   [한도] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
-   [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
-               gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
-   [소모] rgUse: 효과·목록·절망/경험치를 낙관 반영 후 ginbox 삭제·계정 저장은 백그라운드.
-               삭제 실패 시에만 그 칸 효과를 되돌린다. ginPendDel 로 live 가 잠깐 다시 채우지 않게 한다.
-   [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
-       COMPAT_GIFT_PULL(ginPullGift), 보내기의 gift/ 쓰기,
-       rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
-   TODO(선물 한도→서버): 일일 GIFT_DAY 한도는 아직 RTDB gift/ 칸 규칙 + 클라 C.gsl 뿐이다.
-       Cloud Functions(또는 동등 서버)로 이관해 ginbox 쓰기와 함께 강제하고, 그다음 gift/
-       경로·규칙·클라 giftSlot/gsl·COMPAT pull 을 제거한다. 구현 코드는 아직 없음.
+   LIVE(현재):
+     · 목록·화면 권위 = ginbox/{나}/{id}. 계정 c.rg 에 목록을 두지 않음.
+     · 송신 = ginbox/{상대}/{ginNewId} 만. gift/ 미기입. 일일·슬롯(0~3) 한도 없음(삭제됨).
+     · 상한 = RG_MAX(30). ginApply 가 넘치면 오래된 것부터 서버 삭제.
+     · 알림 = giftNtin → ntin live → note("gift"). ginApply 는 목록만.
+     · 소모 = rgUse 낙관 반영 후 ginbox 삭제. 실패 시 그 칸만 되돌림(ginPendDel).
+   LEGACY(구버전 잔여 — 새 선물은 타지 않음):
+     · gift/{나}/{보낸이}/{0~3} · giftn · C.gsl(일일 한도) 송신 경로 → 이미 삭제됨.
+     · ginPullGift / ginSlotId / giftSweep / C.gs = gift/·옛 c.rg 이관용.
+     · ginMigrate = 계정 c.rg → ginbox 1회. ginboxV>=1 이면 no-op.
+   TODO(선물 LEGACY 제거): gift/·giftn 잔여·미이관 c.rg 가 없으면 아래를 한 번에 걷어낸다.
+     ginSlotId, ginMigId, ginMigrate, ginPullGift, giftSweep, C.gs·ginboxV·c.rg 의존,
+     giftBoxMerge, applyGift 의 migrate/pull 호출, RTDB gift/·giftn 규칙,
+     functions/leave·notice wipe 의 gift·giftn 칸. 남길 것: ginWatch·ginApply·rgUse(ginbox)·ginNewId.
    ─────────────────────────────────────────────────────────── */
 const ginPath=id=>"ginbox/"+UID+"/"+id;
-const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot);
-const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||"");
+/* TODO(선물 LEGACY 제거) */ const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot); /* gift/ 슬롯 0~3 이관 id */
+/* TODO(선물 LEGACY 제거) */ const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||""); /* c.rg·옛 gift 단건 id */
+/* LIVE: 새 선물 문서 id. 매번 고유 → 이전 선물 덮어쓰기 없음. */
+const ginNewId=from=>"n_"+String(from)+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
 let ginPullBusy=false,ginPendDel=new Set();
-/* ginbox·gift 공통 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
+/* ginbox·(LEGACY)gift 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
 async function giftDbDel(path){if(!DB||!path)return false;for(let i=0;i<3;i++){try{await DB.doc(path).delete();return true}catch(e){const c=String(e&&e.message||e);if(c==="404")return true;if(i<2)await new Promise(r=>setTimeout(r,200*(i+1)))}}return false}
-function giftWatch(){applyGift()}
-/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) gift/→ginbox pull. */
+/* 마을·가방 진입: LIVE ginWatch + LEGACY ginMigrate·ginPullGift. */
 async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();try{await ginPullGift()}catch(e){}}
-/* 계정에 남던 옛 받은 함(c.rg)을 ginbox 로 한 번만 옮긴다. ginboxV>=1 이면 끝. */
+/* TODO(선물 LEGACY 제거): 계정 c.rg → ginbox 1회. ginboxV>=1 이면 끝. */
 async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||ginMigBusy)return;ginMigBusy=true;
  try{const puts=[],seen={};
   (Array.isArray(C.rg)?C.rg:[]).forEach(x=>{if(!x||GV[x.g]==null)return;const id=ginMigId(x.u,x.ts,x.g);if(seen[id])return;seen[id]=1;
@@ -858,8 +857,7 @@ async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||gi
   try{await ginPullGift(puts,seen)}catch(e){}
   if(puts.length)await Promise.all(puts);
   C.ginboxV=1;C.rg=[];if(typeof saveNow==="function")saveNow();else save()}finally{ginMigBusy=false}}
-/* COMPAT_GIFT_PULL: 구버전·미게시 규칙으로 ginbox 에만 빠진 칸을 gift/ 에서 보충.
-   허브·가방 진입 때 한 번. 후일 ginbox 단독 시 이 함수·호출을 제거한다. */
+/* TODO(선물 LEGACY 제거): gift/ 잔여 → ginbox 보충. 새 송신은 gift/ 미사용. */
 async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!puts&&ginPullBusy)return;const own=!puts;if(own){ginPullBusy=true;puts=[];seen={}}
  try{C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const s=await once(DB.collection("gift/"+UID));let bump=false;
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
@@ -871,12 +869,13 @@ async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!pu
    Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>add(f+"_"+k,Number(k),v[k]))});
   if(own){if(puts.length)await Promise.all(puts);if(bump){if(typeof saveNow==="function")saveNow();else save()}}}
  catch(e){}finally{if(own)ginPullBusy=false}}
-/* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
+/* LIVE: ginbox live. 목록·내비. 도착 알림은 giftNtin→ntin. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
  const take=sn=>{if(gen!==ginGen||!AUTH.uid||!C)return;ginApply(sn.docs||[])};
  try{once(DB.collection("ginbox/"+UID)).then(take).catch(()=>{})}catch(e){}
  unGin=DB.collection("ginbox/"+UID).live().onSnapshot(take,()=>{},30000)}
+/* LIVE: 스냅 → ginList. RG_MAX 초과 시 오래된 ginbox 문서 삭제. */
 function ginApply(docs){const items=[];
  (docs||[]).forEach(d=>{const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object"||GV[v.g]==null)return;
   const id=d.id;if(!id||ginPendDel.has(id))return;items.push({id,g:v.g,n:String(v.n||"누군가").slice(0,20),u:String(v.u||""),ts:Number(v.ts)||0})});
@@ -889,8 +888,7 @@ function ginApply(docs){const items=[];
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
-/* 열기: 목록·절망·경험치를 먼저 낙관 반영하고, ginbox 삭제·gift 청소·계정 PATCH 는 뒤에서.
-   삭제 실패 시 그 칸만 되돌린다. ginPendDel 로 live 스냅이 낙관 구간을 다시 채우지 않는다. */
+/* LIVE: 열기. 낙관 반영 → ginbox 삭제. LEGACY giftSweep 은 구 id 만 gift/ 청소. */
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
@@ -901,9 +899,10 @@ async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에�
  const undoOne=o=>{if(!o||!o.x)return;ginPendDel.delete(o.x.id);if(!ginList.some(y=>y&&y.id===o.x.id)){ginList.push(o.x);ginList.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));ginIds=ginList.map(y=>y.id).join("|")}
   C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(dzFloorToday(),Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
   paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
- const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
-  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
-  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
+ /* TODO(선물 LEGACY 제거): 구 슬롯 id(uid_0~3)·m_ 만 gift/ 청소. n_… 은 스킵. */
+ const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),id=String(x.id||""),slotM=id.match(/^(.+)_([0-3])$/);
+  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2]);return}
+  if(/^m_/.test(id)&&x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
  list.forEach(takeOne);
  if(!opened.length){bag("선물을 열지 못했다. 잠시 뒤 다시 시도해 보자.");if(m)m.style.color="var(--bad)";return}
  const nm=ITM.find(x=>x[0]===opened[0].x.g),drop=b0-(C.dz||0);
@@ -914,6 +913,7 @@ async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에�
  opened.forEach(o=>{giftDbDel(ginPath(o.x.id)).then(ok=>{if(ok){ginPendDel.delete(o.x.id);giftSweep(o.x);return}
   undoOne(o);bag("일부 선물을 서버에서 지우지 못해 되돌렸다. 잠시 뒤 다시 열어 보자.");if(m)m.style.color="var(--bad)";
   if(typeof saveNow==="function")saveNow()}).catch(()=>{undoOne(o);if(typeof saveNow==="function")saveNow()})})}
+/* LIVE: 가방 받은 선물함 UI. */
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=ginList,gr=rgGroups();
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!gr.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
@@ -923,23 +923,20 @@ function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const
   const ic=itIc(g);if(ic)c.append(ic,tx);else c.append(tx);
   const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(g);w.append(c,b);box.appendChild(w)});
  if(rg.length>1){const a=elT("button","btn g","모두 열기 (절망도 -"+rg.reduce((s,x)=>s+rgVal(x.g),0)+")");a.type="button";a.disabled=!!C.fall;a.onclick=()=>rgUse("all");box.appendChild(a)}}
+/* LIVE: 프로필에서 선물 보내기. ginbox 고유 id 만. 일일·슬롯 한도 UI 없음. */
 $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;return}C.inv=C.inv||{};gb.hidden=false;gb.innerHTML="";
- const sl=giftSlot(u);gb.appendChild(elT("p","hint","이 친구에게 오늘 보낼 수 있는 선물 "+sl.left+" / "+GIFT_DAY+"개"+(sl.i<0?" · 약 "+cdTxt(sl.soon-Date.now())+" 뒤에 다시 보낼 수 있다":"")));
+ gb.appendChild(elT("p","hint","보낼 선물을 고르자. 받는 쪽 보관함은 최대 "+RG_MAX+"개다."));
  const own=ITM.filter(x=>x[0][0]==="g"&&(C.inv[x[0]]||0)>0);if(!own.length){gb.appendChild(elT("p","hint","가방에 선물이 없다. 상점에서 사거나 공방에서 만들 수 있다."));return}
  let sel=null;const row=document.createElement("div");row.className="row";row.style.margin="10px 0";
  own.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=x[1]+" x"+C.inv[x[0]];{const ic=itIc(x[0],"sm");if(ic)b.prepend(ic)}b.setAttribute("aria-pressed","false");
   b.onclick=()=>{sel=x[0];row.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"))};row.appendChild(b)});
- const go=document.createElement("button");go.type="button";go.className="btn";go.textContent="보내기";go.disabled=sl.i<0;
+ const go=document.createElement("button");go.type="button";go.className="btn";go.textContent="보내기";
  go.onclick=async()=>{const m=$("#pfm");if(!sel){m.style.color="var(--bad)";m.textContent="보낼 선물을 골라야 한다.";return}
-  const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
-  try{const body={g:sel,ts:{".sv":"timestamp"},n:nmOf()};
-   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. 알림은 giftNtin→ntin. */
-   await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set(body);
-   await DB.doc("ginbox/"+u+"/"+ginSlotId(UID,g.i)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"},slot:g.i});
-   C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
-   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
-  catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}
+  try{/* LIVE: ginbox 고유 id. gift/·슬롯 덮어쓰기·일일 한도 없음. 알림은 giftNtin→ntin. */
+   await DB.doc("ginbox/"+u+"/"+ginNewId(UID)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"}});
+   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다.";gb.hidden=true}
+  catch(e){m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}
   go.disabled=false};
  gb.append(row,go)};
 function pfRows(pf){const dl=document.createElement("dl");dl.className="kv";PF.forEach(([k,n])=>{const v=pf&&typeof pf[k]==="string"?pf[k].trim():"";if(!v)return;const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=n;dd.textContent=v.slice(0,300);dd.style.whiteSpace="pre-wrap";dd.style.overflowWrap="anywhere";dl.append(dt,dd)});return dl.children.length?dl:null}

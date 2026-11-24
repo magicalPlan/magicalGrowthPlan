@@ -125,6 +125,7 @@ async function wipeAccount(db, uid, opt) {
     ["dmn/" + uid, "dmn"],
     ["fmsg/" + uid, "fmsg"],
     ["res/" + uid, "res"],
+    /* TODO(선물 LEGACY 제거): gift·giftn 잔여 이관이 끝나면 두 칸만 목록에서 뺀다. ginbox 는 유지. */
     ["gift/" + uid, "gift"],
     ["giftn/" + uid, "giftn"],
     ["ginbox/" + uid, "ginbox"],
