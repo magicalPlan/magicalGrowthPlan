@@ -157,13 +157,15 @@ function gainDzMod(dz, seat, c, boost) {
   else d = Math.round(d);
   return d;
 }
-/* gain() 경험 보정(wx·상처 제외). 무기 더미 경험용. */
-function gainExMod(ex, seat, c) {
+/* gain() 경험 보정과 맞춤(지혜·끈기·타락·후유증·바람). 무기 더미·사이드 경험용. */
+function gainExMod(ex, seat, c, now) {
   if (!(ex > 0)) return 0;
   let e = ex;
   e *= 1 + .04 * rnLv(c && c.rn, "wis");
   if (((seat && seat.t) || (c && c.t) || "") === "끈기") e *= 1.2;
   if (c && c.fall) e = 0;
+  const t = now == null ? Date.now() : now;
+  if (e > 0 && c && Number(c.scar) > t) e *= .5;
   if (hasAttr(seat, c, "바람")) e = Math.round(e * 1.15);
   else e = Math.round(e);
   return Math.max(0, e);
@@ -214,7 +216,7 @@ function marchSide(r, seat, c, boost, rand, now) {
     const e = pile[1] || {};
     if (e.gd) gAdd += Math.round(Number(e.gd) || 0);
     if (e.mm) mm += Math.max(0, Math.floor(Number(e.mm) || 0));
-    if (e.ex) exAdd += gainExMod(Number(e.ex) || 0, seat, c);
+    if (e.ex) exAdd += gainExMod(Number(e.ex) || 0, seat, c, now);
     if (e.dz) dz += gainDzMod(Number(e.dz) || 0, seat, c, boost);
   }
   if (fx.dh && (Number(seat.dz) || 0) >= 70) {
@@ -331,10 +333,12 @@ function marchMuls(seat, c, shared) {
   if (wfl >= 1) exMul *= 1 + WF_EXP;
   exMul *= 1 + petEff(q, "ex");
   if (dis === "storm") exMul *= .8;
-  /* gain() 경험 보너스(상처·타락 제외). */
+  /* gain() 경험 보너스와 맞춤: 지혜·끈기·바람 + 타락 0·후유증 ×0.5. c 는 loadMarchBoost 가 이미 읽음(추가 조회 없음). */
   exMul *= 1 + .04 * wis;
   if (title === "끈기") exMul *= 1.2;
   if (attrsOf(c).includes("바람") || String((seat && seat.a) || "").includes("바람")) exMul *= 1.15;
+  if (c && c.fall) exMul = 0;
+  else if (c && Number(c.scar) > (shared.now || Date.now())) exMul *= .5;
 
   return {gMul, exMul, dis, workshop, drill, wfl, wand};
 }
