@@ -118,7 +118,9 @@ async function rstOneAccount(db, uid, rstId) {
     delQuiet(db, "raid/" + uid),
     delQuiet(db, "rooms/xa" + uid),
     delQuiet(db, "rooms/xr/" + uid),
-    delQuiet(db, "event_minigame/flanders/rank/" + uid)
+    delQuiet(db, "event_minigame/flanders/rank/" + uid),
+    delQuiet(db, "shady/go/" + uid),
+    delQuiet(db, "accounts/" + uid + "/shadypay")
   ]);
 
   try {

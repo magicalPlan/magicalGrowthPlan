@@ -132,6 +132,7 @@ async function wipeAccount(db, uid, opt) {
     ["pettr/" + uid, "pettr"],
     ["pex/go/" + uid, "pex/go"],
     ["pex/take/" + uid, "pex/take"],
+    ["shady/go/" + uid, "shady/go"],
     ["event_minigame/flanders/rank/" + uid, "flanders/rank"],
     ["event_minigame/flanders/play/" + uid, "flanders/play"],
     ["event_minigame/flanders/go/" + uid, "flanders/go"]

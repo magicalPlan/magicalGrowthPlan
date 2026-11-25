@@ -1,13 +1,10 @@
 /* 수상한 상인(상점 가챠). shop.js 다음에 불러야 한다.
    화면: html/shop/shop.html #shdbox.
-   · 버튼은 '10회 열기' 하나. 총 SHADY_COST(2000)골드로 보상 10칸(2×5) = 칸당 200골드.
-   · 등급 확률 후 등급 안 균등. UI 는 결과 칸·버튼·골드만 고친다(상점 통째 재구성 금지).
-   · 로컬에서 골드·보상을 한 번에 반영한 뒤 칸 PATCH. 실패 시 스냅샷으로 되돌린다. */
+   · 10회 열기 = SHADY_COST(2000)골드 · 보상 10칸.
+   · 굴림·차감·지급은 Functions(shadyPull). 클라는 요청·표시·확률표만.
+   · 요청: shady/go/{uid}/{reqId} → done·show. 계정은 sid:"shady" sync. */
 const SHADY_COST=2000,SHADY_N=10,SHADY_UNIT=SHADY_COST/SHADY_N;
-/* 등급 뽑기 확률(합 100%). 칸마다 독립. 등급 안 아이템은 균등. */
 const SHADY_TIER_P=[.67,.28,.04,.01];
-/* [등급0..][보상]. k: inv(가방·재료)·gd·eggs·eggsEv. n: 개수. 기존 보상은 유지하고 추가·수량만 고친다.
-   eggsEv = 활성 시즌 알(eventLive().egg.inv → eggsEv / eggsEv2). 시즌 밖이면 일반 알. */
 const SHADY_POOL=[
  [{k:"inv",id:"mana",n:2},{k:"inv",id:"charm",n:1},{k:"inv",id:"map",n:1},{k:"inv",id:"flag",n:1},{k:"inv",id:"seal",n:1},{k:"inv",id:"hope",n:1},{k:"inv",id:"g2",n:1},{k:"gd",n:50},{k:"inv",id:"m_forest",n:1},{k:"inv",id:"m_coast",n:1},{k:"inv",id:"m_valley",n:1}],
  [{k:"inv",id:"m_shard",n:2},{k:"inv",id:"m_herb",n:2},{k:"inv",id:"m_ore",n:2},{k:"inv",id:"m_dew",n:2},{k:"inv",id:"m_ash",n:10},{k:"inv",id:"m_crown",n:1},{k:"gd",n:500},{k:"inv",id:"petcan",n:3},{k:"inv",id:"m_abyss",n:2}],
@@ -15,7 +12,11 @@ const SHADY_POOL=[
  [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1},{k:"inv",id:"milk",n:1}]
 ];
 let shadyBusy=false,shadyBuilt=false;
-/* 활성 시즌 알. inv: eggsEv|eggsEv2|null. meta: PET_EV / PET_EV2. */
+/* 가챠 대기 중 클라 PATCH 가 서버 차감·지급(골드·알·가방·통계)을 덮지 않게 한다. */
+function shadyStripPatch(body){if(!body||!shadyBusy)return body;Object.keys(body).forEach(k=>{
+ if(k==="c/gd"||k==="c/eggs"||k==="c/eggsEv"||k==="c/eggsEv2"||k==="shadypay"||k.indexOf("shadypay/")===0
+  ||k.indexOf("c/inv/")===0||k==="c/stats"||k.indexOf("c/stats/")===0)delete body[k]});return body}
+const shadyWhy={gold:"골드가 부족하다. 10회 열기에 "+SHADY_COST+"골드가 필요하다.",acc:"계정을 찾지 못했다.",bad:"요청이 올바르지 않다.",dup:"이미 처리된 요청이다.",err:"서버에서 상자를 열지 못했다."};
 function shadyEvEgg(){const live=typeof eventLive==="function"?eventLive():null,inv=live&&live.egg&&live.egg.inv;
  if(inv==="eggsEv2")return{inv:"eggsEv2",meta:typeof PET_EV2!=="undefined"?PET_EV2:null};
  if(inv==="eggsEv")return{inv:"eggsEv",meta:typeof PET_EV!=="undefined"?PET_EV:null};
@@ -23,13 +24,8 @@ function shadyEvEgg(){const live=typeof eventLive==="function"?eventLive():null,
 function shadyOpen(){try{return localStorage.getItem("mgr_shop_shd")!=="0"}catch(e){return true}}
 function shadyFold(open){const b=$("#shdtog"),box=$("#shdbox");if(!b||!box)return;box.hidden=!open;b.textContent=open?"접기 ▲":"펼치기 ▼";b.setAttribute("aria-expanded",open?"true":"false");try{localStorage.setItem("mgr_shop_shd",open?"1":"0")}catch(e){}
  shopShady()}
-function shadyRollOne(){let r=Math.random(),acc=0,ti=SHADY_TIER_P.length-1;
- for(let i=0;i<SHADY_TIER_P.length;i++){acc+=SHADY_TIER_P[i];if(r<acc){ti=i;break}}
- const pool=SHADY_POOL[ti]||SHADY_POOL[0],pick=pool[Math.floor(Math.random()*pool.length)];
- return Object.assign({tier:ti+1},pick)}
-function shadyRollPack(){const a=[];for(let i=0;i<SHADY_N;i++)a.push(shadyRollOne());return a}
 function shadyName(r){
- if(r.k==="gd")return "골드";
+ if(r.k==="gd")return"골드";
  if(r.k==="eggs")return"사역마의 알";
  if(r.k==="eggsEv"){const e=shadyEvEgg();return e&&e.meta&&e.meta.nm?e.meta.nm:(e?"시즌 알":"사역마의 알")}
  if(typeof ITM!=="undefined"){const x=ITM.find(t=>t[0]===r.id);if(x)return x[1]}
@@ -48,43 +44,40 @@ function shadyPaintGrid(list){const grid=$("#shdgrid");if(!grid)return;
   else if(r.k==="eggs"||r.k==="eggsEv"){const e=r.k==="eggsEv"?shadyEvEgg():null;cell.appendChild(elT("span","shady-ic",e&&e.meta&&e.meta.ic?e.meta.ic:"🥚"))}
   else if(r.k==="gd"){const i=document.createElement("img");i.src="assets/items/gold.png"+(typeof ITEM_IMG_V!=="undefined"?"?v="+ITEM_IMG_V:"");i.alt="";i.width=32;i.height=32;i.decoding="async";i.className="it-ic sm";cell.appendChild(i)}
   cell.appendChild(elT("b","",shadyName(r)));cell.appendChild(elT("small","","×"+r.n))}}
-function shadySnap(){const inv={};C.inv=C.inv||{};Object.keys(C.inv).forEach(k=>{inv[k]=C.inv[k]});
- return{gd:C.gd||0,eggs:C.eggs||0,eggsEv:C.eggsEv||0,eggsEv2:C.eggsEv2||0,inv,mats:(C.stats&&C.stats.mats)||0,shadyBoxes:(C.stats&&C.stats.shadyBoxes)||0,shadyT1:(C.stats&&C.stats.shadyT1)||0,shadyT4:(C.stats&&C.stats.shadyT4)||0}}
-function shadyRestore(s){if(!s||!C)return;C.gd=s.gd;C.eggs=s.eggs;C.eggsEv=s.eggsEv;C.eggsEv2=s.eggsEv2;C.inv=Object.assign({},s.inv);
- C.stats=C.stats||{};C.stats.mats=s.mats;C.stats.shadyBoxes=s.shadyBoxes;C.stats.shadyT1=s.shadyT1;C.stats.shadyT4=s.shadyT4}
-function shadyApplyOne(r,fields,inc){if(!r||!C)return;
- if(r.k==="gd"){C.gd=(C.gd||0)+r.n;inc.gd=(Number(inc.gd)||0)+r.n;return}
- if(r.k==="eggs"){C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
- if(r.k==="eggsEv"){const e=shadyEvEgg();
-  if(e&&e.inv==="eggsEv2"){C.eggsEv2=(C.eggsEv2||0)+r.n;fields.eggsEv2=C.eggsEv2;return}
-  if(e&&e.inv==="eggsEv"){C.eggsEv=(C.eggsEv||0)+r.n;fields.eggsEv=C.eggsEv;return}
-  C.eggs=(C.eggs||0)+r.n;fields.eggs=C.eggs;return}
- if(r.k==="inv"&&r.id){C.inv=C.inv||{};C.inv[r.id]=(C.inv[r.id]||0)+r.n;fields["inv/"+r.id]=C.inv[r.id];
-  try{if(typeof dexAdd==="function"){if(typeof MATM!=="undefined"&&MATM[r.id])dexAdd("mat",r.id);else dexAdd("it",r.id)}}catch(e){}
-  if(typeof MATM!=="undefined"&&MATM[r.id]){C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+r.n;fields["stats/mats"]=C.stats.mats}}}
-/* 10회 열기 = 보상 10칸을 한 번에. 비용 SHADY_COST(2000, 칸당 SHADY_UNIT).
-   골드는 순증감(비용−보상골드)만 increment. 가방 등은 절대 PATCH. */
+async function shadyWait(path,ms){ms=ms||25000;const t0=Date.now();
+ while(Date.now()-t0<ms){try{const s=await DB.doc(path).get(),v=s.exists?s.data():null;if(v&&v.done)return v}catch(e){}await new Promise(r=>setTimeout(r,400))}
+ return null}
+async function shadySyncBg(after){
+ try{if(typeof accSeen!=="undefined")accSeen=0;if(typeof accSyncIfNewer==="function")await accSyncIfNewer()}catch(e){}
+ try{if(typeof after==="function")after()}catch(e){}}
+function shadyFail(msg){const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent=msg||shadyWhy.err}shadyPaintGold();shadyPaintBtns()}
+/* 클라는 요청만. 골드 판단·굴림·차감·지급은 서버. */
 async function shadyPull(){if(shadyBusy||!C)return;const cost=SHADY_COST;
- if((C.gd||0)<cost){const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent="골드가 부족하다. 10회 열기에 "+cost+"골드가 필요하다."}shadyPaintBtns();return}
- shadyBusy=true;shadyPaintBtns();const snap=shadySnap(),fields={},inc={gd:-cost};
- try{C.gd=(C.gd||0)-cost;C.stats=C.stats||{};
-  const show=shadyRollPack();show.forEach(r=>shadyApplyOne(r,fields,inc));
-  /* 칭호용: 연 상자 수(칸)·4등급 횟수. 우수 고객·동전을 땅에 버린. */
-  C.stats.shadyBoxes=(C.stats.shadyBoxes||0)+show.length;fields["stats/shadyBoxes"]=C.stats.shadyBoxes;
-  const t1=show.filter(r=>r&&r.tier===1).length;if(t1){C.stats.shadyT1=(C.stats.shadyT1||0)+t1;fields["stats/shadyT1"]=C.stats.shadyT1}
-  const t4=show.filter(r=>r&&r.tier===4).length;if(t4){C.stats.shadyT4=(C.stats.shadyT4||0)+t4;fields["stats/shadyT4"]=C.stats.shadyT4}
-  C.stats.maxGold=Math.max(C.stats.maxGold||0,C.gd||0);fields["stats/maxGold"]=C.stats.maxGold;
-  shadyPaintGrid(show);shadyPaintGold();shadyPaintBtns();
-  if(typeof apiAccountWrite==="function")await apiAccountWrite(fields,inc);
-  else if(typeof save==="function")save();
+ if((C.gd||0)<cost){shadyFail(shadyWhy.gold);return}
+ if(!AUTH||!AUTH.uid||!DB||typeof LOCAL!=="undefined"&&LOCAL){shadyFail("온라인에서만 상자를 열 수 있다.");return}
+ shadyBusy=true;shadyPaintBtns();
+ const reqId="r"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+ const path="shady/go/"+AUTH.uid+"/"+reqId;
+ try{
+  await DB.doc(path).set({ts:Date.now()});
+  const res=await shadyWait(path,25000);
+  if(!res||!res.done){shadyFail("서버 응답이 늦다. 잠시 뒤 다시 시도해 보자.");await shadySyncBg(()=>{shadyPaintGold();shadyPaintBtns()});return}
+  if(!res.ok){shadyFail(shadyWhy[res.why]||shadyWhy.err);await shadySyncBg(()=>{shadyPaintGold();shadyPaintBtns()});return}
+  if(res.why==="dup"||!Array.isArray(res.show)){await shadySyncBg(()=>{shadyPaintGold();shadyPaintBtns()});
+   const sm=$("#sm");if(sm){sm.style.color="var(--mu)";sm.textContent="이미 처리된 요청이다."}return}
+  shadyPaintGrid(res.show);
   const sm=$("#sm");if(sm){sm.style.color="var(--mu)";
    const pool=typeof SHADY_SAY!=="undefined"&&SHADY_SAY.length?SHADY_SAY:["상자를 10회 열었다. (-{cost}골드)"];
-   sm.textContent=String(pool[Math.floor(Math.random()*pool.length)]||"").replace(/\{cost\}/g,String(cost))}
-  try{if(typeof checkTitles==="function")checkTitles()}catch(e){}}
- catch(e){shadyRestore(snap);shadyPaintGrid(null);shadyPaintGold();
-  try{if(typeof save==="function")save()}catch(_){}
-  const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent="상자를 열지 못했다. 골드는 그대로다."}}
- finally{shadyBusy=false;shadyPaintBtns()}}
+   sm.textContent=String(pool[Math.floor(Math.random()*pool.length)]||"").replace(/\{cost\}/g,String(res.cost||cost))}
+  try{res.show.forEach(r=>{if(!r||r.k!=="inv"||!r.id)return;
+   try{if(typeof MATM!=="undefined"&&MATM[r.id])dexAdd("mat",r.id);else dexAdd("it",r.id)}catch(e){}})}catch(e){}
+  await shadySyncBg(()=>{
+   try{if(typeof titleState==="function")titleState()}catch(e){}
+   try{if(typeof checkTitles==="function")checkTitles()}catch(e){}
+   shadyPaintGold();shadyPaintBtns()
+  });
+ }catch(e){shadyFail(shadyWhy.err);await shadySyncBg(()=>{shadyPaintGold();shadyPaintBtns()})}
+ finally{shadyBusy=false;shadyPaintBtns();try{if(typeof savePending!=="undefined"&&savePending&&typeof saveCloud==="function")saveCloud()}catch(e){}}}
 function shadyStoryFail(msg){const sm=$("#sm");if(sm){sm.style.color="var(--bad)";sm.textContent=msg||"이야기를 열지 못했다."}else if(typeof toast==="function")toast(msg||"이야기를 열지 못했다.")}
 function shadyStoryPlay(){if(typeof storyLoad!=="function"||typeof vnOpen!=="function"){shadyStoryFail("이야기 기능을 불러오지 못했다.");return}
  const play=$("#shdplay");if(play)play.disabled=true;
@@ -94,13 +87,10 @@ function shadyStoryPlay(){if(typeof storyLoad!=="function"||typeof vnOpen!=="fun
   if(!story||!story.start){shadyStoryFail("수상한 상인 이야기가 아직 없다.");return}
   vnOpen(story)}).catch(()=>shadyStoryFail("이야기를 불러오지 못했다.")).finally(()=>{if(play)play.disabled=false})}
 function shopShady(){if(!C)return;
- /* 재생 버튼은 제목줄에 있어 칸이 접혀 있어도 연결한다. */
  const play=$("#shdplay");if(play&&!play._shady){play._shady=1;play.onclick=()=>shadyStoryPlay()}
  const tog=$("#shdtog");if(tog&&!tog._shady){tog._shady=1;tog.onclick=()=>shadyFold(!!$("#shdbox")&&!!$("#shdbox").hidden)}
  const box=$("#shdbox");if(!box||box.hidden)return;
  if(!shadyBuilt||!$("#shdgrid")||!$("#shdgrid").children.length){
   const grid=$("#shdgrid");if(grid){grid.innerHTML="";for(let i=0;i<SHADY_N;i++)grid.appendChild(elT("div","shady-cell",""));shadyBuilt=true;shadyPaintGrid(null)}
   const b10=$("#shd10");if(b10&&!b10._shady){b10._shady=1;b10.onclick=()=>shadyPull()}}
- /* 안내 문구: 기획 변경 시 html #shdlead 또는 아래 한 줄만 고친다.
-    기본: "수상한 상인이 상자를 판다. 상자 안에는 상상 이상으로 좋은 상품도, 꽝도 있다." */
  shadyPaintBtns()}

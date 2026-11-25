@@ -149,6 +149,7 @@ function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
  /* 사역마 출정(c/pex)·지급 영수증(pexpay)은 서버만 쓴다. 클라 PATCH 로 지우거나 덮지 않는다. */
  if(typeof pexStripPatch==="function")pexStripPatch(out);else Object.keys(out).forEach(k=>{if(k==="c/pex"||k.indexOf("c/pex/")===0)delete out[k]});
+ if(typeof shadyStripPatch==="function")shadyStripPatch(out);
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
 function pendWrite(slim){if(!AUTH.uid||!slim||!Object.keys(slim).length)return;try{localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(Object.assign({_t:Date.now()},slim)))}catch(e){}}
@@ -200,7 +201,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,shady:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드·절망(dz): 서버본 절대값 + (이 탭 C − accBase) 미저장 증감. 옛 절대값으로 덮지 않는다.
    절망 예: 로컬만 50→0 회복(미저장), 서버는 아직 50인데 ts 만 오른 경우(마치 xpay·다른 탭 등).
@@ -346,6 +347,8 @@ function saveCloud(now){
   if(document.hidden){savePending=true;return}
   const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;wakeSave(false);return}
    if(document.hidden){savePending=true;saveBusy=false;return}
+   /* 수상 상자 서버 지급 중: 옛 절대값 PATCH·MY_SID 가 차감/보상을 덮고 '다른 기기' 토스트를 만든다. */
+   if(typeof shadyBusy!=="undefined"&&shadyBusy){savePending=true;saveBusy=false;return}
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
    if(document.hidden){savePending=true;saveBusy=false;return}
@@ -369,7 +372,7 @@ function saveCloud(now){
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
    let body=accDiff(sent);body=accPwBonusPatch(body,accBase);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});if(typeof pexStripPatch==="function")pexStripPatch(slim);pendWrite(slim)}catch(e){}
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});if(typeof pexStripPatch==="function")pexStripPatch(slim);if(typeof shadyStripPatch==="function")shadyStripPatch(slim);pendWrite(slim)}catch(e){}
    /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};

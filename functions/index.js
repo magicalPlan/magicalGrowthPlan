@@ -16,6 +16,7 @@ const {createDormantSweep} = require("./dormant");
 const {createPetTraitGrant} = require("./pettr");
 const {createDuelDevScore, createDuelDevClaim} = require("./duel");
 const {createPexStart, createPexClaim} = require("./pex");
+const {createShadyPull} = require("./shady");
 const {createMgFlandersSubmit} = require("./mg-flanders");
 const {createAccountLeave} = require("./leave");
 const {createRosterMirrorSync} = require("./roster-mirror");
@@ -56,6 +57,9 @@ exports.duelDevClaim = createDuelDevClaim(getDatabase);
 /* 사역마 출정: pex/go 출발 스탬프 · pex/take 귀환 보상. 연속 스케줄 없음. */
 exports.pexStart = createPexStart(getDatabase);
 exports.pexClaim = createPexClaim(getDatabase);
+
+/* 수상한 상인: shady/go 요청 → 서버 굴림·차감·지급. 클라 가챠 금지. */
+exports.shadyPull = createShadyPull(getDatabase);
 
 /* 플랜더스 밑그림: go 제출 → play 세션 확인 후 rank·total_amount increment. 클라는 합계 직접 불가. */
 exports.mgFlandersSubmit = createMgFlandersSubmit(getDatabase);
