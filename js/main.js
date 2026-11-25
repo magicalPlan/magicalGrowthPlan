@@ -559,19 +559,24 @@ let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
 /* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다.
-   plazaOpen: 광장/화원 열에서 현재 채널 아래 다른 채널 펼침. 현재 채널을 다시 누르면 접힌다. */
+   plazaOpen: 광장/화원 열에서 현재 채널 아래 다른 채널 펼침. 현재 채널을 다시 누르면 접힌다.
+   gCh(g|h)가 마지막 단체 채널. 마을·1:1로 나가도 gate 문구는 gCh를 따라 광장/화원을 유지한다. */
 let plazaOpen=false;
+const plazaChNow=()=>typeof gCh==="string"&&gCh==="h"?"h":"g";
+const plazaChLab=ch=>ch==="h"?"화원":"광장";
+function plazaGateLabel(){const gate=document.querySelector("#nav .nav-plaza-gate");if(!gate)return;const lab=plazaChLab(plazaChNow());if(gate.textContent!==lab)gate.textContent=lab}
 const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",pact:"town",trial:"town",craft:"town",growth:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",special:"act",mini:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
 function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
  document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX)||(b.dataset.v==="pact"&&id==="trial"))?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
- /* 채팅 › 광장/화원: 현재 채널이 위, 펼치면 나머지가 아래. 마을·1:1에 있을 땐 입장용 gate만. */
+ /* 채팅 › 광장/화원: 현재 채널이 위, 펼치면 나머지가 아래. 마을·1:1에 있을 땐 입장용 gate만(문구=gCh). */
  const chatSub=document.querySelector('#nav .nav-sub[data-for="chat"]'),plazaSec=document.querySelector('#nav .nav-sec[data-for="plaza"]');
  const gate=document.querySelector("#nav .nav-plaza-gate");
  const inPlaza=id==="chat"&&typeof ct==="string"&&ct==="g"&&chatSub&&!chatSub.hidden;
- const chNow=typeof gCh==="string"&&gCh==="h"?"h":"g";
+ const chNow=plazaChNow();
+ plazaGateLabel();
  if(gate)gate.hidden=!!inPlaza;
  if(plazaSec){plazaSec.hidden=!inPlaza;plazaSec.dataset.active=chNow;plazaSec.classList.toggle("open",!!(inPlaza&&plazaOpen))}
  document.querySelectorAll("#nav .nav-sec[data-for=plaza] button[data-ch]").forEach(b=>{const on=b.dataset.ch===chNow;b.setAttribute("aria-pressed",on?"true":"false");if(on)b.setAttribute("aria-expanded",plazaOpen?"true":"false");else b.removeAttribute("aria-expanded")});
@@ -975,10 +980,10 @@ $("#nav").onclick=e=>{
    const open=sub&&!sub.hidden;
    const here=navGroup(curView)===g;
 
-  if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false;updNav();return}
+  if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false;plazaGateLabel();updNav();return}
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
-  if(g!=="chat"){const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false}
+  if(g!=="chat"){const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false;plazaGateLabel()}
   if(g==="town"){if(!here)hub();else updNav();return}
   if(g==="act"){if(!here&&typeof openRooms==="function")openRooms();else if(!here)ord();else updNav();return}
   if(g==="setting"){if(!here){show("setting");drawSetting()}else updNav();return}

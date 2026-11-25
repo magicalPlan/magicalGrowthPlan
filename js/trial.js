@@ -4,7 +4,10 @@
    예전에는 24시간이었다. 그 기준으로 12시간보다 많이 남은 사람은 12시간으로 맞춘다.
    12시간보다 짧게 남은 사람은 그 시간을 유지한다. C.tr12 가 있으면 이미 맞춘 것이므로 다시 건드리지 않는다.
    표시 없이 매번 예전 24시간으로 계산하면, 새로 시작한 시험도 마을을 열 때마다 12시간으로 늘어난다. */
-/* C.rcp = renew_contract_pendulum. can 예외(등급·레벨·토벌·쿨 무시). 성공·실패(탈락·타락)에서 끄고, 나가기·시작 전에는 유지. */
+/* C.rcp = renew_contract_pendulum(왕명의 펜듈럼).
+   · can 예외: 등급·레벨·토벌·쿨 무시(타락만 막음).
+   · 수명: 성공·실패(탈락·타락)에서 끄고, 나가기·시작 전에는 유지.
+   · 성공 보상: 새 속성 확률이 TRIAL_ATTR_P(.15) → TRIAL_ATTR_P_RCP(.7). 뽑는 방식(없는 속성 균등)은 동일. */
 const TRIAL_CD_OLD=24*3600000;
 function trClamp(){if(!C||C.tr12)return;if(C.trT){const now=Date.now(),oldLeft=TRIAL_CD_OLD-(now-(Number(C.trT)||0));if(oldLeft>0){const want=Math.min(oldLeft,TRIAL_CD);C.trT=now-(TRIAL_CD-want)}}C.tr12=1;if(typeof save==="function")save()}
 const trLeft=()=>{trClamp();return Math.max(0,TRIAL_CD-(Date.now()-(Number(C.trT)||0)))};
@@ -37,8 +40,10 @@ $("#tg").onclick=()=>{if(T.end)return;trStart();const v=VL[C.v],last=T.f+1===T.n
  else{titleState();C.stats.trialFails=(C.stats.trialFails||0)+1;T.fails=(T.fails||0)+1;if(useItem("seal")){T.l.push("시련에 밀려났지만 여왕의 인장이 마음을 지켜 주었다. 절망도가 오르지 않았다.");save()}else{T.l.push("시련에 밀려났다. 절망도가 오른다."+(eq(3)?" (방패가 충격을 줄인다)":""));gain(0,eq(3)?12:20)}
   if(T.fails>TRIAL_LIVES&&!C.fall){if(C.rcp){C.rcp=0;if(typeof saveNow==="function")saveNow();else save()}T.l.push("시련에 "+T.fails+"번 밀려났다. 여왕님이 조용히 고개를 저으며 시험을 끝냈다. "+trCdTxt()+" 뒤에 다시 도전할 수 있다.");note("quest","재계약 시험에서 탈락했다. "+trCdTxt()+" 뒤에 다시 도전할 수 있다.");T.end=1}}
  if(C.fall){if(C.rcp){C.rcp=0;if(typeof saveNow==="function")saveNow();else save()}T.l.push("절망이 한계를 넘었다. 시련의 문 앞에서 타락이 시작되었다.");T.end=1}
- else if(T.f>=T.n){titleState();C.stats.trialWins=(C.stats.trialWins||0)+1;const old=C.g,atMax=gi()>=GL.length-1;if(!atMax)C.g=GL[gi()+1];C.cl=0;if(C.rcp)C.rcp=0;let r;const miss=AT.filter(a=>!C.a.includes(a[0]));
-  if(miss.length&&Math.random()<.15){const mx=miss[R(miss.length)],a=mx[0];C.a.push(a);try{if(typeof dexSkAttr==="function"&&dexSkAttr(a))note("dex","도감에 새 마법이 기록되었다: "+((typeof SK!=="undefined"&&SK[a])?SK[a].nm:a))}catch(e){}r="새로운 속성 '"+a+"'을 손에 넣었다! ("+mx[2]+")"}else{C.b=(C.b||0)+5;r="능력이 개화했다. 전투력이 올랐다."}
+ else if(T.f>=T.n){titleState();C.stats.trialWins=(C.stats.trialWins||0)+1;const old=C.g,atMax=gi()>=GL.length-1,pend=!!C.rcp;if(!atMax)C.g=GL[gi()+1];C.cl=0;if(pend)C.rcp=0;let r;const miss=AT.filter(a=>!C.a.includes(a[0]));
+  /* 새 속성: 기본 TRIAL_ATTR_P(15%). 왕명의 펜듈럼(C.rcp)으로 들어온 성공이면 TRIAL_ATTR_P_RCP(70%). 없는 속성 중 균등. */
+  const attrP=pend?(typeof TRIAL_ATTR_P_RCP==="number"?TRIAL_ATTR_P_RCP:.7):(typeof TRIAL_ATTR_P==="number"?TRIAL_ATTR_P:.15);
+  if(miss.length&&Math.random()<attrP){const mx=miss[R(miss.length)],a=mx[0];C.a.push(a);try{if(typeof dexSkAttr==="function"&&dexSkAttr(a))note("dex","도감에 새 마법이 기록되었다: "+((typeof SK!=="undefined"&&SK[a])?SK[a].nm:a))}catch(e){}r="새로운 속성 '"+a+"'을 손에 넣었다! ("+mx[2]+")"+(pend?" (왕명의 펜듈럼)":"")}else{C.b=(C.b||0)+5;r="능력이 개화했다. 전투력이 올랐다."}
   if(C.t==="각성자"){C.b=(C.b||0)+3;r+=" 한계를 넘어 각성했다. 전투력이 3 더 올랐다."}
   /* 등급·속성은 로컬에 바로 반영(낙관적). 서버는 saveNow 로 즉시 PATCH. 실패 시 백그라운드 재시도. UI·나가기는 기다리지 않는다. */
   if(typeof saveNow==="function"){saveNow();try{if(typeof saveNowRetry==="function")saveNowRetry(3,2000)}catch(e){}}else save();
