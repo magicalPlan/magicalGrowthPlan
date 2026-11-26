@@ -1,7 +1,7 @@
 /* 정기 출정. main.js 다음에 불러야 한다. 5분마다 열리는 출정, 참가, 자동 출발, 선택, 결과.
    목록은 매지컬 마치 화면(v-rooms)에서만 본다. 목록 칸이 펼쳐져 보일 때만 참가 자리(rooms/xm)를 연결로 지킨다.
-   화면·구독 모두 정렬(기본=인덱스 / 높은 등급 / 낮은 등급) 앞쪽 xShowN(기본 5)칸만.
-   구독은 자리 doc live 여러 개(보이는 칸 + 내가 참가한 칸). 묶음 prefix 전체 live 는 쓰지 않는다.
+   목록: 정렬 앞 xShowN(기본 5)칸 + 내 참가 칸을 doc live. 묶음 prefix 전체 live 는 쓰지 않는다.
+   출정 방(v-xm) 안에서는 자기 자리 1칸만 구독한다(목록 live 가 남으면 프로필 GET 등이 타임아웃 난다).
    접히거나 화면을 벗어나면 끊는다. 마을에는 목록을 두지 않는다. 끝난 방은 서버 함수가 지운다.
    방 메타(성급·심연)는 X_STARS 셔플이 아니라 아래 isAbyss + xInfo 시드 식(서버 expeditionInfo 와 동일). */
 /* 심연 자리: 묶음 s, 칸 i(0…XN-1).
@@ -99,8 +99,13 @@ function stopX(){
  if(xPolls){xPolls.forEach(u=>{try{u()}catch(e){}});xPolls=null}
  if(xPoll){try{xPoll()}catch(e){}xPoll=null}
  unX=null;xWatchKey=""}
-/* 지금 화면에 그릴·구독할 자리 번호. xOrdered(기본·높은·낮은) 앞 xShowN개 + 같은 묶음에 내가 참가한 칸. */
+/* 쓰기·프로필 GET 동안 1초 틱이 watchX 를 다시 열지 않게 한다. */
+let xIoHold=0;
+/* 지금 화면에 그릴·구독할 자리 번호.
+   출정 방(v-xm)만 열려 있으면 자기 칸 하나. 목록이 펼쳐져 있으면 정렬 앞 xShowN + 내 참가 칸. */
 function xVisibleIdx(ls){
+ if(!xListOpen()&&!$("#v-xm").hidden&&C&&C.mj&&Number(C.mj.s)===Number(ls)){
+  const i=Number(C.mj.i);return Number.isFinite(i)&&i>=0&&i<XN?[i]:[]}
  const n=Math.min(XN,Math.max(X_PAGE,xShowN)),seen={},out=[];
  xOrdered(ls).slice(0,n).forEach(i=>{if(seen[i])return;seen[i]=1;out.push(i)});
  if(C&&C.mj&&Number(C.mj.s)===Number(ls)){const i=Number(C.mj.i);if(Number.isFinite(i)&&i>=0&&i<XN&&!seen[i])out.push(i)}
@@ -208,11 +213,11 @@ function drawX(el){el.innerHTML="";if(!C)return;
    권장 전투력 자체는 올리지 않는다. 개인 전투력 p(및 깃발·특성·무기…)만 올리고,
    출발 시 서버가 파티 p 로 권장·기준치(battleT)를 계산한다(functions/sim/engine.js).
    flush 는 set 실패로 pend 가 남은 경우에만 다시 올린다.
-   자리 live(EventSource)가 같은 호스트 연결을 가득 채우면 PUT 이 대기열에 묶여
-   「서버에 자리를 남기는 중」에 머물다 탭을 옮길 때(live 가 닫힌 뒤)야 나가던 증상이 있다.
-   쓰기·삭제 동안만 목록 live 를 잠시 끊고, 끝나면 다시 연다. */
-async function xSeatNet(fn){const re=xWatchOn();if(re)stopX();
- try{return await fn()}finally{if(re&&XON()&&(xListOpen()||xWatchOn()))try{watchX(xWatchSlot())}catch(e){}}}
+   자리 live(EventSource)가 같은 호스트 연결을 가득 채우면 PUT·프로필 GET 이 대기열에 묶여
+   「서버에 자리를 남기는 중」·인포 타임아웃이 난다.
+   쓰기·삭제·프로필 조회 동안만 목록 live 를 잠시 끊고(xIoHold), 끝나면 다시 연다. */
+async function xSeatNet(fn){xIoHold++;const re=!!(unX||xPolls)||xWatchOn();if(unX||xPolls)stopX();
+ try{return await fn()}finally{xIoHold=Math.max(0,xIoHold-1);if(!xIoHold&&re&&XON()&&(xListOpen()||xWatchOn()))try{watchX(xWatchSlot())}catch(e){}}}
 async function xSeatWrite(s,i,body){return xSeatNet(()=>DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET))}
 async function xSeatDelete(s,i){return xSeatNet(()=>DB.doc(xSeat(s,i)+"/"+UID).delete(X_NET))}
 async function xJoin(s,i){xClock();xClockWait(false).catch(()=>{});const x=xInfo(s,i);if(!XON())return;if(lhOn()){toast("장기 토벌을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 정기 출정에 참가할 수 없다.");return}
@@ -457,8 +462,8 @@ setInterval(()=>{if(!C||!DB)return;const rmOn=!$("#v-rooms").hidden,need=!!(C.mj
  const now=xNow(),wall=Date.now();xMsClear();
  if(C.mj&&xExpired(C.mj)){const fin=XR&&XR.id===C.mj.id&&XR.fin;xRelease(fin?"출정 결과가 정리되어 다시 참가할 수 있다.":"출정 시간이 지나 자리를 정리했다. 다시 참가할 수 있다.")}
  if(xPend||(C.mj&&C.mj.pend)){const j=C.mj,xx=j?xInfo(j.s,j.i):null,near=xx&&xNow()>=xCloseAt(xx)-15000,gap=near?2000:5000;if(!xFlush.at||wall-xFlush.at>=gap){xFlush.at=wall;xFlush()}}
- if(xWatchOn()){watchX(xWatchSlot());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh){xPh=ph;drawXAll()}document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
- else if(unX){stopX();xS=-1}
+ if(xWatchOn()&&!xIoHold){watchX(xWatchSlot());const ph=xLs()+"_"+(C.mj?C.mj.id+(now>=C.mj.T0):"");if(ph!==xPh){xPh=ph;drawXAll()}document.querySelectorAll(".x-cd").forEach(e=>e.textContent=xCdTxt())}
+ else if(unX&&!xIoHold){stopX();xS=-1}
  if(C.mj&&now>=C.mj.T0&&xAuto!==C.mj.id&&(rmOn||!$("#v-hub").hidden)){xAuto=C.mj.id;xView()}
  xTick();xRender()},1000);
 function xSound(k){try{if(typeof dingUnlock==="function")dingUnlock();const a=typeof dingCtx==="function"?dingCtx():(ding.c||null);if(!a)return;if(a.state==="suspended")return;const t0=a.currentTime+.02;
