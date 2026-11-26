@@ -31,13 +31,14 @@ const SHADY_POOL = [
   ],
   [
     {k: "inv", id: "prism", n: 1}, {k: "inv", id: "license", n: 1},
-    {k: "inv", id: "vtown", n: 1}, {k: "inv", id: "milk", n: 1}
+    {k: "inv", id: "vtown", n: 1}, {k: "inv", id: "milk", n: 1},
+    {k: "inv", id: "m_world", n: 1}, {k: "inv", id: "m_aspire", n: 1}
   ]
 ];
 
 const MAT_IDS = {
   m_forest: 1, m_coast: 1, m_valley: 1, m_shard: 1, m_herb: 1, m_ore: 1,
-  m_dew: 1, m_ash: 1, m_crown: 1, m_abyss: 1
+  m_dew: 1, m_ash: 1, m_crown: 1, m_abyss: 1, m_world: 1, m_aspire: 1
 };
 
 function shadyKey(reqId) {

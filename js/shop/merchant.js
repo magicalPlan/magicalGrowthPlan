@@ -9,7 +9,7 @@ const SHADY_POOL=[
  [{k:"inv",id:"mana",n:2},{k:"inv",id:"charm",n:1},{k:"inv",id:"map",n:1},{k:"inv",id:"flag",n:1},{k:"inv",id:"seal",n:1},{k:"inv",id:"hope",n:1},{k:"inv",id:"g2",n:1},{k:"gd",n:50},{k:"inv",id:"m_forest",n:1},{k:"inv",id:"m_coast",n:1},{k:"inv",id:"m_valley",n:1}],
  [{k:"inv",id:"m_shard",n:2},{k:"inv",id:"m_herb",n:2},{k:"inv",id:"m_ore",n:2},{k:"inv",id:"m_dew",n:2},{k:"inv",id:"m_ash",n:10},{k:"inv",id:"m_crown",n:1},{k:"gd",n:500},{k:"inv",id:"petcan",n:3},{k:"inv",id:"m_abyss",n:2}],
  [{k:"inv",id:"g4",n:3},{k:"inv",id:"pfcandy",n:3},{k:"eggs",n:2},{k:"eggsEv",n:2},{k:"gd",n:5000},{k:"inv",id:"petfeast",n:2},{k:"inv",id:"trcyan",n:1},{k:"inv",id:"trblue",n:1},{k:"inv",id:"trcast",n:1}],
- [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1},{k:"inv",id:"milk",n:1}]
+ [{k:"inv",id:"prism",n:1},{k:"inv",id:"license",n:1},{k:"inv",id:"vtown",n:1},{k:"inv",id:"milk",n:1},{k:"inv",id:"m_world",n:1},{k:"inv",id:"m_aspire",n:1}]
 ];
 let shadyBusy=false,shadyBuilt=false;
 /* 가챠 대기 중 클라 PATCH 가 서버 차감·지급(골드·알·가방·통계)을 덮지 않게 한다. */
