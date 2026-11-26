@@ -236,7 +236,11 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   /* 정산 직후: 서버에 옛 lh/clue 가 남아 있어도 보상·절망은 이 탭(mine)이 맞다. dzT 도 같이 둔다. */
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
-  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;if(mine.egg!==undefined)C.egg=mine.egg;
+  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;
+  /* 부화 워터마크는 max. egg 는 mine 이 null(부화함)이면 비우고, 남아 있어도 eggDone 이면 지운다. */
+  if(mine.eggDone!=null)C.eggDone=Math.max(Number(C.eggDone)||0,Number(mine.eggDone)||0)||undefined;
+  if(mine.egg===null)C.egg=null;else if(mine.egg!==undefined)C.egg=mine.egg;
+  try{if(typeof eggClearIfDone==="function")eggClearIfDone(C)}catch(e){}
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.dzT!=null)C.dzT=mine.dzT;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){
@@ -248,9 +252,12 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   if(dDz){const floor=typeof dzFloorToday==="function"?dzFloorToday():0;C.dz=Math.max(floor,Math.min(100,(Number(C.dz)||0)+dDz));if(mine.dzT!=null)C.dzT=Math.max(Number(C.dzT)||0,Number(mine.dzT)||0)}}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
+ try{if(typeof eggFix==="function")eggFix()}catch(e){}
  /* 회귀: accBase=서버본(낮은 b 포함). 일반: accBase=rem, C.b 만 더 크면 rem.b 기준으로 PATCH 되살림. */
  accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
  if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
+ /* 로컬 부화(eggDone·egg=null)를 sync 가 흡수했으면 서버에 바로 밀어 옛 egg 가 권위로 남지 않게 한다. */
+ if(!rstNewer&&((!C.egg&&rem.egg)||(Number(C.eggDone)||0)>(Number(rem.eggDone)||0))){savePending=true;try{saveCloud(true)}catch(e){}}
  const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}
@@ -267,7 +274,8 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   try{if(typeof hub==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hub()}catch(e){}
  }}catch(e){}
  return true}
-/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
+/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
+   품고 있는 알(C.egg)은 서버(dst) 우선: 로컬 옛 egg 를 빈 서버에 넣지 않는다. 부화 워터마크 eggDone 은 max.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다.
    사역마 출정 귀환 직후에도 서버(pex) sync 가 오므로 dex(px 등)를 합치지 않으면 방금 발견한 사건이 지워진다. */
 /* TODO(선물 LEGACY 제거): gift/·c.rg 잔여가 없어지면 giftBoxMerge 전체를 지우거나
@@ -295,7 +303,10 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  const mergePetTr=(a,b)=>{const out=Object.assign({},a&&typeof a==="object"?a:{});if(!b||typeof b!=="object")return out;Object.keys(b).forEach(k=>{const s=b[k];if(!s||typeof s!=="object")return;if(!out[k]||!out[k].c)out[k]={c:Math.floor(Number(s.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(s.r)||1)))}});return out};
  const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else{const cur=L[i],tr=mergePetTr(cur.tr,q.tr);if((Number(q.xp)||0)>(Number(cur.xp)||0))L[i]=Object.assign({},cur,q,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm});else L[i]=Object.assign({},cur,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm})}});dst.pets=L;
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
- if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
+ /* egg: DB(dst) 권위. eggDone 은 max. t0<=eggDone 이면 부화 완료 → 품는 칸 삭제.
+    로컬(src) 옛 egg 를 서버 빈 칸에 되살리지 않는다(두 번 부화·흔들림 UI 원인). */
+ const done=Math.max(Number(dst.eggDone)||0,Number(src.eggDone)||0);if(done)dst.eggDone=done;else if(dst.eggDone!=null)delete dst.eggDone;
+ if(typeof eggClearIfDone==="function")eggClearIfDone(dst);else if(dst.egg&&(Number(dst.egg.t0)||0)>0&&(Number(dst.egg.t0)||0)<=(Number(dst.eggDone)||0))dst.egg=null;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
  dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
  /* 도감(C.dex): 출정·사역마 출정(px) 등 발견 기록. 서버 동기 때 로컬만 있는 칸이 사라지지 않게 합친다.
