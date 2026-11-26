@@ -74,13 +74,13 @@ function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv(
  C.inv=C.inv||{};C.stats=C.stats||{};const g=cfGold(r)*k,fields={};
  Object.entries(r[3]).forEach(([id,n])=>{C.inv[id]=cfHave(id)-n*k;fields["inv/"+id]=C.inv[id]});
  if(g){C.gd=(C.gd||0)-g;fields.gd=C.gd}
- let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle"||cfSeason(r))extra=0;out+=extra;
+ let out=r[2]*k,extra=0,doje=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(C.t==="도제")for(let i=0;i<k;i++)if(Math.random()<.05)doje+=1;if(r[1]==="candle"||cfSeason(r)){extra=0;doje=0}out+=extra+doje;
  C.inv[r[1]]=cfHave(r[1])+out;fields["inv/"+r[1]]=C.inv[r[1]];
  if(cfSeason(r)){C.scf=C.scf&&typeof C.scf==="object"?C.scf:{};C.scf[r[1]]=1;fields["scf/"+r[1]]=1}
  if(ITM.some(t=>t[0]===r[1])&&dexAdd("it",r[1]))fields["dex/it/"+r[1]]=C.dex.it[r[1]];
  C.stats.crafts=(C.stats.crafts||0)+k;fields["stats/crafts"]=C.stats.crafts;
  apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});titleState();checkTitles();
- craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
+ craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(doje?" (도제: "+doje+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
 
 /* 속성의 프리즘: 가방에서 '사용'을 누르면 아래 상자가 열린다. 바꿀 속성(가진 것)과 새 속성(아직 없는 것)을 고르고 확인하면 바뀐다.
    준비해 둔 마법은 속성이 맞을 때만 쓰이므로(armedSk), 사라진 속성의 마법은 저절로 쓰이지 않는다. 숫자는 data/game.js 의 PRISM_DZ. */

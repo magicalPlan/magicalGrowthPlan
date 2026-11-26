@@ -147,7 +147,6 @@ function gainDzMod(dz, seat, c, boost) {
   if (c && c.fall && d < 0) d = 0;
   if (d > 0) {
     if (title === "냉정") d *= .8;
-    if (title === "상처 입은 마음") d *= 1.2;
   }
   if (d < 0 && title === "낙천") d *= 1.15;
   if (d > 0) {
@@ -209,7 +208,10 @@ function marchSide(r, seat, c, boost, rand, now) {
     raw = Math.max(0, (wp === 3 ? 12 : 25) - gdGuard + sc - wtz + dkz);
   }
   if (charm && raw > 0) raw = raw * (water ? 2 / 3 : .5);
-  let dz = gainDzMod(raw, seat, c, boost);
+  /* 상처 입은 마음: 혼자 출정일 때만 오르는(양수) 절망 ×1.1. */
+  const soloWound = title === "상처 입은 마음" && !!(r && r.solo);
+  const woundDz = d => (soloWound && d > 0 ? Math.round(d * 1.1) : d);
+  let dz = woundDz(gainDzMod(raw, seat, c, boost));
   let gAdd = 0, exAdd = 0;
   let wpn = "", wpOn = 0, dh = 0;
   if (fx.wp) {
@@ -220,11 +222,11 @@ function marchSide(r, seat, c, boost, rand, now) {
     if (e.gd) gAdd += Math.round(Number(e.gd) || 0);
     if (e.mm) mm += Math.max(0, Math.floor(Number(e.mm) || 0));
     if (e.ex) exAdd += gainExMod(Number(e.ex) || 0, seat, c, now);
-    if (e.dz) dz += gainDzMod(Number(e.dz) || 0, seat, c, boost);
+    if (e.dz) dz += woundDz(gainDzMod(Number(e.dz) || 0, seat, c, boost));
   }
   if (fx.dh && (Number(seat.dz) || 0) >= 70) {
     dh = Math.round(Number(fx.dh) || 0);
-    dz += gainDzMod(dh, seat, c, boost);
+    dz += woundDz(gainDzMod(dh, seat, c, boost));
   }
   let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = "", crow = 0, soloM = 0;
   if (r && r.ok) {

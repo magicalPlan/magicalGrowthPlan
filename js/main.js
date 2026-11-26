@@ -1025,7 +1025,7 @@ $("#nav").onclick=e=>{
 const SKID={};Object.keys(SK).forEach(a=>SKID[SK[a].id]={...SK[a],a});
 // Firebase는 빈 객체를 저장하지 않으므로, 불러온 뒤 arm이 사라져 있으면 다시 만든다.
 function skDay(){if(!C.sk||C.sk.day!==today())C.sk={day:today(),used:0,arm:{}};C.sk.arm=C.sk.arm||{};C.sk.used=C.sk.used||0}
-const mpMax=()=>2+Math.max(0,(C.a||[]).length-1);
+const mpMax=()=>2+Math.max(0,(C.a||[]).length-1)+(C.t==="각성자"?2:0);
 const mpLeft=()=>{skDay();return mpMax()-C.sk.used-Object.keys(C.sk.arm).length};
 const armedSk=id=>{if(!C)return false;skDay();return !!C.sk.arm[id]&&!!SKID[id]&&(C.a||[]).includes(SKID[id].a)};
 // 준비해 둔 마법을 실제로 쓴다. 썼으면 true.

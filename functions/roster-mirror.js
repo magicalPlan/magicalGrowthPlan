@@ -49,7 +49,6 @@ function mirrorPw(c) {
   let tpw = 0;
   if (t === "대기만성") tpw = lv < 50 ? -5 : lv >= 100 ? Math.floor(lv / 5) : 0;
   else if (t === "불안정한 마력") tpw = 6;
-  else if (t === "상처 입은 마음") tpw = 5;
   const wp = Number(c.wp);
   let wpn = 0;
   if (Number.isInteger(wp) && wp >= 0 && wp < WP_BASE.length) {

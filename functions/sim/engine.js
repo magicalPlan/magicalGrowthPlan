@@ -28,14 +28,15 @@ const battleJ = (n, Th, cd) => n >= BJ_HARD ? 0 : n <= Math.max(1, Math.floor(Th
 function startSim(room) {
   /* room.pl[uid].p ← 클라 me().p(참가 때 xm 자리). 서버는 전투력을 다시 계산하지 않고 이 값을 쓴다.
      sim.avg = 파티 p 평균(+깃발·협력·스태프). battleT(avg+ab, i, df) 의 P. */
-  /* 고독: 혼자일 때 참가 p.p 의 +10%(반올림). 클라 js/room.js startSim 과 맞춤. */
-  const ps = Object.values(room.pl), has = t => ps.some(p => p.t === t), solo = ps.length === 1, sum = ps.reduce((a, p) => a + p.p + (solo && p.t === "고독" ? Math.round(p.p * .1) : 0), 0), fl = ps.some(p => p.f), mp = ps.some(p => p.m), co = ps.length >= 2 && has("협력자"), stf = ps.some(p => p.w === 6);
+  /* 고독 +10% · 상처 입은 마음 +15%: 혼자일 때 참가 p.p 비율. 클라 js/room.js startSim 과 맞춤. */
+  const ps = Object.values(room.pl), has = t => ps.some(p => p.t === t), solo = ps.length === 1, sum = ps.reduce((a, p) => a + p.p + (solo && p.t === "고독" ? Math.round(p.p * .1) : 0) + (solo && p.t === "상처 입은 마음" ? Math.round(p.p * .15) : 0), 0), fl = ps.some(p => p.f), mp = ps.some(p => p.m), co = ps.length >= 2 && has("협력자"), stf = ps.some(p => p.w === 6);
   room.seq = [];
   room.rt = room.rt || room.total;
   if (solo) { room.solo = 1; if (!room.sdf) { room.sdf = 1; room.df = (room.df || 1) * SOLO_DF; room.dzm = (room.dzm || 1) * SOLO_DZ; } room.seq.push("⚔ 고독한 출정: 함께할 동료 없이 홀로 길을 나섰다. 마수들이 혼자인 마법소녀를 노린다. (권장 전투력 ×" + SOLO_DF + ")"); }
   if (mp) { room.total = 3; room.seq.push("마수 사냥 지도를 따라 전투 3번으로 끝나는 길을 골랐다."); }
   if (fl) room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");
   if (solo && has("고독")) room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 출정 전투력이 10% 올랐다.");
+  if (solo && has("상처 입은 마음")) room.seq.push("상처가 힘을 끌어올렸다. 출정 전투력이 15% 올랐다.");
   if (co) room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 10 올랐다.");
   if (stf) room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
   const psk = id => ps.filter(p => (p.sk || []).includes(id)).length, wt = psk("water"), wd = psk("wind"), dk = psk("dark");

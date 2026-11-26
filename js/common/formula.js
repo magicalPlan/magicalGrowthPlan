@@ -13,8 +13,8 @@ const _witchCurse=()=>{try{return typeof witchCurse==="function"?witchCurse():nu
 const _attrs=()=>Array.isArray(C&&C.a)?C.a:[];
 /* 특성 전투력(평탄 가산만). 천재·폭주(%)는 pw() 끝의 비율 곱에 있다.
    대기만성: 레벨 50 전 -5, 50~99는 0, 100부터 floor(레벨/5).
-   불안정한 마력 +6. 상처 입은 마음 +5. 그 밖은 0. */
-const tpw=()=>{const t=C.t,lv=C.lv||1;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
+   불안정한 마력 +6. 상처 입은 마음은 평탄 없음(혼자 출정 시 startSim·절망 보정). 그 밖은 0. */
+const tpw=()=>{const t=C.t,lv=C.lv||1;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="불안정한 마력"?6:0};
 // 강화 단계. 무기 번호 i 의 기록(w0, w1, ...)이 없으면 0.
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
@@ -63,14 +63,15 @@ function xpMigrate(){if(!C||Number(C.xv)>=3)return false;const ex=xpCurve(C.ex,C
 
 /* 경험치 ex 와 절망도 dz 를 캐릭터에 반영한다. 양수는 오름, 음수는 내림.
    타락 중에는 절망도가 내려가지 않고, 경험치도 0 이 된다.
-   절망도가 오를 때: 냉정 ×0.8, 상처 입은 마음 ×1.2, 평온 각인 단계마다 4% 감소,
+   절망도가 오를 때: 냉정 ×0.8, 평온 각인 단계마다 4% 감소,
+     상처 입은 마음(혼자 출정 ×1.1)은 출정 정산·marchSide 에서만.
    등대 3단계면 WF_CALM 만큼 더 줄고, 사역마 dz 만큼 더 줄인다.
    절망도가 내릴 때: 낙천 ×1.15, 사역마 dz 는 오를 때만 쓴다.
    경험치: 지혜 각인 단계마다 4% 증가, 끈기 ×1.15, 후유증이 남아 있으면 ×0.5.
    물 속성은 오르는 절망도를 75% 로 줄이되 최소 1. 바람 속성은 경험치 ×1.15.
    반영 전에 옛 경험치를 새 곡선으로 옮기고, 레벨은 누적 경험치로 다시 계산한다. 절망도는 0~100 으로 자른다.
    100 이 되면 타락하고, 90 을 처음 넘으면 타락 직전을 알린다. */
-function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.15;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.15;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(dzFloorToday(),Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
+function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8}if(dz<0&&t==="낙천")dz*=1.15;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.15;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(dzFloorToday(),Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
  if(!C.fall){if(C.dz>=100)fallen();else if(oldDz<90&&C.dz>=90)note("warn","절망도가 "+C.dz+"에 이르렀다. 타락 직전이다."),alertBox("타락 직전","절망도가 "+C.dz+"에 이르렀다. 마음이 무너지기 직전이다.\n절망도가 100이 되면 타락해 마수가 된다. 공명이나 선물로 친구들의 도움을 받자.")}}
 
 /* 10분마다 내려가는 절망도.

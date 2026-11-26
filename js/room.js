@@ -120,12 +120,12 @@ $("#st").onclick=async()=>{if(!room||room.host!==UID||!code)return;const c=code;
  room.st="run";room.step=0;room.seq=[];room.pend=null;room.fin=false;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.calc=0;room.ts=Date.now();
  try{await rref(c).set(room);await Promise.all([DB.doc("live/m/"+c).set(Date.now()),DB.doc("rooms/"+c+"/calc").set(0).then(()=>DB.doc("rooms/"+c+"/calc").set(1)).catch(()=>DB.doc("rooms/"+c+"/calc").set(1))]);askCalc.key=""}catch(e){$("#rrm").textContent="출발하지 못했다."}};
 // 출발 준비: 아이템·마법·특성 효과를 정리하고 전투를 시작한다. 정기 출정이 쓴다.
-/* 고독: 혼자일 때 참가 전투력 p.p 의 +10%(반올림)를 파티 합에 더한다. 서버 engine.js 와 맞춤. */
-function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?Math.round(p.p*.1):0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
+/* 고독 +10% · 상처 입은 마음 +15%: 혼자일 때 참가 p.p 비율(반올림). 서버 engine.js 와 맞춤. */
+function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?Math.round(p.p*.1):0)+(solo&&p.t==="상처 입은 마음"?Math.round(p.p*.15):0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
  room.rt=room.rt||room.total;
  if(solo){room.solo=1;if(!room.sdf){room.sdf=1;room.df=(room.df||1)*SOLO_DF;room.dzm=(room.dzm||1)*SOLO_DZ}room.seq.push("⚔ 고독한 출정: 함께할 동료 없이 홀로 길을 나섰다. 마수들이 혼자인 마법소녀를 노린다. (권장 전투력 ×"+SOLO_DF+")")}
  if(mp){room.total=3;room.seq.push("마수 사냥 지도를 따라 전투 3번으로 끝나는 길을 골랐다.")}
- if(fl)room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");if(solo&&has("고독"))room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 출정 전투력이 10% 올랐다.");if(co)room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 10 올랐다.");if(stf)room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
+ if(fl)room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");if(solo&&has("고독"))room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 출정 전투력이 10% 올랐다.");if(solo&&has("상처 입은 마음"))room.seq.push("상처가 힘을 끌어올렸다. 출정 전투력이 15% 올랐다.");if(co)room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 10 올랐다.");if(stf)room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
  const psk=id=>ps.filter(p=>(p.sk||[]).includes(id)).length,wt=psk("water"),wd=psk("wind"),dk=psk("dark");
  if(wt)room.seq.push("정화의 물결이 파티를 감쌌다. 이번 출정의 절망도 상승이 줄어든다.");if(dk)room.seq.push("그림자 계약이 맺어졌다. 파티 전투력이 8 올랐다.");if(wd)room.seq.push("바람의 길잡이가 앞장섰다. 운명이 한 번 파티 편을 든다.");room.wsk=wt>0;
  const twb=Math.max(0,...ps.map(p=>Math.min(5,Number(p.tw)||0)));if(twb)room.seq.push("감시탑이 마수의 움직임을 미리 알려 주었다. 전투 판정 +"+twb+".");
@@ -262,7 +262,7 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
    const cut=d=>ch&&d>0?d*(C.a.includes("물")?2/3:.5):d,base=r.rt||r.total;
    /* 이벤트 골드(r.gx): 서버 pay.g 에 포함됨. serverPay 때 C.gd 에 다시 더하지 않는다. */
    /* 수호: 파티에 한 명이라도 있으면 전원 오르는 절망도 -3(서버 marchSide 와 맞춤). */
-   if(r.gx){if(!serverPay)C.gd=Math.max(0,(C.gd||0)+r.gx)}const tn=(!serverPay&&r.gx)?["이벤트 골드 "+(r.gx>0?"+":"")+r.gx]:[],gd=Object.values(r.pl||{}).some(p=>p&&p.t==="수호")?3:0,sc=eq(2)?SCY_DZ:0,wx=(eq(5)?1+WAND_EX:1)*(1+.03*facLv("drill"))*(wfLv()>=1?1+WF_EXP:1)*(1+petEff("ex"))*(disMine()==="storm"?.8:1);if(gd)tn.push("수호: 파티 절망도 상승 3 감소");if(sc)tn.push("낫: 절망도 "+SCY_DZ+" 추가");if(eq(5))tn.push("완드: 경험치 "+Math.round(WAND_EX*100)+"% 증가");if(eq(3)&&!r.ok)tn.push("방패: 실패로 오르는 절망도가 줄었다");
+   if(r.gx){if(!serverPay)C.gd=Math.max(0,(C.gd||0)+r.gx)}const tn=(!serverPay&&r.gx)?["이벤트 골드 "+(r.gx>0?"+":"")+r.gx]:[],gd=Object.values(r.pl||{}).some(p=>p&&p.t==="수호")?3:0,sc=eq(2)?SCY_DZ:0,wx=(eq(5)?1+WAND_EX:1)*(1+.03*facLv("drill"))*(wfLv()>=1?1+WF_EXP:1)*(1+petEff("ex"))*(disMine()==="storm"?.8:1);if(gd)tn.push("수호: 파티 절망도 상승 3 감소");if(r.solo&&C.t==="상처 입은 마음")tn.push("상처 입은 마음: 절망도 상승 10% 증가");if(sc)tn.push("낫: 절망도 "+SCY_DZ+" 추가");if(eq(5))tn.push("완드: 경험치 "+Math.round(WAND_EX*100)+"% 증가");if(eq(3)&&!r.ok)tn.push("방패: 실패로 오르는 절망도가 줄었다");
    /* 서버 영수증 → 안내 문구만. C.dz/C.gd/C.ex 는 건드리지 않는다. */
    if(serverPay&&pay){const pg=Math.max(0,Math.floor(Number(pay.g)||0)),pex=Math.max(0,Math.floor(Number(pay.ex)||0)),pcl=Math.max(0,Math.floor(Number(pay.cl)||0)),pdz=Math.round(Number(pay.dz)||0);
     if(pg)tn.push("골드 +"+pg);if(pex)tn.push("경험치 +"+pex);if(pcl)tn.push("토벌 횟수 +"+pcl);
@@ -297,13 +297,13 @@ function settle(r,opt){opt=opt||{};const serverPay=!!opt.serverPay,pay=opt.pay||
     if((C.dz||0)>=90)C.stats.clutch=1;if(new Date(Date.now()+9*3600000).getUTCHours()===3)C.stats.dawnWin=1;if(r.solo){const sg=SOLO_RW.g;if(!serverPay){const sm=Math.random()<SOLO_RW.mp?1:0;C.gd=(C.gd||0)+sg;if(sm){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+sm}tn.push("고독의 보상: 골드 +"+sg+(sm?", 마력석 +1":""))}else tn.push("고독의 보상"+(pay&&pay.soloM?", 마력석 +1":""));C.stats.soloWins=(C.stats.soloWins||0)+1;if(r.ab)C.stats.soloAbyss=1}
    if(r.ab){C.stats.abyssWins=(C.stats.abyssWins||0)+1;if(!(C.wp>=0))C.stats.abyssBare=1;tn.push("심연을 끝까지 걸어 나왔다")}
     if(!serverPay){C.gd=(C.gd||0)+Math.round((30+10*base)*m*(C.t==="행운"?1.1:1)*(1+.05*facLv("workshop"))*(disMine()==="eclipse"?.7:1)*(1+.05*rnLv("luck"))*(wfLv()>=2?1+WF_GOLD:1)*(1+petEff("gd")));if(C.t==="행운")tn.push("행운: 골드 10% 증가");if(C.t==="수집가"&&Math.random()<.2){const ids=typeof collectorMatIds==="function"?collectorMatIds():[];if(ids.length){const id=ids[Math.floor(Math.random()*ids.length)];C.inv=C.inv||{};C.inv[id]=(C.inv[id]||0)+1;C.stats=C.stats||{};C.stats.mats=(C.stats.mats||0)+1;tn.push("수집가: "+(typeof cfName==="function"?cfName(id):id)+"을(를) 주웠다")}}if(petEff("mana")&&Math.random()<petEff("mana")){C.inv=C.inv||{};C.inv.mana=(C.inv.mana||0)+1;tn.push("밤까마귀가 마력석 1개를 물어 왔다")}}
-    /* 절망·경험: serverPay 이면 인자 0. 산식은 서버 marchSide/corePay 와 같되 클라에서 돌리면 이중 반영. */
-    {const dzAmt=serverPay?0:cut(Math.max(0,r.ev+v.dz+r.total*3-gd+sc-wtz+dkz));gain(serverPay?0:((30+10*base)*v.x*m+(r.ex||0))*wx,dzAmt)}}
+    /* 절망·경험: serverPay 이면 인자 0. 상처 입은 마음·혼자면 오르는 절망 ×1.1(서버 marchSide 와 맞춤). */
+    {let dzAmt=serverPay?0:cut(Math.max(0,r.ev+v.dz+r.total*3-gd+sc-wtz+dkz));if(!serverPay&&dzAmt>0&&r.solo&&C.t==="상처 입은 마음")dzAmt=Math.round(dzAmt*1.1);gain(serverPay?0:((30+10*base)*v.x*m+(r.ex||0))*wx,dzAmt)}}
    else{titleState();C.stats.huntsLost=(C.stats.huntsLost||0)+1;
     if(!serverPay){const mt=matGain(["x_fail"]);if(mt)tn.push(mt);if(typeof clpGain==="function"){const cp=clpGain("x",{ok:0});if(cp)tn.push(cp)}}
-    if(!serverPay)C.gd=(C.gd||0)+5;{const dzAmt=serverPay?0:cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
+    if(!serverPay)C.gd=(C.gd||0)+5;{let dzAmt=serverPay?0:cut(Math.max(0,(eq(3)?12:25)-gd+sc-wtz+dkz));if(!serverPay&&dzAmt>0&&r.solo&&C.t==="상처 입은 마음")dzAmt=Math.round(dzAmt*1.1);gain(serverPay?0:(8+(r.ex||0))*wx,dzAmt)}}
    /* xe/xz 는 !serverPay 의 fx.wp·dh 에서만 채워진다. serverPay 면 여기 gain 도 no-op. */
-   if(xe||xz)gain(xe,xz);checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}
+   if(xe||xz){if(!serverPay&&xz>0&&r.solo&&C.t==="상처 입은 마음")xz=Math.round(xz*1.1);gain(xe,xz)}checkTitles();if(tn.length)out+="<p>"+tn.join(" · ").split(typeof CLP_MARK==="string"?CLP_MARK:"\u0001").join(typeof clpImgHtml==="function"?clpImgHtml():"")+"</p>";{const nd=(r.evs||[]).filter(id=>EVM[id]&&dexAdd("ev",id)).map(id=>evName(EVM[id],evVil(id)||"A")[0]);if(nd.length)note("dex","도감에 새 출정 이벤트가 기록되었다: "+nd.join(", "))}
    /* 로비/로컬 방만 클라가 march 알림. 매지컬 마치(serverPay)는 서버 c/nt. */
    if(!serverPay){const payBits=r.gx?" · 이벤트 골드 +"+r.gx:"";note("march",(r.ok?"토벌 성공":"토벌 실패")+" · 전투 "+r.total+"번 · 파티 "+Object.keys(r.pl).length+"명"+payBits)}
    guardAdd(r.ok?Math.round(10*(r.rw||1)):2);out+="<p><strong>"+(r.ok?"토벌 횟수가 늘었다.":"절망도가 올랐다.")+"</strong></p>"+(used.length?"<p>사용한 아이템·마법: "+used.join(", ")+(ch?" (절망도 상승이 절반으로 줄었다)":"")+"</p>":"");return out}
