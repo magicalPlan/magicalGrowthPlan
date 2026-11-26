@@ -146,4 +146,8 @@ function wfGive(g,st){const pts=g+st*WF_STONE,m=$("#fm2");if(g&&(C.gd||0)<g)retu
  C.gd-=g;if(st)C.inv.mana-=st;C.wf=(Number(C.wf)||0)+pts;titleState();C.stats.wfGive=(C.stats.wfGive||0)+pts;guardAdd(Math.floor(pts/10));
  WFD.sum+=pts;WFD.v[C.v]=(WFD.v[C.v]||0)+pts;const me0=WFD.top.find(t=>t.u===UID);if(me0)me0.pt+=pts;else WFD.top.push({u:UID,n:C.n,v:C.v,pt:pts});
  const a0=wfLv();C.wfl=a0;if(a0>b0)wfUp(a0);save();checkTitles();if(m){m.style.color="var(--mu)";m.textContent="희망의 등대에 "+pts+"점을 보탰다."+(a0>b0?" 등대가 "+a0+"단계가 되었다!":"")}pubScore();tallyWfAdd(pts,C.v);facView(true);if(!$("#v-hub").hidden)hubFac()}
-function wfLight(){if(!wfReady()||C.fall)return;C.wfu=today();gain(0,-WF_LIGHT.dz);giveRw({m:WF_LIGHT.m});save();$("#fm2").style.color="var(--mu)";$("#fm2").textContent="등대의 따뜻한 빛을 받았다. 절망도 -"+WF_LIGHT.dz+", 마력석 +"+WF_LIGHT.m+".";facView(true)}
+function wfLight(){if(!wfReady()||C.fall)return;const d=today(),y=new Date();y.setDate(y.getDate()-1);const yest=ymd(y);C.stats=C.stats||{};
+ const prev=C.stats.wfLightDay,streak=(prev===yest?(Number(C.stats.wfLightStreak)||0):0)+1;
+ C.stats.wfLightDay=d;C.stats.wfLightStreak=streak;C.stats.wfLightMax=Math.max(Number(C.stats.wfLightMax)||0,streak);
+ C.wfu=d;gain(0,-WF_LIGHT.dz);giveRw({m:WF_LIGHT.m});titleState();save();checkTitles();
+ $("#fm2").style.color="var(--mu)";$("#fm2").textContent="등대의 따뜻한 빛을 받았다. 절망도 -"+WF_LIGHT.dz+", 마력석 +"+WF_LIGHT.m+".";facView(true)}

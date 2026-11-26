@@ -323,7 +323,7 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
  /* 일일 의뢰·칭호용 카운터는 max 합친다. 서버 옛 stats 로 resonances 등이 줄어들면
     「2번 공명하기」 등 진행도가 0으로 되돌아가는 것처럼 난다. */
- dst.stats=dst.stats||{};const stMax=["chats","townMoves","resonances","gifts","giftsUsed","purchases","huntsWon","huntsLost","bossHits","crafts","upgrades","dqAll","trialWins","lhDone","lhAbyss","duW","duL","duD"];
+ dst.stats=dst.stats||{};const stMax=["chats","townMoves","resonances","gifts","giftsUsed","purchases","huntsWon","huntsLost","bossHits","crafts","upgrades","dqAll","trialWins","lhDone","lhAbyss","duW","duL","duD","wfLightMax"];
  stMax.forEach(k=>{const v=Math.max(Number(dst.stats[k])||0,Number(src.stats&&src.stats[k])||0);if(v)dst.stats[k]=v});
  dst.stats.vSeen=Object.assign({},src.stats&&src.stats.vSeen||{},dst.stats.vSeen||{});
  dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t});

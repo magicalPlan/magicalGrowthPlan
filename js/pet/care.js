@@ -1,7 +1,7 @@
 /* 사역마를 데리고 돌보는 화면. main.js · growth.js 다음에 불러도 된다.
    성장 기록은 drawPets 를, 출정은 petXp 를 그대로 부른다.
    간식(골드·통조림·특식)은 이 화면에서 고른다(하루 PET_SNACK_N, q.fd 공유). 매지컬 밀크만 가방. */
-function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(petXpCap(q),(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!"+(typeof petTrNeed==="function"&&petTrNeed(q)?" 아래에서 특성을 펼쳐 받아 보자.":""))}}
+function petXp(n){const q=petCur();if(!q||!n)return;const b=petLv(q);q.xp=Math.min(petXpCap(q),(q.xp||0)+n);const a=petLv(q);if(a>b){note("quest",PETS[q.sp][1]+" "+q.nm+"와(과)의 친밀도가 "+a+"단계가 되었다!");toast(PETS[q.sp][2]+" "+q.nm+" 친밀도 "+a+"단계!"+(typeof petTrNeed==="function"&&petTrNeed(q)?" 아래에서 특성을 펼쳐 받아 보자.":""));try{if(typeof checkTitles==="function")checkTitles()}catch(e){}}}
 function petPat(q){if(q.pd===today())return;q.pd=today();petXp0(q,PET_PAT);save();growth(PETS[q.sp][2]+" "+q.nm+"을(를) 쓰다듬었다. 기분이 좋아 보인다. (친밀도 +"+PET_PAT+")")}
 function petSnackUsed(q){return(q.fd&&q.fd.d===today())?q.fd.n:0}
 function petSnackTake(q){if(!q.fd||q.fd.d!==today())q.fd={d:today(),n:0};if(q.fd.n>=PET_SNACK_N)return false;q.fd.n++;return true}
