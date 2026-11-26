@@ -19,8 +19,10 @@ function eggFix(){if(!C)return false;let ch=false;if(C.eggs!=null&&C.eggs!==eggN
 function eggRstAbort(ch){if(!ch||typeof ch!=="object")return false;
  const had=!!(ch.egg||ch.eggs||ch.eggsEv||ch.eggsEv2);
  ch.egg=null;ch.eggs=0;ch.eggsEv=0;ch.eggsEv2=0;return had}
-// 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
-function petDrop(src){const p=src==="lh"?PET_DROP_LH:PET_DROP_X,out=[];
+/* 알 떨어뜨리기(출정·장기 토벌). 받았으면 안내 문구를 돌려준다.
+   기본 확률 PET_DROP_X(출정)·PET_DROP_LH(장기). 행운이면 +0.05(%p) — 일반 알·이벤트 알(eggsEv/eggsEv2) 각각 독립 판정.
+   매지컬 마치는 서버 marchSide 가 같은 식으로 굴린다(클라 petDrop 안 탐). */
+function petDrop(src){const p=Math.min(1,(src==="lh"?PET_DROP_LH:PET_DROP_X)+(C&&C.t==="행운"?0.05:0)),out=[];
  if(Math.random()<p){C.eggs=(C.eggs||0)+1;note("quest","사역마의 알을 주웠다! 성장 기록에서 품을 수 있다.");out.push("🥚 사역마의 알을 주웠다!")}
  if(petEvOn()&&Math.random()<p){C.eggsEv=(C.eggsEv||0)+1;const until=typeof eventRangeTxt==="function"?eventRangeTxt(PET_EV.from,PET_EV.to):"";note("quest",PET_EV.nm+"을(를) 주웠다!"+(until?" "+until+"에만 얻을 수 있는 알이다.":""));try{toast(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV.ic+" "+PET_EV.nm+"을(를) 주웠다!")}
  if(petEv2On()&&Math.random()<p){C.eggsEv2=(C.eggsEv2||0)+1;const until=typeof eventRangeTxt==="function"?eventRangeTxt(PET_EV2.from,PET_EV2.to):"";note("quest",PET_EV2.nm+"을(를) 주웠다!"+(until?" "+until+"에만 얻을 수 있는 알이다.":""));try{toast(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}catch(e){}out.push(PET_EV2.ic+" "+PET_EV2.nm+"을(를) 주웠다!")}

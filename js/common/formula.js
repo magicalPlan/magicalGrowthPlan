@@ -12,10 +12,10 @@ const _disMine=()=>{try{return typeof disMine==="function"?disMine():""}catch(e)
 const _witchCurse=()=>{try{return typeof witchCurse==="function"?witchCurse():null}catch(e){return null}};
 const _attrs=()=>Array.isArray(C&&C.a)?C.a:[];
 /* 특성 전투력(평탄 가산만). 천재는 %라서 여기가 아니라 pw() 끝의 비율 곱에 있다.
-   대기만성: 레벨 8 전에는 -2. 그 뒤에는 레벨의 절반(최대 8)과 레벨의 1/4 중 큰 값.
+   대기만성: 레벨 50 전 -5, 50~99는 0, 100부터 floor(레벨/5).
    폭주: 절망도 60 이상이면 +6.
    불안정한 마력 +6. 상처 입은 마음 +5. 그 밖은 0. */
-const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="대기만성"?(lv<8?-2:Math.max(Math.min(8,Math.floor(lv/2)),Math.floor(lv/4))):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
+const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
 // 강화 단계. 무기 번호 i 의 기록(w0, w1, ...)이 없으면 0.
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
@@ -90,9 +90,9 @@ const healTxt=()=>{if(!C)return "";if(C.fall)return "타락 중에는 절망도�
 const pr=p=>Math.ceil(p*(C.v==="A"?.9:1)*(1-.02*_facLv("market"))*(1-_petEff("shop"))*(_disMine()==="fire"?1.2:1));
 
 /* 강화 성공 확률(%). 표 UPR[단계] 에서 시작한다.
-   행운 특성이면 +5, 대장간 단계마다 +2, 마을에 강화 보너스가 있으면 그 값을 더하고, 사역마 up 을 더한다.
-   100 을 넘기지 않는다. */
-const upr=L=>Math.min(100,UPR[L]+(C.t==="행운"?5:0)+2*_facLv("forge")+((VL[C.v]||{}).up||0)+_petEff("up"));
+   대장간 단계마다 +2, 마을에 강화 보너스가 있으면 그 값을 더하고, 사역마 up 을 더한다.
+   100 을 넘기지 않는다. (행운은 강화가 아니라 출정 골드·알 드롭에 쓴다.) */
+const upr=L=>Math.min(100,UPR[L]+2*_facLv("forge")+((VL[C.v]||{}).up||0)+_petEff("up"));
 
 /* 장기 토벌 성공 확률. 전투력÷권장 전투력 × 0.85 에 사역마 lh 를 더한다.
    최저 30%. 상한은 lh 사역마(거북·용·순록)가 있으면 100%, 없으면 95%.

@@ -47,7 +47,7 @@ function mirrorPw(c) {
   const dz = Math.max(0, Number(c.dz) || 0);
   /* 특성 평탄만. 천재(+5%)는 아래 비율 곱. js/common/formula.js tpw·pw 와 맞춤. */
   let tpw = 0;
-  if (t === "대기만성") tpw = lv < 8 ? -2 : Math.max(Math.min(8, Math.floor(lv / 2)), Math.floor(lv / 4));
+  if (t === "대기만성") tpw = lv < 50 ? -5 : lv >= 100 ? Math.floor(lv / 5) : 0;
   else if (t === "폭주") tpw = dz >= 60 ? 6 : 0;
   else if (t === "불안정한 마력") tpw = 6;
   else if (t === "상처 입은 마음") tpw = 5;

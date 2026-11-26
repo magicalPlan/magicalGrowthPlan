@@ -230,9 +230,11 @@ function marchSide(r, seat, c, boost, rand, now) {
     const manaP = petEff(petCur(c), "mana");
     if (manaP && roll() < manaP) { mm++; crow = 1; }
     if (r.solo && roll() < SOLO_RW_MP) { mm++; soloM = 1; }
-    if (roll() < PET_DROP_X) egg = 1;
-    if (petEvOn(now) && roll() < PET_DROP_X) eggEv = 1;
-    if (petEv2On(now) && roll() < PET_DROP_X) eggEv2 = 1;
+    /* 알·이벤트 알: 기본 PET_DROP_X, 행운이면 +0.05(%p). 종류마다 독립 판정. 클라 petDrop 과 맞춤. */
+    const eggP = Math.min(1, PET_DROP_X + (title === "행운" ? 0.05 : 0));
+    if (roll() < eggP) egg = 1;
+    if (petEvOn(now) && roll() < eggP) eggEv = 1;
+    if (petEv2On(now) && roll() < eggP) eggEv2 = 1;
   }
   return {
     dz, mm, gi, tc, charm: charm ? 1 : 0,
