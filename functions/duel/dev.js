@@ -11,7 +11,7 @@ const {todayStr} = require("../account/boost");
 const DEV = {
   id: "duel-ev-20261207",
   nm: "대련 이벤트",
-  t0: Date.parse("2026-11-30T00:00:00+09:00"),
+  t0: Date.parse("2026-11-28T00:00:00+09:00"),
   t1: Date.parse("2026-12-08T00:00:00+09:00"),
   PAIR: 2,
   GRACE: 3600000,
