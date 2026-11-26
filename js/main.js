@@ -624,14 +624,16 @@ async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy
   if(hasPend||savePending||lhDefer||lhOn()){const ok=await saveNowOk();if(ok&&lhDefer)lhFlushDefer()}
   if(changed&&!$("#v-hub").hidden)hubLH()}finally{accSoftBusy=false}}
 async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
- if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
+ const wait=typeof tripWaitTxt==="function"?tripWaitTxt(L[2]):L[2]+"시간";
+ if(!confirm(L[1]+"("+wait+")을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
  /* 다른 기기 진행이 있으면 먼저 맞춘다. 맞춘 뒤에도 진행 중이면 새로 출발하지 않는다(덮어쓰기 방지). */
  lhBusy=true;hubLH();
  try{try{await accSyncIfNewer()}catch(e){}if(lhOn()){toast("다른 기기·탭에서 이미 장기 토벌 중이다. 그쪽 진행을 이어 받는다.");return}
- /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다. */
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
+ /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다.
+    t1: 집중이면 표 시간의 95%(tripDurMs). 완주 보상 시간은 표 L[2] 그대로. */
+ const t0=Date.now(),dur=typeof tripDurMs==="function"?tripDurMs(L[2]):L[2]*3600000;C.lh={k,t0,t1:t0+dur,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
  const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2],sd:C.lh&&C.lh.sd};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
-  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.","","lh:go:"+(C.lh&&C.lh.sd||""));toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");lhNtArm()}
+  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+wait+" 뒤에 돌아온다.","","lh:go:"+(C.lh&&C.lh.sd||""));toast("🗺 "+L[1]+" 출발! "+wait+" 뒤에 돌아온다.");lhNtArm()}
  finally{lhBusy=false;hubLH()}}
 /* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
 function tripGot(map,sd){const k=String(sd||"");if(!k)return false;const o=C[map]=C[map]&&typeof C[map]==="object"?C[map]:{};if(o[k])return true;o[k]=1;const ks=Object.keys(o);if(ks.length>30)ks.slice(0,ks.length-30).forEach(x=>delete o[x]);return false}
@@ -672,7 +674,7 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
   if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."+(lhDefer?" 아직 서버에 남기지 못한 변경이 있어, 연결되면 다시 맞춘다.":"")));return}
  if(typeof clueOn==="function"&&clueOn())box.appendChild(elT("p","hint","단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다."));
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]),st=L[9]||1;
-  cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
+  cp.append(elT("b","",L[1]+" · "+(typeof tripWaitTxt==="function"?tripWaitTxt(L[2]):L[2]+"시간")),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
   const b=elT("button","chip",lhBusy?"저장 중...":"출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn())||lhBusy;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
 /* 귀환 알림: t1 에 setTimeout 한 번(tripNt dedup). UI 남은 시간은 아래 30초 폴링(알림과 분리). */
 let lhNtT=null;

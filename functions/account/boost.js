@@ -110,8 +110,10 @@ const PET_XP_RUN = 1;
 const PET_DROP_X = .02;
 /* 이벤트 알 창. data/event/seasons.js → event-seasons.js (predeploy). HANDOFF.md §8. */
 const {PET_EV, PET_EV2} = require("./event-seasons");
+const {pickMat} = require("./drops");
 const SOLO_RW_MP = .5;
-const COLLECTOR_P = .3;
+/* 수집가: 출정 성공 시 이 확률로 MAT_DROP 풀에서 재료 1개(마력석 아님). */
+const COLLECTOR_P = .2;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
 const PET_XP_CAP = PET_LV[PET_LV_HARD - 1];
 function petEvOn(now) {
@@ -172,7 +174,7 @@ function gainExMod(ex, seat, c, now) {
 }
 
 /* 출정 부가 전체. 클라 settle 과 맞춤.
-   fx·절망 + 깃발/지도/스킬 소모 + 펫 XP·알 + 수집가/까마귀/고독 마력석.
+   fx·절망 + 깃발/지도/스킬 소모 + 펫 XP·알 + 수집가(재료 id)·까마귀/고독 마력석.
    rand 는 출정·uid 시드(재시도 동일). */
 function marchSide(r, seat, c, boost, rand, now) {
   seat = seat || {};
@@ -186,7 +188,8 @@ function marchSide(r, seat, c, boost, rand, now) {
   const rb = fx.rb ? 1 : 0;
   const wa = fx.wa ? 1 : 0;
   const title = seat.t || c.t || "";
-  const gdGuard = title === "수호" ? 4 : 0;
+  /* 수호: 파티에 한 명이라도 있으면 전원 오르는 절망도 -3(중첩 없음). */
+  const gdGuard = Object.values((r && r.pl) || {}).some(p => p && p.t === "수호") ? 3 : 0;
   const wp = seat.w != null ? Number(seat.w) : Number(c.wp);
   const sc = wp === 2 ? SCY_DZ : 0;
   const msk = Array.isArray(seat.sk) ? seat.sk.filter(id => SK_NM[id]) : [];
@@ -223,10 +226,11 @@ function marchSide(r, seat, c, boost, rand, now) {
     dh = Math.round(Number(fx.dh) || 0);
     dz += gainDzMod(dh, seat, c, boost);
   }
-  let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = 0, crow = 0, soloM = 0;
+  let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = "", crow = 0, soloM = 0;
   if (r && r.ok) {
     if (petCur(c)) petXp = PET_XP_RUN;
-    if (title === "수집가" && roll() < COLLECTOR_P) { mm++; collector = 1; }
+    /* 수집가: 재료 id 문자열. xpay 가 inv 에 1개 넣고, 클라는 안내만. */
+    if (title === "수집가" && roll() < COLLECTOR_P) collector = pickMat(roll);
     const manaP = petEff(petCur(c), "mana");
     if (manaP && roll() < manaP) { mm++; crow = 1; }
     if (r.solo && roll() < SOLO_RW_MP) { mm++; soloM = 1; }

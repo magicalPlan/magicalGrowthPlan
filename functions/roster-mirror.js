@@ -45,10 +45,9 @@ function mirrorPw(c) {
   const b = Math.max(0, Number(c.b) || 0);
   const t = String(c.t || "");
   const dz = Math.max(0, Number(c.dz) || 0);
-  /* 특성 평탄만. 천재(+5%)는 아래 비율 곱. js/common/formula.js tpw·pw 와 맞춤. */
+  /* 특성 평탄만. 천재(+5%)·폭주(절망≥60 +8%)는 아래 비율 곱. js/common/formula.js 와 맞춤. */
   let tpw = 0;
   if (t === "대기만성") tpw = lv < 50 ? -5 : lv >= 100 ? Math.floor(lv / 5) : 0;
-  else if (t === "폭주") tpw = dz >= 60 ? 6 : 0;
   else if (t === "불안정한 마력") tpw = 6;
   else if (t === "상처 입은 마음") tpw = 5;
   const wp = Number(c.wp);
@@ -73,8 +72,8 @@ function mirrorPw(c) {
     }
   } catch (e) { /* ignore */ }
   const flat = tpw + 10 + gi * 8 + lv * 3 + b + wpn + fire + dark + rnPow * 4 + petPw;
-  /* 천재: 평탄 합 ×1.05 후 반올림. 클라 pw() 와 동일(사역마 pwp는 미러에서 안 더함). */
-  const pct = t === "천재" ? 0.05 : 0;
+  /* 천재 0.05 + 폭주(절망≥60) 0.08. 클라 pw() 와 동일(사역마 pwp는 미러에서 안 더함). */
+  const pct = (t === "천재" ? 0.05 : 0) + (t === "폭주" && dz >= 60 ? 0.08 : 0);
   return Math.max(0, pct ? Math.round(flat * (1 + pct)) : flat);
 }
 

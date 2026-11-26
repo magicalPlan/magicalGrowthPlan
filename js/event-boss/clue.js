@@ -13,7 +13,7 @@ function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==
  else if(C.mj&&Date.now()<C.mj.T0)box.appendChild(elT("p","hint","정기 출정에 참가 신청한 동안에는 떠날 수 없다."));
  // 탐색 고르기: 카드 격자. 위에 이름과 시간, 가운데 설명, 아래에 성공 확률과 보상을 작은 칩으로 보여 준다.
  const pv=pw(),grid=elT("div","clue-grid");CLUE.forEach(L=>{const req=L.pw||1,c=lhChance(pv,req),st=L.st||1,w=elT("div","clue-card"+(c<.4?" hard":""));
-  const top=elT("div","clue-top");top.append(elT("b","",L.nm),elT("span","clue-hr",L.hr+"시간"));w.append(top,elT("p","clue-ds",L.ds));
+  const top=elT("div","clue-top");top.append(elT("b","",L.nm),elT("span","clue-hr",typeof tripWaitTxt==="function"?tripWaitTxt(L.hr):L.hr+"시간"));w.append(top,elT("p","clue-ds",L.ds));
   const chips=elT("div","clue-chips"),chip=(t,cls)=>chips.appendChild(elT("span","clue-chip"+(cls?" "+cls:""),t));
   chip("성공 "+Math.round(c*100)+"%",c<.4?"bad":c>=.7?"good":"");chip("권장 "+(L.pw||0));chip("💰 "+lhEst(L.g,L.hr,st));chip("✨ "+lhEst(L.ex,L.hr,st));if(L.m)chip("💎 "+L.m+"+");chip("절망 +"+L.dz,"dz");
   if(typeof CLP!=="undefined"&&typeof clpOn==="function"&&clpOn()&&L.clp){const sp=elT("span","clue-chip clp");if(typeof clpImg==="function")sp.appendChild(clpImg());sp.appendChild(document.createTextNode(" "+L.clp));chips.appendChild(sp)}w.appendChild(chips);
@@ -21,9 +21,11 @@ function clueDraw(){const box=$("#clue");if(!box||!C)return;if(typeof ordMarks==
 function clueStart(id){const L=clueOf(id);if(!L||clueOn())return;if(C.fall){toast("타락한 동안에는 탐색을 떠날 수 없다.");return}
  if(typeof lhOn==="function"&&lhOn()){toast("장기 토벌을 떠나 있는 동안에는 단서를 찾으러 떠날 수 없다.");return}
  if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
- if(!confirm(L.nm+"("+L.hr+"시간)을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw||1)*100)+"%"))return;
- const t0=Date.now();C.clue={k:id,t0,t1:t0+L.hr*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();
- note("quest",L.nm+"을(를) 떠났다. "+L.hr+"시간 뒤에 돌아온다.","","clue:go:"+C.clue.sd);toast("🔍 "+L.nm+" 출발! "+L.hr+"시간 뒤에 돌아온다.");clueNtArm();clueDraw()}
+ const wait=typeof tripWaitTxt==="function"?tripWaitTxt(L.hr):L.hr+"시간";
+ if(!confirm(L.nm+"("+wait+")을 떠날까? 떠나 있는 동안에는 장기 토벌과 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L.pw||1)*100)+"%"))return;
+ /* t1: 집중이면 표 시간의 95%(tripDurMs). 완주 보상 시간은 표 L.hr 그대로. */
+ const t0=Date.now(),dur=typeof tripDurMs==="function"?tripDurMs(L.hr):L.hr*3600000;C.clue={k:id,t0,t1:t0+dur,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();saveNow();
+ note("quest",L.nm+"을(를) 떠났다. "+wait+" 뒤에 돌아온다.","","clue:go:"+C.clue.sd);toast("🔍 "+L.nm+" 출발! "+wait+" 뒤에 돌아온다.");clueNtArm();clueDraw()}
 function cluePick(g,L,done){const evs=[],log=CLUE_LOG||[],n=done?2+Math.min(4,L.hr):1;
  for(let i=0;i<n&&log.length;i++){const e=log[Math.floor(g()*log.length)];if(!evs.includes(e))evs.push(e)}
  const found=[];if(done)(CLUE_EXTRA||[]).forEach(x=>{if(L.hr>=x[4]&&g()<x[3])found.push(x)});return{evs,found}}

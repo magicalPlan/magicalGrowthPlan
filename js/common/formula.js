@@ -11,11 +11,10 @@ const _facLv=k=>_fn("facLv",typeof facLv!=="undefined"?()=>facLv(k):0);
 const _disMine=()=>{try{return typeof disMine==="function"?disMine():""}catch(e){return ""}};
 const _witchCurse=()=>{try{return typeof witchCurse==="function"?witchCurse():null}catch(e){return null}};
 const _attrs=()=>Array.isArray(C&&C.a)?C.a:[];
-/* 특성 전투력(평탄 가산만). 천재는 %라서 여기가 아니라 pw() 끝의 비율 곱에 있다.
+/* 특성 전투력(평탄 가산만). 천재·폭주(%)는 pw() 끝의 비율 곱에 있다.
    대기만성: 레벨 50 전 -5, 50~99는 0, 100부터 floor(레벨/5).
-   폭주: 절망도 60 이상이면 +6.
    불안정한 마력 +6. 상처 입은 마음 +5. 그 밖은 0. */
-const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
+const tpw=()=>{const t=C.t,lv=C.lv||1;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
 // 강화 단계. 무기 번호 i 의 기록(w0, w1, ...)이 없으면 0.
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
@@ -26,17 +25,17 @@ const wup=i=>wlv(i)*(i===0?2:1);
 /* 전투력.
    1) 평탄 합 = 10 + 특성 평탄(tpw) + 등급×8 + 레벨×3 + C.b + 무기·강화·임시
       + 불 6 + 어둠(절망≥50) 6 + 힘의 각인×4 + 등대5 WF_PW + 사역마 평탄 pw
-   2) 비율 곱 = 평탄 합 × (1 + 사역마 pwp + 천재면 0.05), 반올림
-      · 천재·사역마 %는 더해서 한 번만 곱한다(예: 천재+올베르스 3% → ×1.08).
-      · 평탄이 100이면 천재만 있을 때 105.
+   2) 비율 곱 = 평탄 합 × (1 + 사역마 pwp + 천재 0.05 + 폭주(절망≥60) 0.08), 반올림
+      · %는 더해서 한 번만 곱한다(예: 천재+폭주 → ×1.13).
+      · 평탄이 100이면 폭주만 있을 때 108.
    매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
    권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다.
    목록용 슬림식은 functions/roster-mirror.js mirrorPw 와 맞춘다. */
-const pw=(()=>{const base=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");return()=>{const b=base(),pct=_petEff("pwp")+(C&&C.t==="천재"?0.05:0);return pct?Math.round(b*(1+pct)):b}})();
-/* 허브 프로필용 임시 전투력 증가량. 조건 보너스와 오늘만 붙는 임시 증가량을 합산해 표시한다. */
-function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
+const pw=(()=>{const base=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");return()=>{const b=base(),pct=_petEff("pwp")+(C&&C.t==="천재"?0.05:0)+(C&&C.t==="폭주"&&(C.dz||0)>=60?0.08:0);return pct?Math.round(b*(1+pct)):b}})();
+/* 허브 프로필용 임시·조건 평탄 증가량. 폭주(+8%)는 %라서 숫자 합이 아니라 pwExtraTxt 에 따로 적는다. */
+function pwCond(){if(!C)return 0;return _attrs().includes("어둠")&&(C.dz||0)>=50?6:0}
 function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}
-function pwExtraTxt(){const n=pwCond()+pwTmp()+pwCandyTmp();return n?"(+"+n+")":""}
+function pwExtraTxt(){if(!C)return "";const n=pwCond()+pwTmp()+pwCandyTmp(),bits=[];if(n)bits.push("+"+n);if(C.t==="폭주"&&(C.dz||0)>=60)bits.push("+8%");return bits.length?"("+bits.join(", ")+")":""}
 const dzFloorToday=()=>C&&C.dzFloor&&C.dzFloor.day===today()?Math.max(0,Math.min(100,Number(C.dzFloor.v)||0)):0;
 
 // 각인 비용. 지금 단계 L 에서 다음 단계로 가는 마력석은 L+2 개다. 0단계면 2개, 1단계면 3개.
@@ -98,6 +97,10 @@ const upr=L=>Math.min(100,UPR[L]+2*_facLv("forge")+((VL[C.v]||{}).up||0)+_petEff
    최저 30%. 상한은 lh 사역마(거북·용·순록)가 있으면 100%, 없으면 95%.
    (예전에 min(.95, 기본+펫)이라 펫 +%p 가 상한에 막혀 보이지 않았다.) */
 const lhChance=(pwv,req)=>{const pe=_petEff("lh"),cap=pe>0?1:.95,base=Number(req)>0?pwv/req*.85:cap;return Math.max(.3,Math.min(cap,base+pe))};
+/* 집중: 장기 토벌·단서 탐색 소요 ms ×0.95. 완주 보상은 표의 기준 시간(L[2]/L.hr) 그대로. */
+const tripMsMul=()=>C&&C.t==="집중"?0.95:1;
+const tripDurMs=hr=>Math.max(1,Math.round((Number(hr)||0)*3600000*tripMsMul()));
+const tripWaitTxt=hr=>{const m=Math.max(1,Math.round(tripDurMs(hr)/60000));if(m<60)return m+"분";const h=Math.floor(m/60),mm=m%60;return mm?h+"시간 "+mm+"분":h+"시간"};
 /* 장기 토벌 골드·경험치 % 구간. 단계 1 → 95~100, 2 → 90~95, … (양끝 포함). */
 const lhPctRange=st=>{const s=Math.max(1,Number(st)||1),lo=95-5*(s-1),hi=100-5*(s-1);return[lo,hi]};
 const lhRollPct=(st,rand)=>{const[lo,hi]=lhPctRange(st);return lo+Math.floor(rand()*(hi-lo+1))};

@@ -5,7 +5,8 @@
 $("#pfr").onclick=async()=>{const m=$("#pfm"),u=pfU;if(!u||u===UID)return;if(!(C.fr&&C.fr[u])){m.style.color="var(--bad)";m.textContent="친구에게만 공명할 수 있다. 먼저 친구 추가를 해 보자.";return}const last=(C.rl&&C.rl[u])||0,left=RES_CD-(Date.now()-last);
  if(left>0){m.style.color="var(--bad)";m.textContent="같은 상대에게는 3시간에 한 번만 공명할 수 있다. 약 "+Math.ceil(left/3600000)+"시간 뒤에 다시 할 수 있다.";return}
  $("#pfr").disabled=true;
- try{await DB.doc("res/"+u+"/"+UID).set({ts:{".sv":"timestamp"},n:String(C.n).replace(/👑/g,"").slice(0,20),a:(C.a.includes("빛")?3:0)+(C.t==="치유의 손길"?3:0)});
+ /* a: 수락 쪽 추가 감소. 빛 +3, 치유의 손길 +5(상한 8=빛+치유). */
+ try{await DB.doc("res/"+u+"/"+UID).set({ts:{".sv":"timestamp"},n:String(C.n).replace(/👑/g,"").slice(0,20),a:(C.a.includes("빛")?3:0)+(C.t==="치유의 손길"?5:0)});
   // 공명은 '청하기'다. 상대가 받아들이면 그때 나와 상대 모두 절망도가 내려간다. 내 몫은 지금 계산해 두었다가 수락 소식이 오면 적용한다.
   C.rl=C.rl||{};C.rl[u]=Date.now();titleState();C.stats.resonances=(C.stats.resonances||0)+1;const rb=C.rsb?5:0;C.rsb=0;
   C.rq=C.rq||{};C.rq[u]={ts:Date.now(),amt:rqAmt(rb)};save();checkTitles();
@@ -14,8 +15,9 @@ $("#pfr").onclick=async()=>{const m=$("#pfm"),u=pfU;if(!u||u===UID)return;if(!(C
   m.style.color="var(--mu)";m.textContent="공명을 청했다. 상대가 받아들이면 둘 다 절망도가 내려간다. (거절하면 3시간 대기도 풀린다)"}
  catch(e){m.style.color="var(--bad)";m.textContent="지금은 공명할 수 없다. 같은 상대에게는 3시간에 한 번만 가능하다."}
  resBtn(u)};
-/* 공명을 청한 쪽이 받을 절망도 감소량. 청할 때 계산해 두지만, 기록이 사라졌으면(복구·다른 기기) 수락 소식이 올 때 다시 계산한다. */
-const rqAmt=(rb=0)=>Math.round((disMine()==="frost"?.5:1)*(VL[C.v].rz+(C.t==="다정함"?5:0)+(eq(4)?2:0)+(rb||0)+facLv("chapel")));
+/* 공명을 청한 쪽이 받을 절망도 감소량. 청할 때 계산해 두지만, 기록이 사라졌으면(복구·다른 기기) 수락 소식이 올 때 다시 계산한다.
+   다정함·치유의 손길 각 +5(내 몫). 상대 몫의 치유 보너스는 위 a 칸. */
+const rqAmt=(rb=0)=>Math.round((disMine()==="frost"?.5:1)*(VL[C.v].rz+(C.t==="다정함"?5:0)+(C.t==="치유의 손길"?5:0)+(eq(4)?2:0)+(rb||0)+facLv("chapel")));
 /* 수락·거절 소식을 상대에게 보내지 못했으면 기억해 두었다가 다시 보낸다. 이 소식이 가야 청한 쪽의 절망도가 내려간다. */
 function rqSend(f,t){C.rqOut=C.rqOut||{};C.rqOut[f]=t;save();return sendF(f,t).then(()=>{if(C&&C.rqOut&&C.rqOut[f]===t){delete C.rqOut[f];save()}}).catch(()=>{})}
 function rqRetry(){if(!C||!C.rqOut)return;Object.keys(C.rqOut).forEach(f=>rqSend(f,C.rqOut[f]))}
@@ -30,7 +32,7 @@ function rssBump(f,ts){C.rss=C.rss||{};const t=Number(ts)||0;if(t>(Number(C.rss[
  Object.keys(C.rss).forEach(k=>{if(now-(Number(C.rss[k])||0)>ttl)delete C.rss[k]})}
 async function applyRes(){if(!AUTH.uid||!C||!DB)return;try{const s=await once(DB.collection("res/"+UID));let mx=Number(C.rs)||0,ch=false;C.rqIn=C.rqIn||{};C.rss=C.rss||{};
  s.docs.forEach(d=>{const v=d.data(),ts=Number(v&&v.ts)||0;if(!v||!(ts>rssSeen(d.id)))return;
-  const n=String(v.n||"누군가");C.rqIn[d.id]={n,a:Math.min(6,Math.max(0,Number(v.a)||0)),ts};
+  const n=String(v.n||"누군가");C.rqIn[d.id]={n,a:Math.min(8,Math.max(0,Number(v.a)||0)),ts};
   rssBump(d.id,ts);mx=Math.max(mx,ts);ch=true});
  rqExpire();if(!ch){if(!$("#v-friends").hidden)rqDraw();return}C.rs=mx;save();updNav();if(!$("#v-friends").hidden)rqDraw()}catch(e){}}
 function rqExpire(){const now=Date.now();let ch=false;Object.keys(C.rqIn||{}).forEach(f=>{if(now-(C.rqIn[f].ts||0)>RQ_TTL){delete C.rqIn[f];ch=true}});Object.keys(C.rq||{}).forEach(f=>{if(now-(C.rq[f].ts||0)>RQ_TTL+3600000){delete C.rq[f];ch=true}});if(ch)save()}

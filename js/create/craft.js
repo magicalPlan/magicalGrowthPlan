@@ -15,6 +15,8 @@ function matQty(n){if(Array.isArray(n)){const lo=Math.floor(Number(n[0])||1),hi=
 /* 정기 출정 성공·실패에 쓸 MAT_DROP 표 목록. functions/account/drops.js marchDropTables 와 맞춘다.
    ★→x_s1, ★★→x_s2, ★★★→x_hi+x_s3, 심연→x_hi+x_ab(심연의 조각 포함). */
 function marchDropTables(r){if(!r)return[];if(!r.ok)return["x_fail"];const rw=Number(r.rw)||1;if(r.ab)return["x_ok","x_hi","x_ab"];if(rw>=1.4)return["x_ok","x_hi","x_s3"];if(rw>=1)return["x_ok","x_s2"];return["x_ok","x_s1"]}
+/* 수집가 무작위 풀: MAT_DROP 에 나오는 재료(공방 전용·왕관 제외). 서버 drops.matPool 과 맞춤. */
+function collectorMatIds(){const ids=[];if(typeof MAT_DROP!=="object")return ids;Object.keys(MAT_DROP).forEach(k=>{(MAT_DROP[k]||[]).forEach(r=>{if(r&&r[0]&&ids.indexOf(r[0])<0)ids.push(r[0])})});return ids}
 /* 재료 얻기: MAT_DROP 의 표 이름 목록을 받아 줄마다 굴린다. times 가 있으면 그 표를 그만큼 반복한다(장기 토벌의 시간마다).
    C.inv 에만 더하고 저장은 하지 않는다. 부른 쪽이 원래 하던 대로 저장한다. 얻은 것이 없으면 빈 글자를 돌려준다. */
 function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonus=MAT_VIL[C.v];

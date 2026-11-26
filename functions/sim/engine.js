@@ -36,7 +36,7 @@ function startSim(room) {
   if (mp) { room.total = 3; room.seq.push("마수 사냥 지도를 따라 전투 3번으로 끝나는 길을 골랐다."); }
   if (fl) room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");
   if (solo && has("고독")) room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 출정 전투력이 10% 올랐다.");
-  if (co) room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 3 올랐다.");
+  if (co) room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 10 올랐다.");
   if (stf) room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
   const psk = id => ps.filter(p => (p.sk || []).includes(id)).length, wt = psk("water"), wd = psk("wind"), dk = psk("dark");
   if (wt) room.seq.push("정화의 물결이 파티를 감쌌다. 이번 출정의 절망도 상승이 줄어든다.");
@@ -46,7 +46,7 @@ function startSim(room) {
   const twb = Math.max(0, ...ps.map(p => Math.min(5, Number(p.tw) || 0)));
   if (twb) room.seq.push("감시탑이 마수의 움직임을 미리 알려 주었다. 전투 판정 +" + twb + ".");
   if (ps.some(p => p.w === 2)) room.seq.push("낫의 날이 서늘하게 빛난다. 수확의 일격: 대성공이 더 잘 나온다.");
-  room.sim = { scy: ps.some(p => p.w === 2), i: 1, ok: true, ev: 0, ex: 0, gx: 0, ab: dk ? 8 : 0, tw: twb, lucky: wd, rev: false, avg: sum / ps.length + (fl ? 5 : 0) + (co ? 3 : 0) + (stf ? 2 : 0) };
+  room.sim = { scy: ps.some(p => p.w === 2), i: 1, ok: true, ev: 0, ex: 0, gx: 0, ab: dk ? 8 : 0, tw: twb, lucky: wd, rev: false, avg: sum / ps.length + (fl ? 5 : 0) + (co ? 10 : 0) + (stf ? 2 : 0) };
   room.pend = null; room.ch = null; room.fin = false;
   simStep(room);
 }
