@@ -407,7 +407,7 @@ function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style
  c.append(b1,b2);o.appendChild(c);document.body.appendChild(o)})}
 function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv0=Math.max(1,Number(p.lv)||1);let ex=Math.max(0,Number(p.ex)||0);
  if(ex>0&&ex<xpAt(lv0)&&typeof lvOfV2==="function"&&lvOfV2(ex)===lv0)ex=xpCurve(ex,2);ex=Math.max(ex,xpAt(lv0));
- const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:3,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",flags:typeof flagsEmpty==="function"?flagsEmpty():{flag:{},story_flag:{}},stats:{huntsWon:Number(p.cl)||0},
+ const c={n:String(p.n).slice(0,20),g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:3,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",flags:typeof flagsEmpty==="function"?flagsEmpty():{flag:{},story_flag:{}},stats:{huntsWon:Number(p.cl)||0},
   pf:p.pf&&typeof p.pf==="object"?p.pf:{},fc:p.fc&&typeof p.fc==="object"?p.fc:{},wf:Number(p.wf)||0,rescued:Date.now(),
   // 예전 보상·개인 지급은 이미 받은 것으로 친다(기본 정보 복구로 두 번 받지 않게). 이번 복구 보상만 새로 받는다.
   cmp:Object.fromEntries(COMP.map(x=>x[0]).concat(GRANT.map(x=>x[0])).filter(id=>id!=="restore-apology-20261016"&&id!=="maint-20261018").map(id=>[id,1]))};
@@ -721,7 +721,8 @@ const WHO_MS=3000;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
 function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
  const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:power,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:typeof petLv==="function"?petLv(q):1}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&typeof DEV!=="undefined"&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf&&typeof C.pf==="object"?C.pf:{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
+ /* 성별(s)은 더 이상 쓰지 않는다. s:null 로 공개 카드의 옛 성별 칸을 지운다. */
+ return{n:C.n,s:null,g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:power,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:typeof petLv==="function"?petLv(q):1}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&typeof DEV!=="undefined"&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf&&typeof C.pf==="object"?C.pf:{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
@@ -762,7 +763,7 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pf
   const dormant=typeof isDm==="function"?isDm(p):Number(p.dm)===1;
   if(!dormant&&typeof p.im==="string"&&p.im.length<20000&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p.im)){const i=document.createElement("img");i.className="av";i.alt="프로필 이미지";i.src=p.im;hero.appendChild(i);hiAv(i,uid)}
   const intro=document.createElement("div"),h=document.createElement("h2");h.className="profile-name";h.textContent=cn(uid,p.n||"이름 없는 캐릭터");intro.appendChild(h);
-  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=(VL[p.v]?VL[p.v].n:"소속 미상")+" · "+(p.s||"성별 미설정");intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}
+  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=VL[p.v]?VL[p.v].n:"소속 미상";intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}
   if(dormant){const hw=document.createElement("p");hw.className="ttl-tag";hw.style.margin="6px 0 0";hw.textContent="화원 · 휴면 계정";intro.appendChild(hw)}
   hero.appendChild(intro);b.appendChild(hero);
   if(p.fl){const w=document.createElement("p");w.className="fallbar";w.textContent="이 마법소녀는 타락했다. 친구라면 마을의 '타락한 친구' 목록에서 맞서 되돌릴 수 있다.";b.appendChild(w)}

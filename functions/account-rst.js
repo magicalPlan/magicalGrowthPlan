@@ -13,7 +13,7 @@ const {buildPlayers, buildWho, collectUids, okUid} = require("./roster-mirror");
 
 const AT_NAMES = ["불", "물", "바람", "땅", "빛", "어둠"];
 const RST_KEEP = [
-  "n", "s", "v", "a", "t", "img", "pf", "rel", "picSig", "titles", "ti", "dex", "stats",
+  "n", "v", "a", "t", "img", "pf", "rel", "picSig", "titles", "ti", "dex", "stats",
   "pets", "pet", "petSeen", "petGone", "petMax",
   "fr", "fq", "fo", "fs", "flags", "cmp", "founder", "origin", "rescued", "tut", "healOff",
   "ntcl", "doom", "rst", "born", "last",

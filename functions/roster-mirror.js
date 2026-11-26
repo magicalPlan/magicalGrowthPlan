@@ -108,7 +108,7 @@ function buildPlayers(c, mode, ts) {
   const n = String(c.n || "").slice(0, 20);
   const body = {
     n,
-    s: String(c.s || "").slice(0, 8),
+    s: null,
     g: String(c.g || "").slice(0, 2),
     t: String(c.t || "").slice(0, 40),
     a: attrsTxt(c).slice(0, 80),
