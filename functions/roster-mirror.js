@@ -47,8 +47,7 @@ function mirrorPw(c) {
   const dz = Math.max(0, Number(c.dz) || 0);
   /* 특성 평탄만. 천재(+5%)·폭주(절망≥60 +8%)는 아래 비율 곱. js/common/formula.js 와 맞춤. */
   let tpw = 0;
-  if (t === "대기만성") tpw = lv < 50 ? -5 : lv >= 100 ? Math.floor(lv / 5) : 0;
-  else if (t === "불안정한 마력") tpw = 6;
+  if (t === "대기만성") tpw = lv < 100 ? -15 : Math.floor(lv / 5);
   const wp = Number(c.wp);
   let wpn = 0;
   if (Number.isInteger(wp) && wp >= 0 && wp < WP_BASE.length) {

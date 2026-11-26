@@ -66,10 +66,9 @@
 - **파일:** `js/common/formula.js` `pw` · `functions/roster-mirror.js` `mirrorPw`
 
 ### 대기만성
-- **TD:** 레벨 50 전 −5. 레벨 100부터 `floor(lv/5)` 끝없이.
+- **TD:** 레벨 99까지 −15. 레벨 100부터 `floor(lv/5)` 끝없이.
 - **수식 (`tpw`):**
-  - `lv < 50` → `−5`
-  - `50 ≤ lv < 100` → `0`
+  - `lv < 100` → `−15`
   - `lv ≥ 100` → `floor(lv/5)` (100→+20, 1000→+200)
 - **파일:** `js/common/formula.js` `tpw` · `functions/roster-mirror.js` `mirrorPw`
 
@@ -147,11 +146,11 @@
 - **범위:** 클라만.
 
 ### 불안정한 마력
-- **TD:** 전투력 +6. 보스 공격 시 20% 확률로 피해 10~30% 감소.
+- **TD:** 보스 공격 시 20% 확률로 피해 −10%~+30% 사이에서 흔들린다. (전투력 증가 없음)
 - **수식:**
-  - `tpw += 6`
-  - `calcBossDamage`: `random() < 0.2`이면 `cut = 10 + floor(rand*21)` (10~30), `total *= (100-cut)/100`
-- **파일:** `formula.js` `tpw` · `roster-mirror.js` · `formula-battle.js` `calcBossDamage` ← `js/boss.js`, `js/event-boss/boss.js`
+  - `tpw` 보너스 없음
+  - `calcBossDamage`: `random() < 0.2`이면 `swing = -10 + floor(rand*41)` (−10~+30), `total *= (100+swing)/100`
+- **파일:** `formula-battle.js` `calcBossDamage` ← `js/boss.js`, `js/event-boss/boss.js`
 - **참고:** 타락 레이드 `calcRaidDamage`에는 **미적용**.
 
 ### 상처 입은 마음
@@ -184,9 +183,9 @@
 |------|------|-----------------|
 | 불굴, 예민함, 고독, 협력자, 번뜩임, 상처(전투력) | `js/room.js` | `functions/sim/engine.js` |
 | 냉정, 낙천, 끈기 | `formula.js` `gain` | `boost.js` |
-| 천재, 대기만성, 폭주, 불안정(+6) | `formula.js` | `roster-mirror.js` |
+| 천재, 대기만성, 폭주 | `formula.js` | `roster-mirror.js` |
 | 행운(골드·알), 수집가, 수호, 상처(절망) | `room.js` / `pet/egg.js` | `xpay.js` + `boost.marchSide` |
-| 다정함, 치유, 집중, 계약의 가호, 각성자, 도제, 불안정(보스 컷) | 클라만 | — |
+| 다정함, 치유, 집중, 계약의 가호, 각성자, 도제, 불안정(보스 피해 흔들림) | 클라만 | — |
 
 ---
 
@@ -195,13 +194,13 @@
 | 파일 | 다루는 특성 |
 |------|-------------|
 | `data/game.js` | 전 특성 `TR`/`TD`, 관련 상수·주석 |
-| `js/common/formula.js` | 천재, 폭주, 대기만성, 불안정(+6), 냉정, 낙천, 끈기, 집중 |
-| `js/common/formula-battle.js` | 불안정(보스 피해 감소) |
+| `js/common/formula.js` | 천재, 폭주, 대기만성, 냉정, 낙천, 끈기, 집중 |
+| `js/common/formula-battle.js` | 불안정(보스 피해 −10%~+30%) |
 | `js/room.js` | 불굴, 예민함, 번뜩임, 고독, 협력자, 상처, 수호, 행운(골드), 수집가 |
 | `functions/sim/engine.js` | 위 출정 시뮬 대칭 |
 | `functions/account/boost.js` | 냉정, 낙천, 끈기, 수호, 수집가, 행운(알), 상처(절망) |
 | `functions/sim/xpay.js` | 행운(골드), 끈기(경험 배율) |
-| `functions/roster-mirror.js` | 천재, 폭주, 대기만성, 불안정(+6) |
+| `functions/roster-mirror.js` | 천재, 폭주, 대기만성 |
 | `js/friends/resonance.js` | 다정함, 치유의 손길 |
 | `js/main.js` | 다정함(선물), 각성자 |
 | `js/town/portal.js` | 치유의 손길(샘 치유) |

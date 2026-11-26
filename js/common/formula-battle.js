@@ -25,10 +25,10 @@ function calcBossDamage(basePw, efMul, isWeak, isFireSk, hasFireAttr, vBonus, pe
     const fireAttrMul = hasFireAttr ? DMG_FIRE_ATTR_MUL : 1;
 
     let total = base * efMul * weakMul * fireSkMul * fireAttrMul * vBonus * (1 + petBonus);
-    /* 불안정한 마력: 20% 확률로 피해 -10%~-30%(균등). 보스·이벤트 보스 공통. 타락 레이드는 해당 없음. */
+    /* 불안정한 마력: 전투력 보너스 없음. 20% 확률로 피해 −10%~+30%(정수·균등). 보스·이벤트 보스 공통. 타락 레이드는 해당 없음. */
     if (typeof C !== "undefined" && C && C.t === "불안정한 마력" && Math.random() < .2) {
-        const cut = 10 + Math.floor(Math.random() * 21);
-        total *= (100 - cut) / 100;
+        const swing = -10 + Math.floor(Math.random() * 41);
+        total *= (100 + swing) / 100;
     }
     return Math.max(1, Math.round(total));
 }

@@ -12,9 +12,9 @@ const _disMine=()=>{try{return typeof disMine==="function"?disMine():""}catch(e)
 const _witchCurse=()=>{try{return typeof witchCurse==="function"?witchCurse():null}catch(e){return null}};
 const _attrs=()=>Array.isArray(C&&C.a)?C.a:[];
 /* 특성 전투력(평탄 가산만). 천재·폭주(%)는 pw() 끝의 비율 곱에 있다.
-   대기만성: 레벨 50 전 -5, 50~99는 0, 100부터 floor(레벨/5).
-   불안정한 마력 +6. 상처 입은 마음은 평탄 없음(혼자 출정 시 startSim·절망 보정). 그 밖은 0. */
-const tpw=()=>{const t=C.t,lv=C.lv||1;return t==="대기만성"?(lv<50?-5:lv>=100?Math.floor(lv/5):0):t==="불안정한 마력"?6:0};
+   대기만성: 레벨 1~99는 -15, 100부터 floor(레벨/5).
+   불안정한 마력은 전투력 없음(보스 피해 흔들림만, formula-battle). 상처 입은 마음은 평탄 없음(혼자 출정 시 startSim·절망 보정). 그 밖은 0. */
+const tpw=()=>{const t=C.t,lv=C.lv||1;return t==="대기만성"?(lv<100?-15:Math.floor(lv/5)):0};
 // 강화 단계. 무기 번호 i 의 기록(w0, w1, ...)이 없으면 0.
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
