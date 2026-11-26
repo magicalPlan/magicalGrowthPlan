@@ -147,7 +147,7 @@ function gainDzMod(dz, seat, c, boost) {
     if (title === "냉정") d *= .8;
     if (title === "상처 입은 마음") d *= 1.2;
   }
-  if (d < 0 && title === "낙천") d *= 1.3;
+  if (d < 0 && title === "낙천") d *= 1.15;
   if (d > 0) {
     d *= 1 - .04 * rnLv(c && c.rn, "calm");
     if ((boost && boost.wfl || 0) >= 3) d *= 1 - WF_CALM;

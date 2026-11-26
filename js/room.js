@@ -120,11 +120,12 @@ $("#st").onclick=async()=>{if(!room||room.host!==UID||!code)return;const c=code;
  room.st="run";room.step=0;room.seq=[];room.pend=null;room.fin=false;room.segFrom=0;room.phaseAt=Date.now();room.ch=null;room.calc=0;room.ts=Date.now();
  try{await rref(c).set(room);await Promise.all([DB.doc("live/m/"+c).set(Date.now()),DB.doc("rooms/"+c+"/calc").set(0).then(()=>DB.doc("rooms/"+c+"/calc").set(1)).catch(()=>DB.doc("rooms/"+c+"/calc").set(1))]);askCalc.key=""}catch(e){$("#rrm").textContent="출발하지 못했다."}};
 // 출발 준비: 아이템·마법·특성 효과를 정리하고 전투를 시작한다. 정기 출정이 쓴다.
-function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?8:0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
+/* 고독: 혼자일 때 참가 전투력 p.p 의 +10%(반올림)를 파티 합에 더한다. 서버 engine.js 와 맞춤. */
+function startSim(room){const ps=Object.values(room.pl),has=t=>ps.some(p=>p.t===t),solo=ps.length===1,sum=ps.reduce((a,p)=>a+p.p+(solo&&p.t==="고독"?Math.round(p.p*.1):0),0),fl=ps.some(p=>p.f),mp=ps.some(p=>p.m),co=ps.length>=2&&has("협력자"),stf=ps.some(p=>p.w===6);room.seq=[];
  room.rt=room.rt||room.total;
  if(solo){room.solo=1;if(!room.sdf){room.sdf=1;room.df=(room.df||1)*SOLO_DF;room.dzm=(room.dzm||1)*SOLO_DZ}room.seq.push("⚔ 고독한 출정: 함께할 동료 없이 홀로 길을 나섰다. 마수들이 혼자인 마법소녀를 노린다. (권장 전투력 ×"+SOLO_DF+")")}
  if(mp){room.total=3;room.seq.push("마수 사냥 지도를 따라 전투 3번으로 끝나는 길을 골랐다.")}
- if(fl)room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");if(solo&&has("고독"))room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 전투력이 8 올랐다.");if(co)room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 3 올랐다.");if(stf)room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
+ if(fl)room.seq.push("용기의 깃발이 펄럭였다. 파티 전원의 전투력이 5 올랐다.");if(solo&&has("고독"))room.seq.push("홀로 나선 길, 고독이 힘이 되었다. 출정 전투력이 10% 올랐다.");if(co)room.seq.push("협력자가 파티의 호흡을 맞췄다. 파티 전투력이 3 올랐다.");if(stf)room.seq.push("스태프가 큰 마력을 나눠 파티 전투력이 2 올랐다.");
  const psk=id=>ps.filter(p=>(p.sk||[]).includes(id)).length,wt=psk("water"),wd=psk("wind"),dk=psk("dark");
  if(wt)room.seq.push("정화의 물결이 파티를 감쌌다. 이번 출정의 절망도 상승이 줄어든다.");if(dk)room.seq.push("그림자 계약이 맺어졌다. 파티 전투력이 8 올랐다.");if(wd)room.seq.push("바람의 길잡이가 앞장섰다. 운명이 한 번 파티 편을 든다.");room.wsk=wt>0;
  const twb=Math.max(0,...ps.map(p=>Math.min(5,Number(p.tw)||0)));if(twb)room.seq.push("감시탑이 마수의 움직임을 미리 알려 주었다. 전투 판정 +"+twb+".");
