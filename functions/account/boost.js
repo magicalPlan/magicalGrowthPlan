@@ -162,7 +162,7 @@ function gainExMod(ex, seat, c, now) {
   if (!(ex > 0)) return 0;
   let e = ex;
   e *= 1 + .04 * rnLv(c && c.rn, "wis");
-  if (((seat && seat.t) || (c && c.t) || "") === "끈기") e *= 1.2;
+  if (((seat && seat.t) || (c && c.t) || "") === "끈기") e *= 1.15;
   if (c && c.fall) e = 0;
   const t = now == null ? Date.now() : now;
   if (e > 0 && c && Number(c.scar) > t) e *= .5;
@@ -335,7 +335,7 @@ function marchMuls(seat, c, shared) {
   if (dis === "storm") exMul *= .8;
   /* gain() 경험 보너스와 맞춤: 지혜·끈기·바람 + 타락 0·후유증 ×0.5. c 는 loadMarchBoost 가 이미 읽음(추가 조회 없음). */
   exMul *= 1 + .04 * wis;
-  if (title === "끈기") exMul *= 1.2;
+  if (title === "끈기") exMul *= 1.15;
   if (attrsOf(c).includes("바람") || String((seat && seat.a) || "").includes("바람")) exMul *= 1.15;
   if (c && c.fall) exMul = 0;
   else if (c && Number(c.scar) > (shared.now || Date.now())) exMul *= .5;

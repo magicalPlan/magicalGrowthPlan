@@ -74,11 +74,11 @@ function xpMigrate(){if(!C||Number(C.xv)>=3)return false;const ex=xpCurve(C.ex,C
    절망도가 오를 때: 냉정 ×0.8, 상처 입은 마음 ×1.2, 평온 각인 단계마다 4% 감소,
    등대 3단계면 WF_CALM 만큼 더 줄고, 사역마 dz 만큼 더 줄인다.
    절망도가 내릴 때: 낙천 ×1.3, 사역마 dz 는 오를 때만 쓴다.
-   경험치: 지혜 각인 단계마다 4% 증가, 끈기 ×1.2, 후유증이 남아 있으면 ×0.5.
+   경험치: 지혜 각인 단계마다 4% 증가, 끈기 ×1.15, 후유증이 남아 있으면 ×0.5.
    물 속성은 오르는 절망도를 75% 로 줄이되 최소 1. 바람 속성은 경험치 ×1.15.
    반영 전에 옛 경험치를 새 곡선으로 옮기고, 레벨은 누적 경험치로 다시 계산한다. 절망도는 0~100 으로 자른다.
    100 이 되면 타락하고, 90 을 처음 넘으면 타락 직전을 알린다. */
-function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.2;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(dzFloorToday(),Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
+function gain(ex,dz){const oldDz=C.dz||0,t=C.t;if(C.fall&&dz<0)dz=0;if(dz>0){if(t==="냉정")dz*=.8;if(t==="상처 입은 마음")dz*=1.2}if(dz<0&&t==="낙천")dz*=1.3;if(dz>0)dz*=(1-.04*rnLv("calm"))*(_wfLv()>=3&&typeof WF_CALM==="number"?1-WF_CALM:1)*(1-_petEff("dz"));if(ex>0)ex*=1+.04*rnLv("wis");if(ex>0&&t==="끈기")ex*=1.15;if(ex>0&&C.fall)ex=0;if(ex>0&&scarLeft()>0)ex*=.5;if(dz>0&&_attrs().includes("물"))dz=Math.max(1,Math.round(dz*.75));if(ex>0&&_attrs().includes("바람"))ex=Math.round(ex*1.15);xpMigrate();C.ex+=Math.round(ex);C.lv=lvOf(C.ex);C.dz=Math.max(dzFloorToday(),Math.min(100,C.dz+Math.round(dz)));titleState();C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);if(oldDz>0&&C.dz===0)C.stats.reachedZero=true;if(C.dz>=95&&!C.fall)C.edge=1;if(C.fall)C.edge=0;if(C.edge&&C.dz===0){C.edge=0;C.stats.edgeHope=1}save();checkTitles();
  if(!C.fall){if(C.dz>=100)fallen();else if(oldDz<90&&C.dz>=90)note("warn","절망도가 "+C.dz+"에 이르렀다. 타락 직전이다."),alertBox("타락 직전","절망도가 "+C.dz+"에 이르렀다. 마음이 무너지기 직전이다.\n절망도가 100이 되면 타락해 마수가 된다. 공명이나 선물로 친구들의 도움을 받자.")}}
 
 /* 10분마다 내려가는 절망도.
