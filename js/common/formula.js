@@ -11,12 +11,11 @@ const _facLv=k=>_fn("facLv",typeof facLv!=="undefined"?()=>facLv(k):0);
 const _disMine=()=>{try{return typeof disMine==="function"?disMine():""}catch(e){return ""}};
 const _witchCurse=()=>{try{return typeof witchCurse==="function"?witchCurse():null}catch(e){return null}};
 const _attrs=()=>Array.isArray(C&&C.a)?C.a:[];
-/* 특성 전투력.
-   천재 +4.
+/* 특성 전투력(평탄 가산만). 천재는 %라서 여기가 아니라 pw() 끝의 비율 곱에 있다.
    대기만성: 레벨 8 전에는 -2. 그 뒤에는 레벨의 절반(최대 8)과 레벨의 1/4 중 큰 값.
    폭주: 절망도 60 이상이면 +6.
    불안정한 마력 +6. 상처 입은 마음 +5. 그 밖은 0. */
-const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="천재"?4:t==="대기만성"?(lv<8?-2:Math.max(Math.min(8,Math.floor(lv/2)),Math.floor(lv/4))):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
+const tpw=()=>{const t=C.t,lv=C.lv||1,dz=C.dz||0;return t==="대기만성"?(lv<8?-2:Math.max(Math.min(8,Math.floor(lv/2)),Math.floor(lv/4))):t==="폭주"?(dz>=60?6:0):t==="불안정한 마력"?6:t==="상처 입은 마음"?5:0};
 // 강화 단계. 무기 번호 i 의 기록(w0, w1, ...)이 없으면 0.
 const wlv=i=>(C.wl&&C.wl["w"+i])||0;
 // 지금 그 번호의 무기를 장착 중이면 참.
@@ -25,21 +24,15 @@ const pwCandyTmp=()=>C&&C.pwtmp&&C.pwtmp.day===today()?Math.max(0,Number(C.pwtmp
 // 강화가 전투력에 더하는 값. 칼(0번)은 단계마다 2, 다른 무기는 단계마다 1.
 const wup=i=>wlv(i)*(i===0?2:1);
 /* 전투력.
-   10
-   + 특성 보너스
-   + 등급 칸 × 8
-   + 레벨 × 3
-   + 추가 전투력 C.b
-   + 장착 무기 기본 전투력 + 강화 보너스 + 오늘만 붙는 임시 강화
-   + 불 속성이면 6
-   + 어둠 속성이고 절망도가 50 이상이면 6
-   + 힘의 각인 단계 × 4
-   + 희망의 등대 5단계면 WF_PW
-   + 함께하는 사역마의 전투력
+   1) 평탄 합 = 10 + 특성 평탄(tpw) + 등급×8 + 레벨×3 + C.b + 무기·강화·임시
+      + 불 6 + 어둠(절망≥50) 6 + 힘의 각인×4 + 등대5 WF_PW + 사역마 평탄 pw
+   2) 비율 곱 = 평탄 합 × (1 + 사역마 pwp + 천재면 0.05), 반올림
+      · 천재·사역마 %는 더해서 한 번만 곱한다(예: 천재+올베르스 3% → ×1.08).
+      · 평탄이 100이면 천재만 있을 때 105.
    매지컬 마치 참가 때 me().p 로 자리(xm)에 올리며, 서버는 이 값을 다시 계산하지 않는다.
-   권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다. */
-/* pwp(전투력 %)는 평탄 합 뒤에 곱한다. 올베르스네이크 등. */
-const pw=(()=>{const base=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");return()=>{const b=base(),pct=_petEff("pwp");return pct?Math.round(b*(1+pct)):b}})();
+   권장(적정) 전투력 식은 js/room.js·functions/sim/engine.js 의 recPw / battleT 다.
+   목록용 슬림식은 functions/roster-mirror.js mirrorPw 와 맞춘다. */
+const pw=(()=>{const base=()=>tpw()+10+gi()*8+(C.lv||1)*3+(C.b||0)+(C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][3]+wup(C.wp)+(C.wtmp&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0):0)+pwCandyTmp()+(_attrs().includes("불")?6:0)+(_attrs().includes("어둠")&&C.dz>=50?6:0)+4*rnLv("pow")+(_wfLv()>=5&&typeof WF_PW==="number"?WF_PW:0)+_petEff("pw");return()=>{const b=base(),pct=_petEff("pwp")+(C&&C.t==="천재"?0.05:0);return pct?Math.round(b*(1+pct)):b}})();
 /* 허브 프로필용 임시 전투력 증가량. 조건 보너스와 오늘만 붙는 임시 증가량을 합산해 표시한다. */
 function pwCond(){if(!C)return 0;return (_attrs().includes("어둠")&&(C.dz||0)>=50?6:0)+(C.t==="폭주"&&(C.dz||0)>=60?6:0)}
 function pwTmp(){if(!C)return 0;return C.wtmp&&typeof today==="function"&&C.wtmp.day===today()?(Number(C.wtmp.v)||1):0}
