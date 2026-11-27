@@ -99,7 +99,7 @@ function stopX(){
  if(xPolls){xPolls.forEach(u=>{try{u()}catch(e){}});xPolls=null}
  if(xPoll){try{xPoll()}catch(e){}xPoll=null}
  unX=null;xWatchKey=""}
-/* 쓰기·프로필 GET 동안 1초 틱이 watchX 를 다시 열지 않게 한다. */
+/* 자리 쓰기 동안 1초 틱이 watchX 를 다시 열지 않게 한다. */
 let xIoHold=0;
 /* 지금 화면에 그릴·구독할 자리 번호.
    출정 방(v-xm)만 열려 있으면 자기 칸 하나. 목록이 펼쳐져 있으면 정렬 앞 xShowN + 내 참가 칸. */
@@ -213,9 +213,10 @@ function drawX(el){el.innerHTML="";if(!C)return;
    권장 전투력 자체는 올리지 않는다. 개인 전투력 p(및 깃발·특성·무기…)만 올리고,
    출발 시 서버가 파티 p 로 권장·기준치(battleT)를 계산한다(functions/sim/engine.js).
    flush 는 set 실패로 pend 가 남은 경우에만 다시 올린다.
-   자리 live(EventSource)가 같은 호스트 연결을 가득 채우면 PUT·프로필 GET 이 대기열에 묶여
-   「서버에 자리를 남기는 중」·인포 타임아웃이 난다.
-   쓰기·삭제·프로필 조회 동안만 목록 live 를 잠시 끊고(xIoHold), 끝나면 다시 연다. */
+   자리 live(EventSource)가 같은 호스트 연결을 가득 채우면 PUT 이 대기열에 묶여
+   「서버에 자리를 남기는 중」에 머문다.
+   쓰기·삭제 동안만 목록 live 를 잠시 끊고(xIoHold), 끝나면 다시 연다.
+   프로필 GET 에는 쓰지 않는다 — 모바일에서 SSE 를 흔들면 채팅 live 까지 끊길 수 있다. */
 async function xSeatNet(fn){xIoHold++;const re=!!(unX||xPolls)||xWatchOn();if(unX||xPolls)stopX();
  try{return await fn()}finally{xIoHold=Math.max(0,xIoHold-1);if(!xIoHold&&re&&XON()&&(xListOpen()||xWatchOn()))try{watchX(xWatchSlot())}catch(e){}}}
 async function xSeatWrite(s,i,body){return xSeatNet(()=>DB.doc(xSeat(s,i)+"/"+UID).set(body,X_NET))}
