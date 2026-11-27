@@ -769,8 +769,8 @@ function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()
 /* 운영자 프로필용. C.born(캐릭터 생성 ms)을 한국 시각 날짜 문구로. */
 function admBornTxt(ms){const t=Number(ms);if(!Number.isFinite(t)||!(t>0))return "";const k=new Date(t+9*3600000);return k.getUTCFullYear()+"년 "+(k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일"}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
- /* 매지컬 마치 자리 live 가 호스트 연결을 점유하면 players GET 이 타임아웃 난다. xSeatNet 으로 잠깐 끊는다. */
- const load=()=>DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
+ /* 프로필 GET 은 마치 자리 live 를 끊지 않는다. 모바일에서 SSE 를 흔들면 채팅·다른 live 까지 같이 끊긴다. */
+ DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
   const hero=document.createElement("div");hero.className="profile-hero";
   /* 휴면(dm): 공개 사진은 스윕에서 하드 삭제됨. 남아 있어도 표시하지 않는다. */
@@ -801,8 +801,7 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pf
     const t=Number(s.exists?s.data():0);bornL.textContent=t>0?"운영자 전용 · 가입 "+admBornTxt(t):"운영자 전용 · 가입 일자 없음(옛 캐릭터일 수 있다)"}).catch(()=>{if(bornL.isConnected)bornL.textContent="운영자 전용 · 가입 일자를 읽지 못했다"})}
   /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
   Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
-  e=>{$("#pfb").textContent="프로필을 불러오지 못했다."});
- if(typeof xSeatNet==="function")xSeatNet(load);else load()}
+  e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
 $("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null;pfOpenAt=0};
 $("#pfo").onclick=e=>{if(e.target!==$("#pfo"))return;if(Date.now()-pfOpenAt<PF_GUARD_MS)return;$("#pfc").click()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$("#pfc").click()});

@@ -159,9 +159,9 @@ const EVENT_PACKS={
   /* storyLock: at=열림 시각(UTC), mg=밑그림 총합(event_minigame/flanders/total_amount). n 은 steps. */
   storyLock:[
    {id:"flanders-2"},
-   {id:"flanders-3",at:Date.UTC(2026,11,24,15),mg:5000},
-   {id:"flanders-4",at:Date.UTC(2026,11,27,15)},
-   {id:"flanders-5",at:Date.UTC(2026,11,30,15)}
+   {id:"flanders-3",at:Date.UTC(2026,10,24,15),mg:5000},
+   {id:"flanders-4",at:Date.UTC(2026,10,27,15)},
+   {id:"flanders-5",at:Date.UTC(2026,10,29,15)}
   ],
   titles:[
    ["flanders_mg","플랜더스의","특별 의뢰 '플랜더스의 밑그림'을 한 번 그려 보았다.",c=>!!(c.stats&&c.stats.mgFlanders)],
