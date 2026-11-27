@@ -76,4 +76,22 @@ function marchDropTables(r) {
   return ["x_ok", "x_s1"];
 }
 
-module.exports = {MAT_DROP, MAT_VIL, CLP, CLP_SEASONS, clpAt, seedHash, rng, rollQty, rollMats, rollClp, marchDropTables};
+/* MAT_DROP 에 한 번이라도 나오는 재료 id(중복 없음). 수집가 무작위 풀. */
+function matPool() {
+  const ids = [];
+  Object.keys(MAT_DROP).forEach(k => {
+    (MAT_DROP[k] || []).forEach(row => {
+      if (row && row[0] && ids.indexOf(row[0]) < 0) ids.push(row[0]);
+    });
+  });
+  return ids;
+}
+/* 수집가: 풀에서 균등 1개. rand 는 0~1. */
+function pickMat(rand) {
+  const ids = matPool();
+  if (!ids.length) return "";
+  const r = typeof rand === "function" ? rand() : Math.random();
+  return ids[Math.floor(r * ids.length)] || "";
+}
+
+module.exports = {MAT_DROP, MAT_VIL, CLP, CLP_SEASONS, clpAt, seedHash, rng, rollQty, rollMats, rollClp, marchDropTables, matPool, pickMat};

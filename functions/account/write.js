@@ -2,9 +2,15 @@
    통째 트랜잭션 금지. 토벌·지급으로 느는 칸만 ServerValue.increment / 소수 필드 update.
    마치 pay: 경제·재료·단서·절망·전 fx·부적/깃발/지도/스킬 소모·펫 XP·알. */
 const {ServerValue} = require("firebase-admin/database");
-const {lvOf} = require("./xp");
+const {xpAt, lvOf} = require("./xp");
 const {clpAt} = require("./drops");
 const {todayStr, PET_XP_CAP, petXpCap} = require("./boost");
+
+/* 타락 상수. data/game.js · js/corruption.js 와 맞춘다. */
+const FALL_GOLD = 0.1;
+const WITCH_N = 3;
+const WITCH_WIN = 7 * 86400000;
+const WITCH_HP = 3;
 
 async function accountExists(db, uid) {
   const root = db.ref("accounts/" + uid);
@@ -50,8 +56,92 @@ async function pushMarchNote(root, text, grantKey) {
   });
 }
 
+/* 절망도 100·미타락이면 대가·c/fall·raid·players.fl 반영.
+   마치 applyMarchPay 가 dz 만 100 으로 두고 fallen 을 안 부르던 구멍을 막는다.
+   이미 c/fall 이 있으면 no-op(클라 fallCheck 와 이중 손실 방지). */
+async function applyFallIfNeeded(db, uid) {
+  const root = db.ref("accounts/" + uid);
+  const dz = Math.max(0, Math.min(100, Number((await root.child("c/dz").get()).val()) || 0));
+  if (dz < 100) return false;
+  const fallCur = (await root.child("c/fall").get()).val();
+  if (fallCur) return false;
+
+  const now = Date.now();
+  const fallTRaw = (await root.child("c/fallT").get()).val();
+  const fallT0 = Array.isArray(fallTRaw)
+    ? fallTRaw.map(t => Number(t) || 0).filter(t => t > 0)
+    : (fallTRaw && typeof fallTRaw === "object"
+      ? Object.keys(fallTRaw).map(k => Number(fallTRaw[k]) || 0).filter(t => t > 0)
+      : []);
+  const recent = fallT0.filter(t => now - t < WITCH_WIN);
+  const fallT = recent.concat(now).slice(-10);
+  const witch = fallT.length >= WITCH_N;
+
+  const ex0 = Math.max(0, Number((await root.child("c/ex").get()).val()) || 0);
+  const lv0 = lvOf(ex0);
+  const ex1 = xpAt(Math.max(1, lv0 - 1));
+  const ex = Math.min(ex0, ex1);
+  const lv = lvOf(ex);
+  const gd0 = Math.max(0, Number((await root.child("c/gd").get()).val()) || 0);
+  const gl = Math.floor(gd0 * FALL_GOLD * (witch ? 2 : 1));
+  const gd = Math.max(0, gd0 - gl);
+
+  let p = 0;
+  try { p = Math.max(0, Number((await db.ref("players/" + uid + "/pw").get()).val()) || 0); } catch (e) { /* 0 */ }
+  const mx = (300 + p * 12) * (witch ? WITCH_HP : 1);
+  const rid = now;
+  const fall = {rid, mx, sd: 0, st: 0};
+  if (witch) fall.w = 1;
+
+  const bump = {
+    "c/dz": 100,
+    "c/ex": ex,
+    "c/lv": lv,
+    "c/gd": gd,
+    "c/fall": fall,
+    "c/fallT": fallT,
+    "c/edge": null,
+    "c/stats/falls": ServerValue.increment(1),
+    "prog/ex": ex,
+    "prog/lv": lv,
+    ts: now,
+    sid: "xpay"
+  };
+  if (witch) bump["c/stats/witch"] = ServerValue.increment(1);
+  await root.update(bump);
+
+  try {
+    const n = String((await root.child("c/n").get()).val() || "").slice(0, 20);
+    const v = Number((await root.child("c/v").get()).val());
+    const g = String((await root.child("c/g").get()).val() || "");
+    const aRaw = (await root.child("c/a").get()).val();
+    const a = Array.isArray(aRaw) ? aRaw.join(" · ") : String(aRaw || "");
+    await db.ref("raid/" + uid).set({
+      u: uid, rid, mx, sd: 0, w: witch ? 1 : 0,
+      v: Number.isFinite(v) ? v : 0, n, g, a, ts: now
+    });
+  } catch (e) { /* 계정 fall 은 이미 반영. raid 는 클라 putRaid 가 보완 */ }
+  try { await db.ref("players/" + uid + "/fl").set(1); } catch (e) { /* 공개 fl 실패해도 타락은 유지 */ }
+
+  try {
+    const loss = "타락의 대가로 경험치 " + (ex0 - ex) + ", 골드 " + gl + "을(를) 잃었다."
+      + (lv < lv0 ? " 레벨이 " + lv + "(으)로 떨어졌다." : "");
+    const head = witch
+      ? "절망을 견디지 못하고 절망의 마인이 되었다. 모든 마법소녀가 나를 막으러 올 것이다."
+      : "절망도가 100에 닿아 타락했다. 친구들이 맞서 주기를 기다리자.";
+    await root.child("c/nt").transaction(cur => {
+      const list = normalizeNt(cur);
+      const mk = (t) => ({k: "fall", t: String(t).slice(0, 160), u: "", ts: Date.now(), r: false});
+      return [mk(loss), mk(head)].concat(list).slice(0, 60);
+    });
+    await root.update({ts: Date.now(), sid: "xpay"});
+  } catch (e) { /* 알림만 실패 */ }
+  return true;
+}
+
 /* pay 필드 → 계정(매지컬 마치 서버 지급의 최종 쓰기).
    · 절망: 지금 서버 c/dz 를 읽어 pay.dz 를 더한 절대값으로 쓴다(0~100). increment 금지·클라 gain 병행 금지.
+   · 절망이 100이 되면 applyFallIfNeeded 로 타락(대가·raid). settle(serverPay) 는 gain 을 안 하므로 타락 판정은 서버만.
    · 클라: settle(serverPay) 는 절망을 올리지 않는다. 지급 후 accSyncIfNewer 가 서버본을 받되,
      이 탭에만 있던 자연 회복분(dDz)은 클라 sync 가 합쳐 지킨다(js/main.js accSyncIfNewer).
    · grantKey: accounts/{uid}/xpay/{key}=1 과 보상을 같은 update 에 넣어 재시도·이중 호출에도 한 번만.
@@ -178,6 +268,14 @@ async function applyMarchPay(db, uid, pay, grantKey, noteText) {
     await root.update({"c/lv": lv, "prog/ex": ex, "prog/lv": lv, ts: Date.now(), sid: "xpay"});
   }
 
+  /* dz 가 이번 pay 로 100에 닿았거나 이미 100인데 fall 이 없으면 타락. */
+  if (dzAdd) {
+    try {
+      const nextDz = Math.max(0, Math.min(100, Number((await root.child("c/dz").get()).val()) || 0));
+      if (nextDz >= 100) await applyFallIfNeeded(db, uid);
+    } catch (e) { /* 보상은 유지. 클라도 fallCheck */ }
+  }
+
   if (pay.clp > 0) {
     try {
       const meN = Math.max(0, Number((await root.child("c/clp/n").get()).val()) || 0);
@@ -228,4 +326,4 @@ async function addClueTally(db, uid, n) {
   }
 }
 
-module.exports = {accountExists, applyMarchPay, addClueTally};
+module.exports = {accountExists, applyMarchPay, applyFallIfNeeded, addClueTally};

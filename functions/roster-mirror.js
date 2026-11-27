@@ -45,12 +45,9 @@ function mirrorPw(c) {
   const b = Math.max(0, Number(c.b) || 0);
   const t = String(c.t || "");
   const dz = Math.max(0, Number(c.dz) || 0);
+  /* 특성 평탄만. 천재(+5%)·폭주(절망≥60 +8%)는 아래 비율 곱. js/common/formula.js 와 맞춤. */
   let tpw = 0;
-  if (t === "천재") tpw = 4;
-  else if (t === "대기만성") tpw = lv < 8 ? -2 : Math.max(Math.min(8, Math.floor(lv / 2)), Math.floor(lv / 4));
-  else if (t === "폭주") tpw = dz >= 60 ? 6 : 0;
-  else if (t === "불안정한 마력") tpw = 6;
-  else if (t === "상처 입은 마음") tpw = 5;
+  if (t === "대기만성") tpw = lv < 100 ? -15 : Math.floor(lv / 5);
   const wp = Number(c.wp);
   let wpn = 0;
   if (Number.isInteger(wp) && wp >= 0 && wp < WP_BASE.length) {
@@ -61,7 +58,7 @@ function mirrorPw(c) {
   const fire = attrs.indexOf("불") >= 0 ? 6 : 0;
   const dark = attrs.indexOf("어둠") >= 0 && dz >= 50 ? 6 : 0;
   const rnPow = c.rn ? Math.min(5, Math.max(0, Number(c.rn.pow) || 0)) : 0;
-  /* 사역마 전투력(종만, 특성·비율 생략). */
+  /* 사역마 전투력(종 평탄만. 사역마 pwp·특성 비율은 목록용이라 생략). */
   let petPw = 0;
   try {
     const q = petOf(c);
@@ -72,7 +69,10 @@ function mirrorPw(c) {
       else if (sp === "hope") petPw = 2 * L;
     }
   } catch (e) { /* ignore */ }
-  return Math.max(0, tpw + 10 + gi * 8 + lv * 3 + b + wpn + fire + dark + rnPow * 4 + petPw);
+  const flat = tpw + 10 + gi * 8 + lv * 3 + b + wpn + fire + dark + rnPow * 4 + petPw;
+  /* 천재 0.05 + 폭주(절망≥60) 0.08. 클라 pw() 와 동일(사역마 pwp는 미러에서 안 더함). */
+  const pct = (t === "천재" ? 0.05 : 0) + (t === "폭주" && dz >= 60 ? 0.08 : 0);
+  return Math.max(0, pct ? Math.round(flat * (1 + pct)) : flat);
 }
 
 function petOf(c) {
@@ -108,7 +108,7 @@ function buildPlayers(c, mode, ts) {
   const n = String(c.n || "").slice(0, 20);
   const body = {
     n,
-    s: String(c.s || "").slice(0, 8),
+    s: null,
     g: String(c.g || "").slice(0, 2),
     t: String(c.t || "").slice(0, 40),
     a: attrsTxt(c).slice(0, 80),

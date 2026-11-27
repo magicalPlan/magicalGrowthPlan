@@ -86,7 +86,7 @@ function pexSrcLines(id){const out=[];if(typeof PEX==="undefined")return out;
 /* 재료 한 개의 얻는 곳. 순서대로 이어 붙이고, 하나도 없으면 MAT 다섯째 칸을 그대로 적는다.
    1. MAT_DROP: 출정·장기 토벌·보스 레이드에서 굴리는 표. 줄은 [재료 id, 개수|[min,max], 확률]. 표시 이름은 matPlace.
    2. MAT_VIL: 그 마을 출신이면 이 재료가 나올 때 1개 더. 마을 이름은 data/game.js VL.
-   3. RCP: 만드는 결과(둘째 칸)가 이 재료인 제작법. 필요한 마을 공방 단계·골드·개수도 여기 있다.
+   3. RCP: 만드는 결과(둘째 칸)가 이 재료인 제작법. 재료·골드는 적지 않고 「공방에서 제작을 통해 획득」만 적는다.
    4. EBOSS.drop (data/event-boss/boss.js): 이벤트 보스 토벌 보상. [재료 id, 개수].
    5. MAT_CROWN_P: 검은 왕관의 조각만. 절망의 마인을 공격할 때의 확률. 실제 지급은 js/corruption.js.
    6. CLP.ms (data/clue/piece.js): 단서 조각 단계 보상의 mat {재료 id: 개수}.
@@ -94,8 +94,7 @@ function pexSrcLines(id){const out=[];if(typeof PEX==="undefined")return out;
 function matLines(id){const lines=[];
  if(typeof MAT_DROP==="object")Object.keys(MAT_DROP).forEach(k=>{const rows=(MAT_DROP[k]||[]).filter(r=>r[0]===id);if(rows.length)lines.push(matPlace(k)+": "+rows.map(r=>matBit(r[1],r[2])).join(", "))});
  if(typeof MAT_VIL==="object")Object.keys(MAT_VIL).forEach(v=>{if(MAT_VIL[v]===id)lines.push((VL[v]?VL[v].n:v)+": 이 재료가 나오면 1개 더")});
- if(typeof RCP!=="undefined")RCP.filter(r=>r[1]===id).forEach(r=>{const need=Object.keys(r[3]).map(k=>matNm(k)+" "+r[3][k]).join(", "),g=r[4]?", 골드 "+r[4]:"";
-  lines.push("공방 제작"+(r[5]?" (마을 공방 "+r[5]+"단계)":"")+": "+need+g+" → "+r[2]+"개")});
+ if(typeof RCP!=="undefined"&&RCP.some(r=>r[1]===id))lines.push("공방에서 제작을 통해 획득");
  if(typeof EBOSS!=="undefined"&&EBOSS.drop)EBOSS.drop.filter(x=>x[0]===id).forEach(x=>lines.push((EBOSS.nm||"이벤트 보스")+" 토벌 보상: "+x[1]+"개"));
  if(id==="m_crown"&&typeof MAT_CROWN_P==="number")lines.push("절망의 마인 공격: "+matBit(1,MAT_CROWN_P));
  if(typeof CLP!=="undefined"&&CLP.ms)CLP.ms.forEach(s=>{const n=s[1]&&s[1].mat&&s[1].mat[id];if(n)lines.push((CLP.nm||"단서 조각")+" 「"+s[2]+"」 보상: "+n+"개")});

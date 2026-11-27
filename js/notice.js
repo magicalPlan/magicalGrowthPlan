@@ -50,27 +50,35 @@ function drawNotice(){try{drawDoom()}catch(e){}const b=$("#ntc");if(!b)return;co
    기간은 doom 한 칸뿐이다. 운영자가 다시 저장하면 그 날짜가 이전 날짜를 갈아 끼운다. 로그인한 사람은 읽고, 운영자만 고친다.
    시작일은 운영자에게만 보이고, 진행 중인 타이머는 모두에게 보인다.
    운영자가 시작일을 고르면 그날이 시작, 현실 28일 뒤가 D-DAY다. 값: {d:"2026-10-27", ts} 또는 {off:1, ts}(꺼짐).
-   시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤. */
+   시계: 현실 2일=게임 1일(최대 D-14). 시작부터 홀수째 현실일=낮, 짝수째=밤.
+   게임 달력(표시용, 전원): D-14=10월 18일 … D-0(D-DAY)=11월 1일. */
 const DOOM_DAYS = 28;
 const DOOM_REAL_PER_GAME = 2;
+const DOOM_GAME_DAYS = DOOM_DAYS/DOOM_REAL_PER_GAME;
+/* 게임 시작일 고정(연도 무시). D-14 → 10/18, D-0 → 10/18+14일=11/1. */
+const DOOM_GAME_YMD0="2000-10-18";
 let DOOM = null;
 const doomOk = o => !!o&&typeof o==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.d||""));
 const doomYmd = t => {
    const d = new Date(t);
    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const doomDay=s=>{const [y,m,d]=String(s).split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)};
+const doomMdTx=day=>{const e=new Date(Date.UTC(1970,0,1)+day*86400000);return(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일"};
+/* gLeft(남은 게임일) → 게임 달력. D-14=10월 18일, D-0=11월 1일. */
+function doomGameTx(gLeft){const n=Math.max(0,Math.min(DOOM_GAME_DAYS,Number(gLeft)||0));return doomMdTx(doomDay(DOOM_GAME_YMD0)+(DOOM_GAME_DAYS-n))}
 function doomState(o){
    if(!doomOk(o))return null;
    const st = doomDay(o.d),end=st+DOOM_DAYS,today=doomDay(doomYmd(srvNow())),left=end-today;
-   const e = new Date(Date.UTC(1970,0,1)+end*86400000),endTx=(e.getUTCMonth()+1)+"월 "+e.getUTCDate()+"일";
+   const endTx=doomMdTx(end);
    const [,sm,sd]=o.d.split("-").map(Number);
  /* elapsed: 시작일=0. 홀수째(1,3,…) 현실일 → 낮, 짝수째 → 밤. gLeft: 남은 게임일(표시용). */
    const elapsed=Math.max(0,Math.min(DOOM_DAYS,today-st));
    const nth = elapsed+1;
    const dayPhase = nth % 2 === 1
    const gLeft = left <= 0 ? 0 : Math.ceil(left/DOOM_REAL_PER_GAME)
-   const gDay = Math.min(DOOM_DAYS/DOOM_REAL_PER_GAME , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
-   return {left,gLeft,gDay,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
+   const gDay = Math.min(DOOM_GAME_DAYS , Math.floor(elapsed/DOOM_REAL_PER_GAME)+1);
+   const gTx=doomGameTx(gLeft);
+   return {left,gLeft,gDay,gTx,dayPhase,before:today<st,after:today>end,endTx,startTx:sm+"월 "+sd+"일",pct:Math.max(0,Math.min(100,(today-st)/DOOM_DAYS*100))}}
 
 async function loadDoom(){
    if(!XON())return;
@@ -99,20 +107,21 @@ function drawDoom () {
    const live=!!st&&!st.before&&!st.after,show=!!C&&(live||isA);b.hidden=!show;
    if(!show)return;
    
-   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마. */
+   /* 마지막 게임일(D-1·D-DAY): 낮/밤 무시, 기존 붉은 테마.
+      제목: 기호 옆에 게임 달력「mm월 dd일 낮/밤」. 본문에는 게임 n일째·날짜 표기 없음. */
    const final=live&&st.gLeft<=1,phase=live&&!final?(st.dayPhase?"day":"night"):"",phaseTx=st&&st.dayPhase?"낮":"밤",phaseMark=st&&st.dayPhase?"☀":"☾";
  const c=elT("div","doom-card"+(live&&(final||st.gLeft<=2)?" near":"")+(live&&st.left<=0?" dday":"")+(live?"":" off")+(phase?" "+phase:""));
- const l=elT("div","doom-l");l.append(elT("p","doom-t","멸망까지"+" · "+phaseMark));
- if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":final?st.endTx+" 18:00시 멸망 · "+st.startTx+" 시작":st.endTx+" 18:00시 멸망 · 게임 "+st.gDay+"일째 "+phaseTx));
- else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14 · 현실 28일).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
+ const l=elT("div","doom-l");l.append(elT("p","doom-t",live?"멸망까지 · "+phaseMark+" "+st.gTx+" "+phaseTx:"멸망까지"));
+ if(live)l.append(elT("p","doom-s",st.left<=0?"오늘 18:00시, 세계가 끝난다.":st.endTx+" 18:00시 멸망"));
+ else l.append(elT("p","doom-s",!st?"카운트다운이 꺼져 있다.":st.before?st.startTx+"에 시작한다 (D-14).":"멸망의 날("+st.endTx+" 18:00시)이 지났다."));
  c.append(l,elT("p","doom-n",live?(st.left<=0?"D-DAY":"D-"+st.gLeft):"—"));
  if(live){const bar=elT("div","bar doom-bar"),i=elT("i");i.style.width=st.pct+"%";bar.appendChild(i);c.appendChild(bar)}
  b.appendChild(c);
  if(isA){const set=elT("button","chip doom-set","⏳ 시작일 설정");set.type="button";
   const f=elT("form","doom-form");f.hidden=true;const inp=elT("input");inp.type="date";inp.value=doomOk(src)?src.d:doomYmd(srvNow());inp.setAttribute("aria-label","카운트다운 시작일");
-  const hint=elT("p","hint","고른 날부터 현실 28일(표시 D-14). 2일=1일, 홀수째 낮·짝수째 밤.");
+  const hint=elT("p","hint","고른 날부터 현실 28일(표시 D-14·게임 10월 18일). 2일=1일, 홀수째 낮·짝수째 밤. D-DAY는 게임 11월 1일.");
   const go=elT("button","btn","저장");go.type="submit";const off=elT("button","btn g","카운트다운 끄기");off.type="button";off.hidden=!doomOk(src);const cancel=elT("button","btn g","취소");cancel.type="button";const msg=elT("p","msg","");
-  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14) → 멸망 "+v.endTx+" (D-DAY) · 현실 28일":"날짜를 골라야 한다."};inp.oninput=upd;upd();
+  const upd=()=>{const v=doomState({d:inp.value});hint.textContent=v?"시작 "+v.startTx+" (D-14·게임 "+doomGameTx(DOOM_GAME_DAYS)+") → 멸망 "+v.endTx+" (D-DAY·게임 "+doomGameTx(0)+") · 현실 28일":"날짜를 골라야 한다."};inp.oninput=upd;upd();
   f.append(inp,hint,go,off,cancel,msg);set.onclick=()=>{f.hidden=!f.hidden;if(!f.hidden)inp.focus()};cancel.onclick=()=>{f.hidden=true;drawDoom()};
   const put=async v=>{if(XON()&&!ADM[UID])return;go.disabled=off.disabled=true;msg.textContent="";
    try{if(XON()){await DB.doc("doom").set(v?{d:v.d,ts:v.ts}:{off:1,ts:Date.now()});DOOM=v}else{C.doom=v;save()}
@@ -128,7 +137,7 @@ function drawDoom () {
    클라는 공용 wipe·회귀 마커(rst/rstu)만 쓰고, 계정·명부 쓰기는 서버에 맡긴다.
    시즌은 players/{운영자}/rst 에 {id}. 캐릭터 C.rsv 가 그 id 이상이면 같은 회귀는 다시 안 돈다.
    접속(boot) 때는 이미 서버에 반영된 기록을 읽고, C.rstn < due 이면 알림만(다시 회귀시키지 않음).
-   남기는 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·통계(대련 전적 제외), 사역마(친밀도·보유 상한),
+   남기는 것: 이름·마을·처음 속성·특성, 프로필, 칭호·도감·통계(대련 전적 제외), 사역마(친밀도·보유 상한),
    친구 관계(fr 등), flags, 보상·알림 표시.
    처음으로: 레벨·경험·골드, 등급 E, 시험 속성, 아이템·무기·각인·절망, 대련 전적 등.
    강제 취소: 장기 토벌(lh)·단서 탐색(clue). 알 부화·재고 0. 등대·시설 개인 칸 비움.
@@ -142,12 +151,12 @@ let RST=null;
 /* flags(일반·스토리 플래그 가방)는 시즌 회귀에도 남긴다 — 스토리/해금 진행 유지. */
 /* 친구: fr·fq·fo·fs(워터마크). rel(프로필 관계란)도 유지.
    사역마: pets(각 lm=친밀도 상한)·pet·petMax(보유 상한)·stats(안에 petMax). 알 재고는 비움. */
-const RST_KEEP=["n","s","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","petMax",
+const RST_KEEP=["n","v","a","t","img","pf","rel","picSig","titles","ti","dex","stats","pets","pet","petSeen","petGone","petMax",
  "fr","fq","fo","fs","flags","cmp","founder","origin","rescued","tut","healOff","ntcl","doom","rst","born","last",
  "rs","gs","nts","ntcSeen","vcSeen","bdSeen","rsn","pn","drn","drw","wvn1","wvn2","pc","wvc","wbc","gwc"];
 const rstOld=p=>!!RST&&!!p&&typeof p==="object"&&(Number(p.rv)||0)<RST.id;
 const rstNoteTxt=one=>one?"🌑 운영자가 이 캐릭터만 회귀시켰다. 이름·사역마·친구·프로필·기록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 비워지고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.":"🌑 새 시즌이 시작되었다. 이름·사역마·친구·프로필·기록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 비워지고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다.";
-const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·대련 전적 등\n강제 취소: 장기 토벌·단서 탐색(진행 중·완료 미수령 포함, 보상 없음), 알 재고·부화 중 알(전부 0)\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
+const rstAlertMsg=one=>(one?"운영자가 이 캐릭터만 회귀시켰다.":"운영자가 시즌을 초기화했다.")+"\n\n남은 것: 이름·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록\n처음으로 돌아간 것: 레벨·경험치·골드, 등급(E)·시험으로 얻은 속성·아이템·무기·각인·절망도·대련 전적 등\n강제 취소: 장기 토벌·단서 탐색(진행 중·완료 미수령 포함, 보상 없음), 알 재고·부화 중 알(전부 0)\n\n"+(one?"다른 사람의 기록은 그대로다.":"새로운 이야기를 시작하자.");
 async function rstLoad(){if(!XON())return RST;let best=null,ok=false;const us=new Set(Object.keys(ADM));
  for(const u of us){try{const d=(await DB.doc("players/"+u+"/rst").get()).data();ok=true;if(d&&Number(d.id)>0&&(!best||Number(d.id)>Number(best.id)))best={id:Number(d.id),by:u}}catch(e){}}
  if(ok)RST=best;return RST}
@@ -297,7 +306,7 @@ function rstFoldCard(title,id,extraClass,defOpen){const c=elT("div","card rst-ca
  return{c,box}}
 function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".rst-one input:focus,.adm-grant input:focus,.adm-grant select:focus,.adm-grant textarea:focus"))return;box.innerHTML="";box.hidden=!(C&&ADM[UID]&&XON());if(box.hidden)return;
  const season=rstFoldCard("🌑 시즌 초기화 (운영자 전용)","season","",false);season.c.style.marginTop="0";
- season.box.append(elT("p","hint","버튼을 누르면 서버가 등록된 모든 캐릭터를 계정당 되돌리고, 같은 흐름에서 등록자(players)·명부(who)까지 맞춘다. 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
+ season.box.append(elT("p","hint","버튼을 누르면 서버가 등록된 모든 캐릭터를 계정당 되돌리고, 같은 흐름에서 등록자(players)·명부(who)까지 맞춘다. 이름·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성·등급(E)은 돌아간다."),
   elT("p","hint","함께 지우는 것: 단체·마을·1:1 채팅과 1:1 방 목록, 게시판, 친구 신청·공명·선물 우편함(계정 친구 목록은 유지), 마을 경쟁, 마을 시설 단계·기여 순위, 희망의 등대 합계·기여 카드·재해 진압 합계, 보스·웨이브·타락 레이드 기록, 대련 신청·대련·구인 방, 플랜더스 밑그림 랭킹·합계. 캐릭터의 등대·시설 기여와 대련 전적도 0으로 돌아간다. 공지와 '멸망까지', 출정 방은 남는다."),
   elT("p","hint","플레이어 알림(팝업)은 다음 접속 때 한 번만 뜬다. 같은 회귀 번호는 다시 돌리지 않는다."),
   elT("p","hint",RST?"마지막 초기화: "+new Date(RST.id).toLocaleString("ko-KR"):"아직 초기화한 적이 없다."));
@@ -313,7 +322,7 @@ function drawRst(){const box=$("#rstbox");if(!box)return;if(box.querySelector(".
   catch(e){rm.style.color="var(--bad)";rm.textContent="복구하지 못했다. 운영자 계정인지, 마을 단계 규칙이 서버에 올라갔는지 확인해 보자."}rb.disabled=false};
  vfac.box.append(rb,rm);box.appendChild(vfac.c);
  const one=rstFoldCard("👤 개인 회귀 (운영자 전용)","one","rst-one",false);
- one.box.append(elT("p","hint","UID 한 명을 서버에서 되돌리고, 같은 흐름에서 그 사람 등록자·명부도 맞춘다(시즌과 동일 경로). 이름·성별·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
+ one.box.append(elT("p","hint","UID 한 명을 서버에서 되돌리고, 같은 흐름에서 그 사람 등록자·명부도 맞춘다(시즌과 동일 경로). 이름·마을·처음 속성·특성, 프로필, 칭호·도감·기록, 사역마(친밀도·보유 상한), 친구 목록은 남고, 장기 토벌·단서 탐색은 강제 취소되며 알 재고·부화는 0이 되고, 레벨·경험치·골드·대련 전적과 시험으로 얻은 속성은 사라지며 등급은 E로 돌아간다."),
   elT("p","hint","접속 중이 아니어도 서버 기록은 바로 바뀐다. 그 사람의 팝업 알림은 다음 접속 때 한 번. 채팅·게시판·선물·마을·보스·공용 대련 방과 다른 사람의 기록은 그대로 둔다."));
  const row=elT("div","row");row.style.marginTop="8px";const inp=elT("input");inp.type="text";inp.maxLength=128;inp.placeholder="계정 UID";inp.setAttribute("aria-label","회귀할 계정 UID");inp.autocomplete="off";inp.spellcheck=false;inp.style.flex="1";
  const pb=elT("button","btn","이 사람만 회귀"),pm=elT("p","msg","");pb.type="button";pb.style.cssText="width:auto;margin:0;padding:9px 14px";pb.onclick=()=>rstOne(pb,inp,pm);row.append(inp,pb);one.box.append(row,pm);box.appendChild(one.c);

@@ -15,6 +15,8 @@ function matQty(n){if(Array.isArray(n)){const lo=Math.floor(Number(n[0])||1),hi=
 /* 정기 출정 성공·실패에 쓸 MAT_DROP 표 목록. functions/account/drops.js marchDropTables 와 맞춘다.
    ★→x_s1, ★★→x_s2, ★★★→x_hi+x_s3, 심연→x_hi+x_ab(심연의 조각 포함). */
 function marchDropTables(r){if(!r)return[];if(!r.ok)return["x_fail"];const rw=Number(r.rw)||1;if(r.ab)return["x_ok","x_hi","x_ab"];if(rw>=1.4)return["x_ok","x_hi","x_s3"];if(rw>=1)return["x_ok","x_s2"];return["x_ok","x_s1"]}
+/* 수집가 무작위 풀: MAT_DROP 에 나오는 재료(공방 전용·왕관 제외). 서버 drops.matPool 과 맞춤. */
+function collectorMatIds(){const ids=[];if(typeof MAT_DROP!=="object")return ids;Object.keys(MAT_DROP).forEach(k=>{(MAT_DROP[k]||[]).forEach(r=>{if(r&&r[0]&&ids.indexOf(r[0])<0)ids.push(r[0])})});return ids}
 /* 재료 얻기: MAT_DROP 의 표 이름 목록을 받아 줄마다 굴린다. times 가 있으면 그 표를 그만큼 반복한다(장기 토벌의 시간마다).
    C.inv 에만 더하고 저장은 하지 않는다. 부른 쪽이 원래 하던 대로 저장한다. 얻은 것이 없으면 빈 글자를 돌려준다. */
 function matGain(tables,times){if(!C)return "";C.inv=C.inv||{};const got={},bonus=MAT_VIL[C.v];
@@ -59,7 +61,7 @@ function cfArt(id){const src=CF_ART[id];if(!src)return null;const i=document.cre
  // 제작법
  const rl=$("#cfl");rl.innerHTML="";RCP.forEach(r=>{const lock=lv<r[5],mx=lock?0:cfMax(r),k=Math.min(craftQ,mx),g=cfGold(r),b=document.createElement("button");b.type="button";b.className="chip sq cf-r"+(lock?" lock":"");
   const it=ITM.find(t=>t[0]===r[1]),ds=it?it[2]:(MATM[r[1]]||[])[3]||"";
-  {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(MATM[r[1]]?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
+  {const ic=cfArt(r[1])||itIc(r[1],"lg");if(ic)b.appendChild(ic)}b.appendChild(elT("b",null,(r[0]==="r_purify"?"정화 → ":"")+cfNm(r[1])+(r[2]>1?" ×"+r[2]:"")));b.appendChild(elT("small","item-feature",r[6]+" "+ds));
   const need=elT("small","cf-need");Object.entries(r[3]).forEach(([id,n])=>{const s=elT("span",cfHave(id)>=n?"ok":"no",cfNm(id)+" "+cfHave(id)+"/"+n);{const ic=itIc(id,"xs");if(ic)s.prepend(ic)}need.appendChild(s)});if(g)need.appendChild(elT("span",(C.gd||0)>=g?"ok":"no","골드 "+g));b.appendChild(need);
   const st=lock?"🔒 마을 공방 "+r[5]+"단계에 열린다":cfSeasonDone(r)?"이번 시즌에는 이미 만들었다":mx<=0?(r[1]==="candle"&&cfHave("candle")>=1?"계약의 촛불은 1개까지만 가질 수 있다":"재료가 모자라다"):(cfSeason(r)?"시즌마다 1개 · 지금 만들 수 있다":"지금 "+mx+"개까지 만들 수 있다"+(k>1?" · "+k+"개 만들기":""));
   b.appendChild(elT("small",null,st));b.appendChild(elT("small",null,"보유 "+cfHave(r[1])));
@@ -72,13 +74,13 @@ function doCraft(rid){const r=RCP.find(x=>x[0]===rid);if(!r||!C)return;if(facLv(
  C.inv=C.inv||{};C.stats=C.stats||{};const g=cfGold(r)*k,fields={};
  Object.entries(r[3]).forEach(([id,n])=>{C.inv[id]=cfHave(id)-n*k;fields["inv/"+id]=C.inv[id]});
  if(g){C.gd=(C.gd||0)-g;fields.gd=C.gd}
- let out=r[2]*k,extra=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(r[1]==="candle"||cfSeason(r))extra=0;out+=extra;
+ let out=r[2]*k,extra=0,doje=0;if(C.v==="C")for(let i=0;i<k;i++)if(Math.random()<CRAFT_C_BONUS)extra+=r[2];if(C.t==="도제")for(let i=0;i<k;i++)if(Math.random()<.05)doje+=1;if(r[1]==="candle"||cfSeason(r)){extra=0;doje=0}out+=extra+doje;
  C.inv[r[1]]=cfHave(r[1])+out;fields["inv/"+r[1]]=C.inv[r[1]];
  if(cfSeason(r)){C.scf=C.scf&&typeof C.scf==="object"?C.scf:{};C.scf[r[1]]=1;fields["scf/"+r[1]]=1}
  if(ITM.some(t=>t[0]===r[1])&&dexAdd("it",r[1]))fields["dex/it/"+r[1]]=C.dex.it[r[1]];
  C.stats.crafts=(C.stats.crafts||0)+k;fields["stats/crafts"]=C.stats.crafts;
  apiAccountWrite(fields).catch(()=>{try{save()}catch(e){}});titleState();checkTitles();
- craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
+ craft("🔨 "+cfName(r[1])+" "+out+"개를 만들었다."+(extra?" (C마을의 솜씨로 "+extra+"개 더!)":"")+(doje?" (도제: "+doje+"개 더!)":"")+(g?" (골드 "+g+")":"")+(cfSeason(r)?" (시즌 1회)":""))}
 
 /* 속성의 프리즘: 가방에서 '사용'을 누르면 아래 상자가 열린다. 바꿀 속성(가진 것)과 새 속성(아직 없는 것)을 고르고 확인하면 바뀐다.
    준비해 둔 마법은 속성이 맞을 때만 쓰이므로(armedSk), 사라진 속성의 마법은 저절로 쓰이지 않는다. 숫자는 data/game.js 의 PRISM_DZ. */

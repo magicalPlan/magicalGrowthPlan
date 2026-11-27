@@ -8,7 +8,7 @@ function wpIc(i,cls){if(!(i>=0)||typeof WP_FILE==="undefined"||!WP_FILE[i])retur
    화면에 적히는 숫자는 여기서 만든다. 설명을 고칠 때는 이 함수를 고친다.
    · 최대 단계와 기본 성공 확률: data/game.js 의 UPR. 앞칸부터 +0→+1, +1→+2 … 이고, 칸 수가 최대 단계다.
    · 마력석: 아래 강화 버튼의 cost 와 같다. 지금 단계 L 에서 다음은 L+1 개(+0 은 1개, 마지막 단계는 UPR 칸 수만큼).
-   · 확률에 더해지는 값: js/common/formula.js 의 upr. 이 문장의 +5 와 +2 는 그 함수의 행운 특성, 마을 공방(시설 forge)과 같은 숫자다.
+   · 확률에 더해지는 값: js/common/formula.js 의 upr. 대장간(시설 forge) 단계마다 +2.
      마을 보너스는 data/game.js VL 의 up(지금 C마을 5). 사역마는 petEff("up"). 합은 100 을 넘기지 않는다.
    · 실패: 단계는 그대로이고 마력석만 사라진다. 보호의 숫돌(아이템 whet)을 준비해 두면 숫돌이 깨지고 마력석을 돌려받는다. 남은 숫돌은 다시 준비된다. 동작은 아래 강화 버튼.
    · 전투력: js/common/formula.js 의 wup. 칼(무기 0번)은 단계마다 2, 다른 무기는 단계마다 1. */

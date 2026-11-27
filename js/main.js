@@ -149,6 +149,7 @@ function accDiff(sent){const out={},b=accBase||{};diffFlat(b,sent,"c",out);
  if((Number(b.lv)||0)!==(Number(sent.lv)||0)||(Number(b.ex)||0)!==(Number(sent.ex)||0)||(Number(b.xv)||0)!==(Number(sent.xv)||0)){out["prog/lv"]=sent.lv||1;out["prog/ex"]=sent.ex||0;out["prog/xv"]=sent.xv||2}
  /* 사역마 출정(c/pex)·지급 영수증(pexpay)은 서버만 쓴다. 클라 PATCH 로 지우거나 덮지 않는다. */
  if(typeof pexStripPatch==="function")pexStripPatch(out);else Object.keys(out).forEach(k=>{if(k==="c/pex"||k.indexOf("c/pex/")===0)delete out[k]});
+ if(typeof shadyStripPatch==="function")shadyStripPatch(out);
  return out}
 function clearPend(){if(!AUTH.uid)return;try{localStorage.removeItem("mgr_pend_"+AUTH.uid)}catch(e){}}
 function pendWrite(slim){if(!AUTH.uid||!slim||!Object.keys(slim).length)return;try{localStorage.setItem("mgr_pend_"+AUTH.uid,JSON.stringify(Object.assign({_t:Date.now()},slim)))}catch(e){}}
@@ -200,7 +201,7 @@ async function rstAbortStaleSave(){if(!AUTH.uid||!C||!DB)return false;const due=
  }catch(e){}
  return true}
 /* 서버(Functions)가 계정에 쓴 sid. ts 만 올라가도 accSync 는 하되, '다른 기기' 토스트는 띄우지 않는다. */
-const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,"admin-grant":1,"admin-rst":1};
+const ACC_SID_SERVER={xpay:1,frsync:1,pettr:1,pex:1,shady:1,"admin-grant":1,"admin-rst":1};
 /* 서버 ts 가 내가 본 것보다 크면 서버 캐릭터를 기준으로 삼고, 사역마·진행을 합친다.
    경험·골드·절망(dz): 서버본 절대값 + (이 탭 C − accBase) 미저장 증감. 옛 절대값으로 덮지 않는다.
    절망 예: 로컬만 50→0 회복(미저장), 서버는 아직 50인데 ts 만 오른 경우(마치 xpay·다른 탭 등).
@@ -235,7 +236,11 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   /* 정산 직후: 서버에 옛 lh/clue 가 남아 있어도 보상·절망은 이 탭(mine)이 맞다. dzT 도 같이 둔다. */
   if(mine.inv&&typeof mine.inv==="object")C.inv=JSON.parse(JSON.stringify(mine.inv));
   if(mine.stats&&typeof mine.stats==="object")C.stats=Object.assign({},mine.stats);
-  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;if(mine.egg!==undefined)C.egg=mine.egg;
+  if(mine.eggs!=null)C.eggs=mine.eggs;if(mine.eggsEv!=null)C.eggsEv=mine.eggsEv;if(mine.eggsEv2!=null)C.eggsEv2=mine.eggsEv2;
+  /* 부화 워터마크는 max. egg 는 mine 이 null(부화함)이면 비우고, 남아 있어도 eggDone 이면 지운다. */
+  if(mine.eggDone!=null)C.eggDone=Math.max(Number(C.eggDone)||0,Number(mine.eggDone)||0)||undefined;
+  if(mine.egg===null)C.egg=null;else if(mine.egg!==undefined)C.egg=mine.egg;
+  try{if(typeof eggClearIfDone==="function")eggClearIfDone(C)}catch(e){}
   if(mine.clp)C.clp=mine.clp;if(mine.dz!=null)C.dz=mine.dz;if(mine.dzT!=null)C.dzT=mine.dzT;
   if(mine.gd!=null)C.gd=mine.gd;if(mine.ex!=null){C.ex=mine.ex;if(mine.lv!=null)C.lv=mine.lv;if(mine.xv!=null)C.xv=mine.xv}}
  else if(!rstNewer&&base){
@@ -247,20 +252,35 @@ async function accSyncIfNewer(){if(!AUTH.uid||!C||!DB||accSeen==null)return fals
   if(dDz){const floor=typeof dzFloorToday==="function"?dzFloorToday():0;C.dz=Math.max(floor,Math.min(100,(Number(C.dz)||0)+dDz));if(mine.dzT!=null)C.dzT=Math.max(Number(C.dzT)||0,Number(mine.dzT)||0)}}
  /* 받은 선물함은 ginbox 서버 권위. 계정 rg/gs 는 옛 기기 합치기용으로만 정리한다. */
  try{giftBoxMerge(C,mine)}catch(e){}
+ try{if(typeof eggFix==="function")eggFix()}catch(e){}
  /* 회귀: accBase=서버본(낮은 b 포함). 일반: accBase=rem, C.b 만 더 크면 rem.b 기준으로 PATCH 되살림. */
  accSeen=Number(d.ts)||remoteTs;accMark(rstNewer?C:rem);accReady=true;
  if(!rstNewer&&accBase&&(Number(C.b)||0)>(Number(rem.b)||0)){accBase.b=Math.max(0,Number(rem.b)||0);savePending=true}
+ /* 로컬 부화(eggDone·egg=null)를 sync 가 흡수했으면 서버에 바로 밀어 옛 egg 가 권위로 남지 않게 한다. */
+ if(!rstNewer&&((!C.egg&&rem.egg)||(Number(C.eggDone)||0)>(Number(rem.eggDone)||0))){savePending=true;try{saveCloud(true)}catch(e){}}
  const quiet=!!ACC_SID_SERVER[String(d.sid||"")];
  try{if(!quiet&&typeof toast==="function")toast("다른 기기·탭에서 기록이 바뀌어 맞추었다.")}catch(e){}
  try{lhNtArm()}catch(e){}try{if(typeof clueNtArm==="function")clueNtArm()}catch(e){}
  try{if(typeof hubLH==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hubLH()}catch(e){}
+ try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
  try{if(typeof clueDraw==="function"&&$("#v-ord")&&!$("#v-ord").hidden)clueDraw()}catch(e){}
  try{if(typeof drawPex==="function"&&$("#v-growth")&&!$("#v-growth").hidden&&grTab==="shop")drawPex()}catch(e){}
+ /* 마치 등은 서버가 fall 을 씀. sync 로 처음 받으면 안내·raid/fl 만(대가 재적용 금지). */
+ try{if(!mine.fall&&C.fall){
+  if(C.fall.w)alertBox("🜏 절망의 마인","일주일 사이 되풀이된 절망이 "+C.n+"을(를) 삼켰다. 절망의 마인이 되었다. 모든 마법소녀가 맞설 수 있다.");
+  else alertBox("타락","절망도가 100에 닿았다. "+C.n+"은(는) 절망에 삼켜져 마수가 되었다.\n친구들이 맞서 쓰러뜨려 주면 원래 모습으로 돌아온다.");
+  try{if(typeof putRaid==="function")putRaid()}catch(e){}
+  try{if(typeof pubFall==="function")pubFall()}catch(e){}
+  try{if(typeof hub==="function"&&$("#v-hub")&&!$("#v-hub").hidden)hub()}catch(e){}
+ }}catch(e){}
  return true}
-/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 품고 있는 알, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
+/* 기록을 합칠 때 잃어버리면 안 되는 것(사역마, 칭호, 사역마 종 도감 petSeen, 수집 도감 dex)은 양쪽을 합친다.
+   품고 있는 알(C.egg)은 서버(dst) 우선: 로컬 옛 egg 를 빈 서버에 넣지 않는다. 부화 워터마크 eggDone 은 max.
    예전에는 다른 창·기기의 기록이나 이 기기의 백업으로 바뀔 때, 그쪽에 없는 사역마가 통째로 사라졌다. 스스로 보낸 사역마(petGone)는 되살리지 않는다.
    사역마 출정 귀환 직후에도 서버(pex) sync 가 오므로 dex(px 등)를 합치지 않으면 방금 발견한 사건이 지워진다. */
-/* 옛 계정 rg/gs 정리. ginbox 이전 후에는 목록을 계정에 두지 않는다. */
+/* TODO(선물 LEGACY 제거): gift/·c.rg 잔여가 없어지면 giftBoxMerge 전체를 지우거나
+   ginboxV 고정·rg=[] 만 남긴다. i<4 는 구 슬롯 0~3 gs 키(이관 잔여용). */
+/* LEGACY: 옛 계정 rg/gs 기기 합치기. ginboxV>=1 이면 rg 비우고 gs 워터마크만 합친다. */
 function giftBoxMerge(dst,src){if(!dst||!src)return dst;
  const v=Math.max(Number(dst.ginboxV)||0,Number(src.ginboxV)||0);
  dst.gs=dst.gs&&typeof dst.gs==="object"?dst.gs:{};src.gs=src.gs&&typeof src.gs==="object"?src.gs:{};
@@ -283,7 +303,10 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
  const mergePetTr=(a,b)=>{const out=Object.assign({},a&&typeof a==="object"?a:{});if(!b||typeof b!=="object")return out;Object.keys(b).forEach(k=>{const s=b[k];if(!s||typeof s!=="object")return;if(!out[k]||!out[k].c)out[k]={c:Math.floor(Number(s.c)||0),r:Math.min(3,Math.max(1,Math.floor(Number(s.r)||1)))}});return out};
  const L=(Array.isArray(dst.pets)?dst.pets:[]).filter(q=>q&&!gone[q.id]);(Array.isArray(src.pets)?src.pets:[]).forEach(q=>{if(!q||gone[q.id])return;const i=L.findIndex(x=>x.id===q.id);if(i<0)L.push(q);else{const cur=L[i],tr=mergePetTr(cur.tr,q.tr);if((Number(q.xp)||0)>(Number(cur.xp)||0))L[i]=Object.assign({},cur,q,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm});else L[i]=Object.assign({},cur,{tr,lm:Math.max(Number(cur.lm)||0,Number(q.lm)||0)||cur.lm})}});dst.pets=L;
  if(!dst.pet||!L.some(q=>q.id===dst.pet))dst.pet=(L.find(q=>q.id===src.pet)||L[0]||{}).id||null;
- if(!dst.egg&&src.egg&&!L.some(q=>(Number(q.born)||0)>=(Number(src.egg.t0)||0)))dst.egg=src.egg;
+ /* egg: DB(dst) 권위. eggDone 은 max. t0<=eggDone 이면 부화 완료 → 품는 칸 삭제.
+    로컬(src) 옛 egg 를 서버 빈 칸에 되살리지 않는다(두 번 부화·흔들림 UI 원인). */
+ const done=Math.max(Number(dst.eggDone)||0,Number(src.eggDone)||0);if(done)dst.eggDone=done;else if(dst.eggDone!=null)delete dst.eggDone;
+ if(typeof eggClearIfDone==="function")eggClearIfDone(dst);else if(dst.egg&&(Number(dst.egg.t0)||0)>0&&(Number(dst.egg.t0)||0)<=(Number(dst.eggDone)||0))dst.egg=null;
  dst.titles=Array.isArray(dst.titles)?dst.titles:[];(src.titles||[]).forEach(t=>{if(!dst.titles.includes(t))dst.titles.push(t)});
  dst.petSeen=Object.assign({},src.petSeen||{},dst.petSeen||{});
  /* 도감(C.dex): 출정·사역마 출정(px) 등 발견 기록. 서버 동기 때 로컬만 있는 칸이 사라지지 않게 합친다.
@@ -298,8 +321,10 @@ function keepMerge(dst,src){if(!dst||!src||dst===src)return dst;try{
   return out})();
  dst.scf=Object.assign({},src.scf||{},dst.scf||{});
  dst.petMax=Math.max(Number(dst.petMax)||0,Number(src.petMax)||0)||undefined;
- dst.stats=dst.stats||{};const oc=Number(src.stats&&src.stats.chats)||0;if(oc>(Number(dst.stats.chats)||0))dst.stats.chats=oc;
- const tm=Math.max(Number(dst.stats.townMoves)||0,Number(src.stats&&src.stats.townMoves)||0);if(tm)dst.stats.townMoves=tm;
+ /* 일일 의뢰·칭호용 카운터는 max 합친다. 서버 옛 stats 로 resonances 등이 줄어들면
+    「2번 공명하기」 등 진행도가 0으로 되돌아가는 것처럼 난다. */
+ dst.stats=dst.stats||{};const stMax=["chats","townMoves","resonances","gifts","giftsUsed","purchases","huntsWon","huntsLost","bossHits","crafts","upgrades","dqAll","trialWins","lhDone","lhAbyss","duW","duL","duD","wfLightMax"];
+ stMax.forEach(k=>{const v=Math.max(Number(dst.stats[k])||0,Number(src.stats&&src.stats[k])||0);if(v)dst.stats[k]=v});
  dst.stats.vSeen=Object.assign({},src.stats&&src.stats.vSeen||{},dst.stats.vSeen||{});
  dst.dml=dst.dml||{};Object.keys(src.dml||{}).forEach(id=>{const t=Number(src.dml[id])||0;if(t>(Number(dst.dml[id])||0))dst.dml[id]=t});
  /* 공명·친구 소식 워터마크는 숫자 max 로만 합친다. 작은 쪽으로 덮이면 옛 알림이 되살아난다. */
@@ -333,6 +358,8 @@ function saveCloud(now){
   if(document.hidden){savePending=true;return}
   const go=async()=>{if(!AUTH.uid||!C||!DB){savePending=false;saveBusy=false;wakeSave(false);return}
    if(document.hidden){savePending=true;saveBusy=false;return}
+   /* 수상 상자 서버 지급 중: 옛 절대값 PATCH·MY_SID 가 차감/보상을 덮고 '다른 기기' 토스트를 만든다. */
+   if(typeof shadyBusy!=="undefined"&&shadyBusy){savePending=true;saveBusy=false;return}
    saveBusy=true;saveAgain=false;
    try{await accSyncIfNewer()}catch(e){}
    if(document.hidden){savePending=true;saveBusy=false;return}
@@ -356,7 +383,7 @@ function saveCloud(now){
    /* 직렬화 후 여기 올 때의 sent 가 대기 중 변경의 마지막 상태 → 같은 칸은 마지막 값만 PATCH. */
    let body=accDiff(sent);body=accPwBonusPatch(body,accBase);if(!Object.keys(body).length){done();return}
    body.ts=Date.now();body.sid=MY_SID;lastPut=body.ts;
-   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});if(typeof pexStripPatch==="function")pexStripPatch(slim);pendWrite(slim)}catch(e){}
+   try{const slim={};Object.keys(body).forEach(k=>{if(k!=="ts"&&k!=="sid")slim[k]=body[k]});if(typeof pexStripPatch==="function")pexStripPatch(slim);if(typeof shadyStripPatch==="function")shadyStripPatch(slim);pendWrite(slim)}catch(e){}
    /* PATCH 직전 한 번 더: sync~diff 사이에 회귀 set 이 들어오면 버린다. */
    try{if(await rstAbortStaleSave())return finishNoWrite()}catch(e){}
    return DB.doc("accounts/"+AUTH.uid).patch(body).then(()=>{accSeen=lastPut;saveWarn("");done()}).catch(fail)};
@@ -391,7 +418,7 @@ function rescueAsk(p){return new Promise(res=>{const o=elT("div","imgo");o.style
  c.append(b1,b2);o.appendChild(c);document.body.appendChild(o)})}
 function rescueBuild(p){const a=String(p.a||"").split(" · ").filter(x=>AT.some(t=>t[0]===x)),lv0=Math.max(1,Number(p.lv)||1);let ex=Math.max(0,Number(p.ex)||0);
  if(ex>0&&ex<xpAt(lv0)&&typeof lvOfV2==="function"&&lvOfV2(ex)===lv0)ex=xpCurve(ex,2);ex=Math.max(ex,xpAt(lv0));
- const c={n:String(p.n).slice(0,20),s:p.s||"소녀",g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:3,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",flags:typeof flagsEmpty==="function"?flagsEmpty():{flag:{},story_flag:{}},stats:{huntsWon:Number(p.cl)||0},
+ const c={n:String(p.n).slice(0,20),g:GL.includes(p.g)?p.g:"E",t:TR.includes(p.t)?p.t:TR[0],a:a.length?a:["불"],v:VL[p.v]?p.v:"A",lv:lvOf(ex),ex,xv:3,cl:Number(p.cl)||0,dz:Math.min(60,Number(p.dz)||0),b:0,gd:0,inv:{},wps:[],wp:-1,wl:{},titles:[],ti:"",flags:typeof flagsEmpty==="function"?flagsEmpty():{flag:{},story_flag:{}},stats:{huntsWon:Number(p.cl)||0},
   pf:p.pf&&typeof p.pf==="object"?p.pf:{},fc:p.fc&&typeof p.fc==="object"?p.fc:{},wf:Number(p.wf)||0,rescued:Date.now(),
   // 예전 보상·개인 지급은 이미 받은 것으로 친다(기본 정보 복구로 두 번 받지 않게). 이번 복구 보상만 새로 받는다.
   cmp:Object.fromEntries(COMP.map(x=>x[0]).concat(GRANT.map(x=>x[0])).filter(id=>id!=="restore-apology-20261016"&&id!=="maint-20261018").map(id=>[id,1]))};
@@ -545,13 +572,28 @@ let curView="";
 let keepT=null;function keepY(){const m=document.querySelector("main"),y=window.scrollY;if(!m||y<1)return;m.style.minHeight=m.offsetHeight+"px";clearTimeout(keepT);
  requestAnimationFrame(()=>{if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y)});keepT=setTimeout(()=>{m.style.minHeight=""},700)}
 /* 화면 전환: 다른 화면으로 넘어갈 때만 맨 위로 올린다. 같은 화면을 다시 그릴 때(버튼을 눌러 결과가 바뀔 때)는 보던 위치를 그대로 둔다. */
-/* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다. */
+/* 상단 메뉴: 마을·실전·채팅·게시판·기록·설정은 누르면 하위 항목이 나오고, 친구는 바로 그 화면으로 간다.
+   plazaOpen: 광장/화원 열에서 현재 채널 아래 다른 채널 펼침. 현재 채널을 다시 누르면 접힌다.
+   gCh(g|h)가 마지막 단체 채널. 마을·1:1로 나가도 gate 문구는 gCh를 따라 광장/화원을 유지한다. */
+let plazaOpen=false;
+const plazaChNow=()=>typeof gCh==="string"&&gCh==="h"?"h":"g";
+const plazaChLab=ch=>ch==="h"?"화원":"광장";
+function plazaGateLabel(){const gate=document.querySelector("#nav .nav-plaza-gate");if(!gate)return;const lab=plazaChLab(plazaChNow());if(gate.textContent!==lab)gate.textContent=lab}
 const navGroup=id=>({chat:"chat",hub:"town",shop:"town",bag:"town",pact:"town",trial:"town",craft:"town",growth:"town",boss:"town",portal:"town",guard:"town",fac:"town",wave:"town",rooms:"act",room:"act",xm:"act",arena:"act",ord:"act",special:"act",mini:"act",ntc:"board",board:"board",inbox:"record",titles:"record",roster:"record",world:"setting",wev:"setting",wqa:"setting",setting:"setting"})[id]||"";
 function navSync(id,moved){const g=navGroup(id),actX=id==="rooms"||id==="room"||id==="xm";
  document.querySelectorAll("#nav .nav-bar>button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.v===id||(b.dataset.g&&b.dataset.g===g))?"true":"false"));
  document.querySelectorAll("#nav .nav-sub button").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.ct?id==="chat"&&b.dataset.ct===(typeof ct==="string"?ct:""):b.dataset.v===id||(b.dataset.v==="rooms"&&actX)||(b.dataset.v==="pact"&&id==="trial"))?"true":"false"));
  if(moved)document.querySelectorAll("#nav .nav-sub").forEach(s=>{if(s.dataset.for!==g)s.hidden=true;else if(g==="town"){if(id!=="hub")s.hidden=false}else if(g)s.hidden=false});
  document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(b=>{const s=document.querySelector('#nav .nav-sub[data-for="'+b.dataset.g+'"]');b.setAttribute("aria-expanded",s&&!s.hidden?"true":"false")});
+ /* 채팅 › 광장/화원: 현재 채널이 위, 펼치면 나머지가 아래. 마을·1:1에 있을 땐 입장용 gate만(문구=gCh). */
+ const chatSub=document.querySelector('#nav .nav-sub[data-for="chat"]'),plazaSec=document.querySelector('#nav .nav-sec[data-for="plaza"]');
+ const gate=document.querySelector("#nav .nav-plaza-gate");
+ const inPlaza=id==="chat"&&typeof ct==="string"&&ct==="g"&&chatSub&&!chatSub.hidden;
+ const chNow=plazaChNow();
+ plazaGateLabel();
+ if(gate)gate.hidden=!!inPlaza;
+ if(plazaSec){plazaSec.hidden=!inPlaza;plazaSec.dataset.active=chNow;plazaSec.classList.toggle("open",!!(inPlaza&&plazaOpen))}
+ document.querySelectorAll("#nav .nav-sec[data-for=plaza] button[data-ch]").forEach(b=>{const on=b.dataset.ch===chNow;b.setAttribute("aria-pressed",on?"true":"false");if(on)b.setAttribute("aria-expanded",plazaOpen?"true":"false");else b.removeAttribute("aria-expanded")});
  if(typeof updNav==="function"&&C)updNav()}
 function show(id){const moved=curView!==id;if(moved&&curView==="mini"&&typeof spMiniStop==="function")spMiniStop();curView=id;["login","create","hub","rooms","room","xm","portal","guard","fac","board","wave","ntc","arena","ord","special","mini","trial","shop","chat","friends","bag","pact","craft","growth","titles","raid","boss","inbox","roster","world","wev","wqa","setting"].forEach(v=>{const e=$("#v-"+v);if(e)e.hidden=v!==id;else if(typeof includeHeal==="function")includeHeal()});if(id!=="raid"&&typeof unRd==="function"){unRd();unRd=null}if(id!=="hub"&&typeof raidWatchStop==="function")raidWatchStop();if(id!=="hub"&&id!=="fac"&&typeof disWatchStop==="function")disWatchStop();if(id!=="wave"&&typeof wvWatchStop==="function")wvWatchStop();if(id!=="ord"&&typeof clpWatchStop==="function")clpWatchStop();if(id!=="boss"&&typeof unB==="function"){unB();unB=null}document.querySelector("main").classList.toggle("wide",id==="roster"||id==="boss"||id==="titles"||id==="fac"||id==="board"||id==="ntc");document.querySelector("main").classList.toggle("hubw",id==="hub");document.querySelector("main").classList.toggle("xwide",id==="shop"||id==="craft"||id==="ord");if(id!=="hub"&&unH){unH();unH=null}if(id!=="chat"){if(typeof chatLeave==="function")chatLeave();else{if(typeof unC==="function"){unC();unC=null}if(typeof unP==="function"){unP();unP=null}}}if(id!=="board"&&typeof bdStop==="function")bdStop();$("#nav").hidden=!(C&&(id==="hub"||id==="rooms"||id==="room"||id==="xm"||id==="boss"||id==="portal"||id==="guard"||id==="fac"||id==="board"||id==="wave"||id==="ntc"||id==="arena"||id==="ord"||id==="special"||id==="mini"||id==="inbox"||id==="roster"||id==="shop"||id==="chat"||id==="friends"||id==="bag"||id==="pact"||id==="trial"||id==="craft"||id==="growth"||id==="titles"||id==="world"||id==="wev"||id==="wqa"||id==="setting"));navSync(id,moved);if(moved){if(typeof vnClose==="function")vnClose();window.scrollTo(0,0)}else keepY()}
 const titleById=id=>TITLE_LIST.find(t=>t[0]===id);
@@ -593,14 +635,16 @@ async function accSoftSync(){if(!AUTH.uid||!C||!DB||document.hidden||accSoftBusy
   if(hasPend||savePending||lhDefer||lhOn()){const ok=await saveNowOk();if(ok&&lhDefer)lhFlushDefer()}
   if(changed&&!$("#v-hub").hidden)hubLH()}finally{accSoftBusy=false}}
 async function lhStart(k){const L=lhOf(k);if(!L||lhOn()||lhBusy)return;if(typeof clueOn==="function"&&clueOn()){toast("단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다.");return}if(C.fall){toast("타락한 동안에는 토벌을 떠날 수 없다.");return}if(C.mj&&Date.now()<C.mj.T0){toast("정기 출정에 참가 신청한 동안에는 떠날 수 없다.");return}
- if(!confirm(L[1]+"("+L[2]+"시간)을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
+ const wait=typeof tripWaitTxt==="function"?tripWaitTxt(L[2]):L[2]+"시간";
+ if(!confirm(L[1]+"("+wait+")을 떠날까? 떠나 있는 동안에는 정기 출정에 참가할 수 없다. 성공 확률 약 "+Math.round(lhChance(pw(),L[3])*100)+"%"))return;
  /* 다른 기기 진행이 있으면 먼저 맞춘다. 맞춘 뒤에도 진행 중이면 새로 출발하지 않는다(덮어쓰기 방지). */
  lhBusy=true;hubLH();
  try{try{await accSyncIfNewer()}catch(e){}if(lhOn()){toast("다른 기기·탭에서 이미 장기 토벌 중이다. 그쪽 진행을 이어 받는다.");return}
- /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다. */
- const t0=Date.now();C.lh={k,t0,t1:t0+L[2]*3600000,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
+ /* 화면은 바로 바꾸고, 저장은 한 번만 기다린다. 재시도는 accSoftSync 가 맡긴다.
+    t1: 집중이면 표 시간의 95%(tripDurMs). 완주 보상 시간은 표 L[2] 그대로. */
+ const t0=Date.now(),dur=typeof tripDurMs==="function"?tripDurMs(L[2]):L[2]*3600000;C.lh={k,t0,t1:t0+dur,pw:pw(),sd:Math.floor(Math.random()*1e9)};titleState();hubLH();toast("서버에 남기는 중...");
  const ok=await saveNowOk();if(!ok){lhDefer={kind:"start",nm:L[1],hr:L[2],sd:C.lh&&C.lh.sd};toast("출발은 이 기기에 남겨 두었다. 연결되면 서버에 맞추고 알린다.");accSoftSync();return}
-  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+L[2]+"시간 뒤에 돌아온다.","","lh:go:"+(C.lh&&C.lh.sd||""));toast("🗺 "+L[1]+" 출발! "+L[2]+"시간 뒤에 돌아온다.");lhNtArm()}
+  lhDefer=null;note("quest",L[1]+"을(를) 떠났다. "+wait+" 뒤에 돌아온다.","","lh:go:"+(C.lh&&C.lh.sd||""));toast("🗺 "+L[1]+" 출발! "+wait+" 뒤에 돌아온다.");lhNtArm()}
  finally{lhBusy=false;hubLH()}}
 /* 정산 시드 기록: 같은 출정을 재접속·동기화로 두 번 받지 않는다. 최근 30개만 남긴다. */
 function tripGot(map,sd){const k=String(sd||"");if(!k)return false;const o=C[map]=C[map]&&typeof C[map]==="object"?C[map]:{};if(o[k])return true;o[k]=1;const ks=Object.keys(o);if(ks.length>30)ks.slice(0,ks.length-30).forEach(x=>delete o[x]);return false}
@@ -641,7 +685,7 @@ function hubLH(){const box=$("#hlh");if(!box||!C)return;box.innerHTML="";const n
   if(!done)box.appendChild(elT("p","hint","떠나 있는 동안 게임을 꺼 두어도 된다. 정기 출정에는 참가할 수 없다."+(lhDefer?" 아직 서버에 남기지 못한 변경이 있어, 연결되면 다시 맞춘다.":"")));return}
  if(typeof clueOn==="function"&&clueOn())box.appendChild(elT("p","hint","단서 탐색을 떠나 있는 동안에는 장기 토벌을 떠날 수 없다."));
  const pv=pw();LH.forEach(L=>{const w=elT("div","dq"),cp=elT("div","dq-copy"),c=lhChance(pv,L[3]),st=L[9]||1;
-  cp.append(elT("b","",L[1]+" · "+L[2]+"시간"),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
+  cp.append(elT("b","",L[1]+" · "+(typeof tripWaitTxt==="function"?tripWaitTxt(L[2]):L[2]+"시간")),elT("small","",L[8]+" 권장 전투력 "+L[3]+" · 성공 약 "+Math.round(c*100)+"% · 골드 약 "+lhEst(L[4],L[2],st)+", 경험치 약 "+lhEst(L[5],L[2],st)+(L[7]?", 마력석 "+L[7]+"+":"")+" · 절망도 +"+L[6]));
   const b=elT("button","chip",lhBusy?"저장 중...":"출발");b.type="button";b.disabled=!!C.fall||(typeof clueOn==="function"&&clueOn())||lhBusy;b.onclick=()=>lhStart(L[0]);w.append(cp,b);box.appendChild(w)})}
 /* 귀환 알림: t1 에 setTimeout 한 번(tripNt dedup). UI 남은 시간은 아래 30초 폴링(알림과 분리). */
 let lhNtT=null;
@@ -690,7 +734,8 @@ const WHO_MS=3000;
 const pubCopy=o=>JSON.parse(JSON.stringify(o));
 function pubCard(){if(!C)return{};let power=0,q=null;try{power=typeof pw==="function"?pw():0}catch(e){power=0}try{q=typeof petCur==="function"?petCur():null}catch(e){q=null}
  const weapon=Number.isInteger(C.wp)&&C.wp>=0&&typeof WP!=="undefined"&&WP[C.wp]?WP[C.wp][0]+(wlv(C.wp)?" +"+wlv(C.wp):""):"없음";
- return{n:C.n,s:C.s||"",g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:power,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:typeof petLv==="function"?petLv(q):1}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&typeof DEV!=="undefined"&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf&&typeof C.pf==="object"?C.pf:{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
+ /* 성별(s)은 더 이상 쓰지 않는다. s:null 로 공개 카드의 옛 성별 칸을 지운다. */
+ return{n:C.n,s:null,g:C.g,t:C.t||"",td:(typeof TD!=="undefined"&&TD[C.t])||"",a:(C.a||[]).join(" · "),v:C.v,lv:C.lv||1,cl:C.cl||0,ex:C.ex||0,dz:C.dz||0,wp:weapon,pw:power,ti:C.ti||"",tn:tiName(C.ti),rv:Number(C.rsv)||0,fc:C.fc||{},wf:Number(C.wf)||0,pet:q?{s:q.sp,n:q.nm,l:typeof petLv==="function"?petLv(q):1}:null,hf:C.healOff?1:0,du:{w:(C.stats&&C.stats.duW)||0,l:(C.stats&&C.stats.duL)||0},ev:C.dev&&typeof DEV!=="undefined"&&C.dev.id===DEV.id?{id:DEV.id,pt:C.dev.pt||0,w:C.dev.w||0,n:C.dev.n||0,t:C.dev.t||0}:null,db:(C.du&&!C.du.fin)?(C.du.t0||Date.now()):0,dr:C.dr||null,pf:C.pf&&typeof C.pf==="object"?C.pf:{},rel:Array.isArray(C.rel)&&C.rel.length?C.rel:null,fl:C.fall?1:0}}
 function pubRemember(){if(!C)return;pubLast=pubCopy(pubCard())}
 function pubSync(){if(!DB||!C||!pubLast)return;const body=pubCard(),patch={};
  Object.keys(body).forEach(k=>{const a=JSON.stringify(body[k]);if(a!==JSON.stringify(pubLast[k]))patch[k]=JSON.parse(a)});
@@ -724,14 +769,15 @@ function regPlayer(pic){if(!DB||!C)return;if(!pic){pubSync();return}try{pubPic()
 /* 운영자 프로필용. C.born(캐릭터 생성 ms)을 한국 시각 날짜 문구로. */
 function admBornTxt(ms){const t=Number(ms);if(!Number.isFinite(t)||!(t>0))return "";const k=new Date(t+9*3600000);return k.getUTCFullYear()+"년 "+(k.getUTCMonth()+1)+"월 "+k.getUTCDate()+"일"}
 function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pfo").hidden=false;$("#pfm").textContent="";$("#pfr").hidden=uid===UID;$("#pfr").disabled=true;$("#pff").hidden=true;$("#pfg").hidden=true;$("#pfdm").hidden=true;$("#gbox").hidden=true;{const rb=$("#pfrel"),rx=$("#relbox");if(rb)rb.hidden=true;if(rx)rx.hidden=true}$("#pfb").textContent="프로필을 불러오는 중...";
- DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
+ /* 매지컬 마치 자리 live 가 호스트 연결을 점유하면 players GET 이 타임아웃 난다. xSeatNet 으로 잠깐 끊는다. */
+ const load=()=>DB.doc("players/"+uid).get().then(s=>{if(pfU!==uid)return;const p=s.exists?s.data():null,b=$("#pfb");b.innerHTML="";
   if(!p){b.textContent="프로필을 찾지 못했다.";$("#pfr").hidden=true;return}
   const hero=document.createElement("div");hero.className="profile-hero";
   /* 휴면(dm): 공개 사진은 스윕에서 하드 삭제됨. 남아 있어도 표시하지 않는다. */
   const dormant=typeof isDm==="function"?isDm(p):Number(p.dm)===1;
   if(!dormant&&typeof p.im==="string"&&p.im.length<20000&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p.im)){const i=document.createElement("img");i.className="av";i.alt="프로필 이미지";i.src=p.im;hero.appendChild(i);hiAv(i,uid)}
   const intro=document.createElement("div"),h=document.createElement("h2");h.className="profile-name";h.textContent=cn(uid,p.n||"이름 없는 캐릭터");intro.appendChild(h);
-  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=(VL[p.v]?VL[p.v].n:"소속 미상")+" · "+(p.s||"성별 미설정");intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}
+  const sub=document.createElement("p");sub.className="profile-sub";sub.textContent=VL[p.v]?VL[p.v].n:"소속 미상";intro.appendChild(sub);if(tiName(p.ti,p.tn)){const ti=document.createElement("p");ti.className="ttl-tag";ti.style.margin="6px 0 0";ti.textContent="✦ "+tiName(p.ti,p.tn);intro.appendChild(ti)}
   if(dormant){const hw=document.createElement("p");hw.className="ttl-tag";hw.style.margin="6px 0 0";hw.textContent="화원 · 휴면 계정";intro.appendChild(hw)}
   hero.appendChild(intro);b.appendChild(hero);
   if(p.fl){const w=document.createElement("p");w.className="fallbar";w.textContent="이 마법소녀는 타락했다. 친구라면 마을의 '타락한 친구' 목록에서 맞서 되돌릴 수 있다.";b.appendChild(w)}
@@ -755,7 +801,8 @@ function openProfile(uid){if(!DB||!uid)return;pfU=uid;pfOpenAt=Date.now();$("#pf
     const t=Number(s.exists?s.data():0);bornL.textContent=t>0?"운영자 전용 · 가입 "+admBornTxt(t):"운영자 전용 · 가입 일자 없음(옛 캐릭터일 수 있다)"}).catch(()=>{if(bornL.isConnected)bornL.textContent="운영자 전용 · 가입 일자를 읽지 못했다"})}
   /* fmsgFriend 가 맞춘 accounts fr 을 반영한 뒤 친구 버튼을 그린다(친구 창을 안 열어도 됨). */
   Promise.resolve(typeof accSyncIfNewer==="function"?accSyncIfNewer():null).catch(()=>{}).then(()=>{if(pfU!==uid)return;frBtn(uid,p.n);if(typeof relBtn==="function")relBtn(uid,p.n);const dmb=$("#pfdm");dmb.hidden=uid===UID||!AUTH.uid;dmb.onclick=()=>{$("#pfo").hidden=true;pfU=null;goDM(uid,p.n)}})},
-  e=>{$("#pfb").textContent="프로필을 불러오지 못했다."})}
+  e=>{$("#pfb").textContent="프로필을 불러오지 못했다."});
+ if(typeof xSeatNet==="function")xSeatNet(load);else load()}
 $("#pfc").onclick=()=>{$("#pfo").hidden=true;pfU=null;pfOpenAt=0};
 $("#pfo").onclick=e=>{if(e.target!==$("#pfo"))return;if(Date.now()-pfOpenAt<PF_GUARD_MS)return;$("#pfc").click()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pfo").hidden)$("#pfc").click()});
@@ -804,42 +851,40 @@ function bag(msg){const fresh=$("#v-bag").hidden;C.inv=C.inv||{};C.wps=C.wps||[]
   if(id==="milk"){const open=petBagOn==="milk";it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[open?"닫기":"사용",()=>{petBagOn=open?null:"milk";petBagPick=null;bag()}]],itIc(id)));if(open&&typeof petBagBox==="function")it.appendChild(petBagBox());return}
   if(id==="trcyan"||id==="trblue"||id==="trcast"){const open=typeof petTrStoneOn!=="undefined"&&petTrStoneOn===id;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[[open?"닫기":"사용",()=>{petTrStoneOn=open?null:id;petTrStonePick=null;if(typeof petBagOn!=="undefined")petBagOn=null;bag()}]],itIc(id)));if(open&&typeof petTrStoneBox==="function")it.appendChild(petTrStoneBox(id));return}
   if(id==="petcan"||id==="petfeast"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (성장 기록 › 사역마에서 간식으로 준다)",[] ,itIc(id)));return}
+  if(id==="rcp"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 왕명의 펜듈럼이 움직이지 않는다."),$("#bgm").style.color="var(--bad)");if(gi()<5)return bag("S등급에 다다른 뒤에만 쓸 수 있다.");if(C.rcp)return bag("이미 왕명의 펜듈럼의 효력이 남아 있다. 재계약 시험에 도전하자.");if((C.inv.rcp||0)<1)return;C.inv.rcp--;C.rcp=1;try{dexAdd("it","rcp")}catch(e){}note("quest","왕명의 펜듈럼을 사용했다. 재계약 시험에 바로 도전할 수 있다.");if(typeof saveNow==="function")saveNow();else save();bag("펜듈럼이 조용히 흔들린다. 계약 화면에서 재계약 시험에 도전할 수 있다.")}]],itIc(id)));return}
   if(id==="hope"){it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2],[["사용",()=>{if(C.fall)return(bag("타락한 동안에는 희망의 결정이 빛나지 않는다."),$("#bgm").style.color="var(--bad)");if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 아껴 두자.");
    if((C.inv.hope||0)<1)return;C.inv.hope--;const b0=C.dz;gain(0,-HOPE_DZ);note("quest","희망의 결정을 사용해 절망도가 "+(b0-C.dz)+" 내려갔다.");bag("희망의 결정이 부서지며 따뜻한 빛이 퍼졌다. 절망도가 "+(b0-C.dz)+" 내려갔다.")}]],itIc(id)));return}
   if(id==="pfcandy"){const used=pfcandyToday(),limit=used>=PFCANDY_MAX;it.appendChild(rowEl(x[1]+" x"+C.inv[id],x[2]+" (오늘 "+used+"/"+PFCANDY_MAX+")",[["사용",()=>{const n=pfcandyToday();if(n>=PFCANDY_MAX)return bag("오늘은 보라 꽃 설탕 절임을 더 사용할 수 없다.");if((C.inv.pfcandy||0)<1)return;const day=today(),daily=Object.assign({},C.daily&&C.daily.d===day?C.daily:{},{d:day,pfcandy:n+1}),oldFloor=dzFloorToday(),floor=Math.min(100,oldFloor+10),base=C.pwtmp&&C.pwtmp.day===day?Math.max(0,Number(C.pwtmp.v)||0):0;C.daily=daily;C.inv.pfcandy--;C.dzFloor={day,v:floor};C.dz=Math.max(Number(C.dz)||0,floor);C.pwtmp={day,v:base+25};const dzBefore=C.dz;gain(0,10);const dzAdded=C.dz-dzBefore;C.stats.maxDespair=Math.max(C.stats.maxDespair||0,C.dz);dexAdd("it","pfcandy");titleState();save();bag("보라 꽃 설탕 절임을 먹었다. 절망도 +"+dzAdded+", 오늘 하한 +"+floor+", 전투력 +"+(base+25)+".")} ,limit]],itIc(id)));return}
   it.appendChild(rowEl(x[1]+" x"+C.inv[id]+(on?" · 준비됨":""),x[2]+(USE[id]?" ("+USE[id]+"에서 사용)":""),USE[id]?[[on?"준비 해제":"사용 준비",()=>{if(on)delete C.arm[id];else C.arm[id]=true;save();bag(x[1]+(on?" 준비를 해제했다.":"을(를) 준비했다. 다음 "+USE[id]+"에서 쓰인다."))}]]:[],itIc(id)))});
  bagWeapons();
  const bm=$("#bgm");if(bm){bm.style.color="var(--mu)";bm.textContent=msg||""}if(fresh)applyGift()}
-// 이 친구에게 쓸 수 있는 빈 칸 번호와, 다 찼다면 가장 빨리 비는 시각
-/* TODO(선물 한도→서버): 클라 추정용. 진짜 한도는 gift/ RTDB 규칙. 서버 이관 후 이 함수·C.gsl 재검토. */
-function giftSlot(u){C.gsl=C.gsl||{};const a=C.gsl[u]||[],now=Date.now();let best=-1,soon=Infinity;
- for(let i=0;i<GIFT_DAY;i++){const t=a[i]||0;if(now-t>DAY_MS+60000){best=i;break}soon=Math.min(soon,t+DAY_MS+60000)}
- return{i:best,left:[...Array(GIFT_DAY).keys()].filter(i=>now-(a[i]||0)>DAY_MS+60000).length,soon}}
 /* ── 선물 동기화 ─────────────────────────────────────────────
-   [권위] 받은 함 목록·화면 = ginbox/{나}/{id} 만. (계정 c.rg 안 씀)
-   [알림] giftNtin → ntin live → note("gift"). ginApply 는 목록만.
-   [한도] gift/{나}/{보낸이}/{0~3} = RTDB 일일 한도 규칙 + 구버전 송신 큐.
-   [클라 상태] C.gs = 개봉·이관 완료 워터마크(accounts 에 저장). gs[칸]>=ts 이면
-               gift 잔여로 ginbox 를 다시 채우지 않음. 이관 set 성공 후에만 gs↑.
-   [소모] rgUse: 효과·목록·절망/경험치를 낙관 반영 후 ginbox 삭제·계정 저장은 백그라운드.
-               삭제 실패 시에만 그 칸 효과를 되돌린다. ginPendDel 로 live 가 잠깐 다시 채우지 않게 한다.
-   [후일 ginbox 단독] 구클라 소멸·일일 한도를 ginbox/서버로 옮기면 제거 후보:
-       COMPAT_GIFT_PULL(ginPullGift), 보내기의 gift/ 쓰기,
-       rgUse 의 gift/ 삭제, C.gs 의 gift 칸 키. ginWatch·rgUse(ginbox) 는 유지.
-   TODO(선물 한도→서버): 일일 GIFT_DAY 한도는 아직 RTDB gift/ 칸 규칙 + 클라 C.gsl 뿐이다.
-       Cloud Functions(또는 동등 서버)로 이관해 ginbox 쓰기와 함께 강제하고, 그다음 gift/
-       경로·규칙·클라 giftSlot/gsl·COMPAT pull 을 제거한다. 구현 코드는 아직 없음.
+   LIVE(현재):
+     · 목록·화면 권위 = ginbox/{나}/{id}. 계정 c.rg 에 목록을 두지 않음.
+     · 송신 = ginbox/{상대}/{ginNewId} 만. gift/ 미기입. 일일·슬롯(0~3) 한도 없음(삭제됨).
+     · 상한 = RG_MAX(30). ginApply 가 넘치면 오래된 것부터 서버 삭제.
+     · 알림 = giftNtin → ntin live → note("gift"). ginApply 는 목록만.
+     · 소모 = rgUse 낙관 반영 후 ginbox 삭제. 실패 시 그 칸만 되돌림(ginPendDel).
+   LEGACY(구버전 잔여 — 새 선물은 타지 않음):
+     · gift/{나}/{보낸이}/{0~3} · giftn · C.gsl(일일 한도) 송신 경로 → 이미 삭제됨.
+     · ginPullGift / ginSlotId / giftSweep / C.gs = gift/·옛 c.rg 이관용.
+     · ginMigrate = 계정 c.rg → ginbox 1회. ginboxV>=1 이면 no-op.
+   TODO(선물 LEGACY 제거): gift/·giftn 잔여·미이관 c.rg 가 없으면 아래를 한 번에 걷어낸다.
+     ginSlotId, ginMigId, ginMigrate, ginPullGift, giftSweep, C.gs·ginboxV·c.rg 의존,
+     giftBoxMerge, applyGift 의 migrate/pull 호출, RTDB gift/·giftn 규칙,
+     functions/leave·notice wipe 의 gift·giftn 칸. 남길 것: ginWatch·ginApply·rgUse(ginbox)·ginNewId.
    ─────────────────────────────────────────────────────────── */
 const ginPath=id=>"ginbox/"+UID+"/"+id;
-const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot);
-const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||"");
+/* TODO(선물 LEGACY 제거) */ const ginSlotId=(from,slot)=>String(from)+"_"+Number(slot); /* gift/ 슬롯 0~3 이관 id */
+/* TODO(선물 LEGACY 제거) */ const ginMigId=(u,ts,g)=>"m_"+String(u||"x")+"_"+Number(ts||0)+"_"+String(g||""); /* c.rg·옛 gift 단건 id */
+/* LIVE: 새 선물 문서 id. 매번 고유 → 이전 선물 덮어쓰기 없음. */
+const ginNewId=from=>"n_"+String(from)+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
 let ginPullBusy=false,ginPendDel=new Set();
-/* ginbox·gift 공통 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
+/* ginbox·(LEGACY)gift 삭제. 404(이미 없음)는 성공. 잠깐 실패하면 짧게 재시도. */
 async function giftDbDel(path){if(!DB||!path)return false;for(let i=0;i<3;i++){try{await DB.doc(path).delete();return true}catch(e){const c=String(e&&e.message||e);if(c==="404")return true;if(i<2)await new Promise(r=>setTimeout(r,200*(i+1)))}}return false}
-function giftWatch(){applyGift()}
-/* 마을·가방 진입: 옛 rg→ginbox 이전, ginbox 구독, (COMPAT) gift/→ginbox pull. */
+/* 마을·가방 진입: LIVE ginWatch + LEGACY ginMigrate·ginPullGift. */
 async function applyGift(){if(!AUTH.uid||!C||!DB||LOCAL)return;try{await ginMigrate()}catch(e){}ginWatch();try{await ginPullGift()}catch(e){}}
-/* 계정에 남던 옛 받은 함(c.rg)을 ginbox 로 한 번만 옮긴다. ginboxV>=1 이면 끝. */
+/* TODO(선물 LEGACY 제거): 계정 c.rg → ginbox 1회. ginboxV>=1 이면 끝. */
 async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||ginMigBusy)return;ginMigBusy=true;
  try{const puts=[],seen={};
   (Array.isArray(C.rg)?C.rg:[]).forEach(x=>{if(!x||GV[x.g]==null)return;const id=ginMigId(x.u,x.ts,x.g);if(seen[id])return;seen[id]=1;
@@ -847,8 +892,7 @@ async function ginMigrate(){if(!C||!DB||!AUTH.uid||(Number(C.ginboxV)||0)>=1||gi
   try{await ginPullGift(puts,seen)}catch(e){}
   if(puts.length)await Promise.all(puts);
   C.ginboxV=1;C.rg=[];if(typeof saveNow==="function")saveNow();else save()}finally{ginMigBusy=false}}
-/* COMPAT_GIFT_PULL: 구버전·미게시 규칙으로 ginbox 에만 빠진 칸을 gift/ 에서 보충.
-   허브·가방 진입 때 한 번. 후일 ginbox 단독 시 이 함수·호출을 제거한다. */
+/* TODO(선물 LEGACY 제거): gift/ 잔여 → ginbox 보충. 새 송신은 gift/ 미사용. */
 async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!puts&&ginPullBusy)return;const own=!puts;if(own){ginPullBusy=true;puts=[];seen={}}
  try{C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const s=await once(DB.collection("gift/"+UID));let bump=false;
   s.docs.forEach(d=>{const f=d.id,v=d.data();if(!v||typeof v!=="object")return;
@@ -860,12 +904,13 @@ async function ginPullGift(puts,seen){if(!AUTH.uid||!C||!DB||LOCAL)return;if(!pu
    Object.keys(v).filter(k=>/^[0-3]$/.test(k)).forEach(k=>add(f+"_"+k,Number(k),v[k]))});
   if(own){if(puts.length)await Promise.all(puts);if(bump){if(typeof saveNow==="function")saveNow();else save()}}}
  catch(e){}finally{if(own)ginPullBusy=false}}
-/* 본선: ginbox live. 받은 함 목록·내비. 도착 알림(note·토스트)은 giftNtin→ntin live. */
+/* LIVE: ginbox live. 목록·내비. 도착 알림은 giftNtin→ntin. */
 function ginWatch(){if(!AUTH.uid||!C||!DB||LOCAL)return;const gen=++ginGen;
  if(unGin){try{unGin()}catch(e){}unGin=null}ginReady=false;
  const take=sn=>{if(gen!==ginGen||!AUTH.uid||!C)return;ginApply(sn.docs||[])};
  try{once(DB.collection("ginbox/"+UID)).then(take).catch(()=>{})}catch(e){}
  unGin=DB.collection("ginbox/"+UID).live().onSnapshot(take,()=>{},30000)}
+/* LIVE: 스냅 → ginList. RG_MAX 초과 시 오래된 ginbox 문서 삭제. */
 function ginApply(docs){const items=[];
  (docs||[]).forEach(d=>{const v=typeof d.data==="function"?d.data():d;if(!v||typeof v!=="object"||GV[v.g]==null)return;
   const id=d.id;if(!id||ginPendDel.has(id))return;items.push({id,g:v.g,n:String(v.n||"누군가").slice(0,20),u:String(v.u||""),ts:Number(v.ts)||0})});
@@ -878,8 +923,7 @@ function ginApply(docs){const items=[];
 const rgVal=g=>Math.round(GV[g]*(C.t==="다정함"?1.5:1)*(1+(typeof petEff==="function"?petEff("gift"):0)));
 const rgEff=g=>"절망도 -"+rgVal(g)+(GIFT_EX[g]?" · 경험치 +"+GIFT_EX[g]:"");
 function rgGroups(){const m={};ginList.forEach(x=>{if(x&&x.g!=null&&GV[x.g]!=null)m[x.g]=(m[x.g]||0)+1});return Object.keys(m).map(g=>({g,n:m[g]}))}
-/* 열기: 목록·절망·경험치를 먼저 낙관 반영하고, ginbox 삭제·gift 청소·계정 PATCH 는 뒤에서.
-   삭제 실패 시 그 칸만 되돌린다. ginPendDel 로 live 스냅이 낙관 구간을 다시 채우지 않는다. */
+/* LIVE: 열기. 낙관 반영 → ginbox 삭제. LEGACY giftSweep 은 구 id 만 gift/ 청소. */
 async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에는 선물의 온기가 닿지 않는다.");m.style.color="var(--bad)";return}
  const list=key==="all"?ginList.slice():(()=>{const i=ginList.findIndex(x=>x&&x.g===key);return i<0?[]:[ginList[i]]})();if(!list.length)return;if(key==="all"&&!confirm("정말 모두 열까?"))return;if((C.dz||0)<=0)return bag("절망도가 이미 0이다. 선물은 아껴 두자.");
  C.gs=C.gs&&typeof C.gs==="object"?C.gs:{};const opened=[];const b0=C.dz;let xs=0;
@@ -890,9 +934,10 @@ async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에�
  const undoOne=o=>{if(!o||!o.x)return;ginPendDel.delete(o.x.id);if(!ginList.some(y=>y&&y.id===o.x.id)){ginList.push(o.x);ginList.sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1));ginIds=ginList.map(y=>y.id).join("|")}
   C.stats.giftsUsed=Math.max(0,(C.stats.giftsUsed||0)-1);C.dz=Math.max(dzFloorToday(),Math.min(100,(C.dz||0)-o.dDz));C.ex=Math.max(0,(C.ex||0)-o.dEx);if(typeof lvOf==="function")C.lv=lvOf(C.ex);
   paintDz();updNav();if(!$("#v-bag").hidden)drawRG()};
- const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),slotM=String(x.id).match(/^(.+)_([0-3])$/);
-  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2])}
-  else if(x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
+ /* TODO(선물 LEGACY 제거): 구 슬롯 id(uid_0~3)·m_ 만 gift/ 청소. n_… 은 스킵. */
+ const giftSweep=x=>{const ts=Number(x.ts)||Date.now(),id=String(x.id||""),slotM=id.match(/^(.+)_([0-3])$/);
+  if(slotM){C.gs[slotM[1]+"_"+slotM[2]]=Math.max(Number(C.gs[slotM[1]+"_"+slotM[2]])||0,ts);giftDbDel("gift/"+UID+"/"+slotM[1]+"/"+slotM[2]);return}
+  if(/^m_/.test(id)&&x.u){C.gs[x.u]=Math.max(Number(C.gs[x.u])||0,ts);giftDbDel("gift/"+UID+"/"+x.u)}};
  list.forEach(takeOne);
  if(!opened.length){bag("선물을 열지 못했다. 잠시 뒤 다시 시도해 보자.");if(m)m.style.color="var(--bad)";return}
  const nm=ITM.find(x=>x[0]===opened[0].x.g),drop=b0-(C.dz||0);
@@ -903,6 +948,7 @@ async function rgUse(key){const m=$("#bgm");if(C.fall){bag("타락한 동안에�
  opened.forEach(o=>{giftDbDel(ginPath(o.x.id)).then(ok=>{if(ok){ginPendDel.delete(o.x.id);giftSweep(o.x);return}
   undoOne(o);bag("일부 선물을 서버에서 지우지 못해 되돌렸다. 잠시 뒤 다시 열어 보자.");if(m)m.style.color="var(--bad)";
   if(typeof saveNow==="function")saveNow()}).catch(()=>{undoOne(o);if(typeof saveNow==="function")saveNow()})})}
+/* LIVE: 가방 받은 선물함 UI. */
 function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const rg=ginList,gr=rgGroups();
  $("#rgh").textContent="친구에게 받은 선물은 여기에 보관된다. 필요할 때 열어 절망도를 낮추자. (보관 "+rg.length+" / "+RG_MAX+")";
  if(!gr.length){box.appendChild(elT("p","hint","받은 선물이 없다."));return}
@@ -912,23 +958,22 @@ function drawRG(){const box=$("#bgrg");if(!box||!C)return;box.innerHTML="";const
   const ic=itIc(g);if(ic)c.append(ic,tx);else c.append(tx);
   const b=elT("button","chip","열기");b.type="button";b.style.cssText="flex:0 0 auto;min-width:0;padding:10px 14px";b.disabled=!!C.fall;b.onclick=()=>rgUse(g);w.append(c,b);box.appendChild(w)});
  if(rg.length>1){const a=elT("button","btn g","모두 열기 (절망도 -"+rg.reduce((s,x)=>s+rgVal(x.g),0)+")");a.type="button";a.disabled=!!C.fall;a.onclick=()=>rgUse("all");box.appendChild(a)}}
+/* LIVE: 프로필에서 선물 보내기. ginbox 고유 id 만. 일일·슬롯 한도 UI 없음. */
 $("#pfg").onclick=()=>{const gb=$("#gbox"),u=pfU;if(!gb.hidden){gb.hidden=true;return}C.inv=C.inv||{};gb.hidden=false;gb.innerHTML="";
- const sl=giftSlot(u);gb.appendChild(elT("p","hint","이 친구에게 오늘 보낼 수 있는 선물 "+sl.left+" / "+GIFT_DAY+"개"+(sl.i<0?" · 약 "+cdTxt(sl.soon-Date.now())+" 뒤에 다시 보낼 수 있다":"")));
+ gb.appendChild(elT("p","hint","보낼 선물을 고르자. 받는 쪽 보관함은 최대 "+RG_MAX+"개다."));
  const own=ITM.filter(x=>x[0][0]==="g"&&(C.inv[x[0]]||0)>0);if(!own.length){gb.appendChild(elT("p","hint","가방에 선물이 없다. 상점에서 사거나 공방에서 만들 수 있다."));return}
  let sel=null;const row=document.createElement("div");row.className="row";row.style.margin="10px 0";
  own.forEach(x=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=x[1]+" x"+C.inv[x[0]];{const ic=itIc(x[0],"sm");if(ic)b.prepend(ic)}b.setAttribute("aria-pressed","false");
   b.onclick=()=>{sel=x[0];row.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"))};row.appendChild(b)});
- const go=document.createElement("button");go.type="button";go.className="btn";go.textContent="보내기";go.disabled=sl.i<0;
+ const go=document.createElement("button");go.type="button";go.className="btn";go.textContent="보내기";
  go.onclick=async()=>{const m=$("#pfm");if(!sel){m.style.color="var(--bad)";m.textContent="보낼 선물을 골라야 한다.";return}
-  const g=giftSlot(u);if(g.i<0){m.style.color="var(--bad)";m.textContent="이 친구에게는 오늘 선물을 "+GIFT_DAY+"개 모두 보냈다.";return}
   go.disabled=true;
-  try{const body={g:sel,ts:{".sv":"timestamp"},n:nmOf()};
-   /* gift/ = 일일 한도(규칙). ginbox/ = 받은 함 권위. 알림은 giftNtin→ntin. */
-   await DB.doc("gift/"+u+"/"+UID+"/"+g.i).set(body);
-   await DB.doc("ginbox/"+u+"/"+ginSlotId(UID,g.i)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"},slot:g.i});
-   C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();
-   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();m.style.color="var(--mu)";m.textContent="선물을 보냈다. (오늘 남은 선물 "+giftSlot(u).left+" / "+GIFT_DAY+"개)";gb.hidden=true}
-  catch(e){const c=String(e&&e.message||e);if(c==="401"||c==="403"){C.gsl=C.gsl||{};(C.gsl[u]=C.gsl[u]||[])[g.i]=Date.now();save()}m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 같은 친구에게는 하루에 "+GIFT_DAY+"개까지 선물할 수 있다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}
+  try{/* LIVE: ginbox 고유 id. gift/·슬롯 덮어쓰기·일일 한도 없음. 알림은 giftNtin→ntin. */
+   await DB.doc("ginbox/"+u+"/"+ginNewId(UID)).set({g:sel,n:nmOf(),u:UID,ts:{".sv":"timestamp"}});
+   C.inv[sel]--;titleState();C.stats.gifts=(C.stats.gifts||0)+1;save();checkTitles();
+   try{if(typeof drawDQ==="function"&&$("#v-hub")&&!$("#v-hub").hidden)drawDQ()}catch(e){}
+   m.style.color="var(--mu)";m.textContent="선물을 보냈다.";gb.hidden=true}
+  catch(e){m.style.color="var(--bad)";m.textContent="지금은 보낼 수 없다. 서버 규칙에 ginbox 쓰기가 열려 있는지도 확인해야 한다."}
   go.disabled=false};
  gb.append(row,go)};
 function pfRows(pf){const dl=document.createElement("dl");dl.className="kv";PF.forEach(([k,n])=>{const v=pf&&typeof pf[k]==="string"?pf[k].trim():"";if(!v)return;const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=n;dd.textContent=v.slice(0,300);dd.style.whiteSpace="pre-wrap";dd.style.overflowWrap="anywhere";dl.append(dt,dd)});return dl.children.length?dl:null}
@@ -954,17 +999,19 @@ $("#nav").onclick=e=>{
    const open=sub&&!sub.hidden;
    const here=navGroup(curView)===g;
 
-  if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");updNav();return}
+  if(open&&here&&(!v||curView===v)){sub.hidden=true;b.setAttribute("aria-expanded","false");const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false;plazaGateLabel();updNav();return}
   document.querySelectorAll("#nav .nav-sub").forEach(s=>{s.hidden=s!==sub});
   document.querySelectorAll("#nav .nav-bar>button[data-g]").forEach(p=>p.setAttribute("aria-expanded",p===b?"true":"false"));
+  if(g!=="chat"){const ps=document.querySelector('#nav .nav-sec[data-for="plaza"]');if(ps){ps.hidden=true;ps.classList.remove("open")}const gt=document.querySelector("#nav .nav-plaza-gate");if(gt)gt.hidden=false;plazaGateLabel()}
   if(g==="town"){if(!here)hub();else updNav();return}
   if(g==="act"){if(!here&&typeof openRooms==="function")openRooms();else if(!here)ord();else updNav();return}
   if(g==="setting"){if(!here){show("setting");drawSetting()}else updNav();return}
   if(g==="board"){if(curView!=="board"&&curView!=="ntc")board(null);else updNav();return}
   if(g==="record"){if(curView!=="titles"&&curView!=="inbox"&&curView!=="roster")openRec();else updNav();return}
-  if(g==="chat"){if(curView!=="chat"){ct="g";chat()}else updNav();return}
+  if(g==="chat"){if(curView!=="chat"){ct="g";plazaOpen=false;chat()}else{updNav();navSync("chat",false)}return}
   return}
- if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;ct=t;chat();return}
+ if(b.dataset.ch){const ch=b.dataset.ch;if(ch!=="g"&&ch!=="h")return;const cur=typeof gCh==="string"&&gCh==="h"?"h":"g";if(curView==="chat"&&ct==="g"&&ch===cur){plazaOpen=!plazaOpen;navSync("chat",false);return}plazaOpen=false;if(curView!=="chat"||ct!=="g"){ct="g";if(typeof gCh!=="undefined")gCh=ch;chat();if(typeof setGCh==="function")setGCh(ch,true)}else if(typeof setGCh==="function")setGCh(ch);else navSync("chat",false);return}
+ if(b.dataset.ct){const t=b.dataset.ct;if(curView==="chat"&&ct===t&&!(t==="d"&&peer))return;if(t==="g")plazaOpen=false;ct=t;chat();return}
  if(v==="hub")hub();
  if(v==="rooms"&&typeof openRooms==="function")openRooms();
  if(v==="shop")shop();
@@ -991,7 +1038,7 @@ $("#nav").onclick=e=>{
 const SKID={};Object.keys(SK).forEach(a=>SKID[SK[a].id]={...SK[a],a});
 // Firebase는 빈 객체를 저장하지 않으므로, 불러온 뒤 arm이 사라져 있으면 다시 만든다.
 function skDay(){if(!C.sk||C.sk.day!==today())C.sk={day:today(),used:0,arm:{}};C.sk.arm=C.sk.arm||{};C.sk.used=C.sk.used||0}
-const mpMax=()=>2+Math.max(0,(C.a||[]).length-1);
+const mpMax=()=>2+Math.max(0,(C.a||[]).length-1)+(C.t==="각성자"?2:0);
 const mpLeft=()=>{skDay();return mpMax()-C.sk.used-Object.keys(C.sk.arm).length};
 const armedSk=id=>{if(!C)return false;skDay();return !!C.sk.arm[id]&&!!SKID[id]&&(C.a||[]).includes(SKID[id].a)};
 // 준비해 둔 마법을 실제로 쓴다. 썼으면 true.

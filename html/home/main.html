@@ -28,7 +28,14 @@
         <button type="button" data-v="arena" aria-pressed="false">대련</button>
     </div>
     <div class="nav-sub" data-for="chat" hidden>
-        <button type="button" data-ct="g" aria-pressed="false">단체 채팅</button>
+        <div class="nav-plaza">
+            <!-- 문구는 navSync·plazaGateLabel 이 gCh(광장|화원)에 맞춰 갱신. 누르면 ct=g 로 마지막 채널 입장. -->
+            <button type="button" class="nav-plaza-gate" data-ct="g" aria-pressed="false">광장</button>
+            <div class="nav-sec" data-for="plaza" hidden data-active="g">
+                <button type="button" data-ch="g" aria-pressed="true" aria-expanded="false">광장</button>
+                <button type="button" data-ch="h" aria-pressed="false">화원</button>
+            </div>
+        </div>
         <button type="button" data-ct="v" aria-pressed="false">마을 채팅</button>
         <button type="button" data-ct="d" aria-pressed="false">1:1 채팅</button>
     </div>

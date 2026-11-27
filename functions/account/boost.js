@@ -110,8 +110,10 @@ const PET_XP_RUN = 1;
 const PET_DROP_X = .02;
 /* 이벤트 알 창. data/event/seasons.js → event-seasons.js (predeploy). HANDOFF.md §8. */
 const {PET_EV, PET_EV2} = require("./event-seasons");
+const {pickMat} = require("./drops");
 const SOLO_RW_MP = .5;
-const COLLECTOR_P = .3;
+/* 수집가: 출정 성공 시 이 확률로 MAT_DROP 풀에서 재료 1개(마력석 아님). */
+const COLLECTOR_P = .2;
 const SK_NM = {water: "정화의 물결", wind: "바람의 길잡이", dark: "그림자 계약"};
 const PET_XP_CAP = PET_LV[PET_LV_HARD - 1];
 function petEvOn(now) {
@@ -145,9 +147,8 @@ function gainDzMod(dz, seat, c, boost) {
   if (c && c.fall && d < 0) d = 0;
   if (d > 0) {
     if (title === "냉정") d *= .8;
-    if (title === "상처 입은 마음") d *= 1.2;
   }
-  if (d < 0 && title === "낙천") d *= 1.3;
+  if (d < 0 && title === "낙천") d *= 1.15;
   if (d > 0) {
     d *= 1 - .04 * rnLv(c && c.rn, "calm");
     if ((boost && boost.wfl || 0) >= 3) d *= 1 - WF_CALM;
@@ -157,20 +158,22 @@ function gainDzMod(dz, seat, c, boost) {
   else d = Math.round(d);
   return d;
 }
-/* gain() 경험 보정(wx·상처 제외). 무기 더미 경험용. */
-function gainExMod(ex, seat, c) {
+/* gain() 경험 보정과 맞춤(지혜·끈기·타락·후유증·바람). 무기 더미·사이드 경험용. */
+function gainExMod(ex, seat, c, now) {
   if (!(ex > 0)) return 0;
   let e = ex;
   e *= 1 + .04 * rnLv(c && c.rn, "wis");
-  if (((seat && seat.t) || (c && c.t) || "") === "끈기") e *= 1.2;
+  if (((seat && seat.t) || (c && c.t) || "") === "끈기") e *= 1.15;
   if (c && c.fall) e = 0;
+  const t = now == null ? Date.now() : now;
+  if (e > 0 && c && Number(c.scar) > t) e *= .5;
   if (hasAttr(seat, c, "바람")) e = Math.round(e * 1.15);
   else e = Math.round(e);
   return Math.max(0, e);
 }
 
 /* 출정 부가 전체. 클라 settle 과 맞춤.
-   fx·절망 + 깃발/지도/스킬 소모 + 펫 XP·알 + 수집가/까마귀/고독 마력석.
+   fx·절망 + 깃발/지도/스킬 소모 + 펫 XP·알 + 수집가(재료 id)·까마귀/고독 마력석.
    rand 는 출정·uid 시드(재시도 동일). */
 function marchSide(r, seat, c, boost, rand, now) {
   seat = seat || {};
@@ -184,7 +187,8 @@ function marchSide(r, seat, c, boost, rand, now) {
   const rb = fx.rb ? 1 : 0;
   const wa = fx.wa ? 1 : 0;
   const title = seat.t || c.t || "";
-  const gdGuard = title === "수호" ? 4 : 0;
+  /* 수호: 파티에 한 명이라도 있으면 전원 오르는 절망도 -3(중첩 없음). */
+  const gdGuard = Object.values((r && r.pl) || {}).some(p => p && p.t === "수호") ? 3 : 0;
   const wp = seat.w != null ? Number(seat.w) : Number(c.wp);
   const sc = wp === 2 ? SCY_DZ : 0;
   const msk = Array.isArray(seat.sk) ? seat.sk.filter(id => SK_NM[id]) : [];
@@ -204,7 +208,10 @@ function marchSide(r, seat, c, boost, rand, now) {
     raw = Math.max(0, (wp === 3 ? 12 : 25) - gdGuard + sc - wtz + dkz);
   }
   if (charm && raw > 0) raw = raw * (water ? 2 / 3 : .5);
-  let dz = gainDzMod(raw, seat, c, boost);
+  /* 상처 입은 마음: 혼자 출정일 때만 오르는(양수) 절망 ×1.1. */
+  const soloWound = title === "상처 입은 마음" && !!(r && r.solo);
+  const woundDz = d => (soloWound && d > 0 ? Math.round(d * 1.1) : d);
+  let dz = woundDz(gainDzMod(raw, seat, c, boost));
   let gAdd = 0, exAdd = 0;
   let wpn = "", wpOn = 0, dh = 0;
   if (fx.wp) {
@@ -214,23 +221,26 @@ function marchSide(r, seat, c, boost, rand, now) {
     const e = pile[1] || {};
     if (e.gd) gAdd += Math.round(Number(e.gd) || 0);
     if (e.mm) mm += Math.max(0, Math.floor(Number(e.mm) || 0));
-    if (e.ex) exAdd += gainExMod(Number(e.ex) || 0, seat, c);
-    if (e.dz) dz += gainDzMod(Number(e.dz) || 0, seat, c, boost);
+    if (e.ex) exAdd += gainExMod(Number(e.ex) || 0, seat, c, now);
+    if (e.dz) dz += woundDz(gainDzMod(Number(e.dz) || 0, seat, c, boost));
   }
   if (fx.dh && (Number(seat.dz) || 0) >= 70) {
     dh = Math.round(Number(fx.dh) || 0);
-    dz += gainDzMod(dh, seat, c, boost);
+    dz += woundDz(gainDzMod(dh, seat, c, boost));
   }
-  let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = 0, crow = 0, soloM = 0;
+  let petXp = 0, egg = 0, eggEv = 0, eggEv2 = 0, collector = "", crow = 0, soloM = 0;
   if (r && r.ok) {
     if (petCur(c)) petXp = PET_XP_RUN;
-    if (title === "수집가" && roll() < COLLECTOR_P) { mm++; collector = 1; }
+    /* 수집가: 재료 id 문자열. xpay 가 inv 에 1개 넣고, 클라는 안내만. */
+    if (title === "수집가" && roll() < COLLECTOR_P) collector = pickMat(roll);
     const manaP = petEff(petCur(c), "mana");
     if (manaP && roll() < manaP) { mm++; crow = 1; }
     if (r.solo && roll() < SOLO_RW_MP) { mm++; soloM = 1; }
-    if (roll() < PET_DROP_X) egg = 1;
-    if (petEvOn(now) && roll() < PET_DROP_X) eggEv = 1;
-    if (petEv2On(now) && roll() < PET_DROP_X) eggEv2 = 1;
+    /* 알·이벤트 알: 기본 PET_DROP_X, 행운이면 +0.05(%p). 종류마다 독립 판정. 클라 petDrop 과 맞춤. */
+    const eggP = Math.min(1, PET_DROP_X + (title === "행운" ? 0.05 : 0));
+    if (roll() < eggP) egg = 1;
+    if (petEvOn(now) && roll() < eggP) eggEv = 1;
+    if (petEv2On(now) && roll() < eggP) eggEv2 = 1;
   }
   return {
     dz, mm, gi, tc, charm: charm ? 1 : 0,
@@ -331,10 +341,12 @@ function marchMuls(seat, c, shared) {
   if (wfl >= 1) exMul *= 1 + WF_EXP;
   exMul *= 1 + petEff(q, "ex");
   if (dis === "storm") exMul *= .8;
-  /* gain() 경험 보너스(상처·타락 제외). */
+  /* gain() 경험 보너스와 맞춤: 지혜·끈기·바람 + 타락 0·후유증 ×0.5. c 는 loadMarchBoost 가 이미 읽음(추가 조회 없음). */
   exMul *= 1 + .04 * wis;
-  if (title === "끈기") exMul *= 1.2;
+  if (title === "끈기") exMul *= 1.15;
   if (attrsOf(c).includes("바람") || String((seat && seat.a) || "").includes("바람")) exMul *= 1.15;
+  if (c && c.fall) exMul = 0;
+  else if (c && Number(c.scar) > (shared.now || Date.now())) exMul *= .5;
 
   return {gMul, exMul, dis, workshop, drill, wfl, wand};
 }

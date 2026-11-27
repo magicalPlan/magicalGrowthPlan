@@ -125,12 +125,14 @@ async function wipeAccount(db, uid, opt) {
     ["dmn/" + uid, "dmn"],
     ["fmsg/" + uid, "fmsg"],
     ["res/" + uid, "res"],
+    /* TODO(선물 LEGACY 제거): gift·giftn 잔여 이관이 끝나면 두 칸만 목록에서 뺀다. ginbox 는 유지. */
     ["gift/" + uid, "gift"],
     ["giftn/" + uid, "giftn"],
     ["ginbox/" + uid, "ginbox"],
     ["pettr/" + uid, "pettr"],
     ["pex/go/" + uid, "pex/go"],
     ["pex/take/" + uid, "pex/take"],
+    ["shady/go/" + uid, "shady/go"],
     ["event_minigame/flanders/rank/" + uid, "flanders/rank"],
     ["event_minigame/flanders/play/" + uid, "flanders/play"],
     ["event_minigame/flanders/go/" + uid, "flanders/go"]

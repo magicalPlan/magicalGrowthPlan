@@ -63,6 +63,10 @@ function corePay(r, uid, seedKey, now, boost) {
   const clp = acc.rollClp(!!r.ok, now, rand);
   const side = acc.marchSide(r, seat, (boost && boost.c) || {}, boost || {}, rand, now);
   if (side.mm) inv.mana = (inv.mana || 0) + side.mm;
+  /* 수집가: collector 는 재료 id. 마력석이 아니라 inv 에 직접 1개. */
+  if (side.collector && typeof side.collector === "string" && side.collector.indexOf("/") < 0) {
+    inv[side.collector] = (inv[side.collector] || 0) + 1;
+  }
   if (side.gi) inv.g1 = (inv.g1 || 0) + side.gi;
   if (side.gAdd) g += side.gAdd;
   if (side.exAdd) ex += side.exAdd;

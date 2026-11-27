@@ -1,0 +1,3 @@
+/* 수상한 상인 상자 요청 칸 — database.rules.json 에 반영됨.
+   배포: firebase deploy --only database
+   클라는 ts 요청만 쓰고, done·show 는 Cloud Functions(Admin) 가 덮어쓴다. */
